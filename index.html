@@ -1285,7 +1285,8 @@ const CHANGELOG = [
   { version: "3.0.3", date: "2026-07-14", note: "MOQ field in the Ingredient Library is now a fixed-unit \"kg\" number input (numbers only, unit shown as a suffix) instead of free text. Existing entries saved as free text (e.g. \"25 kg\") still display and edit correctly" },
   { version: "3.0.4", date: "2026-07-15", note: "Logo references now point at forge-deploy/Forge_Logo_Navy_Orange_Vector.svg instead of a duplicate copy in the main folder, removing the redundant file (the deploy sync step rewrites this path back to a plain filename for the live site)" },
   { version: "3.0.5", date: "2026-07-15", note: "Shortened the homepage description to \"Recipe development software for product development teams\"" },
-  { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" }
+  { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" },
+  { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1639,6 +1640,23 @@ function renderCompareContent(){
     return `<td>฿${total.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
   }).join('');
 
+  const costPerKgCells = ids.map(id => {
+    if(!selected.some(r => r.id === id)) return '<td>-</td>';
+    const r = recipes.find(x => x.id === id);
+    let total = 0;
+    let hasUnpriced = false;
+    rows.forEach(row => {
+      const wt = row.weights[id];
+      if(wt === undefined) return;
+      const price = priceOf(row.label);
+      if(price === null){ hasUnpriced = true; return; }
+      total += (wt / 1000) * price;
+    });
+    const batchKg = (r && r.batchWeight) ? r.batchWeight / 1000 : 0;
+    if(batchKg <= 0) return '<td class="compare-missing">No batch weight</td>';
+    return `<td>฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+  }).join('');
+
   // --- steps comparison ---
   const stepsHtml = ids.map(id => {
     const r = recipes.find(x => x.id === id);
@@ -1681,10 +1699,13 @@ function renderCompareContent(){
       <table class="compare-table">
         <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
         <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
-        <tfoot><tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr></tfoot>
+        <tfoot>
+          <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
+          <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
+        </tfoot>
       </table>
     </div>
-    <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file.</div>
+    <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
 
     <div class="compare-section-title">Compare Process Steps</div>
     <div class="compare-steps-grid">${stepsHtml}</div>
