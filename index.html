@@ -633,6 +633,17 @@
     padding:16px 0;
     text-align:center;
   }
+  .material-thumb{
+    width:32px;
+    height:32px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid var(--border);
+    display:block;
+  }
+  .material-thumb-empty{
+    background:var(--accent-light);
+  }
 
   .compare-modal{max-width:1180px;}
   .compare-pickers{
@@ -1139,6 +1150,14 @@
               <span class="unit-suffix">kg</span>
             </div>
           </div>
+          <div class="field">
+            <label>8. Photo (optional)</label>
+            <input type="file" id="mf-image" accept="image/*">
+          </div>
+          <div class="field" style="display:flex;align-items:center;gap:10px;">
+            <img id="mf-imagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+            <button type="button" class="btn btn-sm" id="btnRemoveMaterialImage" style="display:none;">Remove photo</button>
+          </div>
         </div>
         <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
         <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
@@ -1152,6 +1171,7 @@
         <table class="material-table">
           <thead>
             <tr>
+              <th>Photo</th>
               <th>English</th>
               <th>Thai</th>
               <th>Code</th>
@@ -1311,7 +1331,8 @@ const CHANGELOG = [
   { version: "3.0.5", date: "2026-07-15", note: "Shortened the homepage description to \"Recipe development software for product development teams\"" },
   { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" },
   { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" },
-  { version: "3.0.8", date: "2026-07-15", note: "Compare Recipes: added a Print button that prints the comparison full-page (ingredients, costing, process steps) instead of being clipped by the modal's on-screen size" }
+  { version: "3.0.8", date: "2026-07-15", note: "Compare Recipes: added a Print button that prints the comparison full-page (ingredients, costing, process steps) instead of being clipped by the modal's on-screen size" },
+  { version: "3.0.9", date: "2026-07-15", note: "Ingredient Library: can now attach a photo to each ingredient (auto-shrunk to a small thumbnail, stored with the entry — no separate file storage needed), shown as a thumbnail in the library table" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1853,12 +1874,13 @@ function renderMaterialTable(){
   });
 
   if(filtered.length === 0){
-    body.innerHTML = `<tr><td colspan="8"><div class="material-empty">${ingredientMaster.length === 0 ? 'No ingredients in the library yet — add the first one above' : 'No matching ingredients found'}</div></td></tr>`;
+    body.innerHTML = `<tr><td colspan="9"><div class="material-empty">${ingredientMaster.length === 0 ? 'No ingredients in the library yet — add the first one above' : 'No matching ingredients found'}</div></td></tr>`;
     return;
   }
 
   body.innerHTML = filtered.map(m => `
     <tr>
+      <td>${m.image ? `<img src="${escapeHtml(m.image)}" class="material-thumb" alt="${escapeHtml(m.nameEn)}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
       <td>${escapeHtml(m.nameEn)}</td>
       <td>${escapeHtml(m.nameTh)}</td>
       <td>${escapeHtml(m.vendorCode || '-')}</td>
@@ -1910,7 +1932,49 @@ function closeMaterialModal(){
 }
 
 let editingMaterialId = null;
+let editingMaterialImage = null; // staged photo as a data URL, or null for no photo
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq'];
+
+/* Shrinks a photo to a small thumbnail before storing it directly in the
+   Firestore document (no separate Firebase Storage setup needed) — a JPEG
+   capped at 200px comfortably stays well under Firestore's 1MB doc limit. */
+function resizeImageFile(file, maxDim){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read that image file'));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function setMaterialImagePreview(dataUrl){
+  const img = document.getElementById('mf-imagePreview');
+  const removeBtn = document.getElementById('btnRemoveMaterialImage');
+  editingMaterialImage = dataUrl || null;
+  if(dataUrl){
+    img.src = dataUrl;
+    img.style.display = 'block';
+    removeBtn.style.display = 'inline-flex';
+  } else {
+    img.src = '';
+    img.style.display = 'none';
+    removeBtn.style.display = 'none';
+  }
+}
 
 function fillMaterialForm(m){
   document.getElementById('mf-nameEn').value = m.nameEn || '';
@@ -1920,6 +1984,8 @@ function fillMaterialForm(m){
   document.getElementById('mf-manufacturer').value = m.manufacturer || '';
   document.getElementById('mf-price').value = m.price || '';
   document.getElementById('mf-moq').value = extractMoqNumber(m.moq);
+  document.getElementById('mf-image').value = '';
+  setMaterialImagePreview(m.image || null);
 }
 
 function startEditMaterial(m){
@@ -1947,6 +2013,8 @@ function startCopyMaterial(m){
 function cancelEditMaterial(){
   editingMaterialId = null;
   MATERIAL_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('mf-image').value = '';
+  setMaterialImagePreview(null);
   document.getElementById('materialFormTitle').textContent = '+ Add New Ingredient';
   document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
   document.getElementById('btnCancelEditMaterial').style.display = 'none';
@@ -1961,6 +2029,22 @@ function initMaterialLibrary(){
   });
   document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
   document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
+
+  document.getElementById('mf-image').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const errEl = document.getElementById('materialFormError');
+    try{
+      setMaterialImagePreview(await resizeImageFile(file, 200));
+      errEl.textContent = '';
+    }catch(err){
+      errEl.textContent = err.message || 'Could not read that image file';
+    }
+  });
+  document.getElementById('btnRemoveMaterialImage').addEventListener('click', () => {
+    document.getElementById('mf-image').value = '';
+    setMaterialImagePreview(null);
+  });
 
   document.getElementById('btnAddMaterial').addEventListener('click', () => {
     const nameEn = document.getElementById('mf-nameEn').value.trim();
@@ -1979,7 +2063,8 @@ function initMaterialLibrary(){
       vendorName: document.getElementById('mf-vendorName').value.trim(),
       manufacturer: document.getElementById('mf-manufacturer').value.trim(),
       price: document.getElementById('mf-price').value.trim(),
-      moq: document.getElementById('mf-moq').value.trim()
+      moq: document.getElementById('mf-moq').value.trim(),
+      image: editingMaterialImage || ''
     });
 
     cancelEditMaterial();
