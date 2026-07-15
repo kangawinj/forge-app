@@ -501,6 +501,22 @@
     font-size:12px;
     padding:6px 0;
   }
+  .overview-ing-cell{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .overview-thumb{
+    width:28px;
+    height:28px;
+    object-fit:cover;
+    border-radius:5px;
+    border:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .overview-thumb-empty{
+    background:var(--accent-light);
+  }
 
   .batch-summary{
     display:flex;
@@ -1332,7 +1348,8 @@ const CHANGELOG = [
   { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" },
   { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" },
   { version: "3.0.8", date: "2026-07-15", note: "Compare Recipes: added a Print button that prints the comparison full-page (ingredients, costing, process steps) instead of being clipped by the modal's on-screen size" },
-  { version: "3.0.9", date: "2026-07-15", note: "Ingredient Library: can now attach a photo to each ingredient (auto-shrunk to a small thumbnail, stored with the entry — no separate file storage needed), shown as a thumbnail in the library table" }
+  { version: "3.0.9", date: "2026-07-15", note: "Ingredient Library: can now attach a photo to each ingredient (auto-shrunk to a small thumbnail, stored with the entry — no separate file storage needed), shown as a thumbnail in the library table" },
+  { version: "3.0.10", date: "2026-07-15", note: "Recipe Overview (all parts combined) now shows each ingredient's photo (from the Ingredient Library) next to its name" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2714,7 +2731,8 @@ function renderOverview(allIngredients){
   named.forEach(i => {
     const key = i.name.trim().toLowerCase();
     if(!groups.has(key)){
-      groups.set(key, { name: i.name.trim(), pct: 0, wt: 0 });
+      const material = i.materialId ? ingredientMaster.find(m => m.id === i.materialId) : null;
+      groups.set(key, { name: i.name.trim(), pct: 0, wt: 0, image: material ? material.image : '' });
     }
     const g = groups.get(key);
     g.pct += parseFloat(i.percent) || 0;
@@ -2728,7 +2746,12 @@ function renderOverview(allIngredients){
     const tr = document.createElement('tr');
     const barPct = Math.min(100, (g.pct / maxPct) * 100);
     tr.innerHTML = `
-      <td>${escapeHtml(g.name)}</td>
+      <td>
+        <div class="overview-ing-cell">
+          ${g.image ? `<img src="${escapeHtml(g.image)}" class="overview-thumb" alt="${escapeHtml(g.name)}">` : '<div class="overview-thumb overview-thumb-empty"></div>'}
+          <span>${escapeHtml(g.name)}</span>
+        </div>
+      </td>
       <td class="col-pct">
         <div class="overview-bar-wrap">
           <div class="overview-bar-track"><div class="overview-bar-fill" style="width:${barPct}%"></div></div>
