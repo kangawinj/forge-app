@@ -1,0 +1,2864 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Forge</title>
+<link rel="icon" type="image/svg+xml" href="Forge_Logo_Navy_Orange_Vector.svg">
+<style>
+  :root{
+    --bg:#f4f6f8;
+    --panel:#ffffff;
+    --border:#dfe3ea;
+    --text:#1c2333;
+    --text-dim:#6b7280;
+    --primary:#16294a;
+    --primary-dark:#0c1830;
+    --primary-light:#e8ecf5;
+    --accent:#ef7f24;
+    --accent-light:#fdece0;
+    --danger:#c0392b;
+    --danger-light:#fbeae8;
+    --ok:#2e8b3d;
+    --ok-light:#e6f4ea;
+    --radius:10px;
+    --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.08);
+    font-family:"Segoe UI","Leelawadee UI","Tahoma",sans-serif;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0;
+    background:var(--bg);
+    color:var(--text);
+    font-size:14px;
+  }
+  .app{
+    display:none;
+    grid-template-columns:280px 1fr;
+    min-height:100vh;
+    padding-bottom:28px;
+  }
+  .app-footer{
+    position:fixed;
+    left:0; right:0; bottom:0;
+    height:28px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    background:var(--primary-dark);
+    color:#fff;
+    font-size:11px;
+    letter-spacing:.02em;
+    z-index:10;
+  }
+  .app-footer .fv-version{font-weight:700;}
+  .app-footer .fv-dot{opacity:.6;}
+  /* Sidebar */
+  .sidebar{
+    background:var(--panel);
+    border-right:1px solid var(--border);
+    display:flex;
+    flex-direction:column;
+    padding:16px;
+  }
+  .brand{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    margin-bottom:16px;
+    cursor:pointer;
+    border-radius:8px;
+    padding:4px;
+    margin:-4px -4px 12px;
+    transition:background .15s;
+  }
+  .brand:hover{background:var(--primary-light);}
+  .brand-icon{
+    width:34px;height:34px;border-radius:8px;
+    background:#ffffff;
+    border:1px solid var(--border);
+    display:flex;align-items:center;justify-content:center;
+    padding:5px;
+    flex-shrink:0;
+  }
+  .brand-icon img{width:100%;height:100%;object-fit:contain;display:block;}
+  .brand-title{
+    font-weight:700;
+    font-size:15px;
+    line-height:1.2;
+  }
+  .brand-sub{
+    font-size:11px;
+    color:var(--text-dim);
+  }
+  .btn{
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--text);
+    padding:8px 12px;
+    border-radius:8px;
+    cursor:pointer;
+    font-size:13px;
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    transition:background .15s,border-color .15s;
+  }
+  .btn:hover{background:var(--primary-light);border-color:var(--primary);}
+  .btn-primary{
+    background:var(--primary);
+    border-color:var(--primary);
+    color:#fff;
+  }
+  .btn-primary:hover{background:var(--primary-dark);border-color:var(--primary-dark);}
+  .btn-danger{color:var(--danger);}
+  .btn-danger:hover{background:var(--danger-light);border-color:var(--danger);}
+  .btn-block{width:100%;justify-content:center;}
+  .btn-sm{padding:4px 8px;font-size:12px;}
+  .btn-icon{padding:6px 8px;line-height:1;}
+
+  .search-box{
+    margin:12px 0 8px;
+  }
+  .search-box input{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-size:13px;
+    font-family:inherit;
+  }
+  .recipe-list{
+    flex:1;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+  }
+  .recipe-item{
+    padding:10px 10px;
+    border-radius:8px;
+    cursor:pointer;
+    border:1px solid transparent;
+    position:relative;
+  }
+  .recipe-item:hover{background:var(--primary-light);}
+  .recipe-item.active{
+    background:var(--primary-light);
+    border-color:var(--primary);
+  }
+  .recipe-item .r-name{
+    font-weight:600;
+    font-size:13px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .recipe-item .r-meta{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .sidebar-footer{
+    border-top:1px solid var(--border);
+    padding-top:10px;
+    margin-top:10px;
+    display:flex;
+    flex-direction:column;
+    gap:6px;
+  }
+  .hidden-file{display:none;}
+
+  .user-info{
+    padding:8px 10px;
+    margin-bottom:14px;
+    background:var(--primary-light);
+    border:1px solid var(--border);
+    border-radius:8px;
+  }
+  .user-info-label{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:2px;
+  }
+  .user-info-email{
+    font-size:13px;
+    font-weight:600;
+    color:var(--primary-dark);
+    word-break:break-all;
+  }
+
+  /* Main */
+  .main{
+    padding:24px 32px 60px;
+    max-width:960px;
+  }
+  .main-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:16px;
+    margin-bottom:20px;
+    flex-wrap:wrap;
+  }
+  .save-status{
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .save-status.saved{color:var(--ok);}
+  .recipe-title-display{
+    font-size:54px;
+    font-weight:700;
+    color:var(--primary-dark);
+    line-height:1.15;
+    margin-bottom:6px;
+  }
+  .recipe-title-display .rt-code{
+    font-size:25px;
+    font-weight:600;
+    color:var(--text-dim);
+    font-family:"Consolas","Courier New",monospace;
+    margin-left:16px;
+    vertical-align:middle;
+  }
+  .toolbar{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+  .card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:20px;
+    margin-bottom:20px;
+  }
+  .card-title{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:15px;
+    font-weight:700;
+    color:var(--primary-dark);
+    margin-bottom:16px;
+  }
+  .step-badge{
+    width:22px;height:22px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    font-size:12px;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  label{
+    display:block;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+    font-weight:600;
+  }
+  input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], textarea{
+    width:100%;
+    padding:9px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-family:inherit;
+    font-size:14px;
+    background:#fff;
+    color:var(--text);
+  }
+  input:focus, textarea:focus{
+    outline:none;
+    border-color:var(--primary);
+    box-shadow:0 0 0 3px var(--primary-light);
+  }
+  input[readonly]{
+    background:#f1f3f0;
+    color:var(--text-dim);
+    cursor:default;
+  }
+  input[readonly]:focus{box-shadow:none;border-color:var(--border);}
+  textarea{resize:vertical;min-height:60px;}
+  .grid-2{
+    display:grid;
+    grid-template-columns:2fr 1fr;
+    gap:14px;
+  }
+  .grid-3{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  .field{margin-bottom:14px;}
+  .field:last-child{margin-bottom:0;}
+
+  .code-row{
+    display:flex;
+    align-items:stretch;
+    gap:0;
+  }
+  .code-prefix{
+    display:flex;
+    align-items:center;
+    padding:0 10px;
+    font-family:"Consolas","Courier New",monospace;
+    font-size:14px;
+    letter-spacing:.03em;
+    color:var(--text-dim);
+    background:#f1f3f0;
+    border:1px solid var(--border);
+    border-right:none;
+    border-radius:8px 0 0 8px;
+    white-space:nowrap;
+  }
+  .code-sep{
+    display:flex;
+    align-items:center;
+    padding:0 4px;
+    background:#f1f3f0;
+    border-top:1px solid var(--border);
+    border-bottom:1px solid var(--border);
+    color:var(--text-dim);
+    font-weight:700;
+  }
+  .code-suffix{
+    border-radius:0 8px 8px 0 !important;
+    font-family:"Consolas","Courier New",monospace;
+  }
+  .unit-input{border-radius:8px 0 0 8px !important;}
+  .unit-suffix{
+    display:flex;
+    align-items:center;
+    padding:0 10px;
+    font-size:14px;
+    color:var(--text-dim);
+    background:#f1f3f0;
+    border:1px solid var(--border);
+    border-left:none;
+    border-radius:0 8px 8px 0;
+    white-space:nowrap;
+  }
+
+  table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:13px;
+  }
+  th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--text-dim);
+    border-bottom:2px solid var(--border);
+    padding:6px 6px;
+  }
+  td{
+    padding:5px 6px;
+    border-bottom:1px solid var(--border);
+    vertical-align:middle;
+  }
+  td input{padding:7px 8px;font-size:13px;}
+  .col-no{width:34px;color:var(--text-dim);text-align:center;}
+  .col-pct{width:100px;}
+  .col-wt{width:110px;}
+  .col-del{width:34px;text-align:center;}
+  .num-input{text-align:right;}
+  tfoot td{
+    border-bottom:none;
+    border-top:2px solid var(--border);
+    font-weight:700;
+    padding-top:8px;
+  }
+  .totals-warn{color:var(--danger);}
+  .totals-ok{color:var(--ok);}
+  .icon-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-size:15px;
+    padding:4px;
+    border-radius:6px;
+    line-height:1;
+  }
+  .icon-btn:hover{background:var(--danger-light);color:var(--danger);}
+  .add-row-btn{margin-top:10px;}
+
+  .part-block{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px 14px 16px;
+    margin-bottom:16px;
+    background:#fbfcfb;
+  }
+  .part-block:last-child{margin-bottom:0;}
+  .part-block.collapsed{padding-bottom:14px;}
+  .part-header{
+    margin-bottom:10px;
+    display:flex;
+    align-items:center;
+    gap:6px;
+  }
+  .part-header input{
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+    border:1px solid transparent;
+    background:transparent;
+    padding:4px 6px;
+    max-width:320px;
+  }
+  .part-header input:hover{border-color:var(--border);}
+  .part-header input:focus{background:#fff;}
+  .part-toggle-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-dim);
+    font-size:12px;
+    padding:4px 6px;
+    border-radius:6px;
+    line-height:1;
+    flex-shrink:0;
+    transition:transform .15s;
+  }
+  .part-toggle-btn:hover{background:var(--primary-light);color:var(--primary);}
+  .part-toggle-btn.open{transform:rotate(90deg);}
+  .part-header-summary{
+    margin-left:auto;
+    font-size:12px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .part-block.collapsed .part-body{display:none;}
+  .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
+  .grand-total-box{
+    display:flex;
+    gap:28px;
+    align-items:center;
+    justify-content:flex-end;
+    margin-top:4px;
+    padding:12px 16px;
+    background:var(--primary-light);
+    border:1px solid var(--primary);
+    border-radius:8px;
+    font-weight:700;
+    font-size:14px;
+  }
+  .grand-total-box .gt-label{
+    margin-right:auto;
+    color:var(--primary-dark);
+    font-weight:700;
+  }
+
+  .overview-block{
+    margin:4px 0 14px;
+    padding:14px 16px;
+    background:#fbfaf6;
+    border:1px solid var(--accent);
+    border-radius:8px;
+  }
+  .overview-title{
+    font-weight:700;
+    font-size:13px;
+    color:var(--accent);
+    margin-bottom:8px;
+  }
+  .overview-block table{font-size:13px;}
+  .overview-block th{border-bottom:2px solid var(--border);}
+  .overview-bar-wrap{
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .overview-bar-track{
+    flex:1;
+    height:8px;
+    background:var(--border);
+    border-radius:4px;
+    overflow:hidden;
+  }
+  .overview-bar-fill{
+    height:100%;
+    background:var(--accent);
+    border-radius:4px;
+  }
+  .overview-empty{
+    color:var(--text-dim);
+    font-size:12px;
+    padding:6px 0;
+  }
+
+  .batch-summary{
+    display:flex;
+    flex-wrap:wrap;
+    gap:24px;
+    align-items:flex-end;
+    margin-bottom:16px;
+    padding:14px 16px;
+    background:var(--primary-light);
+    border:1px solid var(--primary);
+    border-radius:8px;
+  }
+  .batch-stat-label{
+    font-size:12px;
+    color:var(--text-dim);
+    font-weight:600;
+    margin-bottom:2px;
+  }
+  .batch-stat-value{
+    font-size:22px;
+    font-weight:700;
+    color:var(--primary-dark);
+  }
+  .batch-scale-row{
+    display:flex;
+    gap:8px;
+  }
+  .batch-scale-row input{width:140px;}
+  .ing-pct-display{
+    display:block;
+    text-align:right;
+    padding:7px 8px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dim);
+    background:#f1f3f0;
+    border:1px solid transparent;
+    border-radius:8px;
+  }
+
+  .ing-name-cell{
+    min-width:180px;
+  }
+  .ing-name-row{
+    display:flex;
+    gap:4px;
+    align-items:center;
+  }
+  .ing-name-row input{flex:1;}
+  .ing-linked{
+    border-color:var(--primary) !important;
+    background:var(--primary-light);
+  }
+  .ing-name.invalid{
+    border-color:var(--danger) !important;
+    background:var(--danger-light);
+  }
+  .ing-hint{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .ing-hint.hint-block{
+    color:var(--danger);
+    font-weight:600;
+  }
+  .ing-hint.ing-hint-code{
+    color:var(--primary);
+    font-weight:600;
+    font-family:"Consolas","Courier New",monospace;
+  }
+  .ing-wt:disabled{
+    background:#f1f3f0;
+    color:var(--text-dim);
+    cursor:not-allowed;
+  }
+  .material-lib-btn{margin-bottom:16px;}
+
+  .modal-overlay{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(12,24,48,.55);
+    align-items:center;
+    justify-content:center;
+    z-index:100;
+    padding:20px;
+  }
+  .modal-overlay.open{display:flex;}
+  .modal{
+    background:var(--panel);
+    border-radius:var(--radius);
+    width:100%;
+    max-width:820px;
+    max-height:88vh;
+    display:flex;
+    flex-direction:column;
+    box-shadow:0 10px 40px rgba(0,0,0,.25);
+  }
+  .modal-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:16px 20px;
+    border-bottom:1px solid var(--border);
+  }
+  .modal-title{
+    font-weight:700;
+    font-size:15px;
+    color:var(--primary-dark);
+  }
+  .modal-body{
+    padding:20px;
+    overflow-y:auto;
+  }
+  .material-add-form{
+    background:var(--accent-light);
+    border:1px solid var(--accent);
+    border-radius:8px;
+    padding:16px;
+    margin-bottom:20px;
+  }
+  .material-search{margin-bottom:12px;}
+  .material-table th{white-space:nowrap;}
+  .material-table td{font-size:12px;}
+  .material-table td:last-child{white-space:nowrap;}
+  .material-empty{
+    color:var(--text-dim);
+    font-size:12px;
+    padding:16px 0;
+    text-align:center;
+  }
+
+  .compare-modal{max-width:1180px;}
+  .compare-pickers{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .compare-toggle-label{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:13px;
+    font-weight:600;
+    color:var(--text-dim);
+    margin-bottom:16px;
+    cursor:pointer;
+  }
+  .compare-toggle-label input{width:auto;cursor:pointer;}
+  .compare-picker-col{
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fbfcfb;
+  }
+  .compare-picker-col label{margin-bottom:6px;}
+  .compare-picker-col select{
+    width:100%;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-family:inherit;
+    font-size:13px;
+    background:#fff;
+  }
+  .compare-empty{
+    text-align:center;
+    color:var(--text-dim);
+    padding:40px 20px;
+    font-size:13px;
+  }
+  .compare-info-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+    margin-bottom:20px;
+  }
+  .compare-info-col{
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fbfcfb;
+  }
+  .compare-info-col .ci-name{
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+    margin-bottom:6px;
+  }
+  .compare-info-col .ci-row{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:3px;
+  }
+  .compare-info-col .ci-row b{color:var(--text);font-weight:600;}
+  .compare-section-title{
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+    margin:20px 0 10px;
+  }
+  .compare-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .compare-table th, .compare-table td{
+    padding:6px 8px;
+    border-bottom:1px solid var(--border);
+    text-align:right;
+  }
+  .compare-table th:first-child, .compare-table td:first-child{text-align:left;}
+  .compare-table th{
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    border-bottom:2px solid var(--border);
+  }
+  .compare-table tr.diff-row{background:var(--accent-light);}
+  .compare-table tr.total-row td{
+    border-top:2px solid var(--border);
+    border-bottom:none;
+    font-weight:700;
+  }
+  .compare-missing{color:var(--text-dim);}
+  .compare-steps-grid{
+    display:grid;
+    grid-template-columns:repeat(3,1fr);
+    gap:14px;
+  }
+  .compare-steps-col{
+    padding:12px 14px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fbfcfb;
+    font-size:13px;
+  }
+  .compare-steps-col ol{margin:0 0 12px;padding-left:18px;}
+  .compare-steps-col li{margin-bottom:8px;line-height:1.5;}
+  .compare-process-title{
+    font-weight:700;
+    font-size:12px;
+    color:var(--accent);
+    margin:10px 0 4px;
+  }
+  .compare-process-title:first-of-type{margin-top:0;}
+  .compare-legend{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:8px;
+  }
+  .compare-legend .swatch{
+    display:inline-block;
+    width:10px;height:10px;
+    background:var(--accent-light);
+    border:1px solid var(--accent);
+    border-radius:2px;
+    margin-right:4px;
+    vertical-align:middle;
+  }
+
+  .lock-banner{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    padding:10px 16px;
+    border-radius:8px;
+    margin-bottom:16px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .lock-banner.locked{
+    background:var(--danger-light);
+    border:1px solid var(--danger);
+    color:var(--danger);
+  }
+  .lock-banner.unlocked{
+    background:var(--ok-light);
+    border:1px solid var(--ok);
+    color:var(--ok);
+  }
+  .danger-zone{
+    margin-top:24px;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+  }
+
+  /* ---------- Auth / Home full-page screens ---------- */
+  .fullpage-screen{
+    display:none;
+    min-height:100vh;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:var(--bg);
+  }
+  .fullpage-screen.active{display:flex;}
+  .auth-card{
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:32px;
+    width:100%;
+    max-width:380px;
+  }
+  .auth-logo{
+    width:64px;height:64px;
+    margin:0 auto 12px;
+    display:block;
+  }
+  .auth-title{
+    text-align:center;
+    font-size:20px;
+    font-weight:700;
+    color:var(--primary-dark);
+  }
+  .auth-sub{
+    text-align:center;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:24px;
+  }
+  .auth-tabs{
+    display:flex;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:20px;
+  }
+  .auth-tab-btn{
+    flex:1;
+    padding:9px;
+    border:none;
+    background:var(--panel);
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .auth-tab-btn.active{background:var(--primary);color:#fff;}
+  .auth-form{display:none;}
+  .auth-form.active{display:block;}
+  .auth-form .field label{text-align:center;}
+  .auth-form .field input{text-align:center;}
+  .auth-error{text-align:center;}
+  .auth-error{
+    color:var(--danger);
+    font-size:12px;
+    min-height:16px;
+    margin:6px 0 10px;
+  }
+  .auth-success{
+    color:var(--ok);
+    font-size:12px;
+    min-height:16px;
+    margin:6px 0 10px;
+  }
+
+  .home-desc{
+    font-size:14px;
+    color:var(--text-dim);
+    line-height:1.7;
+    margin-bottom:24px;
+  }
+  .home-welcome{
+    font-size:13px;
+    color:var(--text);
+    margin-bottom:20px;
+  }
+
+  .steps-list, .process-steps-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+  }
+  .step-row{
+    display:flex;
+    gap:10px;
+    align-items:flex-start;
+  }
+  .step-body{flex:1;}
+  .step-controls{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    padding-top:2px;
+  }
+
+  .processes-list{
+    display:flex;
+    flex-direction:column;
+    gap:16px;
+    margin-bottom:16px;
+  }
+  .process-block{
+    border:1px solid var(--border);
+    border-radius:8px;
+    padding:14px 14px 16px;
+    background:#fbfcfb;
+  }
+  .process-header{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-bottom:12px;
+  }
+  .process-header .process-title{
+    flex:1;
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+    border:1px solid transparent;
+    background:transparent;
+    padding:4px 6px;
+  }
+  .process-header .process-title:hover{border-color:var(--border);}
+  .process-header .process-title:focus{background:#fff;}
+  .process-steps-list{margin-bottom:10px;}
+
+  .empty-state{
+    text-align:center;
+    color:var(--text-dim);
+    padding:60px 20px;
+  }
+  .empty-state.in-app-home{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:80px 20px;
+  }
+  .empty-state.in-app-home .home-desc,
+  .empty-state.in-app-home .home-welcome{
+    max-width:480px;
+    text-align:center;
+  }
+  .empty-state.in-app-home img{
+    width:72px;height:72px;
+    margin-bottom:16px;
+  }
+  .empty-state.in-app-home .eh-title{
+    font-size:20px;
+    font-weight:700;
+    color:var(--primary-dark);
+    margin-bottom:4px;
+  }
+  .empty-state.in-app-home .eh-sub{
+    font-size:13px;
+    color:var(--accent);
+    font-weight:600;
+    margin-bottom:16px;
+  }
+  .empty-state.in-app-home .eh-hint{
+    font-size:13px;
+    color:var(--text-dim);
+    max-width:360px;
+    line-height:1.6;
+  }
+
+  @media print{
+    .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
+    .app{display:block !important;}
+    .main{max-width:100%;padding:0;}
+    .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+    body{background:#fff;}
+  }
+
+  @media (max-width:800px){
+    .app{grid-template-columns:1fr;}
+    .sidebar{
+      border-right:none;
+      border-bottom:1px solid var(--border);
+      max-height:340px;
+      overflow-y:auto;
+    }
+    .grid-2,.grid-3{grid-template-columns:1fr;}
+  }
+</style>
+</head>
+<body>
+
+<div class="fullpage-screen" id="authScreen">
+  <div class="auth-card">
+    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+    <div class="auth-title">Forge</div>
+    <div class="auth-sub">Food Product Development</div>
+
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="tabLoginBtn">Log In</button>
+      <button class="auth-tab-btn" id="tabRegisterBtn">Sign Up</button>
+    </div>
+
+    <form class="auth-form active" id="loginForm">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-username" autocomplete="username">
+      </div>
+      <div class="field">
+        <label>Password</label>
+        <input type="password" id="login-password" autocomplete="current-password">
+      </div>
+      <div class="auth-error" id="loginError"></div>
+      <button type="submit" class="btn btn-primary btn-block">Log In</button>
+    </form>
+
+    <form class="auth-form" id="registerForm">
+      <div class="field">
+        <label>Email (must be @th-umios.com)</label>
+        <input type="email" id="reg-username" autocomplete="username" placeholder="you@th-umios.com">
+      </div>
+      <div class="field">
+        <label>Password (at least 6 characters)</label>
+        <input type="password" id="reg-password" autocomplete="new-password">
+      </div>
+      <div class="field">
+        <label>Confirm Password</label>
+        <input type="password" id="reg-password2" autocomplete="new-password">
+      </div>
+      <div class="auth-error" id="registerError"></div>
+      <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+    </form>
+  </div>
+</div>
+
+<div class="app" id="appRoot">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-icon">
+        <img src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+      </div>
+      <div>
+        <div class="brand-title">Forge</div>
+        <div class="brand-sub">Food Product Development</div>
+      </div>
+    </div>
+
+    <div class="user-info">
+      <div class="user-info-label">Logged in as</div>
+      <div class="user-info-email" id="sidebarUserEmail"></div>
+    </div>
+
+    <button class="btn btn-primary btn-block" id="btnNew">+ New Recipe</button>
+    <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">⚖️ Compare Recipes</button>
+    <button class="btn btn-block" id="btnOpenMaterialLibSidebar" style="margin-top:8px;">📚 Ingredient Library</button>
+
+    <div class="search-box">
+      <input type="text" id="searchInput" placeholder="Search product name...">
+    </div>
+
+    <div class="recipe-list" id="recipeList"></div>
+
+    <div class="sidebar-footer">
+      <button class="btn btn-sm" id="btnExportAll">⬇ Export All (JSON)</button>
+      <button class="btn btn-sm" id="btnImport">⬆ Import (JSON)</button>
+      <input type="file" id="importFile" class="hidden-file" accept="application/json">
+      <button class="btn btn-sm" id="btnLogoutFromApp">🚪 Log Out</button>
+    </div>
+  </aside>
+
+  <main class="main" id="mainArea">
+    <!-- rendered by JS -->
+  </main>
+</div>
+
+<footer class="app-footer" id="appFooter"></footer>
+
+<div id="cloudErrorBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:#c0392b;color:#fff;padding:10px 16px;font-size:13px;text-align:center;"></div>
+
+<datalist id="materialDatalist"></datalist>
+
+<div class="modal-overlay" id="materialModalOverlay">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title">📚 Ingredient Library</div>
+      <button class="icon-btn" id="btnCloseMaterialModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="material-add-form">
+        <div class="card-title" id="materialFormTitle" style="font-size:13px;margin-bottom:10px;">+ Add New Ingredient</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>1. Ingredient Name (English)*</label>
+            <input type="text" id="mf-nameEn" placeholder="e.g. Vegan Mayonnaise">
+          </div>
+          <div class="field">
+            <label>2. Ingredient Name (Thai)*</label>
+            <input type="text" id="mf-nameTh" placeholder="Thai name">
+          </div>
+          <div class="field">
+            <label>3. Vendor Code (from supplier)</label>
+            <input type="text" id="mf-vendorCode" placeholder="e.g. RM-00123">
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>4. Vendor Name</label>
+            <input type="text" id="mf-vendorName" placeholder="e.g. ABC Co., Ltd.">
+          </div>
+          <div class="field">
+            <label>5. Manufacturer Name (if any)</label>
+            <input type="text" id="mf-manufacturer" placeholder="e.g. XYZ Manufacturing">
+          </div>
+          <div class="field">
+            <label>6. Price/kg (฿)</label>
+            <div class="code-row">
+              <span class="code-prefix">฿</span>
+              <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00" class="code-suffix">
+            </div>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>7. MOQ/kg (if any)</label>
+            <div class="code-row">
+              <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25" class="unit-input">
+              <span class="unit-suffix">kg</span>
+            </div>
+          </div>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
+        <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
+        <span class="ing-hint" id="materialFormError"></span>
+      </div>
+
+      <div class="material-search">
+        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor)...">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="material-table">
+          <thead>
+            <tr>
+              <th>English</th>
+              <th>Thai</th>
+              <th>Code</th>
+              <th>Vendor</th>
+              <th>Manufacturer</th>
+              <th>Price/kg (฿)</th>
+              <th>MOQ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="materialTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="authConfirmModalOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title" id="authConfirmTitle">Confirm Identity</div>
+      <button class="icon-btn" id="btnCloseAuthConfirm" title="Cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:0;" id="authConfirmMessage"></p>
+      <form id="authConfirmForm">
+        <div class="field" id="authConfirmEmailField" style="display:none;">
+          <label>Approver Email</label>
+          <input type="email" id="authConfirmEmail" autocomplete="username" readonly>
+        </div>
+        <div class="field">
+          <label>Password</label>
+          <input type="password" id="authConfirmPassword" autocomplete="current-password">
+        </div>
+        <div class="auth-error" id="authConfirmError"></div>
+        <button type="submit" class="btn btn-primary btn-block">Confirm</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="compareModalOverlay">
+  <div class="modal compare-modal">
+    <div class="modal-header">
+      <div class="modal-title">⚖️ Compare Recipes</div>
+      <button class="icon-btn" id="btnCloseCompareModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="compare-pickers" id="comparePickers"></div>
+      <div id="compareContent"></div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+/* ---------- Firebase (shared cloud backend) ----------
+   Every device that opens this file talks to the same Firebase project, so
+   recipes and the ingredient library sync across computers automatically.
+   access is controlled by Firestore security rules + Firebase Auth. */
+import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+import {
+  getAuth, onAuthStateChanged, signInWithEmailAndPassword,
+  createUserWithEmailAndPassword, signOut,
+  EmailAuthProvider, reauthenticateWithCredential
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import {
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyCAgzfoTpXFCOijaenipzH1Ev1gYXOceTU",
+  authDomain: "forge-food-dev.firebaseapp.com",
+  projectId: "forge-food-dev",
+  storageBucket: "forge-food-dev.firebasestorage.app",
+  messagingSenderId: "887048653492",
+  appId: "1:887048653492:web:deb9535727e37fb1fea5e1",
+  measurementId: "G-JXPV3WHGTE"
+};
+
+const firebaseApp = initializeApp(firebaseConfig);
+const auth = getAuth(firebaseApp);
+const db = getFirestore(firebaseApp);
+const recipesCol = collection(db, "recipes");
+const materialsCol = collection(db, "ingredientMaster");
+
+/* Secondary, isolated Firebase app instance used only to verify the delete
+   approver's password and perform the delete itself — signing in here never
+   touches the main `auth` session, so whoever is actually browsing the app
+   stays logged in as themselves throughout. */
+const approverApp = initializeApp(firebaseConfig, "approver");
+const approverAuth = getAuth(approverApp);
+const approverDb = getFirestore(approverApp);
+const approverRecipesCol = collection(approverDb, "recipes");
+
+/* New sign-ups are restricted to this company email domain (plus the
+   approver email below) — enforced here client-side, and again in
+   Firestore security rules server-side. */
+const ALLOWED_EMAIL_DOMAIN = "th-umios.com";
+
+/* Deleting a recipe always requires this specific account's email + password,
+   regardless of who is currently logged in — verified via a separate,
+   isolated Firebase auth session (see approverAuth above) so it never
+   disturbs the main logged-in user's session. Enforced again in Firestore
+   security rules server-side (only this email may perform a delete). */
+const DELETE_APPROVER_EMAIL = "kangawin@th-umios.com";
+
+function showCloudError(message){
+  const el = document.getElementById('cloudErrorBanner');
+  if(!el) return;
+  el.textContent = message;
+  el.style.display = 'block';
+}
+
+/* MAINTENANCE: every time this file is edited, add a new entry to CHANGELOG
+   below (bump the version, today's date, one short line on what changed).
+   The footer at the bottom of the page always displays the latest entry. */
+const APP_NAME = "Forge";
+const CHANGELOG = [
+  { version: "1.0.0", date: "2026-07-13", note: "Renamed the program to Forge and added a version indicator in the footer" },
+  { version: "1.0.1", date: "2026-07-13", note: "Renamed the file to Forge.html and translated the subtitle under the program name to English" },
+  { version: "1.1.0", date: "2026-07-13", note: "Changed the logo to the letter F and updated the color scheme to navy/orange to match the logo, plus added a favicon" },
+  { version: "1.2.0", date: "2026-07-13", note: "Recipe code changed to the YYYYMMDD-XX format, with the first 8 digits auto-filled from the recipe date and XX entered manually" },
+  { version: "1.3.0", date: "2026-07-13", note: "Added a shared ingredient library (EN/TH name, vendor code, vendor, manufacturer, price, MOQ) — select an existing ingredient from the name field on each row, or add a new one via the ingredient library window" },
+  { version: "1.4.0", date: "2026-07-13", note: "Switched to the client's actual vector logo file (Forge_Logo_Navy_Orange_Vector.svg) in both the app and the desktop icon, and locked out entering a weight for ingredients not yet in the library" },
+  { version: "1.4.1", date: "2026-07-13", note: "Changed how ingredient names are displayed in the library to show the English name before the Thai name (previously Thai came first)" },
+  { version: "1.5.0", date: "2026-07-13", note: "Added sign-up/login — every time the program is opened, users must log in first before reaching the start page (logo + description), and every recipe opens read-only until identity is confirmed with a password to unlock editing or deletion" },
+  { version: "1.6.0", date: "2026-07-13", note: "Added a recipe comparison page — select up to 3 recipes, see basic info, ingredient % compared row by row (differences highlighted), and process steps compared side by side" },
+  { version: "1.7.0", date: "2026-07-13", note: "Export/Import JSON buttons now include the ingredient library too (previously recipes only), for complete backups/machine transfers. User accounts are still excluded for security; old files still import normally" },
+  { version: "2.0.0", date: "2026-07-13", note: "Moved data storage from a single machine (localStorage) to a shared Firebase backend — recipes and the ingredient library are now the same no matter which device opens the app. The account system switched to Firebase Authentication (log in with email instead of a username)" },
+  { version: "2.1.0", date: "2026-07-13", note: "Show the logged-in user's email in the left sidebar, right below the program name and logo" },
+  { version: "2.1.1", date: "2026-07-13", note: "Confirming identity to edit/delete a recipe now only asks for the password (no need to re-enter the email, since you're already logged in)" },
+  { version: "2.2.0", date: "2026-07-13", note: "Translated the entire interface into English" },
+  { version: "2.3.0", date: "2026-07-13", note: "New sign-ups restricted to @th-umios.com email addresses only, enforced both in the sign-up form and in Firestore security rules" },
+  { version: "2.4.0", date: "2026-07-13", note: "Moved the Delete Recipe button to the bottom of the recipe. It's now only visible to kangawin@th-umios.com — everyone else no longer sees it at all" },
+  { version: "2.5.0", date: "2026-07-13", note: "Delete Recipe is visible to everyone again, but deleting now always requires the email + password of kangawin@th-umios.com specifically, verified through an isolated sign-in that never disturbs the current user's own session" },
+  { version: "2.5.1", date: "2026-07-14", note: "Fixed the delete confirmation showing \"incorrect email or password\" even when sign-in succeeded but the delete itself failed (e.g. a Firestore rules issue) — now shows the real error in that case" },
+  { version: "2.6.0", date: "2026-07-14", note: "The main panel no longer auto-selects a recipe. Entering the app, and after deleting the recipe you were viewing, now shows a blank in-app homepage (logo + description) until you explicitly click a recipe in the list" },
+  { version: "2.6.1", date: "2026-07-14", note: "Stopped auto-creating a blank \"Untitled recipe\" whenever the recipe list became empty (was happening on every login and after every delete). The approver email field in the delete-confirmation modal is now pre-filled and locked — only the password needs to be typed" },
+  { version: "2.7.0", date: "2026-07-14", note: "Removed the separate post-login \"Home\" screen and its Manage Recipes / Log Out buttons. Logging in now goes straight to the recipe list + sidebar, with the welcome message and app description merged into the blank in-app homepage shown until a recipe is selected" },
+  { version: "2.7.1", date: "2026-07-14", note: "Centered the Login and Sign Up form fields (labels and input text) so they line up with the rest of the centered auth card" },
+  { version: "2.7.2", date: "2026-07-14", note: "Fixed the real cause of the misaligned Login/Sign Up input boxes: input[type=email] and input[type=password] were missing from the base input styling rule, so they rendered as tiny default browser boxes instead of full-width fields. Now styled and sized consistently with every other input in the app" },
+  { version: "2.7.3", date: "2026-07-14", note: "Fixed the mobile/narrow-screen layout where the sidebar's text would overflow its box and visually overlap the recipe panel below it — the sidebar now scrolls within its own height instead of spilling over" },
+  { version: "2.8.0", date: "2026-07-14", note: "Section 1: Date now sits right after Product Name, before Recipe Code. Ingredient rows show the vendor code once linked to the library. Ingredient parts collapse by default when empty (click to expand) instead of always showing all 4. Process Steps restructured into named process groups, each with its own numbered sub-steps and an Add Step button, plus an Add Process button. Compare Recipes now labels each recipe as \"Name - XX\" using the last 2 characters of its code" },
+  { version: "2.8.1", date: "2026-07-14", note: "Fixed ingredient picker not distinguishing between library entries that share the same name but come from different vendors (e.g. two \"Modified Starch\" entries with different codes) — selecting either one always linked to whichever was added first. The picker list and matching now include the vendor code in the label, e.g. \"Modified Starch / แป้งดัดแปร (RM-002)\", so each option is unambiguous" },
+  { version: "2.8.2", date: "2026-07-14", note: "Compare Recipes: added a \"Show ingredient codes\" checkbox to toggle the vendor code on/off in the ingredient comparison list. Fixed the Total row sometimes showing 99.99% instead of 100.00% — it was summing each ingredient's already-rounded percentage instead of deriving the total directly from weight, the same rounding-drift bug fixed earlier on the main recipe page" },
+  { version: "2.9.0", date: "2026-07-14", note: "Compare Recipes: moved the \"Show ingredient codes\" checkbox to sit under the Compare Ingredients heading, and added a Compare Costing section (weight x library price/kg per ingredient, plus a Total Cost per recipe). Ingredient Library: added Edit and Copy buttons per row so entries can be corrected or used as a template for a similar ingredient, instead of only Delete" },
+  { version: "2.9.1", date: "2026-07-14", note: "Relabeled the ingredient library's \"Price\" field to \"Price/kg (฿)\" and added a ฿ prefix wherever it's shown or used (library table, tooltip, Compare Costing) so the currency and unit are explicit instead of assumed" },
+  { version: "2.9.2", date: "2026-07-14", note: "Added an \"Ingredient Library\" button directly in the sidebar so the library can be opened without first selecting a recipe" },
+  { version: "3.0.0", date: "2026-07-14", note: "Added a large Product Name + Recipe Code title at the top of the recipe panel. The unlock banner is now green when editable and stays red when read-only (was navy before). The idle \"Ready\" save-status label is now green like \"Saved\". Clicking the Forge logo in the sidebar now returns to the blank in-app homepage" },
+  { version: "3.0.1", date: "2026-07-14", note: "Enlarged the Product Name + Recipe Code title to 60px. Swapped the order of Recipe Code and Description/Concept in section 1 (Description now comes first, Recipe Code second)" },
+  { version: "3.0.2", date: "2026-07-14", note: "Adjusted the Product Name + Recipe Code title size from 60px down to 54px" },
+  { version: "3.0.3", date: "2026-07-14", note: "MOQ field in the Ingredient Library is now a fixed-unit \"kg\" number input (numbers only, unit shown as a suffix) instead of free text. Existing entries saved as free text (e.g. \"25 kg\") still display and edit correctly" }
+];
+const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
+const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
+
+function renderFooter(){
+  const el = document.getElementById('appFooter');
+  if(!el) return;
+  const history = CHANGELOG.slice().reverse()
+    .map(c => `v${c.version} (${c.date}): ${c.note}`)
+    .join('\n');
+  el.title = history;
+  el.innerHTML = `
+    <span>${escapeHtml(APP_NAME)}</span>
+    <span class="fv-version">v${escapeHtml(APP_VERSION)}</span>
+    <span class="fv-dot">·</span>
+    <span>Last updated ${escapeHtml(APP_UPDATED)}</span>
+  `;
+}
+
+/* ---------- Auth (Firebase Authentication) ----------
+   Every teammate signs in with their own email/password, managed by Firebase
+   — real per-user accounts shared across every device, not per-browser. */
+let currentUser = null; // Firebase User, set by onAuthStateChanged
+let appView = 'auth'; // 'auth' | 'home' | 'app'
+let unlockedRecipeId = null;
+let pendingAuthCallback = null;
+
+function authErrorMessage(err){
+  const map = {
+    'auth/invalid-email': 'Invalid email',
+    'auth/user-not-found': 'Account not found — please sign up first',
+    'auth/wrong-password': 'Incorrect email or password',
+    'auth/invalid-credential': 'Incorrect email or password',
+    'auth/email-already-in-use': 'This account already exists — please log in instead',
+    'auth/weak-password': 'Password must be at least 6 characters'
+  };
+  return map[err.code] || ('Error: ' + err.message);
+}
+
+function renderApp(){
+  document.getElementById('authScreen').classList.toggle('active', appView === 'auth');
+  document.getElementById('appRoot').style.display = appView === 'app' ? 'grid' : 'none';
+  document.getElementById('sidebarUserEmail').textContent = currentUser ? currentUser.email : '';
+}
+
+function goToAuth(){
+  signOut(auth);
+}
+
+function goToApp(){
+  currentId = null;
+  unlockedRecipeId = null;
+  appView = 'app';
+  renderApp();
+  renderSidebar();
+  renderMain();
+}
+
+function initAuthScreen(){
+  const tabLogin = document.getElementById('tabLoginBtn');
+  const tabRegister = document.getElementById('tabRegisterBtn');
+  const loginForm = document.getElementById('loginForm');
+  const registerForm = document.getElementById('registerForm');
+
+  tabLogin.addEventListener('click', () => {
+    tabLogin.classList.add('active');
+    tabRegister.classList.remove('active');
+    loginForm.classList.add('active');
+    registerForm.classList.remove('active');
+  });
+  tabRegister.addEventListener('click', () => {
+    tabRegister.classList.add('active');
+    tabLogin.classList.remove('active');
+    registerForm.classList.add('active');
+    loginForm.classList.remove('active');
+  });
+
+  loginForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('login-username').value.trim();
+    const password = document.getElementById('login-password').value;
+    const errEl = document.getElementById('loginError');
+    errEl.textContent = '';
+    signInWithEmailAndPassword(auth, email, password)
+      .catch(err => { errEl.textContent = authErrorMessage(err); });
+  });
+
+  registerForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const email = document.getElementById('reg-username').value.trim();
+    const password = document.getElementById('reg-password').value;
+    const password2 = document.getElementById('reg-password2').value;
+    const errEl = document.getElementById('registerError');
+
+    const emailLower = email.toLowerCase();
+    if(!emailLower.endsWith('@' + ALLOWED_EMAIL_DOMAIN) && emailLower !== DELETE_APPROVER_EMAIL.toLowerCase()){
+      errEl.textContent = `Only @${ALLOWED_EMAIL_DOMAIN} email addresses can sign up`;
+      return;
+    }
+    if(password.length < 6){
+      errEl.textContent = 'Password must be at least 6 characters';
+      return;
+    }
+    if(password !== password2){
+      errEl.textContent = 'Passwords do not match';
+      return;
+    }
+    errEl.textContent = '';
+    createUserWithEmailAndPassword(auth, email, password)
+      .catch(err => { errEl.textContent = authErrorMessage(err); });
+  });
+}
+
+let pendingRequiredEmail = null;
+let pendingApproverAction = null;
+
+/* options: { requireEmail, approverAction } — when requireEmail is set, the
+   modal asks for that specific account's email + password (verified via the
+   isolated approverAuth session above) and runs approverAction() while still
+   signed in as the approver, before signing back out. Omit both to fall back
+   to the normal "confirm your own password" flow for the logged-in user. */
+function requestAuthConfirm(title, message, onSuccess, options = {}){
+  document.getElementById('authConfirmTitle').textContent = title;
+  document.getElementById('authConfirmMessage').textContent = message;
+  document.getElementById('authConfirmForm').reset();
+  document.getElementById('authConfirmError').textContent = '';
+  pendingAuthCallback = onSuccess;
+  pendingRequiredEmail = options.requireEmail || null;
+  pendingApproverAction = options.approverAction || null;
+  document.getElementById('authConfirmEmailField').style.display = pendingRequiredEmail ? 'block' : 'none';
+  if(pendingRequiredEmail){
+    document.getElementById('authConfirmEmail').value = pendingRequiredEmail;
+  }
+  document.getElementById('authConfirmModalOverlay').classList.add('open');
+  document.getElementById('authConfirmPassword').focus();
+}
+
+function closeAuthConfirm(){
+  document.getElementById('authConfirmModalOverlay').classList.remove('open');
+  pendingAuthCallback = null;
+  pendingRequiredEmail = null;
+  pendingApproverAction = null;
+}
+
+function initAuthConfirmModal(){
+  document.getElementById('btnCloseAuthConfirm').addEventListener('click', closeAuthConfirm);
+  document.getElementById('authConfirmModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'authConfirmModalOverlay') closeAuthConfirm();
+  });
+  document.getElementById('authConfirmForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const password = document.getElementById('authConfirmPassword').value;
+    const errEl = document.getElementById('authConfirmError');
+
+    if(pendingRequiredEmail){
+      const enteredEmail = document.getElementById('authConfirmEmail').value.trim();
+      if(enteredEmail.toLowerCase() !== pendingRequiredEmail.toLowerCase()){
+        errEl.textContent = 'Incorrect email or password';
+        return;
+      }
+      const action = pendingApproverAction;
+      signInWithEmailAndPassword(approverAuth, enteredEmail, password)
+        .then(() => {
+          // Signed in successfully — from here on, any failure is NOT a
+          // credential problem, so surface the real reason instead of the
+          // generic "incorrect email or password" message.
+          return Promise.resolve(action ? action() : null)
+            .then(() => signOut(approverAuth))
+            .then(() => {
+              const callback = pendingAuthCallback;
+              closeAuthConfirm();
+              if(callback) callback();
+            })
+            .catch(err => {
+              signOut(approverAuth);
+              console.error('Forge: approver action failed', err);
+              errEl.textContent = 'Signed in, but the action itself failed: ' + err.message;
+            });
+        })
+        .catch(err => {
+          console.error('Forge: approver sign-in failed', err);
+          errEl.textContent = 'Incorrect email or password';
+        });
+      return;
+    }
+
+    if(!currentUser){
+      errEl.textContent = 'Session expired — please log in again';
+      return;
+    }
+    reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(currentUser.email, password))
+      .then(() => {
+        const callback = pendingAuthCallback;
+        closeAuthConfirm();
+        if(callback) callback();
+      })
+      .catch(() => { errEl.textContent = 'Incorrect password'; });
+  });
+}
+
+/* ---------- Compare recipes ---------- */
+let compareShowCodes = true;
+
+function initCompareModal(){
+  document.getElementById('btnCompare').addEventListener('click', openCompareModal);
+  document.getElementById('btnCloseCompareModal').addEventListener('click', closeCompareModal);
+  document.getElementById('compareModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'compareModalOverlay') closeCompareModal();
+  });
+}
+
+function openCompareModal(){
+  const picker = document.getElementById('comparePickers');
+  const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
+  const options = sorted.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('');
+
+  picker.innerHTML = [0,1,2].map(i => `
+    <div class="compare-picker-col">
+      <label>Recipe ${i+1}</label>
+      <select class="compare-select" data-slot="${i}">
+        <option value="">— Not selected —</option>
+        ${options}
+      </select>
+    </div>
+  `).join('');
+
+  picker.querySelectorAll('.compare-select').forEach((sel, i) => {
+    if(sorted[i]) sel.value = sorted[i].id;
+    sel.addEventListener('change', renderCompareContent);
+  });
+
+  document.getElementById('compareModalOverlay').classList.add('open');
+  renderCompareContent();
+}
+
+function closeCompareModal(){
+  document.getElementById('compareModalOverlay').classList.remove('open');
+}
+
+function stripIngredientCode(label){
+  return label.replace(/\s*\([^)]*\)\s*$/, '');
+}
+
+function renderCompareContent(){
+  const content = document.getElementById('compareContent');
+  const ids = [...document.querySelectorAll('.compare-select')].map(sel => sel.value);
+  const selected = ids.map(id => recipes.find(r => r.id === id)).filter(Boolean);
+  const showCodes = compareShowCodes;
+
+  if(selected.length < 2){
+    content.innerHTML = '<div class="compare-empty">Select at least 2 recipes to compare</div>';
+    return;
+  }
+
+  // --- basic info ---
+  const infoHtml = ids.map(id => {
+    const r = recipes.find(x => x.id === id);
+    if(!r) return '<div class="compare-info-col"><div class="compare-empty" style="padding:8px 0;">— Not selected —</div></div>';
+    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    return `
+      <div class="compare-info-col">
+        <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
+        <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
+        <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
+        <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
+        <div class="ci-row"><b>Description:</b> ${escapeHtml(r.description || '-')}</div>
+      </div>
+    `;
+  }).join('');
+
+  // --- ingredient comparison (union across selected recipes) ---
+  const ingredientRows = new Map(); // key -> { label, values: {recipeId: pct}, weights: {recipeId: g} }
+  selected.forEach(r => {
+    const allIng = r.parts.flatMap(p => p.ingredients).filter(i => (i.name||'').trim() !== '');
+    allIng.forEach(i => {
+      const key = i.name.trim().toLowerCase();
+      if(!ingredientRows.has(key)) ingredientRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
+      const row = ingredientRows.get(key);
+      row.values[r.id] = (row.values[r.id] || 0) + (parseFloat(i.percent) || 0);
+      row.weights[r.id] = (row.weights[r.id] || 0) + (parseFloat(i.weight) || 0);
+    });
+  });
+
+  const rows = [...ingredientRows.values()].sort((a,b) => {
+    const maxA = Math.max(...ids.map(id => a.values[id] || 0));
+    const maxB = Math.max(...ids.map(id => b.values[id] || 0));
+    return maxB - maxA;
+  });
+
+  const ingHeaderCells = ids.map(id => {
+    const r = recipes.find(x => x.id === id);
+    return `<th>${r ? escapeHtml(recipeDisplayLabel(r)) : '-'}</th>`;
+  }).join('');
+
+  const ingBodyRows = rows.map(row => {
+    const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
+    const isDiff = presentCount > 0 && presentCount < selected.length;
+    const cells = ids.map(id => {
+      if(!selected.some(r => r.id === id)) return '<td>-</td>';
+      const v = row.values[id];
+      return v !== undefined ? `<td>${v.toFixed(2)}%</td>` : '<td class="compare-missing">— Not used —</td>';
+    }).join('');
+    const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
+    return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+  }).join('');
+
+  const totalCells = ids.map(id => {
+    const r = recipes.find(x => x.id === id);
+    if(!r) return '<td>-</td>';
+    // Summing each ingredient's already-rounded % can drift off 100% (e.g.
+    // 99.99%) purely from rounding noise. % is always weight/totalWeight, so
+    // the true total is exactly 100% by construction whenever there's any
+    // weight at all — same fix as the Grand Total box on the recipe page.
+    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const totalPct = totalWt > 0 ? 100 : 0;
+    return `<td>${totalPct.toFixed(2)}%</td>`;
+  }).join('');
+
+  // --- costing comparison (weight × library price/kg, per ingredient) ---
+  function priceOf(label){
+    const m = findMaterialByLabel(label);
+    if(!m || m.price === '' || m.price == null) return null;
+    const p = parseFloat(m.price);
+    return isNaN(p) ? null : p;
+  }
+
+  const costRows = rows.map(row => {
+    const price = priceOf(row.label);
+    const cells = ids.map(id => {
+      if(!selected.some(r => r.id === id)) return '<td>-</td>';
+      const wt = row.weights[id];
+      if(wt === undefined) return '<td class="compare-missing">— Not used —</td>';
+      if(price === null) return '<td class="compare-missing">No price set</td>';
+      return `<td>฿${((wt / 1000) * price).toFixed(2)}</td>`;
+    }).join('');
+    const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
+    return `<tr><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+  }).join('');
+
+  const costTotalCells = ids.map(id => {
+    if(!selected.some(r => r.id === id)) return '<td>-</td>';
+    let total = 0;
+    let hasUnpriced = false;
+    rows.forEach(row => {
+      const wt = row.weights[id];
+      if(wt === undefined) return;
+      const price = priceOf(row.label);
+      if(price === null){ hasUnpriced = true; return; }
+      total += (wt / 1000) * price;
+    });
+    return `<td>฿${total.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+  }).join('');
+
+  // --- steps comparison ---
+  const stepsHtml = ids.map(id => {
+    const r = recipes.find(x => x.id === id);
+    if(!r) return '<div class="compare-steps-col compare-empty">— Not selected —</div>';
+    const processes = (r.processes || []).filter(p => (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== ''));
+    const processesHtml = processes.map(p => {
+      const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+      return `
+        <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+      `;
+    }).join('');
+    return `
+      <div class="compare-steps-col">
+        <div class="ci-name" style="font-size:13px;">${escapeHtml(recipeDisplayLabel(r))}</div>
+        ${processesHtml || '<div class="compare-missing">No processes yet</div>'}
+      </div>
+    `;
+  }).join('');
+
+  content.innerHTML = `
+    <div class="compare-info-grid">${infoHtml}</div>
+
+    <div class="compare-section-title">Compare Ingredients (% of recipe)</div>
+    <label class="compare-toggle-label">
+      <input type="checkbox" id="compareShowCodes" ${showCodes ? 'checked' : ''}>
+      Show ingredient codes
+    </label>
+    <div style="overflow-x:auto;">
+      <table class="compare-table">
+        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+        <tbody>${ingBodyRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+        <tfoot><tr class="total-row"><td>Total</td>${totalCells}</tr></tfoot>
+      </table>
+    </div>
+    <div class="compare-legend"><span class="swatch"></span>Light orange rows = ingredients not used identically across all selected recipes</div>
+
+    <div class="compare-section-title">Compare Costing (weight × library price/kg)</div>
+    <div style="overflow-x:auto;">
+      <table class="compare-table">
+        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+        <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+        <tfoot><tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr></tfoot>
+      </table>
+    </div>
+    <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file.</div>
+
+    <div class="compare-section-title">Compare Process Steps</div>
+    <div class="compare-steps-grid">${stepsHtml}</div>
+  `;
+
+  document.getElementById('compareShowCodes').addEventListener('change', e => {
+    compareShowCodes = e.target.checked;
+    renderCompareContent();
+  });
+}
+
+let recipes = [];
+let currentId = null;
+let saveTimer = null;
+let unsubscribeRecipes = null;
+let unsubscribeMaterials = null;
+let recipesLoaded = false;
+let materialsLoaded = false;
+
+function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+/* ---------- Ingredient master library (shared across every recipe, via Firestore) ---------- */
+let ingredientMaster = [];
+
+function saveMaterialToCloud(m){
+  return setDoc(doc(materialsCol, m.id), m);
+}
+
+function deleteMaterialFromCloud(id){
+  return deleteDoc(doc(materialsCol, id));
+}
+
+function attachMaterialsListener(){
+  unsubscribeMaterials = onSnapshot(materialsCol, snapshot => {
+    ingredientMaster = snapshot.docs.map(d => d.data());
+    materialsLoaded = true;
+    renderMaterialDatalist();
+    if(document.getElementById('materialModalOverlay').classList.contains('open')) renderMaterialTable();
+  }, err => {
+    console.error('Forge: materials listener error', err);
+    showCloudError('Failed to load the ingredient library from Firebase: ' + err.message);
+  });
+}
+
+/* Includes the vendor code so materials that share the same name (different
+   vendors/codes) are distinguishable in the picker and unambiguous to match
+   against — without the code, selecting between two "Modified Starch" entries
+   from different vendors would always resolve to whichever one comes first. */
+function materialLabel(m){
+  const base = `${m.nameEn} / ${m.nameTh}`;
+  return m.vendorCode ? `${base} (${m.vendorCode})` : base;
+}
+
+function oldMaterialLabel(m){
+  return `${m.nameEn} / ${m.nameTh}`;
+}
+
+/* MOQ is stored as a plain number now, but entries saved before this field
+   had a fixed "kg" unit may still hold free text like "25 kg" — avoid
+   double-appending the unit in that case. */
+function formatMoq(v){
+  if(v === '' || v == null) return null;
+  const s = String(v).trim();
+  if(!s) return null;
+  return /kg\s*$/i.test(s) ? s : `${s} kg`;
+}
+
+function extractMoqNumber(v){
+  if(v === '' || v == null) return '';
+  const match = String(v).match(/[\d.]+/);
+  return match ? match[0] : '';
+}
+
+function materialTooltip(m){
+  const lines = [
+    `EN: ${m.nameEn}`,
+    `TH: ${m.nameTh}`,
+    m.vendorCode ? `Code: ${m.vendorCode}` : null,
+    m.vendorName ? `Vendor: ${m.vendorName}` : null,
+    m.manufacturer ? `Manufacturer: ${m.manufacturer}` : null,
+    (m.price !== '' && m.price != null) ? `Price/kg: ฿${m.price}` : null,
+    formatMoq(m.moq) ? `MOQ: ${formatMoq(m.moq)}` : null
+  ].filter(Boolean);
+  return lines.join('\n');
+}
+
+function findMaterialByLabel(text){
+  const t = (text || '').trim();
+  if(!t) return null;
+  const exact = ingredientMaster.find(m => materialLabel(m) === t);
+  if(exact) return exact;
+  // Backward compat: ingredients linked before vendor codes were added to the
+  // label were matched on "EN / TH" alone. Keep resolving those the same way
+  // (still ambiguous if duplicated) until the row is re-selected from the
+  // library, at which point it picks up the new, unambiguous label.
+  return ingredientMaster.find(m => oldMaterialLabel(m) === t) || null;
+}
+
+function hasUnresolvedIngredient(part){
+  return part.ingredients.some(i => (i.name || '').trim() !== '' && !i.materialId);
+}
+
+function renderMaterialDatalist(){
+  const list = document.getElementById('materialDatalist');
+  if(!list) return;
+  list.innerHTML = ingredientMaster
+    .map(m => `<option value="${escapeHtml(materialLabel(m))}"></option>`)
+    .join('');
+}
+
+function renderMaterialTable(){
+  const body = document.getElementById('materialTableBody');
+  if(!body) return;
+  const q = (document.getElementById('materialSearchInput').value || '').trim().toLowerCase();
+  const filtered = ingredientMaster.filter(m => {
+    if(!q) return true;
+    return [m.nameEn, m.nameTh, m.vendorCode, m.vendorName, m.manufacturer]
+      .some(v => (v || '').toLowerCase().includes(q));
+  });
+
+  if(filtered.length === 0){
+    body.innerHTML = `<tr><td colspan="8"><div class="material-empty">${ingredientMaster.length === 0 ? 'No ingredients in the library yet — add the first one above' : 'No matching ingredients found'}</div></td></tr>`;
+    return;
+  }
+
+  body.innerHTML = filtered.map(m => `
+    <tr>
+      <td>${escapeHtml(m.nameEn)}</td>
+      <td>${escapeHtml(m.nameTh)}</td>
+      <td>${escapeHtml(m.vendorCode || '-')}</td>
+      <td>${escapeHtml(m.vendorName || '-')}</td>
+      <td>${escapeHtml(m.manufacturer || '-')}</td>
+      <td>${m.price !== '' && m.price != null ? '฿' + escapeHtml(String(m.price)) : '-'}</td>
+      <td>${escapeHtml(formatMoq(m.moq) || '-')}</td>
+      <td>
+        <button class="icon-btn" data-edit-material="${escapeHtml(m.id)}" title="Edit this ingredient">✏️</button>
+        <button class="icon-btn" data-copy-material="${escapeHtml(m.id)}" title="Copy as a new ingredient">⧉</button>
+        <button class="icon-btn" data-del-material="${escapeHtml(m.id)}" title="Remove this ingredient from the library">✕</button>
+      </td>
+    </tr>
+  `).join('');
+
+  body.querySelectorAll('[data-edit-material]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-edit-material');
+      const m = ingredientMaster.find(x => x.id === id);
+      if(m) startEditMaterial(m);
+    });
+  });
+  body.querySelectorAll('[data-copy-material]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-copy-material');
+      const m = ingredientMaster.find(x => x.id === id);
+      if(m) startCopyMaterial(m);
+    });
+  });
+  body.querySelectorAll('[data-del-material]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.getAttribute('data-del-material');
+      const m = ingredientMaster.find(x => x.id === id);
+      if(!m) return;
+      if(!confirm(`Permanently remove "${materialLabel(m)}" from the ingredient library?`)) return;
+      deleteMaterialFromCloud(id);
+    });
+  });
+}
+
+function openMaterialModal(){
+  document.getElementById('materialModalOverlay').classList.add('open');
+  renderMaterialTable();
+}
+
+function closeMaterialModal(){
+  document.getElementById('materialModalOverlay').classList.remove('open');
+  cancelEditMaterial();
+}
+
+let editingMaterialId = null;
+const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq'];
+
+function fillMaterialForm(m){
+  document.getElementById('mf-nameEn').value = m.nameEn || '';
+  document.getElementById('mf-nameTh').value = m.nameTh || '';
+  document.getElementById('mf-vendorCode').value = m.vendorCode || '';
+  document.getElementById('mf-vendorName').value = m.vendorName || '';
+  document.getElementById('mf-manufacturer').value = m.manufacturer || '';
+  document.getElementById('mf-price').value = m.price || '';
+  document.getElementById('mf-moq').value = extractMoqNumber(m.moq);
+}
+
+function startEditMaterial(m){
+  editingMaterialId = m.id;
+  fillMaterialForm(m);
+  document.getElementById('materialFormTitle').textContent = `✏️ Editing: ${materialLabel(m)}`;
+  document.getElementById('btnAddMaterial').textContent = 'Save Changes';
+  document.getElementById('btnCancelEditMaterial').style.display = 'inline-flex';
+  document.getElementById('materialFormError').textContent = '';
+  document.getElementById('mf-nameEn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('mf-nameEn').focus();
+}
+
+function startCopyMaterial(m){
+  editingMaterialId = null;
+  fillMaterialForm(m);
+  document.getElementById('materialFormTitle').textContent = `⧉ Copy of "${materialLabel(m)}" — review and add as new`;
+  document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
+  document.getElementById('btnCancelEditMaterial').style.display = 'inline-flex';
+  document.getElementById('materialFormError').textContent = '';
+  document.getElementById('mf-nameEn').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('mf-nameEn').focus();
+}
+
+function cancelEditMaterial(){
+  editingMaterialId = null;
+  MATERIAL_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('materialFormTitle').textContent = '+ Add New Ingredient';
+  document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
+  document.getElementById('btnCancelEditMaterial').style.display = 'none';
+  document.getElementById('materialFormError').textContent = '';
+}
+
+function initMaterialLibrary(){
+  document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', openMaterialModal);
+  document.getElementById('btnCloseMaterialModal').addEventListener('click', closeMaterialModal);
+  document.getElementById('materialModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'materialModalOverlay') closeMaterialModal();
+  });
+  document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
+  document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
+
+  document.getElementById('btnAddMaterial').addEventListener('click', () => {
+    const nameEn = document.getElementById('mf-nameEn').value.trim();
+    const nameTh = document.getElementById('mf-nameTh').value.trim();
+    const errEl = document.getElementById('materialFormError');
+    if(!nameEn || !nameTh){
+      errEl.textContent = 'Please enter both the English and Thai ingredient names';
+      return;
+    }
+    errEl.textContent = '';
+    saveMaterialToCloud({
+      id: editingMaterialId || uid(),
+      nameEn,
+      nameTh,
+      vendorCode: document.getElementById('mf-vendorCode').value.trim(),
+      vendorName: document.getElementById('mf-vendorName').value.trim(),
+      manufacturer: document.getElementById('mf-manufacturer').value.trim(),
+      price: document.getElementById('mf-price').value.trim(),
+      moq: document.getElementById('mf-moq').value.trim()
+    });
+
+    cancelEditMaterial();
+  });
+}
+
+const PART_COUNT = 4;
+
+function blankPart(name){
+  return { name, ingredients: [ { name:"", percent:0, weight:0, note:"" } ] };
+}
+
+function blankRecipe(){
+  return {
+    id: uid(),
+    name: "",
+    code: "",
+    date: new Date().toISOString().slice(0,10),
+    description: "",
+    batchWeight: 1000,
+    parts: Array.from({length:PART_COUNT}, (_,i) => blankPart(`Part ${i+1}`)),
+    processes: [ { title: "", steps: [""] } ],
+    updatedAt: Date.now()
+  };
+}
+
+function migrateRecipe(r){
+  if(!Array.isArray(r.parts)){
+    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [{ name:"", percent:0, weight:0, note:"" }];
+    r.parts = [ { name:"Part 1", ingredients: oldIngredients } ];
+    for(let i = r.parts.length; i < PART_COUNT; i++){
+      r.parts.push(blankPart(`Part ${i+1}`));
+    }
+    delete r.ingredients;
+  }
+  while(r.parts.length < PART_COUNT){
+    r.parts.push(blankPart(`Part ${r.parts.length+1}`));
+  }
+  r.parts.forEach(p => {
+    if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
+      p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
+    }
+    const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
+    if(oldPartName) p.name = `Part ${oldPartName[1]}`;
+  });
+
+  if(!Array.isArray(r.processes)){
+    const oldSteps = Array.isArray(r.steps) ? r.steps.filter(s => (s||'').trim() !== '') : [];
+    r.processes = [ { title: "", steps: oldSteps.length ? oldSteps : [""] } ];
+    delete r.steps;
+  }
+  if(r.processes.length === 0){
+    r.processes.push({ title: "", steps: [""] });
+  }
+  r.processes.forEach(p => {
+    if(!Array.isArray(p.steps) || p.steps.length === 0){
+      p.steps = [""];
+    }
+  });
+
+  return r;
+}
+
+function saveRecipeToCloud(r){
+  return setDoc(doc(recipesCol, r.id), r);
+}
+
+/* Firestore is the source of truth, but while a recipe is open for editing we
+   keep its in-memory object identity stable across snapshot updates — the
+   input handlers below mutate that object directly on every keystroke, and
+   swapping in a fresh object from an incoming snapshot mid-edit would silently
+   drop whatever the user just typed. Every other recipe still refreshes freely. */
+function attachRecipesListener(){
+  unsubscribeRecipes = onSnapshot(recipesCol, snapshot => {
+    const previousCurrent = recipes.find(r => r.id === currentId);
+    const incoming = snapshot.docs.map(d => d.data());
+    incoming.forEach(r => { migrateRecipe(r); recomputeFromWeights(r); });
+
+    if(previousCurrent && incoming.some(r => r.id === currentId)){
+      recipes = incoming.map(r => r.id === currentId ? previousCurrent : r);
+    }else{
+      recipes = incoming;
+    }
+
+    const firstLoad = !recipesLoaded;
+    recipesLoaded = true;
+
+    if(currentId && !recipes.some(r => r.id === currentId)){
+      // the recipe being viewed no longer exists (deleted) -> back to the homepage
+      currentId = null;
+      unlockedRecipeId = null;
+      renderMain();
+    }else if(firstLoad){
+      renderMain();
+    }
+
+    renderSidebar();
+  }, err => {
+    console.error('Forge: recipes listener error', err);
+    showCloudError('Failed to load recipe data from Firebase: ' + err.message);
+  });
+}
+
+function getCurrent(){
+  return recipes.find(r => r.id === currentId);
+}
+
+function scheduleSave(){
+  const status = document.getElementById('saveStatus');
+  if(status){ status.textContent = 'Saving...'; status.classList.remove('saved'); }
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    const r = getCurrent();
+    if(!r) return;
+    r.updatedAt = Date.now();
+    saveRecipeToCloud(r);
+    renderSidebar();
+    const s = document.getElementById('saveStatus');
+    if(s){
+      s.textContent = 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+      s.classList.add('saved');
+    }
+  }, 400);
+}
+
+/* ---------- Sidebar ---------- */
+function renderSidebar(){
+  const list = document.getElementById('recipeList');
+  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+  const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
+  list.innerHTML = '';
+  sorted.filter(r => !q || (r.name||'Untitled').toLowerCase().includes(q))
+    .forEach(r => {
+      const div = document.createElement('div');
+      div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
+      const allIngredients = (r.parts||[]).flatMap(p => p.ingredients||[]);
+      const totalPct = allIngredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
+      const codeDisplay = fullCode(r);
+      div.innerHTML = `
+        <div class="r-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
+        <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
+      `;
+      div.addEventListener('click', () => {
+        if(r.id !== currentId) unlockedRecipeId = null;
+        currentId = r.id;
+        renderMain();
+        renderSidebar();
+      });
+      list.appendChild(div);
+    });
+}
+
+function datePrefix(dateStr){
+  return dateStr ? dateStr.replace(/-/g, '') : 'YYYYMMDD';
+}
+
+function fullCode(r){
+  const prefix = datePrefix(r.date);
+  const suffix = (r.code || '').trim();
+  if(prefix === 'YYYYMMDD' && !suffix) return '';
+  return prefix + '-' + (suffix || 'XX');
+}
+
+/* Product name with the last 2 characters of the recipe code suffix appended,
+   e.g. "Vegan Tartar Sauce - 19" — used anywhere recipes are picked/labeled
+   so near-duplicate names stay distinguishable at a glance. */
+function recipeDisplayLabel(r){
+  const name = r.name || 'Untitled recipe';
+  const suffix = (r.code || '').trim();
+  const shortCode = suffix ? suffix.slice(-2) : '';
+  return shortCode ? `${name} - ${shortCode}` : name;
+}
+
+function updateRecipeTitleDisplay(r){
+  const el = document.getElementById('recipeTitleDisplay');
+  if(!el) return;
+  const code = fullCode(r);
+  el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}`;
+}
+
+function escapeHtml(s){
+  return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+/* ---------- Main render ---------- */
+function renderMain(){
+  const r = getCurrent();
+  const main = document.getElementById('mainArea');
+  if(!r){
+    main.innerHTML = `
+      <div class="empty-state in-app-home">
+        <img src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+        <div class="eh-title">Forge</div>
+        <div class="eh-sub">Food Product Development</div>
+        <div class="home-desc">
+          Recipe development software for product development teams — record product
+          names and details, calculate ingredient percentages and weights across
+          4 parts that always total 100%, with a shared ingredient library and
+          process steps all in one place.
+        </div>
+        ${currentUser ? `<div class="home-welcome">Welcome, ${escapeHtml(currentUser.email)}</div>` : ''}
+        <div class="eh-hint">Select a recipe from the list on the left to view its details, or click "+ New Recipe" to start a new one.</div>
+      </div>
+    `;
+    return;
+  }
+
+  main.innerHTML = `
+    <div class="main-header">
+      <div>
+        <div class="recipe-title-display" id="recipeTitleDisplay"></div>
+        <div class="save-status saved" id="saveStatus">Ready</div>
+      </div>
+      <div class="toolbar">
+        <button class="btn" id="btnDuplicate">⧉ Duplicate</button>
+        <button class="btn" id="btnPrint">🖨 Print / PDF</button>
+      </div>
+    </div>
+
+    <div class="lock-banner" id="lockBanner"></div>
+
+    <div id="recipeCards">
+    <div class="card">
+      <div class="card-title">1. Product Name & Details</div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Product Name</label>
+          <input type="text" id="f-name" placeholder="e.g. Vegan Tartar Sauce">
+        </div>
+        <div class="field">
+          <label>Date</label>
+          <input type="date" id="f-date">
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="field">
+          <label>Description / Concept</label>
+          <textarea id="f-desc" placeholder="Product characteristics, selling points, target audience, etc."></textarea>
+        </div>
+        <div class="field">
+          <label>Recipe Code — YYYYMMDD-XX</label>
+          <div class="code-row">
+            <span class="code-prefix" id="codePrefixDisplay">YYYYMMDD</span>
+            <span class="code-sep">-</span>
+            <input type="text" id="f-codeSuffix" class="code-suffix" placeholder="XX" maxlength="10">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">2. Ingredients, Percentage & Weight (4 Parts)</div>
+      <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">📚 Ingredient Library (select existing / add new)</button>
+      <div class="batch-summary">
+        <div>
+          <div class="batch-stat-label">Total Recipe Weight (auto-calculated from all ingredient weights)</div>
+          <div class="batch-stat-value" id="batchTotalDisplay">0.00 g</div>
+        </div>
+        <div>
+          <div class="batch-stat-label">Scale Recipe To (g)</div>
+          <div class="batch-scale-row">
+            <input type="number" id="f-scaleTo" min="0" step="0.01" placeholder="e.g. 1000">
+            <button class="btn btn-sm" id="btnScale">Scale</button>
+          </div>
+        </div>
+      </div>
+      <div id="partsContainer"></div>
+
+      <div class="overview-block">
+        <div class="overview-title">Recipe Overview (all parts combined)</div>
+        <table>
+          <thead>
+            <tr>
+              <th>Ingredient</th>
+              <th class="col-pct">% of Recipe</th>
+              <th class="col-wt">Total Weight (g)</th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+        </table>
+      </div>
+
+      <div class="grand-total-box">
+        <span class="gt-label">Grand Total (All Parts)</span>
+        <span id="grandTotalPct"></span>
+        <span id="grandTotalWt"></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Process Steps</div>
+      <div class="processes-list" id="processesList"></div>
+      <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
+    </div>
+    </div>
+
+    <div class="danger-zone">
+      <button class="btn btn-danger btn-block" id="btnDelete">🗑 Delete Recipe</button>
+    </div>
+  `;
+
+  document.getElementById('f-name').value = r.name || '';
+  document.getElementById('f-codeSuffix').value = r.code || '';
+  document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
+  document.getElementById('f-desc').value = r.description || '';
+  document.getElementById('f-date').value = r.date || '';
+  updateRecipeTitleDisplay(r);
+
+  document.getElementById('f-name').addEventListener('input', e => {
+    r.name = e.target.value;
+    updateRecipeTitleDisplay(r);
+    scheduleSave();
+  });
+  document.getElementById('f-codeSuffix').addEventListener('input', e => {
+    r.code = e.target.value;
+    updateRecipeTitleDisplay(r);
+    scheduleSave();
+  });
+  document.getElementById('f-desc').addEventListener('input', e => { r.description = e.target.value; scheduleSave(); });
+  document.getElementById('f-date').addEventListener('input', e => {
+    r.date = e.target.value;
+    document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
+    updateRecipeTitleDisplay(r);
+    scheduleSave();
+  });
+
+  document.getElementById('btnOpenMaterialLib').addEventListener('click', openMaterialModal);
+
+  document.getElementById('btnScale').addEventListener('click', () => {
+    const target = parseFloat(document.getElementById('f-scaleTo').value) || 0;
+    const currentTotal = r.parts.flatMap(p => p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    if(target <= 0){ alert('Please enter a target weight greater than 0'); return; }
+    if(currentTotal <= 0){ alert('Please enter at least one ingredient weight before scaling the recipe'); return; }
+    const factor = target / currentTotal;
+    r.parts.forEach(part => part.ingredients.forEach(ing => {
+      ing.weight = round2((parseFloat(ing.weight)||0) * factor);
+    }));
+    recomputeFromWeights(r);
+    renderParts(r);
+    scheduleSave();
+  });
+
+  renderParts(r);
+  renderProcesses(r);
+
+  document.getElementById('btnAddProcess').addEventListener('click', () => {
+    r.processes.push({ title: '', steps: [''] });
+    renderProcesses(r);
+    scheduleSave();
+  });
+
+  document.getElementById('btnDuplicate').addEventListener('click', duplicateCurrent);
+  document.getElementById('btnDelete').addEventListener('click', () => {
+    const deletingId = r.id;
+    requestAuthConfirm(
+      'Confirm Deletion',
+      `Enter the approver's email and password to permanently delete the recipe "${r.name || 'Untitled recipe'}"`,
+      () => deleteCurrent(),
+      {
+        requireEmail: DELETE_APPROVER_EMAIL,
+        approverAction: () => deleteDoc(doc(approverRecipesCol, deletingId))
+      }
+    );
+  });
+  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+
+  renderLockState(r);
+}
+
+function renderLockState(r){
+  const banner = document.getElementById('lockBanner');
+  const cards = document.getElementById('recipeCards');
+  const isUnlocked = unlockedRecipeId === r.id;
+
+  if(isUnlocked){
+    banner.className = 'lock-banner unlocked';
+    banner.innerHTML = `🔓 This recipe is unlocked for editing (will lock again when you switch recipes)`;
+  }else{
+    banner.className = 'lock-banner locked';
+    banner.innerHTML = `🔒 This recipe is read-only <button class="btn btn-sm btn-primary" id="btnUnlockEdit">🔓 Unlock to Edit</button>`;
+    document.getElementById('btnUnlockEdit').addEventListener('click', () => {
+      requestAuthConfirm(
+        'Confirm Identity to Edit',
+        `Enter your password to unlock editing for the recipe "${r.name || 'Untitled recipe'}"`,
+        () => {
+          unlockedRecipeId = r.id;
+          renderMain();
+        }
+      );
+    });
+    cards.querySelectorAll('input, textarea, button').forEach(el => { el.disabled = true; });
+  }
+}
+
+/* ---------- Ingredients (4 parts) ----------
+   Weight (g) is the single source of truth per ingredient.
+   % of recipe and total recipe weight are always derived from it, so the
+   percentages across all parts are mathematically guaranteed to sum to 100%. */
+function recomputeFromWeights(r){
+  const totalWeight = r.parts.flatMap(p => p.ingredients)
+    .reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  r.batchWeight = round2(totalWeight);
+  r.parts.forEach(part => {
+    part.ingredients.forEach(ing => {
+      ing.percent = totalWeight > 0 ? round2((parseFloat(ing.weight)||0) / totalWeight * 100) : 0;
+    });
+  });
+  return totalWeight;
+}
+
+function round2(n){ return Math.round(n * 100) / 100; }
+
+function refreshDisplays(r){
+  const totalWeight = recomputeFromWeights(r);
+  const batchEl = document.getElementById('batchTotalDisplay');
+  if(batchEl) batchEl.textContent = totalWeight.toFixed(2) + ' g';
+
+  document.querySelectorAll('#partsContainer .part-block').forEach((block, pIdx) => {
+    const part = r.parts[pIdx];
+    if(!part) return;
+    const pctEls = block.querySelectorAll('.ing-pct-display');
+    part.ingredients.forEach((ing, idx) => {
+      if(pctEls[idx]) pctEls[idx].textContent = (ing.percent||0).toFixed(2) + '%';
+    });
+    const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
+    const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const subPctEl = block.querySelector('.part-subtotal-pct');
+    const subWtEl = block.querySelector('.part-subtotal-wt');
+    if(subPctEl) subPctEl.textContent = subPct.toFixed(2) + '%';
+    if(subWtEl) subWtEl.textContent = subWt.toFixed(2) + ' g';
+
+    const summaryEl = block.querySelector('.part-header-summary');
+    if(summaryEl){
+      const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
+      summaryEl.textContent = namedCount
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${subPct.toFixed(1)}%`
+        : 'No ingredients yet';
+    }
+  });
+
+  updateGrandTotal(r);
+}
+
+function renderParts(r){
+  recomputeFromWeights(r);
+
+  const batchEl = document.getElementById('batchTotalDisplay');
+  if(batchEl) batchEl.textContent = (r.batchWeight||0).toFixed(2) + ' g';
+
+  const container = document.getElementById('partsContainer');
+  container.innerHTML = '';
+  r.parts.forEach((part, pIdx) => {
+    const block = document.createElement('div');
+    block.className = 'part-block';
+    block.innerHTML = `
+      <div class="part-header">
+        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">▶</button>
+        <input type="text" class="part-name" placeholder="Part ${pIdx+1} name">
+        <span class="part-header-summary"></span>
+      </div>
+      <div class="part-body">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-no">#</th>
+              <th>Ingredient</th>
+              <th class="col-pct">% of Recipe (auto)</th>
+              <th class="col-wt">Weight (g)</th>
+              <th>Note</th>
+              <th class="col-del"></th>
+            </tr>
+          </thead>
+          <tbody></tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td>Part ${pIdx+1} Subtotal</td>
+              <td class="part-subtotal-pct"></td>
+              <td class="part-subtotal-wt"></td>
+              <td colspan="2"></td>
+            </tr>
+          </tfoot>
+        </table>
+        <button class="btn btn-sm add-row-btn" data-role="add-ing">+ Add Ingredient (Part ${pIdx+1})</button>
+      </div>
+    `;
+
+    const nameField = block.querySelector('.part-name');
+    nameField.value = part.name || '';
+    nameField.addEventListener('input', e => { part.name = e.target.value; scheduleSave(); });
+
+    const body = block.querySelector('tbody');
+    const subPctCell = block.querySelector('.part-subtotal-pct');
+    const subWtCell = block.querySelector('.part-subtotal-wt');
+    const summaryEl = block.querySelector('.part-header-summary');
+    const toggleBtn = block.querySelector('.part-toggle-btn');
+
+    function setCollapsed(collapsed){
+      block.classList.toggle('collapsed', collapsed);
+      toggleBtn.classList.toggle('open', !collapsed);
+      toggleBtn.textContent = collapsed ? '▶' : '▼';
+    }
+
+    toggleBtn.addEventListener('click', () => {
+      setCollapsed(!block.classList.contains('collapsed'));
+    });
+
+    const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '');
+    setCollapsed(!hasContent);
+
+    function renderRows(){
+      body.innerHTML = '';
+      part.ingredients.forEach((ing, idx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="col-no">${idx+1}</td>
+          <td class="ing-name-cell">
+            <div class="ing-name-row">
+              <input type="text" class="ing-name" list="materialDatalist" placeholder="Search the library or type a new ingredient name">
+            </div>
+            <div class="ing-hint"></div>
+          </td>
+          <td class="col-pct"><span class="ing-pct-display" title="Calculated automatically from weight"></span></td>
+          <td class="col-wt"><input type="number" class="ing-wt num-input" step="0.01" min="0"></td>
+          <td><input type="text" class="ing-note" placeholder=""></td>
+          <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
+        `;
+        const nameInput = tr.querySelector('.ing-name');
+        const hintEl = tr.querySelector('.ing-hint');
+        const pctDisplay = tr.querySelector('.ing-pct-display');
+        const wtInput = tr.querySelector('.ing-wt');
+        const noteInput = tr.querySelector('.ing-note');
+        const delBtn = tr.querySelector('.icon-btn');
+
+        nameInput.value = ing.name || '';
+        pctDisplay.textContent = (ing.percent||0).toFixed(2) + '%';
+        wtInput.value = ing.weight ?? 0;
+        noteInput.value = ing.note || '';
+
+        function syncMaterialLink(resetWeightIfUnlinked){
+          const matched = findMaterialByLabel(nameInput.value);
+          ing.materialId = matched ? matched.id : null;
+          wtInput.disabled = !matched;
+          nameInput.classList.remove('ing-linked', 'invalid');
+          if(matched){
+            nameInput.classList.add('ing-linked');
+            nameInput.title = materialTooltip(matched);
+            hintEl.textContent = matched.vendorCode ? `Code: ${matched.vendorCode}` : '';
+            hintEl.className = 'ing-hint ing-hint-code';
+          }else{
+            nameInput.title = '';
+            if(nameInput.value.trim()){
+              nameInput.classList.add('invalid');
+              hintEl.textContent = 'This ingredient is not in the library — open "Ingredient Library" above to add it before entering a weight';
+              hintEl.className = 'ing-hint hint-block';
+            }else{
+              hintEl.textContent = 'Select an ingredient from the library first before entering a weight';
+              hintEl.className = 'ing-hint';
+            }
+            if(resetWeightIfUnlinked && (parseFloat(ing.weight) || 0) !== 0){
+              ing.weight = 0;
+              wtInput.value = 0;
+            }
+          }
+        }
+        syncMaterialLink(false);
+
+        nameInput.addEventListener('input', e => {
+          ing.name = e.target.value;
+          syncMaterialLink(true);
+          refreshDisplays(r);
+          scheduleSave();
+        });
+        noteInput.addEventListener('input', e => { ing.note = e.target.value; scheduleSave(); });
+
+        wtInput.addEventListener('input', e => {
+          ing.weight = parseFloat(e.target.value) || 0;
+          refreshDisplays(r);
+          scheduleSave();
+        });
+
+        delBtn.addEventListener('click', () => {
+          part.ingredients.splice(idx, 1);
+          if(part.ingredients.length === 0) part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+          renderRows();
+          refreshDisplays(r);
+          scheduleSave();
+        });
+
+        body.appendChild(tr);
+      });
+      updatePartSubtotal();
+    }
+
+    function updatePartSubtotal(){
+      const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
+      const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+      subPctCell.textContent = subPct.toFixed(2) + '%';
+      subWtCell.textContent = subWt.toFixed(2) + ' g';
+      const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
+      summaryEl.textContent = namedCount
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${subPct.toFixed(1)}%`
+        : 'No ingredients yet';
+    }
+
+    renderRows();
+
+    block.querySelector('[data-role="add-ing"]').addEventListener('click', () => {
+      if(hasUnresolvedIngredient(part)){
+        alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
+        return;
+      }
+      part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+      renderRows();
+      refreshDisplays(r);
+      scheduleSave();
+    });
+
+    container.appendChild(block);
+  });
+
+  updateGrandTotal(r);
+}
+
+function updateGrandTotal(r){
+  const allIngredients = r.parts.flatMap(p => p.ingredients);
+  const totalWt = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  // % is always weight / totalWeight, so the grand total is exactly 100% by
+  // construction whenever there's any weight entered — no rounding drift.
+  const totalPct = totalWt > 0 ? 100 : 0;
+  const pctEl = document.getElementById('grandTotalPct');
+  const wtEl = document.getElementById('grandTotalWt');
+  pctEl.textContent = totalPct.toFixed(2) + '%';
+  pctEl.className = 'totals-ok';
+  wtEl.textContent = totalWt.toFixed(2) + ' g';
+
+  renderOverview(allIngredients);
+}
+
+function renderOverview(allIngredients){
+  const body = document.getElementById('overviewBody');
+  if(!body) return;
+  body.innerHTML = '';
+
+  const named = allIngredients.filter(i => (i.name||'').trim() !== '');
+  if(named.length === 0){
+    body.innerHTML = '<tr><td colspan="3"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    return;
+  }
+
+  const groups = new Map();
+  named.forEach(i => {
+    const key = i.name.trim().toLowerCase();
+    if(!groups.has(key)){
+      groups.set(key, { name: i.name.trim(), pct: 0, wt: 0 });
+    }
+    const g = groups.get(key);
+    g.pct += parseFloat(i.percent) || 0;
+    g.wt += parseFloat(i.weight) || 0;
+  });
+
+  const rows = [...groups.values()].sort((a,b) => b.pct - a.pct);
+  const maxPct = Math.max(...rows.map(g => g.pct), 100);
+
+  rows.forEach(g => {
+    const tr = document.createElement('tr');
+    const barPct = Math.min(100, (g.pct / maxPct) * 100);
+    tr.innerHTML = `
+      <td>${escapeHtml(g.name)}</td>
+      <td class="col-pct">
+        <div class="overview-bar-wrap">
+          <div class="overview-bar-track"><div class="overview-bar-fill" style="width:${barPct}%"></div></div>
+          <span>${g.pct.toFixed(2)}%</span>
+        </div>
+      </td>
+      <td class="col-wt">${g.wt.toFixed(2)} g</td>
+    `;
+    body.appendChild(tr);
+  });
+}
+
+/* ---------- Process Steps (grouped: a process title + its own numbered steps) ---------- */
+function renderProcesses(r){
+  const list = document.getElementById('processesList');
+  list.innerHTML = '';
+
+  r.processes.forEach((proc, pIdx) => {
+    const block = document.createElement('div');
+    block.className = 'process-block';
+    block.innerHTML = `
+      <div class="process-header">
+        <div class="step-badge">${pIdx+1}</div>
+        <input type="text" class="process-title" placeholder="Process ${pIdx+1} name (e.g. Mixing)">
+        <button class="icon-btn" title="Delete this process">✕</button>
+      </div>
+      <div class="process-steps-list"></div>
+      <button class="btn btn-sm add-row-btn" data-role="add-step">+ Add Step</button>
+    `;
+
+    const titleInput = block.querySelector('.process-title');
+    titleInput.value = proc.title || '';
+    titleInput.addEventListener('input', e => { proc.title = e.target.value; scheduleSave(); });
+
+    const stepsListEl = block.querySelector('.process-steps-list');
+
+    function renderStepRows(){
+      stepsListEl.innerHTML = '';
+      proc.steps.forEach((step, idx) => {
+        const row = document.createElement('div');
+        row.className = 'step-row';
+        row.innerHTML = `
+          <div class="step-badge">${idx+1}</div>
+          <div class="step-body"><textarea placeholder="Describe step ${idx+1}..."></textarea></div>
+          <div class="step-controls">
+            <button class="icon-btn" title="Move up">▲</button>
+            <button class="icon-btn" title="Move down">▼</button>
+            <button class="icon-btn" title="Delete">✕</button>
+          </div>
+        `;
+        const ta = row.querySelector('textarea');
+        ta.value = step;
+        ta.addEventListener('input', e => { proc.steps[idx] = e.target.value; scheduleSave(); });
+
+        const [upBtn, downBtn, delBtn] = row.querySelectorAll('.icon-btn');
+        upBtn.addEventListener('click', () => {
+          if(idx === 0) return;
+          [proc.steps[idx-1], proc.steps[idx]] = [proc.steps[idx], proc.steps[idx-1]];
+          renderStepRows(); scheduleSave();
+        });
+        downBtn.addEventListener('click', () => {
+          if(idx === proc.steps.length-1) return;
+          [proc.steps[idx+1], proc.steps[idx]] = [proc.steps[idx], proc.steps[idx+1]];
+          renderStepRows(); scheduleSave();
+        });
+        delBtn.addEventListener('click', () => {
+          proc.steps.splice(idx,1);
+          if(proc.steps.length === 0) proc.steps.push('');
+          renderStepRows(); scheduleSave();
+        });
+
+        stepsListEl.appendChild(row);
+      });
+    }
+    renderStepRows();
+
+    block.querySelector('[data-role="add-step"]').addEventListener('click', () => {
+      proc.steps.push('');
+      renderStepRows();
+      scheduleSave();
+    });
+
+    block.querySelector('.process-header .icon-btn').addEventListener('click', () => {
+      r.processes.splice(pIdx, 1);
+      if(r.processes.length === 0) r.processes.push({ title: '', steps: [''] });
+      renderProcesses(r);
+      scheduleSave();
+    });
+
+    list.appendChild(block);
+  });
+}
+
+/* ---------- Recipe actions ---------- */
+function duplicateCurrent(){
+  const r = getCurrent();
+  if(!r) return;
+  const copy = JSON.parse(JSON.stringify(r));
+  copy.id = uid();
+  copy.name = (r.name || 'Untitled recipe') + ' (Copy)';
+  copy.updatedAt = Date.now();
+  recipes.push(copy);
+  currentId = copy.id;
+  unlockedRecipeId = copy.id;
+  saveRecipeToCloud(copy);
+  renderSidebar();
+  renderMain();
+}
+
+/* Called after the approver's credentials have already been verified and the
+   recipe already deleted from Firestore (via approverAction) — this just
+   updates local state and the UI to match. */
+function deleteCurrent(){
+  const r = getCurrent();
+  if(!r) return;
+  const deletedId = r.id;
+  recipes = recipes.filter(x => x.id !== deletedId);
+  currentId = null;
+  unlockedRecipeId = null;
+  renderSidebar();
+  renderMain();
+}
+
+/* ---------- Import / Export ----------
+   Exports recipes + the ingredient library together so a backup / move to
+   another computer restores both. User accounts are deliberately excluded
+   (plaintext passwords shouldn't travel in a shareable JSON backup file). */
+function exportAll(){
+  const payload = {
+    forgeExport: true,
+    appVersion: APP_VERSION,
+    exportedAt: new Date().toISOString(),
+    recipes: recipes,
+    ingredientMaster: ingredientMaster
+  };
+  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `forge-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function importFromFile(file){
+  const reader = new FileReader();
+  reader.onload = e => {
+    try{
+      const data = JSON.parse(e.target.result);
+
+      let importedRecipes = [];
+      let importedMaterials = [];
+
+      if(Array.isArray(data)){
+        importedRecipes = data; // old format: plain array of recipes
+      }else if(data && Array.isArray(data.recipes)){
+        importedRecipes = data.recipes; // new format: {recipes, ingredientMaster}
+        if(Array.isArray(data.ingredientMaster)) importedMaterials = data.ingredientMaster;
+      }else if(data && typeof data === 'object'){
+        importedRecipes = [data]; // old format: a single recipe object
+      }
+
+      const batch = writeBatch(db);
+
+      importedRecipes.forEach(item => {
+        item.id = uid();
+        item.updatedAt = Date.now();
+        migrateRecipe(item);
+        recomputeFromWeights(item);
+        recipes.push(item);
+        batch.set(doc(recipesCol, item.id), item);
+      });
+
+      let addedMaterials = 0;
+      importedMaterials.forEach(m => {
+        const exists = ingredientMaster.some(x =>
+          (x.nameEn||'').trim().toLowerCase() === (m.nameEn||'').trim().toLowerCase() &&
+          (x.nameTh||'').trim().toLowerCase() === (m.nameTh||'').trim().toLowerCase()
+        );
+        if(!exists && (m.nameEn||'').trim() && (m.nameTh||'').trim()){
+          const material = {
+            id: uid(),
+            nameEn: m.nameEn,
+            nameTh: m.nameTh,
+            vendorCode: m.vendorCode || '',
+            vendorName: m.vendorName || '',
+            manufacturer: m.manufacturer || '',
+            price: m.price || '',
+            moq: m.moq || ''
+          };
+          ingredientMaster.push(material);
+          batch.set(doc(materialsCol, material.id), material);
+          addedMaterials++;
+        }
+      });
+
+      if(importedRecipes.length){
+        currentId = recipes[recipes.length-1].id;
+        unlockedRecipeId = null;
+      }
+      batch.commit();
+      if(importedMaterials.length) renderMaterialDatalist();
+      renderSidebar();
+      renderMain();
+      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped)`);
+    }catch(err){
+      alert('Could not read file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ---------- Init ---------- */
+document.getElementById('btnNew').addEventListener('click', () => {
+  const r = blankRecipe();
+  recipes.push(r);
+  currentId = r.id;
+  unlockedRecipeId = r.id;
+  saveRecipeToCloud(r);
+  renderSidebar();
+  renderMain();
+});
+document.getElementById('searchInput').addEventListener('input', renderSidebar);
+document.getElementById('btnExportAll').addEventListener('click', exportAll);
+document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', e => {
+  if(e.target.files[0]) importFromFile(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('btnLogoutFromApp').addEventListener('click', goToAuth);
+document.querySelector('.brand').addEventListener('click', () => {
+  currentId = null;
+  unlockedRecipeId = null;
+  renderMain();
+  renderSidebar();
+});
+
+initAuthScreen();
+initAuthConfirmModal();
+initCompareModal();
+initMaterialLibrary();
+renderFooter();
+
+/* Firestore listeners only attach once someone is actually signed in — the
+   security rules reject reads/writes from a signed-out client anyway. */
+onAuthStateChanged(auth, user => {
+  if(user){
+    currentUser = user;
+    if(!unsubscribeRecipes) attachRecipesListener();
+    if(!unsubscribeMaterials) attachMaterialsListener();
+    if(appView === 'auth') goToApp();
+    document.getElementById('loginForm').reset();
+    document.getElementById('registerForm').reset();
+    document.getElementById('loginError').textContent = '';
+    document.getElementById('registerError').textContent = '';
+  }else{
+    currentUser = null;
+    if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
+    if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
+    recipesLoaded = false;
+    materialsLoaded = false;
+    recipes = [];
+    ingredientMaster = [];
+    currentId = null;
+    unlockedRecipeId = null;
+    appView = 'auth';
+  }
+  renderApp();
+});
+</script>
+</body>
+</html>
