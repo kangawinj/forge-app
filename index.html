@@ -965,6 +965,27 @@
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
     body{background:#fff;}
+
+    /* When a modal (e.g. Compare Recipes) is open, print only the modal
+       content full-page instead of the fixed-position overlay clipped to
+       the viewport. */
+    body:has(.modal-overlay.open) .app{display:none !important;}
+    .modal-overlay:not(.open){display:none !important;}
+    .modal-overlay.open{
+      position:static !important;
+      background:none !important;
+      padding:0 !important;
+      display:block !important;
+    }
+    .modal-overlay.open .modal{
+      max-width:100% !important;
+      max-height:none !important;
+      width:100%;
+      box-shadow:none !important;
+    }
+    .modal-overlay.open .modal-header .icon-btn{display:none !important;}
+    .modal-overlay.open .modal-body{overflow:visible !important;}
+    .compare-toggle-label, .compare-pickers{display:none !important;}
   }
 
   @media (max-width:800px){
@@ -1176,7 +1197,10 @@
   <div class="modal compare-modal">
     <div class="modal-header">
       <div class="modal-title">⚖️ Compare Recipes</div>
-      <button class="icon-btn" id="btnCloseCompareModal" title="Close">✕</button>
+      <div style="display:flex; gap:8px;">
+        <button class="icon-btn" id="btnPrintCompare" title="Print">🖨️</button>
+        <button class="icon-btn" id="btnCloseCompareModal" title="Close">✕</button>
+      </div>
     </div>
     <div class="modal-body">
       <div class="compare-pickers" id="comparePickers"></div>
@@ -1286,7 +1310,8 @@ const CHANGELOG = [
   { version: "3.0.4", date: "2026-07-15", note: "Logo references now point at forge-deploy/Forge_Logo_Navy_Orange_Vector.svg instead of a duplicate copy in the main folder, removing the redundant file (the deploy sync step rewrites this path back to a plain filename for the live site)" },
   { version: "3.0.5", date: "2026-07-15", note: "Shortened the homepage description to \"Recipe development software for product development teams\"" },
   { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" },
-  { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" }
+  { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" },
+  { version: "3.0.8", date: "2026-07-15", note: "Compare Recipes: added a Print button that prints the comparison full-page (ingredients, costing, process steps) instead of being clipped by the modal's on-screen size" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1493,6 +1518,7 @@ let compareShowCodes = true;
 function initCompareModal(){
   document.getElementById('btnCompare').addEventListener('click', openCompareModal);
   document.getElementById('btnCloseCompareModal').addEventListener('click', closeCompareModal);
+  document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
   document.getElementById('compareModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'compareModalOverlay') closeCompareModal();
   });
