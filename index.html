@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forge</title>
-<link rel="icon" type="image/svg+xml" href="Forge_Logo_Navy_Orange_Vector.svg">
+<link rel="icon" type="image/svg+xml" href="Forge_Logo_Navy_Orange_Vector_Large.svg">
 <style>
   :root{
     --bg:#f4f6f8;
@@ -974,7 +974,7 @@
 
 <div class="fullpage-screen" id="authScreen">
   <div class="auth-card">
-    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
     <div class="auth-title">Forge</div>
     <div class="auth-sub">Food Product Development</div>
 
@@ -1019,7 +1019,7 @@
   <aside class="sidebar">
     <div class="brand">
       <div class="brand-icon">
-        <img src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
       </div>
       <div>
         <div class="brand-title">Forge</div>
@@ -1274,8 +1274,9 @@ const CHANGELOG = [
   { version: "3.0.1", date: "2026-07-14", note: "Enlarged the Product Name + Recipe Code title to 60px. Swapped the order of Recipe Code and Description/Concept in section 1 (Description now comes first, Recipe Code second)" },
   { version: "3.0.2", date: "2026-07-14", note: "Adjusted the Product Name + Recipe Code title size from 60px down to 54px" },
   { version: "3.0.3", date: "2026-07-14", note: "MOQ field in the Ingredient Library is now a fixed-unit \"kg\" number input (numbers only, unit shown as a suffix) instead of free text. Existing entries saved as free text (e.g. \"25 kg\") still display and edit correctly" },
-  { version: "3.0.4", date: "2026-07-15", note: "Logo references now point at Forge_Logo_Navy_Orange_Vector.svg instead of a duplicate copy in the main folder, removing the redundant file (the deploy sync step rewrites this path back to a plain filename for the live site)" },
-  { version: "3.0.5", date: "2026-07-15", note: "Shortened the homepage description to \"Recipe development software for product development teams\"" }
+  { version: "3.0.4", date: "2026-07-15", note: "Logo references now point at forge-deploy/Forge_Logo_Navy_Orange_Vector.svg instead of a duplicate copy in the main folder, removing the redundant file (the deploy sync step rewrites this path back to a plain filename for the live site)" },
+  { version: "3.0.5", date: "2026-07-15", note: "Shortened the homepage description to \"Recipe development software for product development teams\"" },
+  { version: "3.0.6", date: "2026-07-15", note: "Switched the logo everywhere to Forge_Logo_Navy_Orange_Vector_Large.svg (a tighter-cropped version of the same mark) and removed the old Forge_Logo_Navy_Orange_Vector.svg file" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2114,7 +2115,7 @@ function renderMain(){
   if(!r){
     main.innerHTML = `
       <div class="empty-state in-app-home">
-        <img src="Forge_Logo_Navy_Orange_Vector.svg" alt="Forge logo">
+        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
         <div class="eh-title">Forge</div>
         <div class="eh-sub">Food Product Development</div>
         <div class="home-desc">Recipe development software for product development teams</div>

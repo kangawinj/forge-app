@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg"
      width="1254" height="1254"
-     viewBox="0 0 1254 1254">
+     viewBox="367.4 318.9 562.2 562.2">
   <title>Forge Logo — Navy and Orange</title>
   <desc>Editable vector recreation of the supplied Forge logo.</desc>
 
@@ -19,7 +19,7 @@
     </linearGradient>
   </defs>
 
-  <rect width="1254" height="1254" fill="#FFFFFF"/>
+  <rect x="367.4" y="318.9" width="562.2" height="562.2" fill="#FFFFFF"/>
 
   <g id="forge-mark">
     <g id="navy-section" fill="url(#navyGradient)">
