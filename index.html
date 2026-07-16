@@ -1418,7 +1418,9 @@ const CHANGELOG = [
   { version: "3.0.11", date: "2026-07-15", note: "Recipe Overview: now also shows each ingredient's vendor and manufacturer (from the Ingredient Library) as a small line under its name" },
   { version: "3.0.12", date: "2026-07-15", note: "Ingredient Library: added a \"Usage Notes\" field (handling/dosage instructions, etc.) shown in the ingredient's tooltip on the recipe page" },
   { version: "3.0.13", date: "2026-07-16", note: "Ingredient Library: clicking anywhere on a row (other than the Edit/Copy/Delete buttons) now opens a details view with the ingredient's full photo, all fields, and usage notes" },
-  { version: "3.0.14", date: "2026-07-16", note: "Ingredient Library: the search box now also matches against Usage Notes, so ingredients can be found by handling/dosage instructions, not just name/code/vendor" }
+  { version: "3.0.14", date: "2026-07-16", note: "Ingredient Library: the search box now also matches against Usage Notes, so ingredients can be found by handling/dosage instructions, not just name/code/vendor" },
+  { version: "3.0.15", date: "2026-07-16", note: "Section 2 (Ingredients) is no longer fixed at 4 parts — added a \"+ Add Part\" button and a delete button per part (at least one part is always kept). Section 3 (Process Steps): each process can now be moved up/down, not just its individual steps" },
+  { version: "3.0.16", date: "2026-07-16", note: "The \"+ Add Ingredient (...)\" button and \"... Subtotal\" row now follow the part's custom name (e.g. \"+ Add Ingredient (Mixed)\") instead of always showing \"Part N\", updating live as you rename the part" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2232,8 +2234,8 @@ function migrateRecipe(r){
     }
     delete r.ingredients;
   }
-  while(r.parts.length < PART_COUNT){
-    r.parts.push(blankPart(`Part ${r.parts.length+1}`));
+  if(r.parts.length === 0){
+    r.parts.push(blankPart('Part 1'));
   }
   r.parts.forEach(p => {
     if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
@@ -2443,7 +2445,7 @@ function renderMain(){
     </div>
 
     <div class="card">
-      <div class="card-title">2. Ingredients, Percentage & Weight (4 Parts)</div>
+      <div class="card-title">2. Ingredients, Percentage & Weight</div>
       <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">📚 Ingredient Library (select existing / add new)</button>
       <div class="batch-summary">
         <div>
@@ -2459,6 +2461,7 @@ function renderMain(){
         </div>
       </div>
       <div id="partsContainer"></div>
+      <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
 
       <div class="overview-block">
         <div class="overview-title">Recipe Overview (all parts combined)</div>
@@ -2536,6 +2539,12 @@ function renderMain(){
 
   renderParts(r);
   renderProcesses(r);
+
+  document.getElementById('btnAddPart').addEventListener('click', () => {
+    r.parts.push(blankPart(`Part ${r.parts.length+1}`));
+    renderParts(r);
+    scheduleSave();
+  });
 
   document.getElementById('btnAddProcess').addEventListener('click', () => {
     r.processes.push({ title: '', steps: [''] });
@@ -2651,6 +2660,7 @@ function renderParts(r){
         <button type="button" class="part-toggle-btn" title="Expand / collapse this part">▶</button>
         <input type="text" class="part-name" placeholder="Part ${pIdx+1} name">
         <span class="part-header-summary"></span>
+        <button class="icon-btn" title="Delete this part">✕</button>
       </div>
       <div class="part-body">
         <table>
@@ -2668,20 +2678,32 @@ function renderParts(r){
           <tfoot>
             <tr>
               <td></td>
-              <td>Part ${pIdx+1} Subtotal</td>
+              <td class="part-subtotal-label"></td>
               <td class="part-subtotal-pct"></td>
               <td class="part-subtotal-wt"></td>
               <td colspan="2"></td>
             </tr>
           </tfoot>
         </table>
-        <button class="btn btn-sm add-row-btn" data-role="add-ing">+ Add Ingredient (Part ${pIdx+1})</button>
+        <button class="btn btn-sm add-row-btn" data-role="add-ing"></button>
       </div>
     `;
 
     const nameField = block.querySelector('.part-name');
+    const subtotalLabelEl = block.querySelector('.part-subtotal-label');
+    const addIngBtn = block.querySelector('[data-role="add-ing"]');
+
+    function partLabel(){
+      return (part.name || '').trim() || `Part ${pIdx+1}`;
+    }
+    function updatePartLabels(){
+      subtotalLabelEl.textContent = `${partLabel()} Subtotal`;
+      addIngBtn.textContent = `+ Add Ingredient (${partLabel()})`;
+    }
+    updatePartLabels();
+
     nameField.value = part.name || '';
-    nameField.addEventListener('input', e => { part.name = e.target.value; scheduleSave(); });
+    nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); scheduleSave(); });
 
     const body = block.querySelector('tbody');
     const subPctCell = block.querySelector('.part-subtotal-pct');
@@ -2810,6 +2832,18 @@ function renderParts(r){
       scheduleSave();
     });
 
+    const deletePartBtn = block.querySelector('.part-header .icon-btn');
+    if(r.parts.length <= 1){
+      deletePartBtn.style.display = 'none';
+    } else {
+      deletePartBtn.addEventListener('click', () => {
+        if(!confirm(`Delete "${part.name || `Part ${pIdx+1}`}" and all its ingredients?`)) return;
+        r.parts.splice(pIdx, 1);
+        renderParts(r);
+        scheduleSave();
+      });
+    }
+
     container.appendChild(block);
   });
 
@@ -2901,6 +2935,8 @@ function renderProcesses(r){
       <div class="process-header">
         <div class="step-badge">${pIdx+1}</div>
         <input type="text" class="process-title" placeholder="Process ${pIdx+1} name (e.g. Mixing)">
+        <button class="icon-btn" title="Move this process up">▲</button>
+        <button class="icon-btn" title="Move this process down">▼</button>
         <button class="icon-btn" title="Delete this process">✕</button>
       </div>
       <div class="process-steps-list"></div>
@@ -2959,7 +2995,20 @@ function renderProcesses(r){
       scheduleSave();
     });
 
-    block.querySelector('.process-header .icon-btn').addEventListener('click', () => {
+    const [moveUpBtn, moveDownBtn, deleteProcessBtn] = block.querySelectorAll('.process-header .icon-btn');
+    moveUpBtn.addEventListener('click', () => {
+      if(pIdx === 0) return;
+      [r.processes[pIdx-1], r.processes[pIdx]] = [r.processes[pIdx], r.processes[pIdx-1]];
+      renderProcesses(r);
+      scheduleSave();
+    });
+    moveDownBtn.addEventListener('click', () => {
+      if(pIdx === r.processes.length-1) return;
+      [r.processes[pIdx+1], r.processes[pIdx]] = [r.processes[pIdx], r.processes[pIdx+1]];
+      renderProcesses(r);
+      scheduleSave();
+    });
+    deleteProcessBtn.addEventListener('click', () => {
       r.processes.splice(pIdx, 1);
       if(r.processes.length === 0) r.processes.push({ title: '', steps: [''] });
       renderProcesses(r);
