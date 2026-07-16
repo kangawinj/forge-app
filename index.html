@@ -1037,8 +1037,12 @@
     line-height:1.6;
   }
 
+  .print-only{display:none;}
+
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
+    .recipe-fields-edit, .processes-list{display:none !important;}
+    .print-only{display:block !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
@@ -1438,7 +1442,10 @@ const CHANGELOG = [
   { version: "3.0.15", date: "2026-07-16", note: "Section 2 (Ingredients) is no longer fixed at 4 parts — added a \"+ Add Part\" button and a delete button per part (at least one part is always kept). Section 3 (Process Steps): each process can now be moved up/down, not just its individual steps" },
   { version: "3.0.16", date: "2026-07-16", note: "The \"+ Add Ingredient (...)\" button and \"... Subtotal\" row now follow the part's custom name (e.g. \"+ Add Ingredient (Mixed)\") instead of always showing \"Part N\", updating live as you rename the part" },
   { version: "3.0.17", date: "2026-07-16", note: "Printing now renders every table as cleanly as Recipe Overview: input/textarea fields print as plain text (no boxes), edit/copy/delete/collapse icons are hidden, and collapsed ingredient parts are force-expanded so nothing is missing from the printout" },
-  { version: "3.0.18", date: "2026-07-16", note: "The ingredient Weight (g) field now always shows 2 decimal places (e.g. \"6.00\" instead of \"6\"), formatting as soon as you leave the field" }
+  { version: "3.0.18", date: "2026-07-16", note: "The ingredient Weight (g) field now always shows 2 decimal places (e.g. \"6.00\" instead of \"6\"), formatting as soon as you leave the field" },
+  { version: "3.0.19", date: "2026-07-16", note: "Printing/saving a recipe as PDF now defaults the filename to \"Recipe Product Name Recipe Code Forge\" instead of the browser's generic page title" },
+  { version: "3.0.20", date: "2026-07-16", note: "Printing a recipe now shows section 1 (Code/Date/Total weight/Description) in the same clean read-only card style as Compare Recipes, instead of the on-screen editable form fields" },
+  { version: "3.0.21", date: "2026-07-16", note: "Printing a recipe now also shows section 3 (Process Steps) as clean orange process headers with a plain numbered step list, instead of the on-screen editable step boxes" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2436,30 +2443,33 @@ function renderMain(){
     <div id="recipeCards">
     <div class="card">
       <div class="card-title">1. Product Name & Details</div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Product Name</label>
-          <input type="text" id="f-name" placeholder="e.g. Vegan Tartar Sauce">
+      <div class="recipe-fields-edit">
+        <div class="grid-2">
+          <div class="field">
+            <label>Product Name</label>
+            <input type="text" id="f-name" placeholder="e.g. Vegan Tartar Sauce">
+          </div>
+          <div class="field">
+            <label>Date</label>
+            <input type="date" id="f-date">
+          </div>
         </div>
-        <div class="field">
-          <label>Date</label>
-          <input type="date" id="f-date">
-        </div>
-      </div>
-      <div class="grid-2">
-        <div class="field">
-          <label>Description / Concept</label>
-          <textarea id="f-desc" placeholder="Product characteristics, selling points, target audience, etc."></textarea>
-        </div>
-        <div class="field">
-          <label>Recipe Code — YYYYMMDD-XX</label>
-          <div class="code-row">
-            <span class="code-prefix" id="codePrefixDisplay">YYYYMMDD</span>
-            <span class="code-sep">-</span>
-            <input type="text" id="f-codeSuffix" class="code-suffix" placeholder="XX" maxlength="10">
+        <div class="grid-2">
+          <div class="field">
+            <label>Description / Concept</label>
+            <textarea id="f-desc" placeholder="Product characteristics, selling points, target audience, etc."></textarea>
+          </div>
+          <div class="field">
+            <label>Recipe Code — YYYYMMDD-XX</label>
+            <div class="code-row">
+              <span class="code-prefix" id="codePrefixDisplay">YYYYMMDD</span>
+              <span class="code-sep">-</span>
+              <input type="text" id="f-codeSuffix" class="code-suffix" placeholder="XX" maxlength="10">
+            </div>
           </div>
         </div>
       </div>
+      <div id="printInfoCard" class="print-only compare-info-col"></div>
     </div>
 
     <div class="card">
@@ -2506,6 +2516,7 @@ function renderMain(){
       <div class="card-title">3. Process Steps</div>
       <div class="processes-list" id="processesList"></div>
       <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
+      <div id="printProcessesView" class="print-only compare-steps-col"></div>
     </div>
     </div>
 
@@ -2583,7 +2594,22 @@ function renderMain(){
       }
     );
   });
-  document.getElementById('btnPrint').addEventListener('click', () => window.print());
+  document.getElementById('btnPrint').addEventListener('click', () => {
+    renderPrintView(r);
+    // Browsers default the "Save as PDF" filename to document.title, so set
+    // it to "Recipe Product Name Recipe Code Forge" just for the print, then
+    // restore the real page title afterwards.
+    const originalTitle = document.title;
+    const code = fullCode(r);
+    const namePart = [r.name || 'Untitled recipe', code].filter(Boolean).join(' ');
+    document.title = `Recipe ${namePart} Forge`.replace(/[\\/:*?"<>|]/g, '-');
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    };
+    window.addEventListener('afterprint', restoreTitle);
+    window.print();
+  });
 
   renderLockState(r);
 }
@@ -3038,6 +3064,36 @@ function renderProcesses(r){
 
     list.appendChild(block);
   });
+}
+
+/* Read-only print layout for section 1 (info card) and section 3 (process
+   steps as a plain numbered list) — reuses the same look as Compare Recipes
+   instead of the on-screen editable form/step-badge styling. Filled in right
+   before printing so it's always current regardless of what was last edited. */
+function renderPrintView(r){
+  const infoEl = document.getElementById('printInfoCard');
+  if(infoEl){
+    const totalWt = r.parts.flatMap(p => p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    infoEl.innerHTML = `
+      <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
+      <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
+      <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
+      <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
+      <div class="ci-row"><b>Description:</b> ${escapeHtml(r.description || '-')}</div>
+    `;
+  }
+
+  const procEl = document.getElementById('printProcessesView');
+  if(procEl){
+    const processes = (r.processes || []).filter(p => (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== ''));
+    procEl.innerHTML = processes.map(p => {
+      const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+      return `
+        <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+      `;
+    }).join('') || '<div class="compare-missing">No processes yet</div>';
+  }
 }
 
 /* ---------- Recipe actions ---------- */
