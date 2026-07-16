@@ -1437,7 +1437,8 @@ const CHANGELOG = [
   { version: "3.0.14", date: "2026-07-16", note: "Ingredient Library: the search box now also matches against Usage Notes, so ingredients can be found by handling/dosage instructions, not just name/code/vendor" },
   { version: "3.0.15", date: "2026-07-16", note: "Section 2 (Ingredients) is no longer fixed at 4 parts — added a \"+ Add Part\" button and a delete button per part (at least one part is always kept). Section 3 (Process Steps): each process can now be moved up/down, not just its individual steps" },
   { version: "3.0.16", date: "2026-07-16", note: "The \"+ Add Ingredient (...)\" button and \"... Subtotal\" row now follow the part's custom name (e.g. \"+ Add Ingredient (Mixed)\") instead of always showing \"Part N\", updating live as you rename the part" },
-  { version: "3.0.17", date: "2026-07-16", note: "Printing now renders every table as cleanly as Recipe Overview: input/textarea fields print as plain text (no boxes), edit/copy/delete/collapse icons are hidden, and collapsed ingredient parts are force-expanded so nothing is missing from the printout" }
+  { version: "3.0.17", date: "2026-07-16", note: "Printing now renders every table as cleanly as Recipe Overview: input/textarea fields print as plain text (no boxes), edit/copy/delete/collapse icons are hidden, and collapsed ingredient parts are force-expanded so nothing is missing from the printout" },
+  { version: "3.0.18", date: "2026-07-16", note: "The ingredient Weight (g) field now always shows 2 decimal places (e.g. \"6.00\" instead of \"6\"), formatting as soon as you leave the field" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2767,7 +2768,7 @@ function renderParts(r){
 
         nameInput.value = ing.name || '';
         pctDisplay.textContent = (ing.percent||0).toFixed(2) + '%';
-        wtInput.value = ing.weight ?? 0;
+        wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
         noteInput.value = ing.note || '';
 
         function syncMaterialLink(resetWeightIfUnlinked){
@@ -2792,7 +2793,7 @@ function renderParts(r){
             }
             if(resetWeightIfUnlinked && (parseFloat(ing.weight) || 0) !== 0){
               ing.weight = 0;
-              wtInput.value = 0;
+              wtInput.value = (0).toFixed(2);
             }
           }
         }
@@ -2810,6 +2811,9 @@ function renderParts(r){
           ing.weight = parseFloat(e.target.value) || 0;
           refreshDisplays(r);
           scheduleSave();
+        });
+        wtInput.addEventListener('blur', () => {
+          wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
         });
 
         delBtn.addEventListener('click', () => {
