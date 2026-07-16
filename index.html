@@ -669,6 +669,48 @@
   .material-thumb-empty{
     background:var(--accent-light);
   }
+  .material-table tbody tr{cursor:pointer;}
+  .material-table tbody tr:hover{background:var(--accent-light);}
+
+  .material-detail-photo{
+    display:flex;
+    justify-content:center;
+    margin-bottom:14px;
+  }
+  .material-detail-photo img, .material-detail-photo-empty{
+    width:120px;
+    height:120px;
+    object-fit:cover;
+    border-radius:10px;
+    border:1px solid var(--border);
+  }
+  .material-detail-photo-empty{background:var(--accent-light);}
+  .material-detail-title{
+    font-weight:700;
+    font-size:15px;
+    color:var(--primary-dark);
+    text-align:center;
+    margin-bottom:16px;
+  }
+  .material-detail-list{
+    display:grid;
+    grid-template-columns:auto 1fr;
+    gap:8px 16px;
+    font-size:13px;
+  }
+  .material-detail-list dt{color:var(--text-dim);font-weight:600;}
+  .material-detail-list dd{margin:0;}
+  .material-detail-notes-label{
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:13px;
+    margin-top:16px;
+    margin-bottom:4px;
+  }
+  .material-detail-notes{
+    font-size:13px;
+    white-space:pre-wrap;
+  }
 
   .compare-modal{max-width:1180px;}
   .compare-pickers{
@@ -1218,6 +1260,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="materialDetailModalOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">Ingredient Details</div>
+      <button class="icon-btn" id="btnCloseMaterialDetail" title="Close">✕</button>
+    </div>
+    <div class="modal-body" id="materialDetailBody"></div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="authConfirmModalOverlay">
   <div class="modal" style="max-width:380px;">
     <div class="modal-header">
@@ -1364,7 +1416,8 @@ const CHANGELOG = [
   { version: "3.0.9", date: "2026-07-15", note: "Ingredient Library: can now attach a photo to each ingredient (auto-shrunk to a small thumbnail, stored with the entry — no separate file storage needed), shown as a thumbnail in the library table" },
   { version: "3.0.10", date: "2026-07-15", note: "Recipe Overview (all parts combined) now shows each ingredient's photo (from the Ingredient Library) next to its name" },
   { version: "3.0.11", date: "2026-07-15", note: "Recipe Overview: now also shows each ingredient's vendor and manufacturer (from the Ingredient Library) as a small line under its name" },
-  { version: "3.0.12", date: "2026-07-15", note: "Ingredient Library: added a \"Usage Notes\" field (handling/dosage instructions, etc.) shown in the ingredient's tooltip on the recipe page" }
+  { version: "3.0.12", date: "2026-07-15", note: "Ingredient Library: added a \"Usage Notes\" field (handling/dosage instructions, etc.) shown in the ingredient's tooltip on the recipe page" },
+  { version: "3.0.13", date: "2026-07-16", note: "Ingredient Library: clicking anywhere on a row (other than the Edit/Copy/Delete buttons) now opens a details view with the ingredient's full photo, all fields, and usage notes" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1912,7 +1965,7 @@ function renderMaterialTable(){
   }
 
   body.innerHTML = filtered.map(m => `
-    <tr>
+    <tr data-view-material="${escapeHtml(m.id)}">
       <td>${m.image ? `<img src="${escapeHtml(m.image)}" class="material-thumb" alt="${escapeHtml(m.nameEn)}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
       <td>${escapeHtml(m.nameEn)}</td>
       <td>${escapeHtml(m.nameTh)}</td>
@@ -1952,6 +2005,14 @@ function renderMaterialTable(){
       deleteMaterialFromCloud(id);
     });
   });
+  body.querySelectorAll('[data-view-material]').forEach(tr => {
+    tr.addEventListener('click', e => {
+      if(e.target.closest('button')) return; // let edit/copy/delete handle their own click
+      const id = tr.getAttribute('data-view-material');
+      const m = ingredientMaster.find(x => x.id === id);
+      if(m) openMaterialDetail(m);
+    });
+  });
 }
 
 function openMaterialModal(){
@@ -1962,6 +2023,37 @@ function openMaterialModal(){
 function closeMaterialModal(){
   document.getElementById('materialModalOverlay').classList.remove('open');
   cancelEditMaterial();
+}
+
+function openMaterialDetail(m){
+  const body = document.getElementById('materialDetailBody');
+  const rows = [
+    ['Vendor Code', m.vendorCode],
+    ['Vendor Name', m.vendorName],
+    ['Manufacturer', m.manufacturer],
+    ['Price/kg', (m.price !== '' && m.price != null) ? `฿${m.price}` : ''],
+    ['MOQ', formatMoq(m.moq)]
+  ].map(([label, value]) => `
+    <dt>${escapeHtml(label)}</dt>
+    <dd>${escapeHtml(value || '-')}</dd>
+  `).join('');
+
+  body.innerHTML = `
+    <div class="material-detail-photo">
+      ${m.image ? `<img src="${escapeHtml(m.image)}" alt="${escapeHtml(m.nameEn)}">` : '<div class="material-detail-photo-empty"></div>'}
+    </div>
+    <div class="material-detail-title">${escapeHtml(m.nameEn)} / ${escapeHtml(m.nameTh)}</div>
+    <dl class="material-detail-list">${rows}</dl>
+    ${m.usageNotes ? `
+      <div class="material-detail-notes-label">Usage Notes</div>
+      <div class="material-detail-notes">${escapeHtml(m.usageNotes)}</div>
+    ` : ''}
+  `;
+  document.getElementById('materialDetailModalOverlay').classList.add('open');
+}
+
+function closeMaterialDetail(){
+  document.getElementById('materialDetailModalOverlay').classList.remove('open');
 }
 
 let editingMaterialId = null;
@@ -2063,6 +2155,10 @@ function initMaterialLibrary(){
   });
   document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
   document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
+  document.getElementById('btnCloseMaterialDetail').addEventListener('click', closeMaterialDetail);
+  document.getElementById('materialDetailModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'materialDetailModalOverlay') closeMaterialDetail();
+  });
 
   document.getElementById('mf-image').addEventListener('change', async e => {
     const file = e.target.files[0];
