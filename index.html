@@ -1236,7 +1236,7 @@
       </div>
 
       <div class="material-search">
-        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor)...">
+        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor / usage notes)...">
       </div>
       <div style="overflow-x:auto;">
         <table class="material-table">
@@ -1417,7 +1417,8 @@ const CHANGELOG = [
   { version: "3.0.10", date: "2026-07-15", note: "Recipe Overview (all parts combined) now shows each ingredient's photo (from the Ingredient Library) next to its name" },
   { version: "3.0.11", date: "2026-07-15", note: "Recipe Overview: now also shows each ingredient's vendor and manufacturer (from the Ingredient Library) as a small line under its name" },
   { version: "3.0.12", date: "2026-07-15", note: "Ingredient Library: added a \"Usage Notes\" field (handling/dosage instructions, etc.) shown in the ingredient's tooltip on the recipe page" },
-  { version: "3.0.13", date: "2026-07-16", note: "Ingredient Library: clicking anywhere on a row (other than the Edit/Copy/Delete buttons) now opens a details view with the ingredient's full photo, all fields, and usage notes" }
+  { version: "3.0.13", date: "2026-07-16", note: "Ingredient Library: clicking anywhere on a row (other than the Edit/Copy/Delete buttons) now opens a details view with the ingredient's full photo, all fields, and usage notes" },
+  { version: "3.0.14", date: "2026-07-16", note: "Ingredient Library: the search box now also matches against Usage Notes, so ingredients can be found by handling/dosage instructions, not just name/code/vendor" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1955,7 +1956,7 @@ function renderMaterialTable(){
   const q = (document.getElementById('materialSearchInput').value || '').trim().toLowerCase();
   const filtered = ingredientMaster.filter(m => {
     if(!q) return true;
-    return [m.nameEn, m.nameTh, m.vendorCode, m.vendorName, m.manufacturer]
+    return [m.nameEn, m.nameTh, m.vendorCode, m.vendorName, m.manufacturer, m.usageNotes]
       .some(v => (v || '').toLowerCase().includes(q));
   });
 
