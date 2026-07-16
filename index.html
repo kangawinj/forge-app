@@ -517,6 +517,15 @@
   .overview-thumb-empty{
     background:var(--accent-light);
   }
+  .overview-ing-info{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+  }
+  .overview-ing-sub{
+    font-size:11px;
+    color:var(--text-dim);
+  }
 
   .batch-summary{
     display:flex;
@@ -1349,7 +1358,8 @@ const CHANGELOG = [
   { version: "3.0.7", date: "2026-07-15", note: "Compare Recipes: added a \"Cost / kg of product\" row under Compare Costing's Total Cost (Total Cost ÷ batch weight), so recipes with different batch sizes can be compared on an even footing" },
   { version: "3.0.8", date: "2026-07-15", note: "Compare Recipes: added a Print button that prints the comparison full-page (ingredients, costing, process steps) instead of being clipped by the modal's on-screen size" },
   { version: "3.0.9", date: "2026-07-15", note: "Ingredient Library: can now attach a photo to each ingredient (auto-shrunk to a small thumbnail, stored with the entry — no separate file storage needed), shown as a thumbnail in the library table" },
-  { version: "3.0.10", date: "2026-07-15", note: "Recipe Overview (all parts combined) now shows each ingredient's photo (from the Ingredient Library) next to its name" }
+  { version: "3.0.10", date: "2026-07-15", note: "Recipe Overview (all parts combined) now shows each ingredient's photo (from the Ingredient Library) next to its name" },
+  { version: "3.0.11", date: "2026-07-15", note: "Recipe Overview: now also shows each ingredient's vendor and manufacturer (from the Ingredient Library) as a small line under its name" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2732,7 +2742,14 @@ function renderOverview(allIngredients){
     const key = i.name.trim().toLowerCase();
     if(!groups.has(key)){
       const material = i.materialId ? ingredientMaster.find(m => m.id === i.materialId) : null;
-      groups.set(key, { name: i.name.trim(), pct: 0, wt: 0, image: material ? material.image : '' });
+      groups.set(key, {
+        name: i.name.trim(),
+        pct: 0,
+        wt: 0,
+        image: material ? material.image : '',
+        vendorName: material ? material.vendorName : '',
+        manufacturer: material ? material.manufacturer : ''
+      });
     }
     const g = groups.get(key);
     g.pct += parseFloat(i.percent) || 0;
@@ -2749,7 +2766,10 @@ function renderOverview(allIngredients){
       <td>
         <div class="overview-ing-cell">
           ${g.image ? `<img src="${escapeHtml(g.image)}" class="overview-thumb" alt="${escapeHtml(g.name)}">` : '<div class="overview-thumb overview-thumb-empty"></div>'}
-          <span>${escapeHtml(g.name)}</span>
+          <div class="overview-ing-info">
+            <span>${escapeHtml(g.name)}</span>
+            ${(g.vendorName || g.manufacturer) ? `<span class="overview-ing-sub">${escapeHtml([g.vendorName, g.manufacturer].filter(Boolean).join(' · '))}</span>` : ''}
+          </div>
         </div>
       </td>
       <td class="col-pct">
