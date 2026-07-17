@@ -776,6 +776,8 @@
     margin-bottom:3px;
   }
   .compare-info-col .ci-row b{color:var(--text);font-weight:600;}
+  .ci-desc-list{margin:2px 0 6px 16px;padding:0;font-size:12px;color:var(--text-dim);}
+  .ci-desc-list li{margin-bottom:2px;}
   .compare-section-title{
     font-weight:700;
     font-size:14px;
@@ -997,6 +999,62 @@
   .process-header .process-title:hover{border-color:var(--border);}
   .process-header .process-title:focus{background:#fff;}
   .process-steps-list{margin-bottom:10px;}
+
+  .desc-points-list{margin-bottom:8px;}
+  .desc-point-row{
+    display:flex;
+    gap:8px;
+    align-items:flex-start;
+    margin-bottom:8px;
+  }
+  .desc-point-row textarea{flex:1;min-height:44px;}
+
+  .trial-section{
+    margin-top:20px;
+    padding-top:16px;
+    border-top:1px solid var(--border);
+  }
+  .trial-section-title{
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+    margin-bottom:12px;
+  }
+  .trial-photos-row{
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+    margin-bottom:10px;
+  }
+  .trial-photo-thumb{
+    position:relative;
+    width:100px;
+    height:100px;
+  }
+  .trial-photo-thumb img{
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    border-radius:8px;
+    border:1px solid var(--border);
+  }
+  .trial-photo-thumb button{
+    position:absolute;
+    top:-6px;
+    right:-6px;
+    width:22px;
+    height:22px;
+    border-radius:50%;
+    background:#fff;
+    border:1px solid var(--border);
+    box-shadow:0 1px 3px rgba(0,0,0,.15);
+    font-size:12px;
+    line-height:1;
+    padding:0;
+  }
+  .trial-eval-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;}
+  .trial-eval-table input{padding:7px 8px;font-size:13px;}
+  .col-score{width:90px;}
 
   .empty-state{
     text-align:center;
@@ -1445,7 +1503,12 @@ const CHANGELOG = [
   { version: "3.0.18", date: "2026-07-16", note: "The ingredient Weight (g) field now always shows 2 decimal places (e.g. \"6.00\" instead of \"6\"), formatting as soon as you leave the field" },
   { version: "3.0.19", date: "2026-07-16", note: "Printing/saving a recipe as PDF now defaults the filename to \"Recipe Product Name Recipe Code Forge\" instead of the browser's generic page title" },
   { version: "3.0.20", date: "2026-07-16", note: "Printing a recipe now shows section 1 (Code/Date/Total weight/Description) in the same clean read-only card style as Compare Recipes, instead of the on-screen editable form fields" },
-  { version: "3.0.21", date: "2026-07-16", note: "Printing a recipe now also shows section 3 (Process Steps) as clean orange process headers with a plain numbered step list, instead of the on-screen editable step boxes" }
+  { version: "3.0.21", date: "2026-07-16", note: "Printing a recipe now also shows section 3 (Process Steps) as clean orange process headers with a plain numbered step list, instead of the on-screen editable step boxes" },
+  { version: "3.0.22", date: "2026-07-16", note: "Section 1: Description / Concept is now a list of separate points (+ Add Point / delete per point) instead of one text box. Added a \"Trial / Experiment Results\" area with up to 3 photos and a free-form sensory evaluation table (criteria / score / comment, add/delete rows). Ingredient Library now lists the most recently added ingredient first. Recipe Overview now numbers each ingredient row" },
+  { version: "3.0.23", date: "2026-07-16", note: "The sidebar recipe list now shows the Recipe Code suffix after the product name (e.g. \"Vegan Tartar Sauce - 20\"), matching the naming already used in Compare Recipes and printing" },
+  { version: "3.0.24", date: "2026-07-16", note: "\"Name - Code\" labels (sidebar, Compare Recipes) now show the full Recipe Code suffix as typed instead of always truncating to the last 2 characters (e.g. \"02A\" now shows as \"02A\", not \"2A\")" },
+  { version: "3.0.25", date: "2026-07-16", note: "Compare Recipes no longer auto-selects the 3 most recently updated recipes when opened — all three picker slots start blank, so the user always chooses recipes fresh" },
+  { version: "3.0.26", date: "2026-07-16", note: "Compare Recipes: the recipe dropdowns are now sorted alphabetically by product name (then by code), instead of by most recently updated" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1660,7 +1723,12 @@ function initCompareModal(){
 
 function openCompareModal(){
   const picker = document.getElementById('comparePickers');
-  const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
+  // Alphabetical by product name, then by code, so recipes are easy to find
+  // in the dropdown instead of jumping around by last-edited time.
+  const sorted = [...recipes].sort((a,b) =>
+    (a.name||'Untitled recipe').localeCompare(b.name||'Untitled recipe', undefined, {sensitivity:'base'}) ||
+    (a.code||'').localeCompare(b.code||'', undefined, {numeric:true})
+  );
   const options = sorted.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('');
 
   picker.innerHTML = [0,1,2].map(i => `
@@ -1673,8 +1741,9 @@ function openCompareModal(){
     </div>
   `).join('');
 
-  picker.querySelectorAll('.compare-select').forEach((sel, i) => {
-    if(sorted[i]) sel.value = sorted[i].id;
+  // Always start blank — the user picks recipes fresh every time the modal
+  // opens, rather than defaulting to the most recently updated ones.
+  picker.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
   });
 
@@ -1712,7 +1781,7 @@ function renderCompareContent(){
         <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
         <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
         <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
-        <div class="ci-row"><b>Description:</b> ${escapeHtml(r.description || '-')}</div>
+        ${descriptionListHtml(r)}
       </div>
     `;
   }).join('');
@@ -1986,6 +2055,9 @@ function renderMaterialTable(){
     return [m.nameEn, m.nameTh, m.vendorCode, m.vendorName, m.manufacturer, m.usageNotes]
       .some(v => (v || '').toLowerCase().includes(q));
   });
+  // Most recently added first — ids are generated as "r" + a base36 timestamp
+  // + random suffix, so sorting ids descending sorts by creation time.
+  filtered.sort((a, b) => (b.id || '').localeCompare(a.id || ''));
 
   if(filtered.length === 0){
     body.innerHTML = `<tr><td colspan="9"><div class="material-empty">${ingredientMaster.length === 0 ? 'No ingredients in the library yet — add the first one above' : 'No matching ingredients found'}</div></td></tr>`;
@@ -2242,10 +2314,12 @@ function blankRecipe(){
     name: "",
     code: "",
     date: new Date().toISOString().slice(0,10),
-    description: "",
+    description: [],
     batchWeight: 1000,
     parts: Array.from({length:PART_COUNT}, (_,i) => blankPart(`Part ${i+1}`)),
     processes: [ { title: "", steps: [""] } ],
+    trialPhotos: [],
+    trialEvaluation: [],
     updatedAt: Date.now()
   };
 }
@@ -2283,6 +2357,15 @@ function migrateRecipe(r){
       p.steps = [""];
     }
   });
+
+  // Description used to be a single free-text field — upgrade it to a list
+  // of separate points (characteristics, selling points, etc.).
+  if(!Array.isArray(r.description)){
+    r.description = (r.description || '').trim() ? [r.description] : [];
+  }
+
+  if(!Array.isArray(r.trialPhotos)) r.trialPhotos = [];
+  if(!Array.isArray(r.trialEvaluation)) r.trialEvaluation = [];
 
   return r;
 }
@@ -2363,7 +2446,7 @@ function renderSidebar(){
       const totalPct = allIngredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
       const codeDisplay = fullCode(r);
       div.innerHTML = `
-        <div class="r-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
+        <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
         <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
       `;
       div.addEventListener('click', () => {
@@ -2393,8 +2476,18 @@ function fullCode(r){
 function recipeDisplayLabel(r){
   const name = r.name || 'Untitled recipe';
   const suffix = (r.code || '').trim();
-  const shortCode = suffix ? suffix.slice(-2) : '';
-  return shortCode ? `${name} - ${shortCode}` : name;
+  return suffix ? `${name} - ${suffix}` : name;
+}
+
+/* Shared by the Compare Recipes info card and the print info card — renders
+   the Description/Concept points (an array) as a small bullet list. */
+function descriptionListHtml(r){
+  const points = (r.description || []).filter(p => (p||'').trim() !== '');
+  if(points.length === 0) return '<div class="ci-row"><b>Description:</b> -</div>';
+  return `
+    <div class="ci-row"><b>Description:</b></div>
+    <ul class="ci-desc-list">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+  `;
 }
 
 function updateRecipeTitleDisplay(r){
@@ -2457,7 +2550,8 @@ function renderMain(){
         <div class="grid-2">
           <div class="field">
             <label>Description / Concept</label>
-            <textarea id="f-desc" placeholder="Product characteristics, selling points, target audience, etc."></textarea>
+            <div class="desc-points-list" id="descPointsList"></div>
+            <button class="btn btn-sm add-row-btn" type="button" id="btnAddDescPoint">+ Add Point</button>
           </div>
           <div class="field">
             <label>Recipe Code — YYYYMMDD-XX</label>
@@ -2470,6 +2564,34 @@ function renderMain(){
         </div>
       </div>
       <div id="printInfoCard" class="print-only compare-info-col"></div>
+
+      <div class="trial-section">
+        <div class="trial-section-title">Trial / Experiment Results</div>
+
+        <div class="field">
+          <label>Photos (up to 3)</label>
+          <div class="trial-photos-row" id="trialPhotosRow"></div>
+          <input type="file" id="trialPhotoInput" accept="image/*">
+        </div>
+
+        <div class="field">
+          <label>Sensory Evaluation</label>
+          <div style="overflow-x:auto;">
+            <table class="trial-eval-table">
+              <thead>
+                <tr>
+                  <th>Criteria</th>
+                  <th class="col-score">Score</th>
+                  <th>Comment</th>
+                  <th class="col-del"></th>
+                </tr>
+              </thead>
+              <tbody id="trialEvalBody"></tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm add-row-btn" type="button" id="btnAddTrialEvalRow">+ Add Criteria</button>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -2496,6 +2618,7 @@ function renderMain(){
         <table>
           <thead>
             <tr>
+              <th class="col-no">#</th>
               <th>Ingredient</th>
               <th class="col-pct">% of Recipe</th>
               <th class="col-wt">Total Weight (g)</th>
@@ -2528,9 +2651,11 @@ function renderMain(){
   document.getElementById('f-name').value = r.name || '';
   document.getElementById('f-codeSuffix').value = r.code || '';
   document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
-  document.getElementById('f-desc').value = r.description || '';
   document.getElementById('f-date').value = r.date || '';
   updateRecipeTitleDisplay(r);
+  renderDescPoints(r);
+  renderTrialPhotos(r);
+  renderTrialEval(r);
 
   document.getElementById('f-name').addEventListener('input', e => {
     r.name = e.target.value;
@@ -2542,7 +2667,24 @@ function renderMain(){
     updateRecipeTitleDisplay(r);
     scheduleSave();
   });
-  document.getElementById('f-desc').addEventListener('input', e => { r.description = e.target.value; scheduleSave(); });
+  document.getElementById('btnAddDescPoint').addEventListener('click', () => {
+    r.description.push('');
+    renderDescPoints(r);
+    scheduleSave();
+  });
+  document.getElementById('trialPhotoInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file || r.trialPhotos.length >= 3) return;
+    r.trialPhotos.push(await resizeImageFile(file, 500));
+    renderTrialPhotos(r);
+    scheduleSave();
+  });
+  document.getElementById('btnAddTrialEvalRow').addEventListener('click', () => {
+    r.trialEvaluation.push({ criteria: '', score: '', comment: '' });
+    renderTrialEval(r);
+    scheduleSave();
+  });
   document.getElementById('f-date').addEventListener('input', e => {
     r.date = e.target.value;
     document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
@@ -2919,7 +3061,7 @@ function renderOverview(allIngredients){
 
   const named = allIngredients.filter(i => (i.name||'').trim() !== '');
   if(named.length === 0){
-    body.innerHTML = '<tr><td colspan="3"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="4"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
     return;
   }
 
@@ -2945,10 +3087,11 @@ function renderOverview(allIngredients){
   const rows = [...groups.values()].sort((a,b) => b.pct - a.pct);
   const maxPct = Math.max(...rows.map(g => g.pct), 100);
 
-  rows.forEach(g => {
+  rows.forEach((g, idx) => {
     const tr = document.createElement('tr');
     const barPct = Math.min(100, (g.pct / maxPct) * 100);
     tr.innerHTML = `
+      <td class="col-no">${idx+1}</td>
       <td>
         <div class="overview-ing-cell">
           ${g.image ? `<img src="${escapeHtml(g.image)}" class="overview-thumb" alt="${escapeHtml(g.name)}">` : '<div class="overview-thumb overview-thumb-empty"></div>'}
@@ -3066,6 +3209,86 @@ function renderProcesses(r){
   });
 }
 
+/* ---------- Description points (Description / Concept, as a bullet list) ---------- */
+function renderDescPoints(r){
+  const list = document.getElementById('descPointsList');
+  if(!list) return;
+  list.innerHTML = '';
+  r.description.forEach((point, idx) => {
+    const row = document.createElement('div');
+    row.className = 'desc-point-row';
+    row.innerHTML = `
+      <textarea rows="2" placeholder="e.g. Product characteristics, selling point, target audience..."></textarea>
+      <button class="icon-btn" title="Delete">✕</button>
+    `;
+    const ta = row.querySelector('textarea');
+    ta.value = point;
+    ta.addEventListener('input', e => { r.description[idx] = e.target.value; scheduleSave(); });
+    row.querySelector('.icon-btn').addEventListener('click', () => {
+      r.description.splice(idx, 1);
+      renderDescPoints(r);
+      scheduleSave();
+    });
+    list.appendChild(row);
+  });
+}
+
+/* ---------- Trial / Experiment Results (photos + free-form sensory table) ---------- */
+function renderTrialPhotos(r){
+  const row = document.getElementById('trialPhotosRow');
+  const input = document.getElementById('trialPhotoInput');
+  if(!row) return;
+  row.innerHTML = r.trialPhotos.map((photo, idx) => `
+    <div class="trial-photo-thumb" data-idx="${idx}">
+      <img src="${escapeHtml(photo)}" alt="Trial photo ${idx+1}">
+      <button title="Remove this photo">✕</button>
+    </div>
+  `).join('');
+  row.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
+      r.trialPhotos.splice(idx, 1);
+      renderTrialPhotos(r);
+      scheduleSave();
+    });
+  });
+  if(input) input.style.display = r.trialPhotos.length >= 3 ? 'none' : '';
+}
+
+function renderTrialEval(r){
+  const body = document.getElementById('trialEvalBody');
+  if(!body) return;
+  if(r.trialEvaluation.length === 0){
+    body.innerHTML = '<tr><td colspan="4"><div class="overview-empty">No evaluation criteria added yet</div></td></tr>';
+    return;
+  }
+  body.innerHTML = r.trialEvaluation.map(() => `
+    <tr>
+      <td><input type="text" class="teval-criteria" placeholder="e.g. Appearance"></td>
+      <td class="col-score"><input type="text" class="teval-score" placeholder="e.g. 8/9"></td>
+      <td><input type="text" class="teval-comment" placeholder="Notes"></td>
+      <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
+    </tr>
+  `).join('');
+  [...body.querySelectorAll('tr')].forEach((tr, idx) => {
+    const row = r.trialEvaluation[idx];
+    const criteriaInput = tr.querySelector('.teval-criteria');
+    const scoreInput = tr.querySelector('.teval-score');
+    const commentInput = tr.querySelector('.teval-comment');
+    criteriaInput.value = row.criteria || '';
+    scoreInput.value = row.score || '';
+    commentInput.value = row.comment || '';
+    criteriaInput.addEventListener('input', e => { row.criteria = e.target.value; scheduleSave(); });
+    scoreInput.addEventListener('input', e => { row.score = e.target.value; scheduleSave(); });
+    commentInput.addEventListener('input', e => { row.comment = e.target.value; scheduleSave(); });
+    tr.querySelector('.icon-btn').addEventListener('click', () => {
+      r.trialEvaluation.splice(idx, 1);
+      renderTrialEval(r);
+      scheduleSave();
+    });
+  });
+}
+
 /* Read-only print layout for section 1 (info card) and section 3 (process
    steps as a plain numbered list) — reuses the same look as Compare Recipes
    instead of the on-screen editable form/step-badge styling. Filled in right
@@ -3079,7 +3302,7 @@ function renderPrintView(r){
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
       <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
-      <div class="ci-row"><b>Description:</b> ${escapeHtml(r.description || '-')}</div>
+      ${descriptionListHtml(r)}
     `;
   }
 
