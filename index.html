@@ -445,25 +445,6 @@
   }
   .part-block.collapsed .part-body{display:none;}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
-  .grand-total-box{
-    display:flex;
-    gap:28px;
-    align-items:center;
-    justify-content:flex-end;
-    margin-top:4px;
-    padding:12px 16px;
-    background:var(--primary-light);
-    border:1px solid var(--primary);
-    border-radius:8px;
-    font-weight:700;
-    font-size:14px;
-  }
-  .grand-total-box .gt-label{
-    margin-right:auto;
-    color:var(--primary-dark);
-    font-weight:700;
-  }
-
   .overview-block{
     margin:4px 0 14px;
     padding:14px 16px;
@@ -1000,6 +981,37 @@
   .process-header .process-title:focus{background:#fff;}
   .process-steps-list{margin-bottom:10px;}
 
+  .process-components{
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--border);
+  }
+  .process-components-title{
+    font-weight:700;
+    font-size:13px;
+    color:var(--primary-dark);
+    margin-bottom:8px;
+  }
+  .process-comp-add-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:10px;
+  }
+  .process-comp-select{
+    flex:1;
+    padding:8px 10px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    font-family:inherit;
+    font-size:13px;
+    background:#fff;
+    color:var(--text);
+  }
+  .process-comp-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .process-comp-table input{padding:7px 8px;font-size:13px;}
+  .col-tol{width:100px;}
+  .col-range{width:120px;white-space:nowrap;}
+
   .desc-points-list{margin-bottom:8px;}
   .desc-point-row{
     display:flex;
@@ -1509,7 +1521,13 @@ const CHANGELOG = [
   { version: "3.0.24", date: "2026-07-16", note: "\"Name - Code\" labels (sidebar, Compare Recipes) now show the full Recipe Code suffix as typed instead of always truncating to the last 2 characters (e.g. \"02A\" now shows as \"02A\", not \"2A\")" },
   { version: "3.0.25", date: "2026-07-16", note: "Compare Recipes no longer auto-selects the 3 most recently updated recipes when opened — all three picker slots start blank, so the user always chooses recipes fresh" },
   { version: "3.0.26", date: "2026-07-16", note: "Compare Recipes: the recipe dropdowns are now sorted alphabetically by product name (then by code), instead of by most recently updated" },
-  { version: "3.0.27", date: "2026-07-16", note: "Clicking into an ingredient's Weight (g) field now selects the whole number, so you can type a new value right away instead of having to clear it first" }
+  { version: "3.0.27", date: "2026-07-16", note: "Clicking into an ingredient's Weight (g) field now selects the whole number, so you can type a new value right away instead of having to clear it first" },
+  { version: "3.0.28", date: "2026-07-16", note: "Read-only weight totals (Total Recipe Weight, Part Subtotal, Grand Total, Recipe Overview, Compare Recipes) now show a thousands separator, e.g. \"2,000.00 g\" instead of \"2000.00 g\". The editable Weight (g) field itself is unchanged since number inputs can't contain commas" },
+  { version: "3.0.29", date: "2026-07-16", note: "Each ingredient's \"% of Part\" (renamed from \"% of Recipe\") is now relative to its own part's weight, so every part's own Subtotal is always 100%. The part header still shows that part's % share of the whole recipe, next to the ingredient count. Recipe Overview, Compare Recipes, and the sidebar's overall % are unaffected — they still reflect the whole recipe" },
+  { version: "3.0.30", date: "2026-07-16", note: "Each Process (section 3) now has a \"Components\" table — pick an existing Part or ingredient from the recipe to add a row (Name, Weight, ± Tolerance, auto-computed Range, %). Values are copied in once and can then be edited freely without affecting the recipe's real ingredients" },
+  { version: "3.0.31", date: "2026-07-16", note: "Components now sits above the Steps list within each Process. Its % column is auto-computed from the table's own weights (always sums to 100%) instead of being freely editable. Printing a recipe now includes each process's Components table" },
+  { version: "3.0.32", date: "2026-07-16", note: "Components table: added a row number (#) column and a Total row (weight + %), on-screen and when printing (empty tables are skipped when printing). Section 2 (Ingredients) no longer auto-creates 4 parts for a new recipe — it now starts empty with a \"+ Add Part\" prompt" },
+  { version: "3.0.33", date: "2026-07-16", note: "Removed the separate \"Grand Total (All Parts)\" box in section 2 — the same total (% and weight) now shows as a Total row at the bottom of the Recipe Overview table instead" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1781,7 +1799,7 @@ function renderCompareContent(){
         <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
         <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
         <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
-        <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
+        <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
         ${descriptionListHtml(r)}
       </div>
     `;
@@ -1795,8 +1813,17 @@ function renderCompareContent(){
       const key = i.name.trim().toLowerCase();
       if(!ingredientRows.has(key)) ingredientRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
       const row = ingredientRows.get(key);
-      row.values[r.id] = (row.values[r.id] || 0) + (parseFloat(i.percent) || 0);
       row.weights[r.id] = (row.weights[r.id] || 0) + (parseFloat(i.weight) || 0);
+    });
+  });
+  // % of recipe, computed from weight per recipe — ing.percent is now each
+  // ingredient's % of its own part, not of the whole recipe, so it can't be
+  // summed directly here.
+  selected.forEach(r => {
+    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    ingredientRows.forEach(row => {
+      const wt = row.weights[r.id];
+      if(wt !== undefined) row.values[r.id] = totalWt > 0 ? (wt / totalWt * 100) : 0;
     });
   });
 
@@ -2317,8 +2344,8 @@ function blankRecipe(){
     date: new Date().toISOString().slice(0,10),
     description: [],
     batchWeight: 1000,
-    parts: Array.from({length:PART_COUNT}, (_,i) => blankPart(`Part ${i+1}`)),
-    processes: [ { title: "", steps: [""] } ],
+    parts: [],
+    processes: [ { title: "", steps: [""], components: [] } ],
     trialPhotos: [],
     trialEvaluation: [],
     updatedAt: Date.now()
@@ -2334,9 +2361,6 @@ function migrateRecipe(r){
     }
     delete r.ingredients;
   }
-  if(r.parts.length === 0){
-    r.parts.push(blankPart('Part 1'));
-  }
   r.parts.forEach(p => {
     if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
       p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
@@ -2351,12 +2375,13 @@ function migrateRecipe(r){
     delete r.steps;
   }
   if(r.processes.length === 0){
-    r.processes.push({ title: "", steps: [""] });
+    r.processes.push({ title: "", steps: [""], components: [] });
   }
   r.processes.forEach(p => {
     if(!Array.isArray(p.steps) || p.steps.length === 0){
       p.steps = [""];
     }
+    if(!Array.isArray(p.components)) p.components = [];
   });
 
   // Description used to be a single free-text field — upgrade it to a list
@@ -2444,7 +2469,11 @@ function renderSidebar(){
       const div = document.createElement('div');
       div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
       const allIngredients = (r.parts||[]).flatMap(p => p.ingredients||[]);
-      const totalPct = allIngredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
+      // % is always weight / totalWeight, so it's exactly 100% by
+      // construction whenever there's any weight at all (ing.percent is now
+      // per-part, so it can't be summed directly to check this).
+      const hasWeight = allIngredients.some(i => (parseFloat(i.weight)||0) > 0);
+      const totalPct = hasWeight ? 100 : 0;
       const codeDisplay = fullCode(r);
       div.innerHTML = `
         <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
@@ -2626,13 +2655,15 @@ function renderMain(){
             </tr>
           </thead>
           <tbody id="overviewBody"></tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td>Total</td>
+              <td class="col-pct" id="grandTotalPct"></td>
+              <td class="col-wt" id="grandTotalWt"></td>
+            </tr>
+          </tfoot>
         </table>
-      </div>
-
-      <div class="grand-total-box">
-        <span class="gt-label">Grand Total (All Parts)</span>
-        <span id="grandTotalPct"></span>
-        <span id="grandTotalWt"></span>
       </div>
     </div>
 
@@ -2715,11 +2746,12 @@ function renderMain(){
   document.getElementById('btnAddPart').addEventListener('click', () => {
     r.parts.push(blankPart(`Part ${r.parts.length+1}`));
     renderParts(r);
+    renderProcesses(r); // refresh the "Add Component" picker with the new part
     scheduleSave();
   });
 
   document.getElementById('btnAddProcess').addEventListener('click', () => {
-    r.processes.push({ title: '', steps: [''] });
+    r.processes.push({ title: '', steps: [''], components: [] });
     renderProcesses(r);
     scheduleSave();
   });
@@ -2784,15 +2816,17 @@ function renderLockState(r){
 
 /* ---------- Ingredients (4 parts) ----------
    Weight (g) is the single source of truth per ingredient.
-   % of recipe and total recipe weight are always derived from it, so the
-   percentages across all parts are mathematically guaranteed to sum to 100%. */
+   Each ingredient's % is of its own PART (not the whole recipe), so every
+   part's own subtotal is mathematically guaranteed to sum to 100%. A part's
+   share of the whole recipe is shown separately, next to its name. */
 function recomputeFromWeights(r){
   const totalWeight = r.parts.flatMap(p => p.ingredients)
     .reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
   r.batchWeight = round2(totalWeight);
   r.parts.forEach(part => {
+    const partWeight = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     part.ingredients.forEach(ing => {
-      ing.percent = totalWeight > 0 ? round2((parseFloat(ing.weight)||0) / totalWeight * 100) : 0;
+      ing.percent = partWeight > 0 ? round2((parseFloat(ing.weight)||0) / partWeight * 100) : 0;
     });
   });
   return totalWeight;
@@ -2800,10 +2834,17 @@ function recomputeFromWeights(r){
 
 function round2(n){ return Math.round(n * 100) / 100; }
 
+/* Read-only weight displays (totals/subtotals) get a thousands separator for
+   readability at larger batch sizes — editable Weight (g) <input> fields
+   stay plain numbers since type="number" inputs can't contain commas. */
+function formatWeight(n){
+  return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
+}
+
 function refreshDisplays(r){
   const totalWeight = recomputeFromWeights(r);
   const batchEl = document.getElementById('batchTotalDisplay');
-  if(batchEl) batchEl.textContent = totalWeight.toFixed(2) + ' g';
+  if(batchEl) batchEl.textContent = formatWeight(totalWeight);
 
   document.querySelectorAll('#partsContainer .part-block').forEach((block, pIdx) => {
     const part = r.parts[pIdx];
@@ -2814,16 +2855,17 @@ function refreshDisplays(r){
     });
     const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
     const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const partShareOfRecipePct = totalWeight > 0 ? (subWt / totalWeight * 100) : 0;
     const subPctEl = block.querySelector('.part-subtotal-pct');
     const subWtEl = block.querySelector('.part-subtotal-wt');
     if(subPctEl) subPctEl.textContent = subPct.toFixed(2) + '%';
-    if(subWtEl) subWtEl.textContent = subWt.toFixed(2) + ' g';
+    if(subWtEl) subWtEl.textContent = formatWeight(subWt);
 
     const summaryEl = block.querySelector('.part-header-summary');
     if(summaryEl){
       const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
       summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${subPct.toFixed(1)}%`
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(1)}% of recipe`
         : 'No ingredients yet';
     }
   });
@@ -2835,10 +2877,13 @@ function renderParts(r){
   recomputeFromWeights(r);
 
   const batchEl = document.getElementById('batchTotalDisplay');
-  if(batchEl) batchEl.textContent = (r.batchWeight||0).toFixed(2) + ' g';
+  if(batchEl) batchEl.textContent = formatWeight(r.batchWeight);
 
   const container = document.getElementById('partsContainer');
   container.innerHTML = '';
+  if(r.parts.length === 0){
+    container.innerHTML = '<div class="overview-empty">No parts yet — click "+ Add Part" below to add the first one</div>';
+  }
   r.parts.forEach((part, pIdx) => {
     const block = document.createElement('div');
     block.className = 'part-block';
@@ -2855,7 +2900,7 @@ function renderParts(r){
             <tr>
               <th class="col-no">#</th>
               <th>Ingredient</th>
-              <th class="col-pct">% of Recipe (auto)</th>
+              <th class="col-pct">% of Part (auto)</th>
               <th class="col-wt">Weight (g)</th>
               <th>Note</th>
               <th class="col-del"></th>
@@ -2890,7 +2935,7 @@ function renderParts(r){
     updatePartLabels();
 
     nameField.value = part.name || '';
-    nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); scheduleSave(); });
+    nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); renderProcesses(r); scheduleSave(); });
 
     const body = block.querySelector('tbody');
     const subPctCell = block.querySelector('.part-subtotal-pct');
@@ -2972,6 +3017,7 @@ function renderParts(r){
           ing.name = e.target.value;
           syncMaterialLink(true);
           refreshDisplays(r);
+          renderProcesses(r); // keep the "Add Component" picker's ingredient list current
           scheduleSave();
         });
         noteInput.addEventListener('input', e => { ing.note = e.target.value; scheduleSave(); });
@@ -2999,6 +3045,7 @@ function renderParts(r){
           if(part.ingredients.length === 0) part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
           renderRows();
           refreshDisplays(r);
+          renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
           scheduleSave();
         });
 
@@ -3010,11 +3057,13 @@ function renderParts(r){
     function updatePartSubtotal(){
       const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
       const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+      const recipeTotalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+      const partShareOfRecipePct = recipeTotalWt > 0 ? (subWt / recipeTotalWt * 100) : 0;
       subPctCell.textContent = subPct.toFixed(2) + '%';
-      subWtCell.textContent = subWt.toFixed(2) + ' g';
+      subWtCell.textContent = formatWeight(subWt);
       const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
       summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${subPct.toFixed(1)}%`
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(1)}% of recipe`
         : 'No ingredients yet';
     }
 
@@ -3039,6 +3088,7 @@ function renderParts(r){
         if(!confirm(`Delete "${part.name || `Part ${pIdx+1}`}" and all its ingredients?`)) return;
         r.parts.splice(pIdx, 1);
         renderParts(r);
+        renderProcesses(r); // drop the deleted part from the "Add Component" picker
         scheduleSave();
       });
     }
@@ -3059,7 +3109,7 @@ function updateGrandTotal(r){
   const wtEl = document.getElementById('grandTotalWt');
   pctEl.textContent = totalPct.toFixed(2) + '%';
   pctEl.className = 'totals-ok';
-  wtEl.textContent = totalWt.toFixed(2) + ' g';
+  wtEl.textContent = formatWeight(totalWt);
 
   renderOverview(allIngredients);
 }
@@ -3090,9 +3140,14 @@ function renderOverview(allIngredients){
       });
     }
     const g = groups.get(key);
-    g.pct += parseFloat(i.percent) || 0;
     g.wt += parseFloat(i.weight) || 0;
   });
+
+  // % here is always of the whole recipe (not the ingredient's own part),
+  // so it's computed straight from weight rather than summing the now
+  // per-part ing.percent values.
+  const totalRecipeWeight = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  groups.forEach(g => { g.pct = totalRecipeWeight > 0 ? (g.wt / totalRecipeWeight * 100) : 0; });
 
   const rows = [...groups.values()].sort((a,b) => b.pct - a.pct);
   const maxPct = Math.max(...rows.map(g => g.pct), 100);
@@ -3117,7 +3172,7 @@ function renderOverview(allIngredients){
           <span>${g.pct.toFixed(2)}%</span>
         </div>
       </td>
-      <td class="col-wt">${g.wt.toFixed(2)} g</td>
+      <td class="col-wt">${formatWeight(g.wt)}</td>
     `;
     body.appendChild(tr);
   });
@@ -3139,6 +3194,41 @@ function renderProcesses(r){
         <button class="icon-btn" title="Move this process down">▼</button>
         <button class="icon-btn" title="Delete this process">✕</button>
       </div>
+      <div class="process-components">
+        <div class="process-components-title">Components</div>
+        <div class="process-comp-add-row">
+          <select class="process-comp-select"></select>
+          <button class="btn btn-sm" type="button" data-role="add-component">+ Add</button>
+        </div>
+        <div style="overflow-x:auto;">
+          <table class="process-comp-table">
+            <thead>
+              <tr>
+                <th class="col-no">#</th>
+                <th>Name</th>
+                <th class="col-wt">Weight (g)</th>
+                <th class="col-tol">Tolerance (±)</th>
+                <th class="col-range">Range</th>
+                <th class="col-pct">% (auto)</th>
+                <th class="col-del"></th>
+              </tr>
+            </thead>
+            <tbody></tbody>
+            <tfoot>
+              <tr>
+                <td></td>
+                <td>Total</td>
+                <td class="col-wt process-comp-total-wt"></td>
+                <td></td>
+                <td></td>
+                <td class="col-pct process-comp-total-pct"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+
       <div class="process-steps-list"></div>
       <button class="btn btn-sm add-row-btn" data-role="add-step">+ Add Step</button>
     `;
@@ -3195,6 +3285,124 @@ function renderProcesses(r){
       scheduleSave();
     });
 
+    // --- Components (snapshot a Part or an existing ingredient into a
+    //     reference table for this process: weight, ± tolerance, %).
+    //     Name/weight/tolerance are copied in once and then fully editable —
+    //     they don't stay linked to the source, so editing them later never
+    //     touches the recipe's real ingredients/parts. % is the exception:
+    //     it's always auto-computed from this table's own weights, so the
+    //     components in a process always sum to 100%. ---
+    if(!Array.isArray(proc.components)) proc.components = [];
+    const compSelect = block.querySelector('.process-comp-select');
+    const compBody = block.querySelector('.process-comp-table tbody');
+    const compFoot = block.querySelector('.process-comp-table tfoot');
+    const totalWtEl = block.querySelector('.process-comp-total-wt');
+    const totalPctEl = block.querySelector('.process-comp-total-pct');
+
+    const partOptions = r.parts.map((part, pIdx2) => {
+      const wt = part.ingredients.reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
+      const label = part.name || `Part ${pIdx2+1}`;
+      return `<option value="part:${pIdx2}">Part: ${escapeHtml(label)}</option>`;
+    }).join('');
+    const ingOptions = r.parts.flatMap((part, pIdx2) => part.ingredients
+      .map((ing, iIdx) => ({ ing, pIdx2, iIdx }))
+      .filter(x => (x.ing.name||'').trim() !== '')
+    ).map(({ing, pIdx2, iIdx}) => `<option value="ing:${pIdx2}:${iIdx}">Ingredient: ${escapeHtml(ing.name)}</option>`).join('');
+    compSelect.innerHTML = `
+      <option value="">— Select a part or ingredient to add —</option>
+      ${partOptions ? `<optgroup label="Parts">${partOptions}</optgroup>` : ''}
+      ${ingOptions ? `<optgroup label="Ingredients">${ingOptions}</optgroup>` : ''}
+    `;
+
+    function renderComponentRows(){
+      compBody.innerHTML = '';
+      if(proc.components.length === 0){
+        compBody.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No components added yet</div></td></tr>';
+        if(compFoot) compFoot.style.display = 'none';
+        return;
+      }
+      if(compFoot) compFoot.style.display = '';
+      const pctDisplays = [];
+
+      function recalcAllPercents(){
+        const totalWt = proc.components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
+        proc.components.forEach((c, i) => {
+          c.percent = totalWt > 0 ? round2((parseFloat(c.weight)||0)/totalWt*100) : 0;
+          if(pctDisplays[i]) pctDisplays[i].textContent = c.percent.toFixed(2) + '%';
+        });
+        if(totalWtEl) totalWtEl.textContent = formatWeight(totalWt);
+        if(totalPctEl){
+          const totalPct = proc.components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0);
+          totalPctEl.textContent = totalPct.toFixed(2) + '%';
+        }
+      }
+
+      proc.components.forEach((comp, cIdx) => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="col-no">${cIdx+1}</td>
+          <td><input type="text" class="comp-name"></td>
+          <td class="col-wt"><input type="number" class="comp-wt num-input" step="0.01"></td>
+          <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
+          <td class="col-range comp-range"></td>
+          <td class="col-pct"><span class="comp-pct-display" title="Calculated automatically from weight"></span></td>
+          <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
+        `;
+        const nameInput = tr.querySelector('.comp-name');
+        const wtInput = tr.querySelector('.comp-wt');
+        const tolInput = tr.querySelector('.comp-tol');
+        const rangeCell = tr.querySelector('.comp-range');
+        const pctDisplay = tr.querySelector('.comp-pct-display');
+        pctDisplays.push(pctDisplay);
+        nameInput.value = comp.name || '';
+        wtInput.value = comp.weight ?? 0;
+        tolInput.value = comp.tolerance ?? 0;
+
+        function updateRange(){
+          const wt = parseFloat(wtInput.value) || 0;
+          const tol = parseFloat(tolInput.value) || 0;
+          rangeCell.textContent = `${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g`;
+        }
+        updateRange();
+
+        nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
+        wtInput.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateRange(); recalcAllPercents(); scheduleSave(); });
+        tolInput.addEventListener('input', e => { comp.tolerance = parseFloat(e.target.value) || 0; updateRange(); scheduleSave(); });
+        tr.querySelector('.icon-btn').addEventListener('click', () => {
+          proc.components.splice(cIdx, 1);
+          renderComponentRows();
+          scheduleSave();
+        });
+
+        compBody.appendChild(tr);
+      });
+
+      recalcAllPercents();
+    }
+    renderComponentRows();
+
+    block.querySelector('[data-role="add-component"]').addEventListener('click', () => {
+      const val = compSelect.value;
+      if(!val) return;
+      const [kind, a, b] = val.split(':');
+      let name, weight;
+      if(kind === 'part'){
+        const part = r.parts[+a];
+        if(!part) return;
+        name = part.name || `Part ${+a+1}`;
+        weight = part.ingredients.reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
+      } else {
+        const ing = r.parts[+a]?.ingredients[+b];
+        if(!ing) return;
+        name = ing.name;
+        weight = parseFloat(ing.weight) || 0;
+      }
+      proc.components.push({ name, weight: round2(weight), tolerance: 0, percent: 0 });
+      compSelect.value = '';
+      renderComponentRows();
+      scheduleSave();
+    });
+
     const [moveUpBtn, moveDownBtn, deleteProcessBtn] = block.querySelectorAll('.process-header .icon-btn');
     moveUpBtn.addEventListener('click', () => {
       if(pIdx === 0) return;
@@ -3210,7 +3418,7 @@ function renderProcesses(r){
     });
     deleteProcessBtn.addEventListener('click', () => {
       r.processes.splice(pIdx, 1);
-      if(r.processes.length === 0) r.processes.push({ title: '', steps: [''] });
+      if(r.processes.length === 0) r.processes.push({ title: '', steps: [''], components: [] });
       renderProcesses(r);
       scheduleSave();
     });
@@ -3311,18 +3519,39 @@ function renderPrintView(r){
       <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
-      <div class="ci-row"><b>Total weight:</b> ${totalWt.toFixed(2)} g</div>
+      <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
       ${descriptionListHtml(r)}
     `;
   }
 
   const procEl = document.getElementById('printProcessesView');
   if(procEl){
-    const processes = (r.processes || []).filter(p => (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== ''));
+    const processes = (r.processes || []).filter(p =>
+      (p.title||'').trim() !== '' ||
+      (p.steps||[]).some(s => (s||'').trim() !== '') ||
+      (p.components||[]).length > 0
+    );
     procEl.innerHTML = processes.map(p => {
       const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+      const components = p.components || [];
       return `
         <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+        ${components.length ? `
+          <table class="compare-table" style="margin-bottom:10px;">
+            <thead><tr><th>#</th><th>Component</th><th>Weight (g)</th><th>Tolerance</th><th>Range</th><th>%</th></tr></thead>
+            <tbody>${components.map((c, cIdx) => {
+              const wt = parseFloat(c.weight) || 0;
+              const tol = parseFloat(c.tolerance) || 0;
+              return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
+            }).join('')}</tbody>
+            <tfoot><tr class="total-row">
+              <td></td><td>Total</td>
+              <td>${formatWeight(components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0))}</td>
+              <td></td><td></td>
+              <td>${components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0).toFixed(2)}%</td>
+            </tr></tfoot>
+          </table>
+        ` : ''}
         ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       `;
     }).join('') || '<div class="compare-missing">No processes yet</div>';
