@@ -65,11 +65,45 @@
   .app-footer .fv-dot{opacity:.6;}
   /* Sidebar */
   .sidebar{
+    position:relative;
     background:var(--panel);
     border-right:1px solid var(--border);
     display:flex;
     flex-direction:column;
     padding:16px;
+  }
+  .mobile-sidebar-toggle{
+    display:none;
+    position:fixed;
+    top:14px; left:14px;
+    z-index:60;
+    width:40px;height:40px;
+    align-items:center;justify-content:center;
+    border-radius:10px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    box-shadow:var(--shadow);
+    font-size:18px;
+    cursor:pointer;
+  }
+  .sidebar-backdrop{
+    display:none;
+    position:fixed;
+    inset:0;
+    background:rgba(12,24,48,.5);
+    z-index:90;
+  }
+  .sidebar-close-btn{
+    display:none;
+    align-items:center;justify-content:center;
+    position:absolute;
+    top:12px; right:12px;
+    width:30px;height:30px;
+    border-radius:8px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    font-size:16px;
+    cursor:pointer;
   }
   .brand{
     display:flex;
@@ -216,6 +250,11 @@
     color:var(--text-dim);
   }
   .save-status.saved{color:var(--ok);}
+  .recipe-activity-display{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-top:4px;
+  }
   .recipe-title-display{
     font-size:54px;
     font-weight:700;
@@ -692,6 +731,13 @@
     font-size:13px;
     white-space:pre-wrap;
   }
+  .material-detail-activity{
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+    font-size:11px;
+    color:var(--text-dim);
+  }
 
   .compare-modal{max-width:1180px;}
   .compare-pickers{
@@ -1026,6 +1072,31 @@
     padding-top:16px;
     border-top:1px solid var(--border);
   }
+
+  .version-save-row{
+    display:flex;
+    gap:8px;
+    margin-bottom:6px;
+  }
+  .version-save-row input{flex:1;}
+  .version-hint{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:16px;
+  }
+  .version-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:8px;
+  }
+  .version-item-label{font-weight:700;font-size:13px;color:var(--primary-dark);}
+  .version-item-date{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .version-item-actions{display:flex;gap:6px;flex-shrink:0;}
   .trial-section-title{
     font-weight:700;
     font-size:14px;
@@ -1158,13 +1229,42 @@
 
   @media (max-width:800px){
     .app{grid-template-columns:1fr;}
+    .mobile-sidebar-toggle{display:flex;}
+    .sidebar-close-btn{display:flex;}
+    .main{padding-top:64px;}
     .sidebar{
-      border-right:none;
-      border-bottom:1px solid var(--border);
-      max-height:340px;
+      position:fixed;
+      top:0; left:0; bottom:0;
+      width:85%;
+      max-width:300px;
+      z-index:95;
+      border-right:1px solid var(--border);
       overflow-y:auto;
+      transform:translateX(-100%);
+      transition:transform .25s ease;
+      box-shadow:2px 0 24px rgba(0,0,0,.25);
     }
-    .grid-2,.grid-3{grid-template-columns:1fr;}
+    body.mobile-sidebar-open{overflow:hidden;}
+    body.mobile-sidebar-open .sidebar{transform:translateX(0);}
+    body.mobile-sidebar-open .sidebar-backdrop{display:block;}
+    .grid-2,.grid-3,
+    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:1fr;}
+  }
+
+  @media (max-width:700px){
+    .main{padding:64px 16px 60px;}
+    .recipe-title-display{font-size:30px;line-height:1.2;}
+    .recipe-title-display .rt-code{
+      display:block;
+      font-size:15px;
+      margin-left:0;
+      margin-top:4px;
+    }
+    .lock-banner{flex-wrap:wrap;}
+    .version-item{flex-wrap:wrap;}
+    .modal-overlay{padding:8px;}
+    .modal-body{padding:14px;}
+    .batch-scale-row input{width:100px;}
   }
 </style>
 </head>
@@ -1213,8 +1313,12 @@
   </div>
 </div>
 
+<button class="mobile-sidebar-toggle" id="btnMobileSidebarToggle" aria-label="Open menu">☰</button>
+<div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
 <div class="app" id="appRoot">
   <aside class="sidebar">
+    <button class="sidebar-close-btn" id="btnSidebarClose" aria-label="Close menu">✕</button>
     <div class="brand">
       <div class="brand-icon">
         <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
@@ -1400,6 +1504,23 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="versionsModalOverlay">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-header">
+      <div class="modal-title">🕒 Version History</div>
+      <button class="icon-btn" id="btnCloseVersionsModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="version-save-row">
+        <input type="text" id="versionLabelInput" placeholder="Label this version, e.g. &quot;Before flavor adjustment&quot;">
+        <button class="btn btn-primary btn-sm" id="btnSaveVersion">💾 Save Current as Version</button>
+      </div>
+      <div class="version-hint">Keeps the last 5 saved versions. Restoring replaces the recipe's name, description, ingredients, process steps/components, and yield — it does not affect trial photos.</div>
+      <div id="versionsList"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -1527,7 +1648,11 @@ const CHANGELOG = [
   { version: "3.0.30", date: "2026-07-16", note: "Each Process (section 3) now has a \"Components\" table — pick an existing Part or ingredient from the recipe to add a row (Name, Weight, ± Tolerance, auto-computed Range, %). Values are copied in once and can then be edited freely without affecting the recipe's real ingredients" },
   { version: "3.0.31", date: "2026-07-16", note: "Components now sits above the Steps list within each Process. Its % column is auto-computed from the table's own weights (always sums to 100%) instead of being freely editable. Printing a recipe now includes each process's Components table" },
   { version: "3.0.32", date: "2026-07-16", note: "Components table: added a row number (#) column and a Total row (weight + %), on-screen and when printing (empty tables are skipped when printing). Section 2 (Ingredients) no longer auto-creates 4 parts for a new recipe — it now starts empty with a \"+ Add Part\" prompt" },
-  { version: "3.0.33", date: "2026-07-16", note: "Removed the separate \"Grand Total (All Parts)\" box in section 2 — the same total (% and weight) now shows as a Total row at the bottom of the Recipe Overview table instead" }
+  { version: "3.0.33", date: "2026-07-16", note: "Removed the separate \"Grand Total (All Parts)\" box in section 2 — the same total (% and weight) now shows as a Total row at the bottom of the Recipe Overview table instead" },
+  { version: "3.0.34", date: "2026-07-16", note: "Added two BOM-style features: an Expected Yield (%) field in section 2 that shows an Adjusted Output Weight (accounting for production loss), and a Version History tool (🕒 Versions in the toolbar) to save/restore/delete named snapshots of the recipe's formulation" },
+  { version: "3.0.35", date: "2026-07-17", note: "Recipes and Ingredient Library entries now track who created and last edited them, and when. Shown under the recipe title on the recipe page, and in the Ingredient Library's detail view (click a row)" },
+  { version: "3.0.36", date: "2026-07-17", note: "Improved layout for narrow/mobile screens: the Product Name title and page padding shrink to fit small screens instead of wasting vertical space, the read-only/unlock banner wraps instead of crowding its button off-screen, Compare Recipes' 3-column layouts stack into one column, and the ingredient and Recipe Overview tables scroll horizontally within their own box instead of stretching the whole page" },
+  { version: "3.0.37", date: "2026-07-17", note: "On narrow/mobile screens, the left sidebar (recipe list, New Recipe, Compare, Ingredient Library) is now hidden behind a ☰ menu button and slides in as an overlay when tapped, instead of always taking up space above the recipe. Tap the backdrop, the ✕ in the drawer, or pick anything inside it to close" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1730,6 +1855,98 @@ function initAuthConfirmModal(){
 
 /* ---------- Compare recipes ---------- */
 let compareShowCodes = true;
+
+/* ---------- Version History (snapshot & restore the recipe's formulation) ---------- */
+let versionsModalRecipe = null;
+
+/* Only the BOM-relevant fields are snapshotted — trial photos are excluded
+   to keep each version small (photos alone could approach Firestore's 1MB
+   doc limit across a few saved versions). */
+function snapshotRecipeCore(r){
+  return {
+    name: r.name,
+    code: r.code,
+    date: r.date,
+    description: JSON.parse(JSON.stringify(r.description)),
+    batchWeight: r.batchWeight,
+    parts: JSON.parse(JSON.stringify(r.parts)),
+    processes: JSON.parse(JSON.stringify(r.processes)),
+    yieldPct: r.yieldPct,
+    trialEvaluation: JSON.parse(JSON.stringify(r.trialEvaluation))
+  };
+}
+
+function openVersionsModal(r){
+  versionsModalRecipe = r;
+  document.getElementById('versionLabelInput').value = '';
+  renderVersionsList(r);
+  document.getElementById('versionsModalOverlay').classList.add('open');
+}
+
+function closeVersionsModal(){
+  document.getElementById('versionsModalOverlay').classList.remove('open');
+}
+
+function renderVersionsList(r){
+  const listEl = document.getElementById('versionsList');
+  if(!Array.isArray(r.versions) || r.versions.length === 0){
+    listEl.innerHTML = '<div class="overview-empty">No versions saved yet</div>';
+    return;
+  }
+  const sorted = [...r.versions].sort((a,b) => b.savedAt - a.savedAt);
+  listEl.innerHTML = sorted.map(v => `
+    <div class="version-item" data-id="${escapeHtml(v.id)}">
+      <div>
+        <div class="version-item-label">${escapeHtml(v.label || 'Untitled version')}</div>
+        <div class="version-item-date">${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
+      </div>
+      <div class="version-item-actions">
+        <button class="btn btn-sm" data-role="restore-version">Restore</button>
+        <button class="icon-btn" data-role="delete-version" title="Delete this version">✕</button>
+      </div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('[data-role="restore-version"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.version-item').dataset.id;
+      const v = r.versions.find(x => x.id === id);
+      if(!v) return;
+      if(!confirm(`Restore version "${v.label || 'Untitled version'}"? This overwrites the recipe's current name, description, ingredients, process steps/components, and yield (trial photos are not affected).`)) return;
+      Object.assign(r, JSON.parse(JSON.stringify(v.snapshot)));
+      migrateRecipe(r);
+      closeVersionsModal();
+      renderMain();
+      scheduleSave();
+    });
+  });
+  listEl.querySelectorAll('[data-role="delete-version"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.version-item').dataset.id;
+      r.versions = r.versions.filter(x => x.id !== id);
+      renderVersionsList(r);
+      scheduleSave();
+    });
+  });
+}
+
+function initVersionsModal(){
+  document.getElementById('btnCloseVersionsModal').addEventListener('click', closeVersionsModal);
+  document.getElementById('versionsModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'versionsModalOverlay') closeVersionsModal();
+  });
+  document.getElementById('btnSaveVersion').addEventListener('click', () => {
+    const r = versionsModalRecipe;
+    if(!r) return;
+    const label = document.getElementById('versionLabelInput').value.trim();
+    if(!Array.isArray(r.versions)) r.versions = [];
+    r.versions.push({ id: uid(), label, savedAt: Date.now(), snapshot: snapshotRecipeCore(r) });
+    if(r.versions.length > 5) r.versions = r.versions.slice(r.versions.length - 5);
+    document.getElementById('versionLabelInput').value = '';
+    renderVersionsList(r);
+    scheduleSave();
+  });
+}
 
 function initCompareModal(){
   document.getElementById('btnCompare').addEventListener('click', openCompareModal);
@@ -2176,6 +2393,10 @@ function openMaterialDetail(m){
       <div class="material-detail-notes-label">Usage Notes</div>
       <div class="material-detail-notes">${escapeHtml(m.usageNotes)}</div>
     ` : ''}
+    <div class="material-detail-activity">
+      ${m.createdBy ? `<div>Created by ${escapeHtml(m.createdBy)}${m.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(m.createdAt)) : ''}</div>` : ''}
+      ${m.updatedBy ? `<div>Last edited by ${escapeHtml(m.updatedBy)}${m.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(m.updatedAt)) : ''}</div>` : ''}
+    </div>
   `;
   document.getElementById('materialDetailModalOverlay').classList.add('open');
 }
@@ -2313,6 +2534,7 @@ function initMaterialLibrary(){
       return;
     }
     errEl.textContent = '';
+    const existing = editingMaterialId ? ingredientMaster.find(m => m.id === editingMaterialId) : null;
     saveMaterialToCloud({
       id: editingMaterialId || uid(),
       nameEn,
@@ -2323,7 +2545,11 @@ function initMaterialLibrary(){
       price: document.getElementById('mf-price').value.trim(),
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
-      image: editingMaterialImage || ''
+      image: editingMaterialImage || '',
+      createdBy: existing?.createdBy || currentUser?.email || '',
+      createdAt: existing?.createdAt || Date.now(),
+      updatedBy: currentUser?.email || '',
+      updatedAt: Date.now()
     });
 
     cancelEditMaterial();
@@ -2348,6 +2574,11 @@ function blankRecipe(){
     processes: [ { title: "", steps: [""], components: [] } ],
     trialPhotos: [],
     trialEvaluation: [],
+    yieldPct: '',
+    versions: [],
+    createdBy: currentUser?.email || '',
+    createdAt: Date.now(),
+    updatedBy: currentUser?.email || '',
     updatedAt: Date.now()
   };
 }
@@ -2392,6 +2623,14 @@ function migrateRecipe(r){
 
   if(!Array.isArray(r.trialPhotos)) r.trialPhotos = [];
   if(!Array.isArray(r.trialEvaluation)) r.trialEvaluation = [];
+  if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
+  if(!Array.isArray(r.versions)) r.versions = [];
+
+  // Older recipes saved before activity tracking existed won't have these —
+  // leave them blank rather than guessing a creator/date that isn't real.
+  if(r.createdBy === undefined) r.createdBy = '';
+  if(r.createdAt === undefined) r.createdAt = null;
+  if(r.updatedBy === undefined) r.updatedBy = '';
 
   return r;
 }
@@ -2448,8 +2687,10 @@ function scheduleSave(){
     const r = getCurrent();
     if(!r) return;
     r.updatedAt = Date.now();
+    r.updatedBy = currentUser?.email || '';
     saveRecipeToCloud(r);
     renderSidebar();
+    updateRecipeTitleDisplay(r); // refresh "Last edited by/at" now that it's current
     const s = document.getElementById('saveStatus');
     if(s){
       s.textContent = 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
@@ -2520,11 +2761,24 @@ function descriptionListHtml(r){
   `;
 }
 
+function formatActivityDateTime(ts){
+  if(!ts) return null;
+  return new Date(ts).toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
 function updateRecipeTitleDisplay(r){
   const el = document.getElementById('recipeTitleDisplay');
   if(!el) return;
   const code = fullCode(r);
   el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}`;
+
+  const activityEl = document.getElementById('recipeActivityDisplay');
+  if(activityEl){
+    const parts = [];
+    if(r.createdBy) parts.push(`Created by ${r.createdBy}${r.createdAt ? ' · ' + formatActivityDateTime(r.createdAt) : ''}`);
+    if(r.updatedBy) parts.push(`Last edited by ${r.updatedBy}${r.updatedAt ? ' · ' + formatActivityDateTime(r.updatedAt) : ''}`);
+    activityEl.textContent = parts.join('   |   ');
+  }
 }
 
 function escapeHtml(s){
@@ -2554,8 +2808,10 @@ function renderMain(){
       <div>
         <div class="recipe-title-display" id="recipeTitleDisplay"></div>
         <div class="save-status saved" id="saveStatus">Ready</div>
+        <div class="recipe-activity-display" id="recipeActivityDisplay"></div>
       </div>
       <div class="toolbar">
+        <button class="btn" id="btnVersions">🕒 Versions</button>
         <button class="btn" id="btnDuplicate">⧉ Duplicate</button>
         <button class="btn" id="btnPrint">🖨 Print / PDF</button>
       </div>
@@ -2639,12 +2895,24 @@ function renderMain(){
             <button class="btn btn-sm" id="btnScale">Scale</button>
           </div>
         </div>
+        <div>
+          <div class="batch-stat-label">Expected Yield (%) — production loss, e.g. cooking/trim</div>
+          <div class="batch-scale-row">
+            <input type="number" id="f-yieldPct" min="0" max="100" step="0.01" placeholder="e.g. 95" class="unit-input">
+            <span class="unit-suffix">%</span>
+          </div>
+        </div>
+        <div>
+          <div class="batch-stat-label">Adjusted Output Weight (after yield loss)</div>
+          <div class="batch-stat-value" id="yieldAdjustedDisplay">—</div>
+        </div>
       </div>
       <div id="partsContainer"></div>
       <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
 
       <div class="overview-block">
         <div class="overview-title">Recipe Overview (all parts combined)</div>
+        <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
@@ -2664,6 +2932,7 @@ function renderMain(){
             </tr>
           </tfoot>
         </table>
+        </div>
       </div>
     </div>
 
@@ -2740,6 +3009,13 @@ function renderMain(){
     scheduleSave();
   });
 
+  document.getElementById('f-yieldPct').value = r.yieldPct ?? '';
+  document.getElementById('f-yieldPct').addEventListener('input', e => {
+    r.yieldPct = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+    updateYieldDisplay(r);
+    scheduleSave();
+  });
+
   renderParts(r);
   renderProcesses(r);
 
@@ -2756,6 +3032,7 @@ function renderMain(){
     scheduleSave();
   });
 
+  document.getElementById('btnVersions').addEventListener('click', () => openVersionsModal(r));
   document.getElementById('btnDuplicate').addEventListener('click', duplicateCurrent);
   document.getElementById('btnDelete').addEventListener('click', () => {
     const deletingId = r.id;
@@ -2841,10 +3118,19 @@ function formatWeight(n){
   return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
 }
 
+function updateYieldDisplay(r){
+  const el = document.getElementById('yieldAdjustedDisplay');
+  if(!el) return;
+  const yieldPct = parseFloat(r.yieldPct);
+  if(!yieldPct || yieldPct <= 0){ el.textContent = '—'; return; }
+  el.textContent = formatWeight((r.batchWeight||0) * yieldPct / 100);
+}
+
 function refreshDisplays(r){
   const totalWeight = recomputeFromWeights(r);
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(totalWeight);
+  updateYieldDisplay(r);
 
   document.querySelectorAll('#partsContainer .part-block').forEach((block, pIdx) => {
     const part = r.parts[pIdx];
@@ -2878,6 +3164,7 @@ function renderParts(r){
 
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(r.batchWeight);
+  updateYieldDisplay(r);
 
   const container = document.getElementById('partsContainer');
   container.innerHTML = '';
@@ -2895,6 +3182,7 @@ function renderParts(r){
         <button class="icon-btn" title="Delete this part">✕</button>
       </div>
       <div class="part-body">
+        <div style="overflow-x:auto;">
         <table>
           <thead>
             <tr>
@@ -2917,6 +3205,7 @@ function renderParts(r){
             </tr>
           </tfoot>
         </table>
+        </div>
         <button class="btn btn-sm add-row-btn" data-role="add-ing"></button>
       </div>
     `;
@@ -3565,6 +3854,9 @@ function duplicateCurrent(){
   const copy = JSON.parse(JSON.stringify(r));
   copy.id = uid();
   copy.name = (r.name || 'Untitled recipe') + ' (Copy)';
+  copy.createdBy = currentUser?.email || '';
+  copy.createdAt = Date.now();
+  copy.updatedBy = currentUser?.email || '';
   copy.updatedAt = Date.now();
   recipes.push(copy);
   currentId = copy.id;
@@ -3702,9 +3994,22 @@ document.querySelector('.brand').addEventListener('click', () => {
   renderSidebar();
 });
 
+/* Mobile sidebar drawer: hidden off-screen by default below 800px width,
+   toggled via a fixed hamburger button, closed via the backdrop, the
+   in-drawer close button, or picking anything actionable inside it. */
+function openMobileSidebar(){ document.body.classList.add('mobile-sidebar-open'); }
+function closeMobileSidebar(){ document.body.classList.remove('mobile-sidebar-open'); }
+document.getElementById('btnMobileSidebarToggle').addEventListener('click', openMobileSidebar);
+document.getElementById('sidebarBackdrop').addEventListener('click', closeMobileSidebar);
+document.getElementById('btnSidebarClose').addEventListener('click', closeMobileSidebar);
+document.querySelector('.sidebar').addEventListener('click', e => {
+  if(e.target.closest('button, .recipe-item')) closeMobileSidebar();
+});
+
 initAuthScreen();
 initAuthConfirmModal();
 initCompareModal();
+initVersionsModal();
 initMaterialLibrary();
 renderFooter();
 
