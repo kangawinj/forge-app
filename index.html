@@ -1508,7 +1508,8 @@ const CHANGELOG = [
   { version: "3.0.23", date: "2026-07-16", note: "The sidebar recipe list now shows the Recipe Code suffix after the product name (e.g. \"Vegan Tartar Sauce - 20\"), matching the naming already used in Compare Recipes and printing" },
   { version: "3.0.24", date: "2026-07-16", note: "\"Name - Code\" labels (sidebar, Compare Recipes) now show the full Recipe Code suffix as typed instead of always truncating to the last 2 characters (e.g. \"02A\" now shows as \"02A\", not \"2A\")" },
   { version: "3.0.25", date: "2026-07-16", note: "Compare Recipes no longer auto-selects the 3 most recently updated recipes when opened — all three picker slots start blank, so the user always chooses recipes fresh" },
-  { version: "3.0.26", date: "2026-07-16", note: "Compare Recipes: the recipe dropdowns are now sorted alphabetically by product name (then by code), instead of by most recently updated" }
+  { version: "3.0.26", date: "2026-07-16", note: "Compare Recipes: the recipe dropdowns are now sorted alphabetically by product name (then by code), instead of by most recently updated" },
+  { version: "3.0.27", date: "2026-07-16", note: "Clicking into an ingredient's Weight (g) field now selects the whole number, so you can type a new value right away instead of having to clear it first" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2982,6 +2983,15 @@ function renderParts(r){
         });
         wtInput.addEventListener('blur', () => {
           wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+        });
+        // Select the whole number on focus so a click lets you type a new
+        // value straight away — Chrome otherwise collapses the selection on
+        // mouseup, so the first click's mouseup is suppressed once to let it stick.
+        let wtJustFocused = false;
+        wtInput.addEventListener('mousedown', () => { wtJustFocused = document.activeElement !== wtInput; });
+        wtInput.addEventListener('focus', () => wtInput.select());
+        wtInput.addEventListener('mouseup', e => {
+          if(wtJustFocused){ e.preventDefault(); wtJustFocused = false; }
         });
 
         delBtn.addEventListener('click', () => {
