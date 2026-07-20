@@ -342,6 +342,8 @@
     grid-template-columns:repeat(3,1fr);
     gap:14px;
   }
+  .combo-row{display:flex;gap:6px;align-items:center;}
+  .combo-row input{flex:1;min-width:0;}
   .field{margin-bottom:14px;}
   .field:last-child{margin-bottom:0;}
 
@@ -1419,6 +1421,9 @@
 <div id="cloudErrorBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:#c0392b;color:#fff;padding:10px 16px;font-size:13px;text-align:center;"></div>
 
 <datalist id="materialDatalist"></datalist>
+<datalist id="customerDatalist"></datalist>
+<datalist id="destinationDatalist"></datalist>
+<datalist id="salesRepDatalist"></datalist>
 
 <div class="modal-overlay" id="materialModalOverlay">
   <div class="modal">
@@ -1608,6 +1613,11 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const recipesCol = collection(db, "recipes");
 const materialsCol = collection(db, "ingredientMaster");
+/* Single shared document holding the "type to add" suggestion lists for
+   Customer Name / Destination Country / Sales Rep — much lighter than a
+   full master-data collection like ingredientMaster since these are just
+   plain strings, not records with their own fields. */
+const metaListsDoc = doc(collection(db, "metaLists"), "shared");
 
 /* Secondary, isolated Firebase app instance used only to verify the delete
    approver's password and perform the delete itself — signing in here never
@@ -1715,7 +1725,8 @@ const CHANGELOG = [
   { version: "3.0.40", date: "2026-07-17", note: "Fixed the Recipe Overview table's numbers not lining up: the Total row's % column had silently lost its column width/alignment (a JS bug overwrote its class name instead of adding to it), and the Weight column's per-ingredient rows were left-aligned while the Total was right-aligned. Every row and the Total now line up in a straight column for both % and Weight" },
   { version: "3.0.41", date: "2026-07-17", note: "Fixed a regression from 3.0.40 that broke the Parts ingredient table's row/Subtotal number alignment (on screen and when printing): the previous fix's right-align rule was too broad and added extra padding on top of the ingredient row's own boxed % / Weight fields, pushing them out of line with the Subtotal again. Narrowed the fix to only the table totals and the Recipe Overview's rows, leaving the Parts table's already-aligned row fields untouched" },
   { version: "3.0.42", date: "2026-07-17", note: "Fixed the batch-summary stats (Total Weight / Scale / Yield / Adjusted Output) laying out differently on screen vs. in print — it now always uses a fixed 2-column layout in both places instead of a width-dependent flex-wrap. Also fixed the Yield % field looking too far from its \"%\" suffix: narrowed the field to fit a percentage and right-aligned its text so the two now read as one joined pill" },
-  { version: "3.0.43", date: "2026-07-17", note: "Section 1 renamed \"Product Name & Details\" → \"Product Details\", with two new fields: Destination Country and Sales Rep (responsible / requested by) — shown in the recipe page, Compare Recipes, and printouts. Description / Concept points are now numbered, and the section can now hold up to 3 reference photos alongside the trial photos" }
+  { version: "3.0.43", date: "2026-07-17", note: "Section 1 renamed \"Product Name & Details\" → \"Product Details\", with two new fields: Destination Country and Sales Rep (responsible / requested by) — shown in the recipe page, Compare Recipes, and printouts. Description / Concept points are now numbered, and the section can now hold up to 3 reference photos alongside the trial photos" },
+  { version: "3.0.44", date: "2026-07-21", note: "Added a Customer Name field (before Destination Country). Customer Name, Destination Country, and Sales Rep are now type-to-add dropdowns shared across all recipes — typing a new value saves it to a shared suggestion list, and a small trash button next to each field removes a value from that list without affecting any recipe that already has it saved" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2080,6 +2091,7 @@ function renderCompareContent(){
         <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
         <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
         <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
+        ${r.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(r.customerName)}</div>` : ''}
         ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
         ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
         ${descriptionListHtml(r)}
@@ -2261,6 +2273,7 @@ let currentId = null;
 let saveTimer = null;
 let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
+let unsubscribeMetaLists = null;
 let recipesLoaded = false;
 let materialsLoaded = false;
 
@@ -2286,6 +2299,68 @@ function attachMaterialsListener(){
   }, err => {
     console.error('Forge: materials listener error', err);
     showCloudError('Failed to load the ingredient library from Firebase: ' + err.message);
+  });
+}
+
+/* ---------- Customer / Destination / Sales Rep suggestion lists ---------- */
+let metaLists = { customers: [], destinationCountries: [], salesReps: [] };
+
+function attachMetaListsListener(){
+  unsubscribeMetaLists = onSnapshot(metaListsDoc, snap => {
+    const data = snap.data() || {};
+    metaLists = {
+      customers: Array.isArray(data.customers) ? data.customers : [],
+      destinationCountries: Array.isArray(data.destinationCountries) ? data.destinationCountries : [],
+      salesReps: Array.isArray(data.salesReps) ? data.salesReps : []
+    };
+    renderMetaDatalists();
+  }, err => {
+    console.error('Forge: meta lists listener error', err);
+  });
+}
+
+/* Adds a value the first time it's typed into one of the combo fields, and
+   lets it be removed again via that field's small delete button — this is
+   a suggestion list only, so removing a value never touches any recipe
+   that already has it saved. */
+function addMetaListValue(key, value){
+  const v = (value || '').trim();
+  if(!v || metaLists[key].includes(v)) return;
+  metaLists = { ...metaLists, [key]: [...metaLists[key], v].sort((a,b)=>a.localeCompare(b)) };
+  setDoc(metaListsDoc, metaLists);
+}
+function removeMetaListValue(key, value){
+  const v = (value || '').trim();
+  if(!v) return;
+  metaLists = { ...metaLists, [key]: metaLists[key].filter(x => x !== v) };
+  setDoc(metaListsDoc, metaLists);
+}
+function renderMetaDatalists(){
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist' };
+  Object.entries(map).forEach(([key, listId]) => {
+    const el = document.getElementById(listId);
+    if(!el) return;
+    el.innerHTML = metaLists[key].map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+  });
+}
+
+/* Wires a "type to add / pick from suggestions" field (Customer Name,
+   Destination Country, Sales Rep): typing saves straight onto the recipe
+   as usual, and leaving the field (change) adds that value to the shared
+   suggestion list so it shows up for other recipes too. The trash button
+   removes a value from the suggestion list only — it never touches any
+   recipe that already has that value saved. */
+function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
+  const input = document.getElementById(inputId);
+  input.value = r[fieldKey] || '';
+  input.addEventListener('input', e => {
+    r[fieldKey] = e.target.value;
+    scheduleSave();
+  });
+  input.addEventListener('change', () => addMetaListValue(metaKey, input.value));
+  document.getElementById(deleteBtnId).addEventListener('click', () => {
+    if(!input.value.trim()) return;
+    removeMetaListValue(metaKey, input.value);
   });
 }
 
@@ -2633,6 +2708,7 @@ function blankRecipe(){
     name: "",
     code: "",
     date: new Date().toISOString().slice(0,10),
+    customerName: "",
     destinationCountry: "",
     salesRep: "",
     description: [],
@@ -2689,6 +2765,7 @@ function migrateRecipe(r){
     r.description = (r.description || '').trim() ? [r.description] : [];
   }
   if(!Array.isArray(r.descPhotos)) r.descPhotos = [];
+  if(r.customerName === undefined) r.customerName = '';
   if(r.destinationCountry === undefined) r.destinationCountry = '';
   if(r.salesRep === undefined) r.salesRep = '';
 
@@ -2904,14 +2981,27 @@ function renderMain(){
             <input type="date" id="f-date">
           </div>
         </div>
-        <div class="grid-2">
+        <div class="grid-3">
+          <div class="field">
+            <label>Customer Name</label>
+            <div class="combo-row">
+              <input type="text" id="f-customerName" list="customerDatalist" placeholder="e.g. ABC Trading Co.">
+              <button type="button" class="icon-btn" id="btnRemoveCustomerName" title="Remove this value from the suggestion list">🗑</button>
+            </div>
+          </div>
           <div class="field">
             <label>Destination Country</label>
-            <input type="text" id="f-destinationCountry" placeholder="e.g. Japan">
+            <div class="combo-row">
+              <input type="text" id="f-destinationCountry" list="destinationDatalist" placeholder="e.g. Japan">
+              <button type="button" class="icon-btn" id="btnRemoveDestinationCountry" title="Remove this value from the suggestion list">🗑</button>
+            </div>
           </div>
           <div class="field">
             <label>Sales Rep (responsible / requested by)</label>
-            <input type="text" id="f-salesRep" placeholder="e.g. Somchai">
+            <div class="combo-row">
+              <input type="text" id="f-salesRep" list="salesRepDatalist" placeholder="e.g. Somchai">
+              <button type="button" class="icon-btn" id="btnRemoveSalesRep" title="Remove this value from the suggestion list">🗑</button>
+            </div>
           </div>
         </div>
         <div class="grid-2">
@@ -3037,8 +3127,9 @@ function renderMain(){
   document.getElementById('f-codeSuffix').value = r.code || '';
   document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
   document.getElementById('f-date').value = r.date || '';
-  document.getElementById('f-destinationCountry').value = r.destinationCountry || '';
-  document.getElementById('f-salesRep').value = r.salesRep || '';
+  bindComboField(r, 'customerName', 'f-customerName', 'btnRemoveCustomerName', 'customers');
+  bindComboField(r, 'destinationCountry', 'f-destinationCountry', 'btnRemoveDestinationCountry', 'destinationCountries');
+  bindComboField(r, 'salesRep', 'f-salesRep', 'btnRemoveSalesRep', 'salesReps');
   updateRecipeTitleDisplay(r);
   renderDescPoints(r);
   renderDescPhotos(r);
@@ -3053,14 +3144,6 @@ function renderMain(){
   document.getElementById('f-codeSuffix').addEventListener('input', e => {
     r.code = e.target.value;
     updateRecipeTitleDisplay(r);
-    scheduleSave();
-  });
-  document.getElementById('f-destinationCountry').addEventListener('input', e => {
-    r.destinationCountry = e.target.value;
-    scheduleSave();
-  });
-  document.getElementById('f-salesRep').addEventListener('input', e => {
-    r.salesRep = e.target.value;
     scheduleSave();
   });
   document.getElementById('descPhotoInput').addEventListener('change', async e => {
@@ -3937,6 +4020,7 @@ function renderPrintView(r){
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
       <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
+      ${r.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(r.customerName)}</div>` : ''}
       ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
       ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
       ${descriptionListHtml(r)}
@@ -4150,6 +4234,7 @@ onAuthStateChanged(auth, user => {
     currentUser = user;
     if(!unsubscribeRecipes) attachRecipesListener();
     if(!unsubscribeMaterials) attachMaterialsListener();
+    if(!unsubscribeMetaLists) attachMetaListsListener();
     if(appView === 'auth') goToApp();
     document.getElementById('loginForm').reset();
     document.getElementById('registerForm').reset();
@@ -4159,10 +4244,12 @@ onAuthStateChanged(auth, user => {
     currentUser = null;
     if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
     if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
+    if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
     recipesLoaded = false;
     materialsLoaded = false;
     recipes = [];
     ingredientMaster = [];
+    metaLists = { customers: [], destinationCountries: [], salesReps: [] };
     currentId = null;
     unlockedRecipeId = null;
     appView = 'auth';
