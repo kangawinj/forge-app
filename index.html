@@ -659,6 +659,11 @@
     padding:20px;
   }
   .modal-overlay.open{display:flex;}
+  /* The password-confirm dialog can be triggered while another modal is
+     already open (e.g. deleting from inside Reference Lists), and the
+     cloud-error banner (z-index 200) can appear at any time — this must
+     stack above both so it's never hidden or made unreachable. */
+  #authConfirmModalOverlay{z-index:210;}
   .modal{
     background:var(--panel);
     border-radius:var(--radius);
@@ -1128,6 +1133,50 @@
   .version-item-label{font-weight:700;font-size:13px;color:var(--primary-dark);}
   .version-item-date{font-size:11px;color:var(--text-dim);margin-top:2px;}
   .version-item-actions{display:flex;gap:6px;flex-shrink:0;}
+  .reflist-tabs{
+    display:flex;
+    border:1px solid var(--border);
+    border-radius:8px;
+    overflow:hidden;
+    margin-bottom:16px;
+  }
+  .reflist-tab-btn{
+    flex:1;
+    padding:9px;
+    border:none;
+    background:var(--panel);
+    color:var(--text-dim);
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    font-family:inherit;
+  }
+  .reflist-tab-btn.active{background:var(--primary);color:#fff;}
+  .reflist-add-row{display:flex;gap:8px;margin-bottom:16px;}
+  .reflist-add-row input{flex:1;}
+  .reflist-item{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    margin-bottom:8px;
+  }
+  .reflist-item-main{flex:1;min-width:0;}
+  input.reflist-item-name-input{
+    font-weight:600;
+    font-size:13px;
+    border:1px solid transparent;
+    background:transparent;
+    padding:4px 6px;
+    margin:-4px -6px;
+    width:calc(100% + 12px);
+  }
+  input.reflist-item-name-input:hover{border-color:var(--border);}
+  input.reflist-item-name-input:focus{background:#fff;}
+  .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
   .trial-section-title{
     font-weight:700;
     font-size:14px;
@@ -1396,6 +1445,7 @@
     <button class="btn btn-primary btn-block" id="btnNew">+ New Recipe</button>
     <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">⚖️ Compare Recipes</button>
     <button class="btn btn-block" id="btnOpenMaterialLibSidebar" style="margin-top:8px;">📚 Ingredient Library</button>
+    <button class="btn btn-block" id="btnOpenRefLists" style="margin-top:8px;">📇 Reference Lists</button>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search product name...">
@@ -1583,6 +1633,27 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="refListsModalOverlay">
+  <div class="modal" style="max-width:520px;">
+    <div class="modal-header">
+      <div class="modal-title">📇 Reference Lists</div>
+      <button class="icon-btn" id="btnCloseRefListsModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="reflist-tabs">
+        <button class="reflist-tab-btn active" data-key="customers">Customers</button>
+        <button class="reflist-tab-btn" data-key="salesReps">Sales Reps</button>
+        <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
+      </div>
+      <div class="reflist-add-row">
+        <input type="text" id="refListNewInput" placeholder="Add a new entry...">
+        <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
+      </div>
+      <div id="refListItems"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -1627,6 +1698,7 @@ const approverApp = initializeApp(firebaseConfig, "approver");
 const approverAuth = getAuth(approverApp);
 const approverDb = getFirestore(approverApp);
 const approverRecipesCol = collection(approverDb, "recipes");
+const approverMaterialsCol = collection(approverDb, "ingredientMaster");
 
 /* New sign-ups are restricted to this company email domain (plus the
    approver email below) — enforced here client-side, and again in
@@ -1726,7 +1798,14 @@ const CHANGELOG = [
   { version: "3.0.41", date: "2026-07-17", note: "Fixed a regression from 3.0.40 that broke the Parts ingredient table's row/Subtotal number alignment (on screen and when printing): the previous fix's right-align rule was too broad and added extra padding on top of the ingredient row's own boxed % / Weight fields, pushing them out of line with the Subtotal again. Narrowed the fix to only the table totals and the Recipe Overview's rows, leaving the Parts table's already-aligned row fields untouched" },
   { version: "3.0.42", date: "2026-07-17", note: "Fixed the batch-summary stats (Total Weight / Scale / Yield / Adjusted Output) laying out differently on screen vs. in print — it now always uses a fixed 2-column layout in both places instead of a width-dependent flex-wrap. Also fixed the Yield % field looking too far from its \"%\" suffix: narrowed the field to fit a percentage and right-aligned its text so the two now read as one joined pill" },
   { version: "3.0.43", date: "2026-07-17", note: "Section 1 renamed \"Product Name & Details\" → \"Product Details\", with two new fields: Destination Country and Sales Rep (responsible / requested by) — shown in the recipe page, Compare Recipes, and printouts. Description / Concept points are now numbered, and the section can now hold up to 3 reference photos alongside the trial photos" },
-  { version: "3.0.44", date: "2026-07-21", note: "Added a Customer Name field (before Destination Country). Customer Name, Destination Country, and Sales Rep are now type-to-add dropdowns shared across all recipes — typing a new value saves it to a shared suggestion list, and a small trash button next to each field removes a value from that list without affecting any recipe that already has it saved" }
+  { version: "3.0.44", date: "2026-07-21", note: "Added a Customer Name field (before Destination Country). Customer Name, Destination Country, and Sales Rep are now type-to-add dropdowns shared across all recipes — typing a new value saves it to a shared suggestion list, and the trash button next to each field clears that recipe's own value" },
+  { version: "3.0.45", date: "2026-07-21", note: "Added a \"Reference Lists\" screen (sidebar button) for managing the Customer / Sales Rep / Destination Country suggestion lists directly — add or delete entries in one place instead of only through typing them into a recipe" },
+  { version: "3.0.46", date: "2026-07-21", note: "Customer Name, Destination Country, and Sales Rep on the recipe page can no longer add new values by typing — picking a value not already in Reference Lists now warns you to add it there first. Reference Lists entries can be renamed in place, and each one now shows who added it (and when), plus who last edited it (and when)" },
+  { version: "3.0.47", date: "2026-07-21", note: "Reference Lists entries now have an explicit ✏️ Edit button — names are read-only until you click Edit, instead of being editable just by clicking into them" },
+  { version: "3.0.48", date: "2026-07-21", note: "Reference Lists: clicking ✏️ Edit now swaps it for a 💾 Save button, and the ✕ Delete button becomes ↩️ Cancel while editing — instead of saving automatically when you click away or press Enter" },
+  { version: "3.0.49", date: "2026-07-21", note: "Deleting a Reference Lists entry now asks for confirmation first, then requires your password before it's actually removed — matching the same safeguard already used for deleting a recipe" },
+  { version: "3.0.50", date: "2026-07-21", note: "Deleting a recipe now also asks for a plain Yes/No confirmation before the approver password step (it used to jump straight to the password form). Deleting an ingredient from the Ingredient Library now requires the same approver email + password as deleting a recipe, instead of just a Yes/No confirmation" },
+  { version: "3.0.51", date: "2026-07-21", note: "The \"Confirm Identity\" password popup now always renders above any notification banner (e.g. a cloud connection error) and above any other open modal, instead of potentially being covered by them" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2022,6 +2101,120 @@ function initVersionsModal(){
   });
 }
 
+/* ---------- Reference Lists modal (Customers / Sales Reps / Destination Countries) ---------- */
+let refListActiveTab = 'customers';
+let refListEditingId = null;
+
+function openRefListsModal(){
+  document.getElementById('refListsModalOverlay').classList.add('open');
+  refListEditingId = null;
+  renderRefListItems();
+}
+function closeRefListsModal(){
+  document.getElementById('refListsModalOverlay').classList.remove('open');
+}
+function renderRefListItems(){
+  const container = document.getElementById('refListItems');
+  if(!container) return;
+  const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
+  if(items.length === 0){
+    container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
+    return;
+  }
+  container.innerHTML = items.map(item => {
+    const isEditing = item.id === refListEditingId;
+    const activity = [];
+    if(item.createdBy) activity.push(`Added by ${escapeHtml(item.createdBy)}${item.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(item.createdAt)) : ''}`);
+    if(item.updatedBy && item.updatedAt !== item.createdAt) activity.push(`Edited by ${escapeHtml(item.updatedBy)}${item.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(item.updatedAt)) : ''}`);
+    return `
+    <div class="reflist-item" data-id="${escapeHtml(item.id)}">
+      <div class="reflist-item-main">
+        <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
+        ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+      </div>
+      ${isEditing
+        ? `<button class="icon-btn" title="Save" data-role="save">💾</button><button class="icon-btn" title="Cancel" data-role="cancel">↩️</button>`
+        : `<button class="icon-btn" title="Edit" data-role="edit">✏️</button><button class="icon-btn" title="Delete" data-role="delete">✕</button>`}
+    </div>
+  `;
+  }).join('');
+
+  container.querySelectorAll('[data-role="edit"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      refListEditingId = btn.closest('.reflist-item').dataset.id;
+      renderRefListItems();
+      const inp = container.querySelector(`.reflist-item[data-id="${CSS.escape(refListEditingId)}"] .reflist-item-name-input`);
+      if(inp){ inp.focus(); inp.select(); }
+    });
+  });
+  const saveEdit = row => {
+    const id = row.dataset.id;
+    const item = metaLists[refListActiveTab].find(x => x.id === id);
+    const newVal = row.querySelector('.reflist-item-name-input').value.trim();
+    if(!newVal || newVal === item.name){ refListEditingId = null; renderRefListItems(); return; }
+    if(!renameMetaListItem(refListActiveTab, id, newVal)){
+      alert(`"${newVal}" is already in this list.`);
+      return; // stay in edit mode so the name can be fixed
+    }
+    refListEditingId = null;
+    renderRefListItems();
+  };
+  container.querySelectorAll('[data-role="save"]').forEach(btn => {
+    btn.addEventListener('click', () => saveEdit(btn.closest('.reflist-item')));
+  });
+  container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
+    btn.addEventListener('click', () => { refListEditingId = null; renderRefListItems(); });
+  });
+  container.querySelectorAll('.reflist-item-name-input').forEach(inp => {
+    inp.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
+      else if(e.key === 'Escape'){ refListEditingId = null; renderRefListItems(); }
+    });
+  });
+  container.querySelectorAll('[data-role="delete"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.reflist-item').dataset.id;
+      const item = metaLists[refListActiveTab].find(x => x.id === id);
+      if(!item) return;
+      if(!confirm(`Delete "${item.name}"? This cannot be undone.`)) return;
+      requestAuthConfirm(
+        'Confirm Identity to Delete',
+        `Enter your password to delete "${item.name}" from the list.`,
+        () => {
+          removeMetaListItem(refListActiveTab, id);
+          renderRefListItems();
+        }
+      );
+    });
+  });
+}
+function initRefListsModal(){
+  document.getElementById('btnOpenRefLists').addEventListener('click', openRefListsModal);
+  document.getElementById('btnCloseRefListsModal').addEventListener('click', closeRefListsModal);
+  document.getElementById('refListsModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'refListsModalOverlay') closeRefListsModal();
+  });
+  document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.reflist-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refListActiveTab = btn.dataset.key;
+      refListEditingId = null;
+      renderRefListItems();
+    });
+  });
+  const addNewEntry = () => {
+    const input = document.getElementById('refListNewInput');
+    addMetaListValue(refListActiveTab, input.value);
+    input.value = '';
+    renderRefListItems();
+  };
+  document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
+  document.getElementById('refListNewInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+}
+
 function initCompareModal(){
   document.getElementById('btnCompare').addEventListener('click', openCompareModal);
   document.getElementById('btnCloseCompareModal').addEventListener('click', closeCompareModal);
@@ -2302,37 +2495,73 @@ function attachMaterialsListener(){
   });
 }
 
-/* ---------- Customer / Destination / Sales Rep suggestion lists ---------- */
+/* ---------- Reference Lists: Customers / Sales Reps / Destination Countries ---------- */
+/* Each list holds { id, name } records rather than plain strings, so future
+   fields (contact info, region, etc.) can be added per entry later without
+   another data migration. */
 let metaLists = { customers: [], destinationCountries: [], salesReps: [] };
+const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Sales Reps', destinationCountries: 'Destination Countries' };
+
+/* Normalizes a stored list entry to a { id, name, createdBy, createdAt,
+   updatedBy, updatedAt } record — older data (or the very first values
+   saved before this list tracked activity) may just be a plain string. */
+function metaItem(entry){
+  if(typeof entry === 'string'){
+    return { id: uid(), name: entry, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null };
+  }
+  return entry;
+}
+function metaItemName(entry){
+  return typeof entry === 'string' ? entry : (entry.name || '');
+}
 
 function attachMetaListsListener(){
   unsubscribeMetaLists = onSnapshot(metaListsDoc, snap => {
     const data = snap.data() || {};
     metaLists = {
-      customers: Array.isArray(data.customers) ? data.customers : [],
-      destinationCountries: Array.isArray(data.destinationCountries) ? data.destinationCountries : [],
-      salesReps: Array.isArray(data.salesReps) ? data.salesReps : []
+      customers: (Array.isArray(data.customers) ? data.customers : []).map(metaItem),
+      destinationCountries: (Array.isArray(data.destinationCountries) ? data.destinationCountries : []).map(metaItem),
+      salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem)
     };
     renderMetaDatalists();
+    if(document.getElementById('refListsModalOverlay')?.classList.contains('open')) renderRefListItems();
   }, err => {
     console.error('Forge: meta lists listener error', err);
   });
 }
 
-/* Adds a value the first time it's typed into one of the combo fields, and
-   lets it be removed again via that field's small delete button — this is
-   a suggestion list only, so removing a value never touches any recipe
-   that already has it saved. */
+/* New entries can only be added via the Reference Lists modal (not by
+   typing a new value straight into a recipe's Customer/Destination/Sales
+   Rep field — see bindComboField) so the list stays a deliberately curated
+   set instead of accumulating typos from free text. */
 function addMetaListValue(key, value){
   const v = (value || '').trim();
-  if(!v || metaLists[key].includes(v)) return;
-  metaLists = { ...metaLists, [key]: [...metaLists[key], v].sort((a,b)=>a.localeCompare(b)) };
+  if(!v || metaLists[key].some(item => metaItemName(item) === v)) return;
+  const now = Date.now();
+  const who = currentUser?.email || '';
+  const updated = [...metaLists[key], { id: uid(), name: v, createdBy: who, createdAt: now, updatedBy: who, updatedAt: now }]
+    .sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
+  metaLists = { ...metaLists, [key]: updated };
   setDoc(metaListsDoc, metaLists);
 }
-function removeMetaListValue(key, value){
-  const v = (value || '').trim();
-  if(!v) return;
-  metaLists = { ...metaLists, [key]: metaLists[key].filter(x => x !== v) };
+/* Renaming in place (rather than delete + re-add) is what lets "edited by /
+   when" mean something distinct from "added by / when". Returns false
+   without saving if the new name collides with another entry already in
+   the same list. */
+function renameMetaListItem(key, id, newName){
+  const v = (newName || '').trim();
+  if(!v) return false;
+  if(metaLists[key].some(item => item.id !== id && metaItemName(item) === v)) return false;
+  const updated = metaLists[key].map(item => item.id === id
+    ? { ...item, name: v, updatedBy: currentUser?.email || '', updatedAt: Date.now() }
+    : item
+  );
+  metaLists = { ...metaLists, [key]: updated };
+  setDoc(metaListsDoc, metaLists);
+  return true;
+}
+function removeMetaListItem(key, id){
+  metaLists = { ...metaLists, [key]: metaLists[key].filter(item => item.id !== id) };
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
@@ -2340,27 +2569,42 @@ function renderMetaDatalists(){
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
-    el.innerHTML = metaLists[key].map(v => `<option value="${escapeHtml(v)}"></option>`).join('');
+    el.innerHTML = metaLists[key].map(item => `<option value="${escapeHtml(metaItemName(item))}"></option>`).join('');
   });
 }
 
-/* Wires a "type to add / pick from suggestions" field (Customer Name,
-   Destination Country, Sales Rep): typing saves straight onto the recipe
-   as usual, and leaving the field (change) adds that value to the shared
-   suggestion list so it shows up for other recipes too. The trash button
-   removes a value from the suggestion list only — it never touches any
-   recipe that already has that value saved. */
+/* Wires a "pick from the shared list" field (Customer Name, Destination
+   Country, Sales Rep). New values can no longer be added by just typing
+   them here — that used to silently grow the shared list from free text,
+   which the Reference Lists screen is meant to curate deliberately.
+   Typing something not already in the list reverts the field and points
+   the user at 📇 Reference Lists instead. The trash button just clears
+   this recipe's own field. */
 function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
   const input = document.getElementById(inputId);
   input.value = r[fieldKey] || '';
+  let lastValidValue = r[fieldKey] || '';
   input.addEventListener('input', e => {
     r[fieldKey] = e.target.value;
     scheduleSave();
   });
-  input.addEventListener('change', () => addMetaListValue(metaKey, input.value));
+  input.addEventListener('change', () => {
+    const v = input.value.trim();
+    const exists = v === '' || metaLists[metaKey].some(item => metaItemName(item) === v);
+    if(!exists){
+      alert(`"${v}" is not in the list yet. Please add it via 📇 Reference Lists first, then pick it here.`);
+      input.value = lastValidValue;
+      r[fieldKey] = lastValidValue;
+      scheduleSave();
+      return;
+    }
+    lastValidValue = v;
+  });
   document.getElementById(deleteBtnId).addEventListener('click', () => {
-    if(!input.value.trim()) return;
-    removeMetaListValue(metaKey, input.value);
+    input.value = '';
+    r[fieldKey] = '';
+    lastValidValue = '';
+    scheduleSave();
   });
 }
 
@@ -2487,7 +2731,15 @@ function renderMaterialTable(){
       const m = ingredientMaster.find(x => x.id === id);
       if(!m) return;
       if(!confirm(`Permanently remove "${materialLabel(m)}" from the ingredient library?`)) return;
-      deleteMaterialFromCloud(id);
+      requestAuthConfirm(
+        'Confirm Deletion',
+        `Enter the approver's email and password to permanently remove "${materialLabel(m)}" from the ingredient library`,
+        () => {},
+        {
+          requireEmail: DELETE_APPROVER_EMAIL,
+          approverAction: () => deleteDoc(doc(approverMaterialsCol, id))
+        }
+      );
     });
   });
   body.querySelectorAll('[data-view-material]').forEach(tr => {
@@ -2986,21 +3238,21 @@ function renderMain(){
             <label>Customer Name</label>
             <div class="combo-row">
               <input type="text" id="f-customerName" list="customerDatalist" placeholder="e.g. ABC Trading Co.">
-              <button type="button" class="icon-btn" id="btnRemoveCustomerName" title="Remove this value from the suggestion list">🗑</button>
+              <button type="button" class="icon-btn" id="btnRemoveCustomerName" title="Clear this field">🗑</button>
             </div>
           </div>
           <div class="field">
             <label>Destination Country</label>
             <div class="combo-row">
               <input type="text" id="f-destinationCountry" list="destinationDatalist" placeholder="e.g. Japan">
-              <button type="button" class="icon-btn" id="btnRemoveDestinationCountry" title="Remove this value from the suggestion list">🗑</button>
+              <button type="button" class="icon-btn" id="btnRemoveDestinationCountry" title="Clear this field">🗑</button>
             </div>
           </div>
           <div class="field">
             <label>Sales Rep (responsible / requested by)</label>
             <div class="combo-row">
               <input type="text" id="f-salesRep" list="salesRepDatalist" placeholder="e.g. Somchai">
-              <button type="button" class="icon-btn" id="btnRemoveSalesRep" title="Remove this value from the suggestion list">🗑</button>
+              <button type="button" class="icon-btn" id="btnRemoveSalesRep" title="Clear this field">🗑</button>
             </div>
           </div>
         </div>
@@ -3222,6 +3474,7 @@ function renderMain(){
   document.getElementById('btnDuplicate').addEventListener('click', duplicateCurrent);
   document.getElementById('btnDelete').addEventListener('click', () => {
     const deletingId = r.id;
+    if(!confirm(`Delete "${r.name || 'Untitled recipe'}"? This cannot be undone.`)) return;
     requestAuthConfirm(
       'Confirm Deletion',
       `Enter the approver's email and password to permanently delete the recipe "${r.name || 'Untitled recipe'}"`,
@@ -4224,6 +4477,7 @@ initAuthScreen();
 initAuthConfirmModal();
 initCompareModal();
 initVersionsModal();
+initRefListsModal();
 initMaterialLibrary();
 renderFooter();
 
