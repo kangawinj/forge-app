@@ -274,6 +274,8 @@
     display:flex;
     gap:8px;
     flex-wrap:wrap;
+    margin-left:auto;
+    justify-content:flex-end;
   }
   .card{
     background:var(--panel);
@@ -484,6 +486,19 @@
   }
   .part-block.collapsed .part-body{display:none;}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
+  /* Right-align every numeric column total (Parts/Components tfoot,
+     Recipe Overview's plain-text data rows and its Total) so every digit
+     lines up in a straight column. The Parts/Components per-row cells are
+     deliberately excluded here — their ing-pct-display span / num-input
+     already sit ~15px in from the cell's right edge via their own
+     padding+border, so adding the same padding to the <td> itself would
+     double up and push them out of alignment again. */
+  tfoot .col-pct, tfoot .col-wt,
+  #overviewBody .col-pct, #overviewBody .col-wt,
+  .part-subtotal-pct, .part-subtotal-wt{
+    text-align:right;
+    padding-right:15px;
+  }
   .overview-block{
     margin:4px 0 14px;
     padding:14px 16px;
@@ -548,10 +563,10 @@
   }
 
   .batch-summary{
-    display:flex;
-    flex-wrap:wrap;
-    gap:24px;
-    align-items:flex-end;
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:14px 24px;
+    align-items:end;
     margin-bottom:16px;
     padding:14px 16px;
     background:var(--primary-light);
@@ -574,6 +589,13 @@
     gap:8px;
   }
   .batch-scale-row input{width:140px;}
+  /* The Yield input + "%" suffix are meant to read as one joined pill
+     (see the matching border-radius on .unit-input/.unit-suffix below) —
+     drop the row's gap and give the input just enough width for a
+     percentage value, instead of inheriting the wide Scale-To sizing and
+     the 8px gap meant for that row's separate Scale button. */
+  .batch-scale-row:has(.unit-suffix){gap:0;}
+  .batch-scale-row .unit-input{width:70px !important;text-align:right;}
   .ing-pct-display{
     display:block;
     text-align:right;
@@ -1066,6 +1088,13 @@
     margin-bottom:8px;
   }
   .desc-point-row textarea{flex:1;min-height:44px;}
+  .desc-point-row .step-badge{margin-top:10px;}
+  .desc-photos-label{
+    font-size:12px;
+    color:var(--text-dim);
+    font-weight:600;
+    margin:12px 0 4px;
+  }
 
   .trial-section{
     margin-top:20px;
@@ -1182,12 +1211,39 @@
 
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
+    .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list{display:none !important;}
     .print-only{display:block !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
     body{background:#fff;}
+
+    /* The recipe title always prints as "Name  CODE" on one line. At the
+       on-screen 54px/25px sizing this doesn't reliably fit within a
+       printed page's content width (~740px after margins) once the name
+       is more than a few words, wrapping mid-code — so print uses its
+       own smaller, fixed sizing plus nowrap, instead of inheriting
+       whatever on-screen size (desktop 54px or mobile 30px) happens to
+       be active. */
+    .recipe-title-display{
+      font-size:32px !important;
+      margin-bottom:6px !important;
+      white-space:nowrap !important;
+    }
+    .recipe-title-display .rt-code{
+      display:inline !important;
+      font-size:16px !important;
+      margin-left:12px !important;
+      margin-top:0 !important;
+    }
+    .main{padding-top:0 !important;}
+
+    /* The batch-summary stat grid must always print as the same fixed
+       2-column layout as the on-screen (desktop) view, regardless of the
+       printed page's effective content width — otherwise it can pick up
+       the mobile single-column stacking instead. */
+    .batch-summary{grid-template-columns:1fr 1fr !important;}
 
     /* When a modal (e.g. Compare Recipes) is open, print only the modal
        content full-page instead of the fixed-position overlay clipped to
@@ -1265,6 +1321,7 @@
     .modal-overlay{padding:8px;}
     .modal-body{padding:14px;}
     .batch-scale-row input{width:100px;}
+    .batch-summary{grid-template-columns:1fr;}
   }
 </style>
 </head>
@@ -1652,7 +1709,13 @@ const CHANGELOG = [
   { version: "3.0.34", date: "2026-07-16", note: "Added two BOM-style features: an Expected Yield (%) field in section 2 that shows an Adjusted Output Weight (accounting for production loss), and a Version History tool (🕒 Versions in the toolbar) to save/restore/delete named snapshots of the recipe's formulation" },
   { version: "3.0.35", date: "2026-07-17", note: "Recipes and Ingredient Library entries now track who created and last edited them, and when. Shown under the recipe title on the recipe page, and in the Ingredient Library's detail view (click a row)" },
   { version: "3.0.36", date: "2026-07-17", note: "Improved layout for narrow/mobile screens: the Product Name title and page padding shrink to fit small screens instead of wasting vertical space, the read-only/unlock banner wraps instead of crowding its button off-screen, Compare Recipes' 3-column layouts stack into one column, and the ingredient and Recipe Overview tables scroll horizontally within their own box instead of stretching the whole page" },
-  { version: "3.0.37", date: "2026-07-17", note: "On narrow/mobile screens, the left sidebar (recipe list, New Recipe, Compare, Ingredient Library) is now hidden behind a ☰ menu button and slides in as an overlay when tapped, instead of always taking up space above the recipe. Tap the backdrop, the ✕ in the drawer, or pick anything inside it to close" }
+  { version: "3.0.37", date: "2026-07-17", note: "On narrow/mobile screens, the left sidebar (recipe list, New Recipe, Compare, Ingredient Library) is now hidden behind a ☰ menu button and slides in as an overlay when tapped, instead of always taking up space above the recipe. Tap the backdrop, the ✕ in the drawer, or pick anything inside it to close" },
+  { version: "3.0.38", date: "2026-07-17", note: "Each ingredient part's \"% of recipe\" summary now shows 2 decimal places instead of 1, matching the Recipe Overview table exactly. Versions/Duplicate/Print PDF buttons are now right-aligned under the recipe title. The Subtotal/Total rows in the ingredient, Recipe Overview, and Components tables now line up in the same column as the values above them instead of sitting flush left" },
+  { version: "3.0.39", date: "2026-07-17", note: "Fixed printing/PDF export picking up the new mobile layout when triggered from a narrow screen: the ☰ menu button no longer appears in the printout, the Product Name and Recipe Code always print on one line, and the \"Delete Recipe\" button no longer appears at the bottom of the printout" },
+  { version: "3.0.40", date: "2026-07-17", note: "Fixed the Recipe Overview table's numbers not lining up: the Total row's % column had silently lost its column width/alignment (a JS bug overwrote its class name instead of adding to it), and the Weight column's per-ingredient rows were left-aligned while the Total was right-aligned. Every row and the Total now line up in a straight column for both % and Weight" },
+  { version: "3.0.41", date: "2026-07-17", note: "Fixed a regression from 3.0.40 that broke the Parts ingredient table's row/Subtotal number alignment (on screen and when printing): the previous fix's right-align rule was too broad and added extra padding on top of the ingredient row's own boxed % / Weight fields, pushing them out of line with the Subtotal again. Narrowed the fix to only the table totals and the Recipe Overview's rows, leaving the Parts table's already-aligned row fields untouched" },
+  { version: "3.0.42", date: "2026-07-17", note: "Fixed the batch-summary stats (Total Weight / Scale / Yield / Adjusted Output) laying out differently on screen vs. in print — it now always uses a fixed 2-column layout in both places instead of a width-dependent flex-wrap. Also fixed the Yield % field looking too far from its \"%\" suffix: narrowed the field to fit a percentage and right-aligned its text so the two now read as one joined pill" },
+  { version: "3.0.43", date: "2026-07-17", note: "Section 1 renamed \"Product Name & Details\" → \"Product Details\", with two new fields: Destination Country and Sales Rep (responsible / requested by) — shown in the recipe page, Compare Recipes, and printouts. Description / Concept points are now numbered, and the section can now hold up to 3 reference photos alongside the trial photos" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2017,6 +2080,8 @@ function renderCompareContent(){
         <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
         <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
         <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
+        ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
+        ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
         ${descriptionListHtml(r)}
       </div>
     `;
@@ -2568,7 +2633,10 @@ function blankRecipe(){
     name: "",
     code: "",
     date: new Date().toISOString().slice(0,10),
+    destinationCountry: "",
+    salesRep: "",
     description: [],
+    descPhotos: [],
     batchWeight: 1000,
     parts: [],
     processes: [ { title: "", steps: [""], components: [] } ],
@@ -2620,6 +2688,9 @@ function migrateRecipe(r){
   if(!Array.isArray(r.description)){
     r.description = (r.description || '').trim() ? [r.description] : [];
   }
+  if(!Array.isArray(r.descPhotos)) r.descPhotos = [];
+  if(r.destinationCountry === undefined) r.destinationCountry = '';
+  if(r.salesRep === undefined) r.salesRep = '';
 
   if(!Array.isArray(r.trialPhotos)) r.trialPhotos = [];
   if(!Array.isArray(r.trialEvaluation)) r.trialEvaluation = [];
@@ -2757,7 +2828,7 @@ function descriptionListHtml(r){
   if(points.length === 0) return '<div class="ci-row"><b>Description:</b> -</div>';
   return `
     <div class="ci-row"><b>Description:</b></div>
-    <ul class="ci-desc-list">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ul>
+    <ol class="ci-desc-list">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>
   `;
 }
 
@@ -2821,7 +2892,7 @@ function renderMain(){
 
     <div id="recipeCards">
     <div class="card">
-      <div class="card-title">1. Product Name & Details</div>
+      <div class="card-title">1. Product Details</div>
       <div class="recipe-fields-edit">
         <div class="grid-2">
           <div class="field">
@@ -2835,9 +2906,22 @@ function renderMain(){
         </div>
         <div class="grid-2">
           <div class="field">
+            <label>Destination Country</label>
+            <input type="text" id="f-destinationCountry" placeholder="e.g. Japan">
+          </div>
+          <div class="field">
+            <label>Sales Rep (responsible / requested by)</label>
+            <input type="text" id="f-salesRep" placeholder="e.g. Somchai">
+          </div>
+        </div>
+        <div class="grid-2">
+          <div class="field">
             <label>Description / Concept</label>
             <div class="desc-points-list" id="descPointsList"></div>
             <button class="btn btn-sm add-row-btn" type="button" id="btnAddDescPoint">+ Add Point</button>
+            <div class="desc-photos-label">Photos (up to 3)</div>
+            <div class="trial-photos-row" id="descPhotosRow"></div>
+            <input type="file" id="descPhotoInput" accept="image/*">
           </div>
           <div class="field">
             <label>Recipe Code — YYYYMMDD-XX</label>
@@ -2953,8 +3037,11 @@ function renderMain(){
   document.getElementById('f-codeSuffix').value = r.code || '';
   document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
   document.getElementById('f-date').value = r.date || '';
+  document.getElementById('f-destinationCountry').value = r.destinationCountry || '';
+  document.getElementById('f-salesRep').value = r.salesRep || '';
   updateRecipeTitleDisplay(r);
   renderDescPoints(r);
+  renderDescPhotos(r);
   renderTrialPhotos(r);
   renderTrialEval(r);
 
@@ -2966,6 +3053,22 @@ function renderMain(){
   document.getElementById('f-codeSuffix').addEventListener('input', e => {
     r.code = e.target.value;
     updateRecipeTitleDisplay(r);
+    scheduleSave();
+  });
+  document.getElementById('f-destinationCountry').addEventListener('input', e => {
+    r.destinationCountry = e.target.value;
+    scheduleSave();
+  });
+  document.getElementById('f-salesRep').addEventListener('input', e => {
+    r.salesRep = e.target.value;
+    scheduleSave();
+  });
+  document.getElementById('descPhotoInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file || r.descPhotos.length >= 3) return;
+    r.descPhotos.push(await resizeImageFile(file, 500));
+    renderDescPhotos(r);
     scheduleSave();
   });
   document.getElementById('btnAddDescPoint').addEventListener('click', () => {
@@ -3151,7 +3254,7 @@ function refreshDisplays(r){
     if(summaryEl){
       const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
       summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(1)}% of recipe`
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(2)}% of recipe`
         : 'No ingredients yet';
     }
   });
@@ -3352,7 +3455,7 @@ function renderParts(r){
       subWtCell.textContent = formatWeight(subWt);
       const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
       summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(1)}% of recipe`
+        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(2)}% of recipe`
         : 'No ingredients yet';
     }
 
@@ -3397,7 +3500,7 @@ function updateGrandTotal(r){
   const pctEl = document.getElementById('grandTotalPct');
   const wtEl = document.getElementById('grandTotalWt');
   pctEl.textContent = totalPct.toFixed(2) + '%';
-  pctEl.className = 'totals-ok';
+  pctEl.className = 'col-pct totals-ok';
   wtEl.textContent = formatWeight(totalWt);
 
   renderOverview(allIngredients);
@@ -3725,6 +3828,7 @@ function renderDescPoints(r){
     const row = document.createElement('div');
     row.className = 'desc-point-row';
     row.innerHTML = `
+      <span class="step-badge">${idx+1}</span>
       <textarea rows="2" placeholder="e.g. Product characteristics, selling point, target audience..."></textarea>
       <button class="icon-btn" title="Delete">✕</button>
     `;
@@ -3738,6 +3842,30 @@ function renderDescPoints(r){
     });
     list.appendChild(row);
   });
+}
+
+/* Up to 3 reference photos attached to Description / Concept — same pattern
+   as the Trial Photos row (resize on upload, thumbnail grid, click to
+   remove), just a separate array so the two photo sets don't mix. */
+function renderDescPhotos(r){
+  const row = document.getElementById('descPhotosRow');
+  const input = document.getElementById('descPhotoInput');
+  if(!row) return;
+  row.innerHTML = r.descPhotos.map((photo, idx) => `
+    <div class="trial-photo-thumb" data-idx="${idx}">
+      <img src="${escapeHtml(photo)}" alt="Description photo ${idx+1}">
+      <button title="Remove this photo">✕</button>
+    </div>
+  `).join('');
+  row.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
+      r.descPhotos.splice(idx, 1);
+      renderDescPhotos(r);
+      scheduleSave();
+    });
+  });
+  if(input) input.style.display = r.descPhotos.length >= 3 ? 'none' : '';
 }
 
 /* ---------- Trial / Experiment Results (photos + free-form sensory table) ---------- */
@@ -3809,6 +3937,8 @@ function renderPrintView(r){
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
       <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
+      ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
+      ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
       ${descriptionListHtml(r)}
     `;
   }
