@@ -495,10 +495,18 @@
      double up and push them out of alignment again. */
   tfoot .col-pct, tfoot .col-wt,
   #overviewBody .col-pct, #overviewBody .col-wt,
-  .part-subtotal-pct, .part-subtotal-wt{
+  .part-subtotal-pct, .part-subtotal-wt,
+  .compare-table .col-pct, .compare-table .col-wt{
     text-align:right;
     padding-right:15px;
   }
+  .compare-table .col-wt{border-left:1px solid var(--border);}
+  .compare-table .recipe-boundary{border-left:2px solid #b0b6c0;}
+  /* The Ingredient header uses rowspan="2", so in the sub-header row (%/g
+     labels) the first recipe's "%" cell becomes the row's actual first
+     child and wrongly inherits the left-align meant for the Ingredient
+     label column — force it back to right-aligned like every other %/g cell. */
+  .compare-table .col-pct:first-child{text-align:right;}
   .overview-block{
     margin:4px 0 14px;
     padding:14px 16px;
@@ -807,10 +815,23 @@
   }
   .compare-info-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    /* Leading 220px spacer matches the fixed-width "Ingredient"/label column
+       in the tables below, so each recipe's card lines up with its column. */
+    grid-template-columns:220px repeat(3,1fr);
     gap:14px;
     margin-bottom:20px;
   }
+  .compare-info-spacer{visibility:hidden;}
+  /* Trials' product-card grid has trailing dead columns (matching the eval
+     table's Comment + delete-icon columns) so the product columns themselves
+     line up with their score columns. A real grid `gap` would consume extra
+     width across those dead columns that the (gapless, contiguous) table
+     never spends, throwing columns out of alignment again — so gap is
+     replaced with an equivalent per-card margin, which doesn't affect track
+     sizing at all. */
+  .compare-info-grid.gap-via-margin{gap:0;}
+  .compare-info-grid.gap-via-margin > *{margin-right:14px;min-width:0;}
+  .compare-info-grid.gap-via-margin > *:last-child{margin-right:0;}
   .compare-info-col{
     padding:12px 14px;
     border-radius:var(--radius);
@@ -836,7 +857,7 @@
     color:var(--primary-dark);
     margin:20px 0 10px;
   }
-  .compare-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .compare-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
   .compare-table th, .compare-table td{
     padding:6px 8px;
     border-bottom:1px solid var(--border);
@@ -1085,11 +1106,6 @@
     margin:12px 0 4px;
   }
 
-  .trial-section{
-    margin-top:20px;
-    padding-top:16px;
-    border-top:1px solid var(--border);
-  }
 
   .version-save-row{
     display:flex;
@@ -1158,6 +1174,18 @@
   }
   input.reflist-item-name-input:hover{border-color:var(--border);}
   input.reflist-item-name-input:focus{background:#fff;}
+  input.reflist-item-location-input{
+    display:block;
+    font-size:12px;
+    color:var(--text-dim);
+    border:1px solid transparent;
+    background:transparent;
+    padding:2px 6px;
+    margin:2px -6px 0;
+    width:calc(100% + 12px);
+  }
+  input.reflist-item-location-input:hover{border-color:var(--border);}
+  input.reflist-item-location-input:focus{background:#fff;color:var(--text);}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
 
   /* ---------- Projects modal ---------- */
@@ -1186,12 +1214,6 @@
   .project-log-date{font-size:11px;color:var(--text-dim);}
   .project-log-note{font-size:13px;margin-top:4px;}
   .project-log-by{font-size:11px;color:var(--text-dim);margin-top:4px;}
-  .trial-section-title{
-    font-weight:700;
-    font-size:14px;
-    color:var(--primary-dark);
-    margin-bottom:12px;
-  }
   .trial-photos-row{
     display:flex;
     flex-wrap:wrap;
@@ -1224,9 +1246,6 @@
     line-height:1;
     padding:0;
   }
-  .trial-eval-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:10px;}
-  .trial-eval-table input{padding:7px 8px;font-size:13px;}
-  .col-score{width:90px;}
 
   .empty-state{
     text-align:center;
@@ -1428,6 +1447,13 @@
     .icon-btn, .part-toggle-btn, .material-search{display:none !important;}
     .part-block.collapsed .part-body{display:block !important;}
     .part-block{background:#fff !important;}
+
+    /* Trial Results: printing one trial's Print button should print only
+       that trial, not the whole list of trials sharing the modal. */
+    #btnAddTrial{display:none !important;}
+    #trialsList > .part-block:not(.printing-only){display:none !important;}
+    [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
+    [data-role="print-trial"], .project-add-row, .trial-photo-input{display:none !important;}
   }
 
   @media (max-width:800px){
@@ -1543,6 +1569,7 @@
     <button class="btn btn-block" id="btnOpenMaterialLibSidebar" style="margin-top:8px;">📚 Ingredient Library</button>
     <button class="btn btn-block" id="btnOpenRefLists" style="margin-top:8px;">📇 Reference Lists</button>
     <button class="btn btn-block" id="btnOpenProjects" style="margin-top:8px;">📁 Projects</button>
+    <button class="btn btn-block" id="btnOpenTrials" style="margin-top:8px;">🧪 Trial Results</button>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search product name...">
@@ -1571,6 +1598,8 @@
 <datalist id="customerDatalist"></datalist>
 <datalist id="destinationDatalist"></datalist>
 <datalist id="salesRepDatalist"></datalist>
+<datalist id="responsiblePersonDatalist"></datalist>
+<datalist id="factoryDatalist"></datalist>
 
 <div class="modal-overlay" id="materialModalOverlay">
   <div class="modal">
@@ -1731,7 +1760,7 @@
 </div>
 
 <div class="modal-overlay" id="refListsModalOverlay">
-  <div class="modal" style="max-width:520px;">
+  <div class="modal" style="max-width:680px;">
     <div class="modal-header">
       <div class="modal-title">📇 Reference Lists</div>
       <button class="icon-btn" id="btnCloseRefListsModal" title="Close">✕</button>
@@ -1741,9 +1770,12 @@
         <button class="reflist-tab-btn active" data-key="customers">Customers</button>
         <button class="reflist-tab-btn" data-key="salesReps">Sales Reps</button>
         <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
+        <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
+        <button class="reflist-tab-btn" data-key="factories">Factories</button>
       </div>
       <div class="reflist-add-row">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
+        <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
         <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
       </div>
       <div id="refListItems"></div>
@@ -1785,6 +1817,19 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="trialsModalOverlay">
+  <div class="modal" style="max-width:900px;">
+    <div class="modal-header">
+      <div class="modal-title">🧪 Trial Results</div>
+      <button class="icon-btn" id="btnCloseTrialsModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Trial</button>
+      <div id="trialsList"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -1816,6 +1861,7 @@ const db = getFirestore(firebaseApp);
 const recipesCol = collection(db, "recipes");
 const materialsCol = collection(db, "ingredientMaster");
 const projectsCol = collection(db, "projects");
+const trialsCol = collection(db, "trials");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -1942,7 +1988,13 @@ const CHANGELOG = [
   { version: "3.0.53", date: "2026-07-27", note: "Restyled the app with a lighter, more rounded look — system font stack, larger corner radius, and borderless cards with softer shadows — while keeping the existing navy/orange brand colors" },
   { version: "3.0.54", date: "2026-07-27", note: "Added a Projects screen for tracking cross-recipe production projects — owner sales rep, responsible person, factory, and per-product sales rep/stage with an append-only progress log" },
   { version: "3.0.55", date: "2026-07-27", note: "Projects are now included in Export All (JSON) and Import, with recipe references remapped correctly so imported product links still point at the right recipe" },
-  { version: "3.0.56", date: "2026-07-27", note: "The home dashboard now also shows total projects, products by stage, and recent project activity" }
+  { version: "3.0.56", date: "2026-07-27", note: "The home dashboard now also shows total projects, products by stage, and recent project activity" },
+  { version: "3.0.57", date: "2026-08-03", note: "Compare Recipes now groups ingredients by Part (matching the recipe page) and shows weight (g) next to each percentage, with a checkbox to toggle grams on/off, numbers right-aligned, and a divider between each compared recipe for easier side-by-side reading" },
+  { version: "3.0.58", date: "2026-08-03", note: "Reference Lists: added Responsible Person (PD) and Factory (with Location) as new manageable list types" },
+  { version: "3.0.59", date: "2026-08-03", note: "Projects: added Edit/Save/Delete buttons, a collapsible list view, and a dashboard summary (project/product counts, products by stage) at the top of the screen. New fields: Request Date, Customer Name, Destination Country, Factory Sales Rep, and Requirements/Certifications" },
+  { version: "3.0.60", date: "2026-08-03", note: "Recipes can now be linked to a Project directly from the recipe page — picking a project shows its customer, destination, and sales rep info inline. The recipe's own Customer Name/Destination Country/Sales Rep fields were removed, since that information now comes from the linked Project" },
+  { version: "3.0.61", date: "2026-08-03", note: "Added a standalone Trial Results screen (moved out of the recipe page) for comparing up to 4 products side by side — shared photos plus a Sensory Evaluation table scored per product, instead of a single trial tied to one recipe" },
+  { version: "3.0.62", date: "2026-08-03", note: "Trial Results: product cards now line up column-for-column with the Sensory Evaluation table below them, and each trial has Edit/Save/Delete/Print buttons — fields are locked read-only until Edit is clicked, and Print outputs just that one trial" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2145,6 +2197,7 @@ function initAuthConfirmModal(){
 
 /* ---------- Compare recipes ---------- */
 let compareShowCodes = true;
+let compareShowWeights = false;
 
 /* ---------- Version History (snapshot & restore the recipe's formulation) ---------- */
 let versionsModalRecipe = null;
@@ -2161,8 +2214,7 @@ function snapshotRecipeCore(r){
     batchWeight: r.batchWeight,
     parts: JSON.parse(JSON.stringify(r.parts)),
     processes: JSON.parse(JSON.stringify(r.processes)),
-    yieldPct: r.yieldPct,
-    trialEvaluation: JSON.parse(JSON.stringify(r.trialEvaluation))
+    yieldPct: r.yieldPct
   };
 }
 
@@ -2253,6 +2305,7 @@ function closeRefListsModal(){
 function renderRefListItems(){
   const container = document.getElementById('refListItems');
   if(!container) return;
+  const isFactories = refListActiveTab === 'factories';
   const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
@@ -2267,6 +2320,7 @@ function renderRefListItems(){
     <div class="reflist-item" data-id="${escapeHtml(item.id)}">
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
+        ${isFactories ? `<input type="text" class="reflist-item-location-input" placeholder="Location" value="${escapeHtml(item.location || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
         ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
       </div>
       ${isEditing
@@ -2288,8 +2342,12 @@ function renderRefListItems(){
     const id = row.dataset.id;
     const item = metaLists[refListActiveTab].find(x => x.id === id);
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
-    if(!newVal || newVal === item.name){ refListEditingId = null; renderRefListItems(); return; }
-    if(!renameMetaListItem(refListActiveTab, id, newVal)){
+    const newLocation = isFactories ? row.querySelector('.reflist-item-location-input').value.trim() : undefined;
+    const extra = isFactories ? { location: newLocation } : {};
+    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')))){
+      refListEditingId = null; renderRefListItems(); return;
+    }
+    if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
       alert(`"${newVal}" is already in this list.`);
       return; // stay in edit mode so the name can be fixed
     }
@@ -2302,7 +2360,7 @@ function renderRefListItems(){
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
     btn.addEventListener('click', () => { refListEditingId = null; renderRefListItems(); });
   });
-  container.querySelectorAll('.reflist-item-name-input').forEach(inp => {
+  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
       else if(e.key === 'Escape'){ refListEditingId = null; renderRefListItems(); }
@@ -2337,17 +2395,24 @@ function initRefListsModal(){
       btn.classList.add('active');
       refListActiveTab = btn.dataset.key;
       refListEditingId = null;
+      document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
       renderRefListItems();
     });
   });
   const addNewEntry = () => {
     const input = document.getElementById('refListNewInput');
-    addMetaListValue(refListActiveTab, input.value);
+    const locationInput = document.getElementById('refListNewLocationInput');
+    const extra = refListActiveTab === 'factories' ? { location: locationInput.value.trim() } : {};
+    addMetaListValue(refListActiveTab, input.value, extra);
     input.value = '';
+    locationInput.value = '';
     renderRefListItems();
   };
   document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
   document.getElementById('refListNewInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+  document.getElementById('refListNewLocationInput').addEventListener('keydown', e => {
     if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
   });
 }
@@ -2362,9 +2427,14 @@ function blankProject(){
   return {
     id: uid(),
     name: "",
+    requestDate: new Date().toISOString().slice(0,10),
+    customerName: "",
+    destinationCountry: "",
     ownerSalesRep: "",
+    factorySalesRep: "",
     responsiblePerson: "",
     factoryName: "",
+    requirements: "",
     products: [],
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
@@ -2402,6 +2472,356 @@ function addProductLogEntry(product, stage, note){
   product.updatedAt = Date.now();
 }
 
+/* ---------- Trial Results (moved out of the recipe page into its own mode
+   so a trial can compare up to TRIAL_MAX_PRODUCTS existing recipes side by
+   side, Compare-Recipes-style, instead of belonging to just one). ---------- */
+let trials = [];
+let trialExpandedIds = new Set();
+let trialEditingId = null;
+
+const TRIAL_MAX_PRODUCTS = 4;
+
+function blankTrial(){
+  return {
+    id: uid(),
+    recipeIds: [],
+    photos: [],
+    evaluation: [],
+    createdBy: currentUser?.email || '',
+    createdAt: Date.now(),
+    updatedBy: currentUser?.email || '',
+    updatedAt: Date.now()
+  };
+}
+
+function saveTrialToCloud(t){
+  return setDoc(doc(trialsCol, t.id), t);
+}
+function deleteTrialFromCloud(id){
+  return deleteDoc(doc(trialsCol, id));
+}
+function scheduleTrialSave(t){
+  t.updatedAt = Date.now();
+  t.updatedBy = currentUser?.email || '';
+  saveTrialToCloud(t);
+}
+
+/* One-time, idempotent move of each recipe's embedded trialPhotos/
+   trialEvaluation into a standalone Trial record linked back by recipeId -
+   guarded by trialsMigrated so it only ever runs once per session, and by
+   the "does a trial already reference this recipe" check so re-running it
+   (e.g. after a reload) can never create duplicates. The old fields are
+   left on the recipe untouched (unused, harmless) rather than stripped, so
+   this migration can't destroy data if anything about it is ever wrong. */
+function migrateTrialsFromRecipes(){
+  if(trialsMigrated || !recipesLoaded || !trialsLoaded) return;
+  trialsMigrated = true;
+  let migratedAny = false;
+  recipes.forEach(r => {
+    const hasPhotos = Array.isArray(r.trialPhotos) && r.trialPhotos.length > 0;
+    const hasEval = Array.isArray(r.trialEvaluation) && r.trialEvaluation.length > 0;
+    if(!hasPhotos && !hasEval) return;
+    if(trials.some(t => (t.recipeIds || []).includes(r.id))) return;
+    const now = Date.now();
+    const t = {
+      id: uid(),
+      recipeIds: [r.id],
+      photos: hasPhotos ? r.trialPhotos : [],
+      evaluation: hasEval ? r.trialEvaluation : [],
+      createdBy: r.createdBy || '',
+      createdAt: r.createdAt || now,
+      updatedBy: currentUser?.email || '',
+      updatedAt: now
+    };
+    trials.push(t);
+    saveTrialToCloud(t);
+    migratedAny = true;
+  });
+  if(migratedAny && document.getElementById('trialsModalOverlay')?.classList.contains('open')) renderTrialsList();
+}
+
+function openTrialsModal(){
+  document.getElementById('trialsModalOverlay').classList.add('open');
+  renderTrialsList();
+}
+function closeTrialsModal(){
+  document.getElementById('trialsModalOverlay').classList.remove('open');
+}
+
+function renderTrialsList(){
+  const container = document.getElementById('trialsList');
+  if(!container) return;
+  if(trials.length === 0){
+    container.innerHTML = '<div class="overview-empty">No trial results yet — click "+ New Trial" above to start one</div>';
+    return;
+  }
+  const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
+  container.innerHTML = sorted.map(t => {
+    const isEditing = t.id === trialEditingId;
+    const isExpanded = isEditing || trialExpandedIds.has(t.id);
+    const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+    const productLabel = linkedRecipes.length ? linkedRecipes.map(r => recipeDisplayLabel(r)).join(', ') : 'Untitled trial';
+    const activity = [];
+    if(t.createdBy) activity.push(`Created by ${escapeHtml(t.createdBy)}${t.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(t.createdAt)) : ''}`);
+    if(t.updatedBy && t.updatedAt !== t.createdAt) activity.push(`Last edited by ${escapeHtml(t.updatedBy)}${t.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(t.updatedAt)) : ''}`);
+
+    const usedRecipeIds = new Set(t.recipeIds || []);
+    const availableRecipes = recipes
+      .filter(r => !usedRecipeIds.has(r.id))
+      .sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
+    const atMax = (t.recipeIds || []).length >= TRIAL_MAX_PRODUCTS;
+
+    // Side-by-side product cards (same visual language as Compare Recipes'
+    // info-grid) so every product being evaluated is visible at once,
+    // instead of a click-to-reveal list — the whole point of a comparison.
+    const productCardsHtml = (t.recipeIds || []).map(recipeId => {
+      const r = recipes.find(x => x.id === recipeId);
+      const removeBtn = isEditing ? `<button class="icon-btn" data-role="remove-trial-recipe" data-recipe-id="${escapeHtml(recipeId)}" title="Remove this product" style="margin-top:8px;">✕ Remove</button>` : '';
+      if(!r){
+        return `
+          <div class="compare-info-col">
+            <div class="ci-row" style="color:var(--danger);">Recipe not found (deleted?)</div>
+            ${removeBtn}
+          </div>
+        `;
+      }
+      const totalWt = r.parts.flatMap(p => p.ingredients).reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
+      const link = findProjectForRecipe(r.id);
+      return `
+        <div class="compare-info-col">
+          <div class="ci-name">${escapeHtml(recipeDisplayLabel(r))}</div>
+          <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
+          <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
+          <div class="ci-row"><b>Total weight:</b> ${escapeHtml(formatWeight(totalWt))}</div>
+          ${link?.project.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(link.project.customerName)}</div>` : ''}
+          ${link?.project.destinationCountry ? `<div class="ci-row"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
+          ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Owner Sales Rep:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
+          ${link ? `<div class="ci-row"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
+          ${removeBtn}
+        </div>
+      `;
+    }).join('');
+
+    // Leading 220px spacer/column matches the fixed-width "Criteria" column
+    // in the evaluation table below, so each product's card lines up with
+    // its own score column — same technique used on the Compare Recipes page.
+    const productCardsGrid = productCardsHtml
+      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${(t.recipeIds||[]).length},1fr) 160px 34px;"><div class="compare-info-spacer"></div>${productCardsHtml}<div class="compare-info-spacer"></div><div class="compare-info-spacer"></div></div>`
+      : '<div class="overview-empty">No products added yet</div>';
+
+    const photosHtml = t.photos.map((photo, idx) => `
+      <div class="trial-photo-thumb" data-idx="${idx}">
+        <img src="${escapeHtml(photo)}" alt="Trial photo ${idx+1}">
+        ${isEditing ? '<button class="icon-btn" title="Remove this photo">✕</button>' : ''}
+      </div>
+    `).join('');
+
+    // Each row's score is per-product (columns matching the product cards
+    // above) so every sample can be scored against the same criteria in one
+    // glance, the same way Compare Recipes lines up ingredients per recipe.
+    const evalHeaderCells = linkedRecipes.map((r, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(fullCode(r) || recipeDisplayLabel(r))}</th>`).join('');
+    const evalRows = t.evaluation.length === 0
+      ? `<tr><td colspan="${linkedRecipes.length + 3}"><div class="overview-empty">No evaluation criteria added yet</div></td></tr>`
+      : t.evaluation.map((row, idx) => {
+        if(!row.scores) row.scores = {};
+        // Carries forward a score saved under the old single-product format
+        // (before comparison support existed) so it isn't silently dropped.
+        if(row.score !== undefined && Object.keys(row.scores).length === 0 && linkedRecipes.length === 1){
+          row.scores[linkedRecipes[0].id] = row.score;
+        }
+        const scoreCells = linkedRecipes.map((r, i) => `
+          <td class="${i > 0 ? 'recipe-boundary' : ''}"><input type="text" class="teval-score" ${isEditing ? '' : 'readonly'} data-recipe-id="${escapeHtml(r.id)}" value="${escapeHtml(row.scores[r.id] || '')}" placeholder="e.g. 8/9"></td>
+        `).join('');
+        return `
+          <tr data-idx="${idx}">
+            <td><input type="text" class="teval-criteria" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.criteria || '')}" placeholder="e.g. Appearance"></td>
+            ${scoreCells}
+            <td><input type="text" class="teval-comment" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.comment || '')}" placeholder="Notes"></td>
+            <td class="col-del">${isEditing ? '<button class="icon-btn" data-role="delete-eval-row" title="Delete">✕</button>' : ''}</td>
+          </tr>
+        `;
+      }).join('');
+
+    // 220px leading column + 34px trailing delete-icon column mirror the
+    // product-card spacer above so the two grids share the same column ruler.
+    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(linkedRecipes.length)}<col style="width:160px;"><col style="width:34px;"></colgroup>`;
+
+    return `
+      <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
+        <div class="part-header" style="margin-bottom:12px;">
+          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this trial">▶</button>
+          <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
+          <span class="part-header-summary">${linkedRecipes.length} product${linkedRecipes.length === 1 ? '' : 's'} · ${t.photos.length} photo${t.photos.length === 1 ? '' : 's'} · ${t.evaluation.length} criteri${t.evaluation.length === 1 ? 'on' : 'a'}</span>
+          ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">💾 Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">✏️ Edit</button>`}
+          <button class="btn btn-sm" data-role="print-trial">🖨️ Print</button>
+          <button class="btn btn-sm btn-danger" data-role="delete-trial">✕ Delete</button>
+        </div>
+        <div class="part-body">
+          <div class="field">
+            <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
+            ${productCardsGrid}
+            ${isEditing ? `
+              <div class="project-add-row" style="margin-top:12px;">
+                <select class="trial-add-recipe-select" ${atMax ? 'disabled' : ''}>
+                  <option value="">${atMax ? `Maximum ${TRIAL_MAX_PRODUCTS} products reached` : (availableRecipes.length ? 'Select a product to add...' : 'No more recipes available')}</option>
+                  ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('')}
+                </select>
+                <button class="btn btn-sm" data-role="add-trial-recipe" ${atMax ? 'disabled' : ''}>+ Add</button>
+              </div>
+            ` : ''}
+          </div>
+          ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+
+          <div class="field" style="margin-top:14px;">
+            <label>Photos (up to 3)</label>
+            <div class="trial-photos-row">${photosHtml}</div>
+            ${isEditing && t.photos.length < 3 ? `<input type="file" class="trial-photo-input" accept="image/*">` : ''}
+          </div>
+
+          <div class="field">
+            <label>Sensory Evaluation (compare side by side)</label>
+            <div style="overflow-x:auto;">
+              <table class="compare-table">
+                ${trialColgroup}
+                <thead><tr><th>Criteria</th>${evalHeaderCells}<th>Comment</th><th class="col-del"></th></tr></thead>
+                <tbody>${evalRows}</tbody>
+              </table>
+            </div>
+            ${isEditing ? `<button class="btn btn-sm add-row-btn" type="button" data-role="add-eval-row">+ Add Criteria</button>` : ''}
+          </div>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.part-block[data-trial-id]').forEach(block => {
+    const id = block.dataset.trialId;
+    const t = trials.find(x => x.id === id);
+    if(!t) return;
+    const isEditing = id === trialEditingId;
+
+    block.querySelector('.part-toggle-btn').addEventListener('click', () => {
+      if(trialExpandedIds.has(id)) trialExpandedIds.delete(id);
+      else trialExpandedIds.add(id);
+      renderTrialsList();
+    });
+
+    if(isEditing){
+      block.querySelector('[data-role="save-trial"]').addEventListener('click', () => {
+        trialEditingId = null;
+        renderTrialsList();
+      });
+    }else{
+      block.querySelector('[data-role="edit-trial"]').addEventListener('click', () => {
+        trialEditingId = id;
+        trialExpandedIds.add(id);
+        renderTrialsList();
+      });
+    }
+
+    block.querySelector('[data-role="print-trial"]').addEventListener('click', () => {
+      block.classList.add('printing-only');
+      const cleanup = () => {
+        block.classList.remove('printing-only');
+        window.removeEventListener('afterprint', cleanup);
+      };
+      window.addEventListener('afterprint', cleanup);
+      window.print();
+    });
+
+    block.querySelector('[data-role="delete-trial"]').addEventListener('click', () => {
+      if(!confirm('Delete this trial result? This cannot be undone.')) return;
+      requestAuthConfirm(
+        'Confirm Identity to Delete',
+        'Enter your password to delete this trial result.',
+        () => {
+          trials = trials.filter(x => x.id !== t.id);
+          deleteTrialFromCloud(t.id);
+          renderTrialsList();
+        }
+      );
+    });
+
+    block.querySelectorAll('[data-role="remove-trial-recipe"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const recipeId = btn.dataset.recipeId;
+        t.recipeIds = (t.recipeIds || []).filter(x => x !== recipeId);
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
+
+    const addRecipeSelect = block.querySelector('.trial-add-recipe-select');
+    block.querySelector('[data-role="add-trial-recipe"]')?.addEventListener('click', () => {
+      const recipeId = addRecipeSelect.value;
+      if(!recipeId || (t.recipeIds || []).length >= TRIAL_MAX_PRODUCTS) return;
+      if(!Array.isArray(t.recipeIds)) t.recipeIds = [];
+      t.recipeIds.push(recipeId);
+      scheduleTrialSave(t);
+      renderTrialsList();
+    });
+
+    block.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
+        t.photos.splice(idx, 1);
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
+
+    block.querySelector('.trial-photo-input')?.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if(!file || t.photos.length >= 3) return;
+      t.photos.push(await resizeImageFile(file, 500));
+      scheduleTrialSave(t);
+      renderTrialsList();
+    });
+
+    block.querySelector('[data-role="add-eval-row"]')?.addEventListener('click', () => {
+      t.evaluation.push({ criteria: '', scores: {}, comment: '' });
+      scheduleTrialSave(t);
+      renderTrialsList();
+    });
+
+    block.querySelectorAll('tbody tr[data-idx]').forEach(tr => {
+      const idx = parseInt(tr.dataset.idx, 10);
+      const row = t.evaluation[idx];
+      tr.querySelector('.teval-criteria').addEventListener('change', e => { row.criteria = e.target.value.trim(); scheduleTrialSave(t); });
+      tr.querySelectorAll('.teval-score').forEach(scoreInput => {
+        scoreInput.addEventListener('change', e => {
+          if(!row.scores) row.scores = {};
+          row.scores[scoreInput.dataset.recipeId] = e.target.value.trim();
+          scheduleTrialSave(t);
+        });
+      });
+      tr.querySelector('.teval-comment').addEventListener('change', e => { row.comment = e.target.value.trim(); scheduleTrialSave(t); });
+      tr.querySelector('[data-role="delete-eval-row"]')?.addEventListener('click', () => {
+        t.evaluation.splice(idx, 1);
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
+  });
+}
+
+function initTrialsModal(){
+  document.getElementById('btnOpenTrials').addEventListener('click', openTrialsModal);
+  document.getElementById('btnCloseTrialsModal').addEventListener('click', closeTrialsModal);
+  document.getElementById('trialsModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'trialsModalOverlay') closeTrialsModal();
+  });
+  document.getElementById('btnAddTrial').addEventListener('click', () => {
+    const t = blankTrial();
+    trials.push(t);
+    saveTrialToCloud(t);
+    trialEditingId = t.id;
+    trialExpandedIds.add(t.id);
+    renderTrialsList();
+  });
+}
+
 function openProjectsModal(){
   document.getElementById('projectsModalOverlay').classList.add('open');
   renderProjectsList();
@@ -2409,6 +2829,9 @@ function openProjectsModal(){
 function closeProjectsModal(){
   document.getElementById('projectsModalOverlay').classList.remove('open');
 }
+
+let projectEditingId = null;
+let projectExpandedIds = new Set();
 
 function renderProjectsList(){
   const container = document.getElementById('projectsList');
@@ -2418,7 +2841,35 @@ function renderProjectsList(){
     return;
   }
   const sorted = [...projects].sort((a,b) => b.updatedAt - a.updatedAt);
-  container.innerHTML = sorted.map(p => {
+
+  // Compact summary strip at the top — with dozens of projects, this gives
+  // an at-a-glance pipeline view before scrolling through the (collapsed
+  // by default) list below.
+  const allProductsGlobal = projects.flatMap(pr => pr.products || []);
+  const productsByStage = PROJECT_STAGES
+    .map(stage => ({ label: stage, count: allProductsGlobal.filter(x => x.stage === stage).length }))
+    .filter(g => g.count > 0);
+  const dashboardHtml = `
+    <div class="dash-metrics" style="margin-bottom:14px;">
+      <div class="dash-metric">
+        <div class="dash-metric-label">Projects</div>
+        <div class="dash-metric-value">${projects.length}</div>
+      </div>
+      <div class="dash-metric">
+        <div class="dash-metric-label">Products</div>
+        <div class="dash-metric-value">${allProductsGlobal.length}</div>
+      </div>
+    </div>
+    <div class="dash-card" style="margin-bottom:16px;">
+      <div class="dash-card-title">Products by stage</div>
+      ${renderBarList(productsByStage)}
+    </div>
+  `;
+
+  container.innerHTML = dashboardHtml + sorted.map(p => {
+    const isEditing = p.id === projectEditingId;
+    const isExpanded = isEditing || projectExpandedIds.has(p.id);
+    const ro = isEditing ? '' : 'readonly';
     const usedRecipeIds = new Set(p.products.map(prod => prod.recipeId));
     const availableRecipes = recipes.filter(r => !usedRecipeIds.has(r.id));
     const activity = [];
@@ -2448,27 +2899,59 @@ function renderProjectsList(){
       `;
     }).join('');
 
+    const summaryBits = [p.customerName, p.destinationCountry].filter(Boolean).join(' · ');
+    const productCount = p.products.length;
+
     return `
-      <div class="part-block" data-project-id="${escapeHtml(p.id)}">
+      <div class="part-block${isExpanded ? '' : ' collapsed'}" data-project-id="${escapeHtml(p.id)}">
+        <div class="part-header" style="margin-bottom:12px;">
+          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">▶</button>
+          <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(p.name || 'Untitled project')}</span>
+          <span class="part-header-summary">${escapeHtml(summaryBits)}${summaryBits ? ' · ' : ''}${productCount} product${productCount === 1 ? '' : 's'}</span>
+          ${isEditing
+            ? `<button class="btn btn-sm" data-role="save-project">💾 Save</button><button class="btn btn-sm" data-role="cancel-project">↩️ Cancel</button>`
+            : `<button class="btn btn-sm" data-role="edit-project">✏️ Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">✕ Delete</button>`}
+        </div>
+        <div class="part-body">
         <div class="project-header-grid">
           <div class="field" style="margin-bottom:0;">
             <label>Project Name</label>
-            <input type="text" class="proj-name" value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+            <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Request Date</label>
+            <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Customer Name</label>
+            <input type="text" class="proj-customer" list="customerDatalist" ${ro} value="${escapeHtml(p.customerName)}" placeholder="e.g. ABC Trading Co.">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Destination Country</label>
+            <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Owner Sales Rep</label>
-            <input type="text" class="proj-owner" list="salesRepDatalist" value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
+            <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Factory Sales Rep</label>
+            <input type="text" class="proj-factory-rep" list="salesRepDatalist" ${ro} value="${escapeHtml(p.factorySalesRep)}" placeholder="e.g. Kenta-san">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Responsible Person (PD)</label>
-            <input type="text" class="proj-responsible" value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
+            <input type="text" class="proj-responsible" list="responsiblePersonDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Factory</label>
-            <input type="text" class="proj-factory" value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+            <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+          </div>
+          <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
+            <label>Requirements / Certifications</label>
+            <textarea class="proj-requirements" ${ro} placeholder="e.g. Halal certified, no MSG, shelf-life 12 months">${escapeHtml(p.requirements)}</textarea>
           </div>
         </div>
-        ${activity.length ? `<div class="reflist-item-meta" style="margin-bottom:10px;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+        ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
         ${p.products.length ? `
         <table>
@@ -2484,8 +2967,6 @@ function renderProjectsList(){
           </select>
           <button class="btn btn-sm" data-role="add-product">+ Add Product</button>
         </div>
-        <div class="danger-zone" style="margin-top:12px;padding-top:0;border-top:none;">
-          <button class="btn btn-sm btn-danger" data-role="delete-project">Delete Project</button>
         </div>
       </div>
     `;
@@ -2495,11 +2976,41 @@ function renderProjectsList(){
     const id = block.dataset.projectId;
     const p = projects.find(x => x.id === id);
     if(!p) return;
+    const isEditing = id === projectEditingId;
 
-    block.querySelector('.proj-name').addEventListener('change', e => { p.name = e.target.value.trim(); scheduleProjectSave(p); });
-    block.querySelector('.proj-owner').addEventListener('change', e => { p.ownerSalesRep = e.target.value.trim(); scheduleProjectSave(p); });
-    block.querySelector('.proj-responsible').addEventListener('change', e => { p.responsiblePerson = e.target.value.trim(); scheduleProjectSave(p); });
-    block.querySelector('.proj-factory').addEventListener('change', e => { p.factoryName = e.target.value.trim(); scheduleProjectSave(p); });
+    block.querySelector('.part-toggle-btn').addEventListener('click', () => {
+      if(projectExpandedIds.has(id)) projectExpandedIds.delete(id);
+      else projectExpandedIds.add(id);
+      renderProjectsList();
+    });
+
+    if(isEditing){
+      block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
+        p.name = block.querySelector('.proj-name').value.trim();
+        p.requestDate = block.querySelector('.proj-request-date').value;
+        p.customerName = block.querySelector('.proj-customer').value.trim();
+        p.destinationCountry = block.querySelector('.proj-destination').value.trim();
+        p.ownerSalesRep = block.querySelector('.proj-owner').value.trim();
+        p.factorySalesRep = block.querySelector('.proj-factory-rep').value.trim();
+        p.responsiblePerson = block.querySelector('.proj-responsible').value.trim();
+        p.factoryName = block.querySelector('.proj-factory').value.trim();
+        p.requirements = block.querySelector('.proj-requirements').value.trim();
+        projectEditingId = null;
+        projectExpandedIds.add(p.id);
+        scheduleProjectSave(p);
+        renderProjectsList();
+      });
+      block.querySelector('[data-role="cancel-project"]').addEventListener('click', () => {
+        projectEditingId = null;
+        projectExpandedIds.add(p.id);
+        renderProjectsList();
+      });
+    }else{
+      block.querySelector('[data-role="edit-project"]').addEventListener('click', () => {
+        projectEditingId = p.id;
+        renderProjectsList();
+      });
+    }
 
     block.querySelectorAll('tr[data-product-id]').forEach(row => {
       const prodId = row.dataset.productId;
@@ -2531,7 +3042,7 @@ function renderProjectsList(){
       renderProjectsList();
     });
 
-    block.querySelector('[data-role="delete-project"]').addEventListener('click', () => {
+    block.querySelector('[data-role="delete-project"]')?.addEventListener('click', () => {
       if(!confirm(`Delete project "${p.name || 'Untitled project'}"? This removes all its products and progress logs. This cannot be undone.`)) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',
@@ -2595,6 +3106,8 @@ function initProjectsModal(){
     const p = blankProject();
     projects.push(p);
     saveProjectToCloud(p);
+    projectEditingId = p.id;
+    projectExpandedIds.add(p.id);
     renderProjectsList();
   });
 
@@ -2667,6 +3180,7 @@ function renderCompareContent(){
   const ids = [...document.querySelectorAll('.compare-select')].map(sel => sel.value);
   const selected = ids.map(id => recipes.find(r => r.id === id)).filter(Boolean);
   const showCodes = compareShowCodes;
+  const showWeights = compareShowWeights;
 
   if(selected.length < 2){
     content.innerHTML = '<div class="compare-empty">Select at least 2 recipes to compare</div>';
@@ -2720,33 +3234,137 @@ function renderCompareContent(){
     return maxB - maxA;
   });
 
-  const ingHeaderCells = ids.map(id => {
+  // A visible left border on the first column of every recipe (after the
+  // first) so, when scanning 3 recipes side by side, it's obvious at a
+  // glance where one recipe's numbers end and the next one's begin.
+  function boundaryClass(idx){ return idx > 0 ? ' recipe-boundary' : ''; }
+
+  // Fixed-width label column + N equal unset-width columns — with
+  // table-layout:fixed, unset <col>s split the remaining width evenly, so
+  // this lines each recipe's column(s) up with its equal-width info card.
+  function colgroupHtml(numDataCols){
+    return `<colgroup><col style="width:220px;">${'<col>'.repeat(numDataCols)}</colgroup>`;
+  }
+
+  // The ingredient/costing tables identify each recipe by just its code
+  // (already shown in full above in the info cards) rather than repeating
+  // the full product name — keeps these columns narrow and lined up with
+  // the equal-width info cards instead of stretching wide per recipe name.
+  function recipeColLabel(r){
+    return fullCode(r) || recipeDisplayLabel(r);
+  }
+
+  const ingHeaderCells = ids.map((id, idx) => {
     const r = recipes.find(x => x.id === id);
-    return `<th>${r ? escapeHtml(recipeDisplayLabel(r)) : '-'}</th>`;
+    return `<th class="${boundaryClass(idx)}">${r ? escapeHtml(recipeColLabel(r)) : '-'}</th>`;
   }).join('');
 
-  const ingBodyRows = rows.map(row => {
-    const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
-    const isDiff = presentCount > 0 && presentCount < selected.length;
-    const cells = ids.map(id => {
-      if(!selected.some(r => r.id === id)) return '<td>-</td>';
-      const v = row.values[id];
-      return v !== undefined ? `<td>${v.toFixed(2)}%</td>` : '<td class="compare-missing">— Not used —</td>';
+  // With weights on, % and g get their own aligned columns per recipe
+  // (rather than being crammed into one cell) — a two-row header names the
+  // recipe once, then labels each of its two sub-columns.
+  const ingHeaderRowsHtml = showWeights
+    ? `
+      <tr><th rowspan="2">Ingredient</th>${ids.map((id, idx) => {
+        const r = recipes.find(x => x.id === id);
+        return `<th colspan="2" class="${boundaryClass(idx)}">${r ? escapeHtml(recipeColLabel(r)) : '-'}</th>`;
+      }).join('')}</tr>
+      <tr>${ids.map((id, idx) => `<th class="col-pct${boundaryClass(idx)}">%</th><th class="col-wt">g</th>`).join('')}</tr>
+    `
+    : `<tr><th>Ingredient</th>${ingHeaderCells}</tr>`;
+
+  // Same union-by-name logic as above, but scoped to one part position at a
+  // time (mirrors the recipe page, where ingredients are grouped by Part
+  // rather than shown as one flat list) — % stays "% of whole recipe" so
+  // the numbers are still directly comparable across parts and recipes.
+  // Returns two cells (% | g) when showWeights is on, so the numbers line
+  // up in their own columns instead of being stacked inside one cell.
+  function ingCell(row, id, idx){
+    if(!selected.some(r => r.id === id)){
+      return showWeights ? `<td class="${boundaryClass(idx)}">-</td><td>-</td>` : `<td class="${boundaryClass(idx)}">-</td>`;
+    }
+    const v = row.values[id];
+    if(v === undefined){
+      return showWeights
+        ? `<td class="compare-missing${boundaryClass(idx)}" colspan="2">— Not used —</td>`
+        : `<td class="compare-missing${boundaryClass(idx)}">— Not used —</td>`;
+    }
+    if(!showWeights) return `<td class="${boundaryClass(idx)}">${v.toFixed(2)}%</td>`;
+    const wt = row.weights[id] || 0;
+    return `<td class="col-pct${boundaryClass(idx)}">${v.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`;
+  }
+
+  const maxParts = Math.max(0, ...selected.map(r => (r.parts || []).length));
+  const partSections = [];
+  for(let pIdx = 0; pIdx < maxParts; pIdx++){
+    const partRows = new Map();
+    selected.forEach(r => {
+      const part = (r.parts || [])[pIdx];
+      if(!part) return;
+      const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+      (part.ingredients || []).filter(i => (i.name||'').trim() !== '').forEach(i => {
+        const key = i.name.trim().toLowerCase();
+        if(!partRows.has(key)) partRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
+        const row = partRows.get(key);
+        const wt = (row.weights[r.id] || 0) + (parseFloat(i.weight) || 0);
+        row.weights[r.id] = wt;
+        row.values[r.id] = totalWt > 0 ? (wt / totalWt * 100) : 0;
+      });
+    });
+    if(partRows.size === 0) continue; // no recipe has ingredients at this part position — skip the empty section
+
+    let label = `Part ${pIdx+1}`;
+    for(const r of selected){
+      const nm = (r.parts?.[pIdx]?.name || '').trim();
+      if(nm){ label = nm; break; }
+    }
+
+    const sortedRows = [...partRows.values()].sort((a,b) => {
+      const maxA = Math.max(...ids.map(id => a.values[id] || 0));
+      const maxB = Math.max(...ids.map(id => b.values[id] || 0));
+      return maxB - maxA;
+    });
+    partSections.push({ label, rows: sortedRows });
+  }
+
+  const partSectionsHtml = partSections.map(section => {
+    const bodyRows = section.rows.map(row => {
+      const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
+      const isDiff = presentCount > 0 && presentCount < selected.length;
+      const cells = ids.map((id, idx) => ingCell(row, id, idx)).join('');
+      const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
+      return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
     }).join('');
-    const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
-    return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+    const subtotalCells = ids.map((id, idx) => {
+      if(!selected.some(r => r.id === id)) return showWeights ? `<td class="${boundaryClass(idx)}">-</td><td>-</td>` : `<td class="${boundaryClass(idx)}">-</td>`;
+      let pct = 0, wt = 0;
+      section.rows.forEach(row => { pct += row.values[id] || 0; wt += row.weights[id] || 0; });
+      return showWeights
+        ? `<td class="col-pct${boundaryClass(idx)}">${pct.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`
+        : `<td class="${boundaryClass(idx)}">${pct.toFixed(2)}%</td>`;
+    }).join('');
+    return `
+      <div class="compare-section-title" style="font-size:13px;margin:16px 0 8px;">${escapeHtml(section.label)}</div>
+      <div style="overflow-x:auto;">
+        <table class="compare-table">
+          ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+          <thead>${ingHeaderRowsHtml}</thead>
+          <tbody>${bodyRows}</tbody>
+          <tfoot><tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr></tfoot>
+        </table>
+      </div>
+    `;
   }).join('');
 
-  const totalCells = ids.map(id => {
+  const totalCells = ids.map((id, idx) => {
     const r = recipes.find(x => x.id === id);
-    if(!r) return '<td>-</td>';
+    if(!r) return `<td class="${boundaryClass(idx)}">-</td>`;
     // Summing each ingredient's already-rounded % can drift off 100% (e.g.
     // 99.99%) purely from rounding noise. % is always weight/totalWeight, so
     // the true total is exactly 100% by construction whenever there's any
     // weight at all — same fix as the Grand Total box on the recipe page.
     const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     const totalPct = totalWt > 0 ? 100 : 0;
-    return `<td>${totalPct.toFixed(2)}%</td>`;
+    return `<td class="${boundaryClass(idx)}">${totalPct.toFixed(2)}%</td>`;
   }).join('');
 
   // --- costing comparison (weight × library price/kg, per ingredient) ---
@@ -2759,19 +3377,19 @@ function renderCompareContent(){
 
   const costRows = rows.map(row => {
     const price = priceOf(row.label);
-    const cells = ids.map(id => {
-      if(!selected.some(r => r.id === id)) return '<td>-</td>';
+    const cells = ids.map((id, idx) => {
+      if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
       const wt = row.weights[id];
-      if(wt === undefined) return '<td class="compare-missing">— Not used —</td>';
-      if(price === null) return '<td class="compare-missing">No price set</td>';
-      return `<td>฿${((wt / 1000) * price).toFixed(2)}</td>`;
+      if(wt === undefined) return `<td class="compare-missing${boundaryClass(idx)}">— Not used —</td>`;
+      if(price === null) return `<td class="compare-missing${boundaryClass(idx)}">No price set</td>`;
+      return `<td class="${boundaryClass(idx)}">฿${((wt / 1000) * price).toFixed(2)}</td>`;
     }).join('');
     const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
     return `<tr><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
   }).join('');
 
-  const costTotalCells = ids.map(id => {
-    if(!selected.some(r => r.id === id)) return '<td>-</td>';
+  const costTotalCells = ids.map((id, idx) => {
+    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
     let total = 0;
     let hasUnpriced = false;
     rows.forEach(row => {
@@ -2781,11 +3399,11 @@ function renderCompareContent(){
       if(price === null){ hasUnpriced = true; return; }
       total += (wt / 1000) * price;
     });
-    return `<td>฿${total.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    return `<td class="${boundaryClass(idx)}">฿${total.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
   }).join('');
 
-  const costPerKgCells = ids.map(id => {
-    if(!selected.some(r => r.id === id)) return '<td>-</td>';
+  const costPerKgCells = ids.map((id, idx) => {
+    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
     const r = recipes.find(x => x.id === id);
     let total = 0;
     let hasUnpriced = false;
@@ -2797,8 +3415,8 @@ function renderCompareContent(){
       total += (wt / 1000) * price;
     });
     const batchKg = (r && r.batchWeight) ? r.batchWeight / 1000 : 0;
-    if(batchKg <= 0) return '<td class="compare-missing">No batch weight</td>';
-    return `<td>฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    if(batchKg <= 0) return `<td class="compare-missing${boundaryClass(idx)}">No batch weight</td>`;
+    return `<td class="${boundaryClass(idx)}">฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
   }).join('');
 
   // --- steps comparison ---
@@ -2822,17 +3440,22 @@ function renderCompareContent(){
   }).join('');
 
   content.innerHTML = `
-    <div class="compare-info-grid">${infoHtml}</div>
+    <div class="compare-info-grid"><div class="compare-info-spacer"></div>${infoHtml}</div>
 
     <div class="compare-section-title">Compare Ingredients (% of recipe)</div>
     <label class="compare-toggle-label">
       <input type="checkbox" id="compareShowCodes" ${showCodes ? 'checked' : ''}>
       Show ingredient codes
     </label>
-    <div style="overflow-x:auto;">
+    <label class="compare-toggle-label">
+      <input type="checkbox" id="compareShowWeights" ${showWeights ? 'checked' : ''}>
+      Also show weight (g)
+    </label>
+    ${partSectionsHtml || '<div class="compare-empty">No ingredients yet</div>'}
+    <div style="overflow-x:auto;margin-top:16px;">
       <table class="compare-table">
-        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
-        <tbody>${ingBodyRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+        ${colgroupHtml(ids.length)}
+        <thead><tr><th>Recipe Total</th>${ingHeaderCells}</tr></thead>
         <tfoot><tr class="total-row"><td>Total</td>${totalCells}</tr></tfoot>
       </table>
     </div>
@@ -2841,6 +3464,7 @@ function renderCompareContent(){
     <div class="compare-section-title">Compare Costing (weight × library price/kg)</div>
     <div style="overflow-x:auto;">
       <table class="compare-table">
+        ${colgroupHtml(ids.length)}
         <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
         <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
         <tfoot>
@@ -2859,6 +3483,10 @@ function renderCompareContent(){
     compareShowCodes = e.target.checked;
     renderCompareContent();
   });
+  document.getElementById('compareShowWeights').addEventListener('change', e => {
+    compareShowWeights = e.target.checked;
+    renderCompareContent();
+  });
 }
 
 let recipes = [];
@@ -2868,9 +3496,12 @@ let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
 let unsubscribeMetaLists = null;
 let unsubscribeProjects = null;
+let unsubscribeTrials = null;
 let recipesLoaded = false;
 let materialsLoaded = false;
 let projectsLoaded = false;
+let trialsLoaded = false;
+let trialsMigrated = false;
 
 function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -2918,12 +3549,28 @@ function attachProjectsListener(){
   });
 }
 
+function attachTrialsListener(){
+  unsubscribeTrials = onSnapshot(trialsCol, snapshot => {
+    trials = snapshot.docs.map(d => d.data());
+    trials.forEach(t => {
+      if(!Array.isArray(t.photos)) t.photos = [];
+      if(!Array.isArray(t.evaluation)) t.evaluation = [];
+    });
+    trialsLoaded = true;
+    migrateTrialsFromRecipes();
+    if(document.getElementById('trialsModalOverlay')?.classList.contains('open')) renderTrialsList();
+  }, err => {
+    console.error('Forge: trials listener error', err);
+    showCloudError('Failed to load trial results from Firebase: ' + err.message);
+  });
+}
+
 /* ---------- Reference Lists: Customers / Sales Reps / Destination Countries ---------- */
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [] };
-const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Sales Reps', destinationCountries: 'Destination Countries' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [] };
+const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Sales Reps', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories' };
 
 /* Normalizes a stored list entry to a { id, name, createdBy, createdAt,
    updatedBy, updatedAt } record — older data (or the very first values
@@ -2944,7 +3591,9 @@ function attachMetaListsListener(){
     metaLists = {
       customers: (Array.isArray(data.customers) ? data.customers : []).map(metaItem),
       destinationCountries: (Array.isArray(data.destinationCountries) ? data.destinationCountries : []).map(metaItem),
-      salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem)
+      salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem),
+      responsiblePersons: (Array.isArray(data.responsiblePersons) ? data.responsiblePersons : []).map(metaItem),
+      factories: (Array.isArray(data.factories) ? data.factories : []).map(metaItem)
     };
     renderMetaDatalists();
     if(document.getElementById('refListsModalOverlay')?.classList.contains('open')) renderRefListItems();
@@ -2957,12 +3606,14 @@ function attachMetaListsListener(){
    typing a new value straight into a recipe's Customer/Destination/Sales
    Rep field — see bindComboField) so the list stays a deliberately curated
    set instead of accumulating typos from free text. */
-function addMetaListValue(key, value){
+/* extra carries fields beyond "name" — currently only Factories use this,
+   for their Location field. */
+function addMetaListValue(key, value, extra = {}){
   const v = (value || '').trim();
   if(!v || metaLists[key].some(item => metaItemName(item) === v)) return;
   const now = Date.now();
   const who = currentUser?.email || '';
-  const updated = [...metaLists[key], { id: uid(), name: v, createdBy: who, createdAt: now, updatedBy: who, updatedAt: now }]
+  const updated = [...metaLists[key], { id: uid(), name: v, ...extra, createdBy: who, createdAt: now, updatedBy: who, updatedAt: now }]
     .sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   metaLists = { ...metaLists, [key]: updated };
   setDoc(metaListsDoc, metaLists);
@@ -2971,12 +3622,12 @@ function addMetaListValue(key, value){
    when" mean something distinct from "added by / when". Returns false
    without saving if the new name collides with another entry already in
    the same list. */
-function renameMetaListItem(key, id, newName){
+function renameMetaListItem(key, id, newName, extra = {}){
   const v = (newName || '').trim();
   if(!v) return false;
   if(metaLists[key].some(item => item.id !== id && metaItemName(item) === v)) return false;
   const updated = metaLists[key].map(item => item.id === id
-    ? { ...item, name: v, updatedBy: currentUser?.email || '', updatedAt: Date.now() }
+    ? { ...item, name: v, ...extra, updatedBy: currentUser?.email || '', updatedAt: Date.now() }
     : item
   );
   metaLists = { ...metaLists, [key]: updated };
@@ -2988,7 +3639,7 @@ function removeMetaListItem(key, id){
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', factories: 'factoryDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -3003,6 +3654,42 @@ function renderMetaDatalists(){
    Typing something not already in the list reverts the field and points
    the user at 📇 Reference Lists instead. The trash button just clears
    this recipe's own field. */
+/* A recipe's link to a Project isn't a field on the recipe itself - it's
+   read from whichever Project (if any) has a product entry whose recipeId
+   matches, so the Project's own products list stays the single source of
+   truth instead of two places that could drift out of sync. */
+function findProjectForRecipe(recipeId){
+  for(const proj of projects){
+    const prod = (proj.products || []).find(x => x.recipeId === recipeId);
+    if(prod) return { project: proj, product: prod };
+  }
+  return null;
+}
+
+function renderLinkedProjectSection(r){
+  const select = document.getElementById('f-linkedProject');
+  if(!select) return;
+  const link = findProjectForRecipe(r.id);
+  const sortedProjects = [...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
+  select.innerHTML = `<option value="">— Not linked —</option>` +
+    sortedProjects.map(p => `<option value="${escapeHtml(p.id)}" ${link && link.project.id === p.id ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('');
+
+  const infoEl = document.getElementById('linkedProjectInfo');
+  if(!link){
+    infoEl.innerHTML = '';
+    return;
+  }
+  const { project, product } = link;
+  const facts = [
+    project.customerName ? `<b>Customer:</b> ${escapeHtml(project.customerName)}` : '',
+    project.destinationCountry ? `<b>Destination:</b> ${escapeHtml(project.destinationCountry)}` : '',
+    project.ownerSalesRep ? `<b>Owner Sales Rep:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
+    project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
+    `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
+  ].filter(Boolean);
+  infoEl.innerHTML = `<div class="ci-row" style="margin-top:6px;">${facts.join(' &nbsp;|&nbsp; ')}</div>`;
+}
+
 function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
   const input = document.getElementById(inputId);
   input.value = r[fieldKey] || '';
@@ -3391,8 +4078,6 @@ function blankRecipe(){
     batchWeight: 1000,
     parts: [],
     processes: [ { title: "", steps: [""], components: [] } ],
-    trialPhotos: [],
-    trialEvaluation: [],
     yieldPct: '',
     versions: [],
     createdBy: currentUser?.email || '',
@@ -3444,8 +4129,6 @@ function migrateRecipe(r){
   if(r.destinationCountry === undefined) r.destinationCountry = '';
   if(r.salesRep === undefined) r.salesRep = '';
 
-  if(!Array.isArray(r.trialPhotos)) r.trialPhotos = [];
-  if(!Array.isArray(r.trialEvaluation)) r.trialEvaluation = [];
   if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
   if(!Array.isArray(r.versions)) r.versions = [];
 
@@ -3481,6 +4164,7 @@ function attachRecipesListener(){
 
     const firstLoad = !recipesLoaded;
     recipesLoaded = true;
+    migrateTrialsFromRecipes();
 
     if(currentId && !recipes.some(r => r.id === currentId)){
       // the recipe being viewed no longer exists (deleted) -> back to the homepage
@@ -3641,8 +4325,8 @@ function parseScoreRatio(s){
   return num / den;
 }
 
-function recipeAvgScoreRatio(r){
-  const ratios = (r.trialEvaluation || []).map(e => parseScoreRatio(e.score)).filter(v => v !== null);
+function trialAvgScoreRatio(t){
+  const ratios = (t.evaluation || []).map(e => parseScoreRatio(e.score)).filter(v => v !== null);
   if(!ratios.length) return null;
   return ratios.reduce((s,v) => s+v, 0) / ratios.length;
 }
@@ -3696,17 +4380,17 @@ function computeDashboardData(){
     const d = new Date(curYear, curMonth - i, 1);
     months.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString('en-US',{month:'short'}) });
   }
-  const perRecipeScore = recipes.map(r => ({ r, ratio: recipeAvgScoreRatio(r) })).filter(x => x.ratio !== null);
+  const perTrialScore = trials.map(t => ({ t, ratio: trialAvgScoreRatio(t) })).filter(x => x.ratio !== null);
   const trend = months.map(mo => {
-    const inMonth = perRecipeScore.filter(({r}) => {
-      const basis = r.date ? new Date(r.date) : (r.createdAt ? new Date(r.createdAt) : null);
+    const inMonth = perTrialScore.filter(({t}) => {
+      const basis = t.createdAt ? new Date(t.createdAt) : null;
       return basis && basis.getFullYear() === mo.year && basis.getMonth() === mo.month;
     });
     const avg = inMonth.length ? inMonth.reduce((s,{ratio}) => s+ratio, 0) / inMonth.length : null;
     return { label: mo.label, avg };
   });
-  const avgTrialScorePct = perRecipeScore.length
-    ? Math.round(perRecipeScore.reduce((s,x) => s+x.ratio, 0) / perRecipeScore.length * 100)
+  const avgTrialScorePct = perTrialScore.length
+    ? Math.round(perTrialScore.reduce((s,x) => s+x.ratio, 0) / perTrialScore.length * 100)
     : null;
 
   const allProducts = projects.flatMap(p => p.products || []);
@@ -3918,28 +4602,10 @@ function renderMain(){
             <input type="date" id="f-date">
           </div>
         </div>
-        <div class="grid-3">
-          <div class="field">
-            <label>Customer Name</label>
-            <div class="combo-row">
-              <input type="text" id="f-customerName" list="customerDatalist" placeholder="e.g. ABC Trading Co.">
-              <button type="button" class="icon-btn" id="btnRemoveCustomerName" title="Clear this field">🗑</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Destination Country</label>
-            <div class="combo-row">
-              <input type="text" id="f-destinationCountry" list="destinationDatalist" placeholder="e.g. Japan">
-              <button type="button" class="icon-btn" id="btnRemoveDestinationCountry" title="Clear this field">🗑</button>
-            </div>
-          </div>
-          <div class="field">
-            <label>Sales Rep (responsible / requested by)</label>
-            <div class="combo-row">
-              <input type="text" id="f-salesRep" list="salesRepDatalist" placeholder="e.g. Somchai">
-              <button type="button" class="icon-btn" id="btnRemoveSalesRep" title="Clear this field">🗑</button>
-            </div>
-          </div>
+        <div class="field">
+          <label>Project</label>
+          <select id="f-linkedProject" class="proj-select"></select>
+          <div id="linkedProjectInfo"></div>
         </div>
         <div class="grid-2">
           <div class="field">
@@ -3961,34 +4627,6 @@ function renderMain(){
         </div>
       </div>
       <div id="printInfoCard" class="print-only compare-info-col"></div>
-
-      <div class="trial-section">
-        <div class="trial-section-title">Trial / Experiment Results</div>
-
-        <div class="field">
-          <label>Photos (up to 3)</label>
-          <div class="trial-photos-row" id="trialPhotosRow"></div>
-          <input type="file" id="trialPhotoInput" accept="image/*">
-        </div>
-
-        <div class="field">
-          <label>Sensory Evaluation</label>
-          <div style="overflow-x:auto;">
-            <table class="trial-eval-table">
-              <thead>
-                <tr>
-                  <th>Criteria</th>
-                  <th class="col-score">Score</th>
-                  <th>Comment</th>
-                  <th class="col-del"></th>
-                </tr>
-              </thead>
-              <tbody id="trialEvalBody"></tbody>
-            </table>
-          </div>
-          <button class="btn btn-sm add-row-btn" type="button" id="btnAddTrialEvalRow">+ Add Criteria</button>
-        </div>
-      </div>
     </div>
 
     <div class="card">
@@ -4064,14 +4702,26 @@ function renderMain(){
   document.getElementById('f-codeSuffix').value = r.code || '';
   document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
   document.getElementById('f-date').value = r.date || '';
-  bindComboField(r, 'customerName', 'f-customerName', 'btnRemoveCustomerName', 'customers');
-  bindComboField(r, 'destinationCountry', 'f-destinationCountry', 'btnRemoveDestinationCountry', 'destinationCountries');
-  bindComboField(r, 'salesRep', 'f-salesRep', 'btnRemoveSalesRep', 'salesReps');
+  renderLinkedProjectSection(r);
+  document.getElementById('f-linkedProject').addEventListener('change', e => {
+    const newProjectId = e.target.value;
+    const oldLink = findProjectForRecipe(r.id);
+    if(oldLink && oldLink.project.id !== newProjectId){
+      oldLink.project.products = oldLink.project.products.filter(x => x.recipeId !== r.id);
+      scheduleProjectSave(oldLink.project);
+    }
+    if(newProjectId && (!oldLink || oldLink.project.id !== newProjectId)){
+      const newProject = projects.find(p => p.id === newProjectId);
+      if(newProject && !newProject.products.some(x => x.recipeId === r.id)){
+        newProject.products.push(blankProduct(r.id));
+        scheduleProjectSave(newProject);
+      }
+    }
+    renderLinkedProjectSection(r);
+  });
   updateRecipeTitleDisplay(r);
   renderDescPoints(r);
   renderDescPhotos(r);
-  renderTrialPhotos(r);
-  renderTrialEval(r);
 
   document.getElementById('f-name').addEventListener('input', e => {
     r.name = e.target.value;
@@ -4094,19 +4744,6 @@ function renderMain(){
   document.getElementById('btnAddDescPoint').addEventListener('click', () => {
     r.description.push('');
     renderDescPoints(r);
-    scheduleSave();
-  });
-  document.getElementById('trialPhotoInput').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    e.target.value = '';
-    if(!file || r.trialPhotos.length >= 3) return;
-    r.trialPhotos.push(await resizeImageFile(file, 500));
-    renderTrialPhotos(r);
-    scheduleSave();
-  });
-  document.getElementById('btnAddTrialEvalRow').addEventListener('click', () => {
-    r.trialEvaluation.push({ criteria: '', score: '', comment: '' });
-    renderTrialEval(r);
     scheduleSave();
   });
   document.getElementById('f-date').addEventListener('input', e => {
@@ -4889,62 +5526,6 @@ function renderDescPhotos(r){
   if(input) input.style.display = r.descPhotos.length >= 3 ? 'none' : '';
 }
 
-/* ---------- Trial / Experiment Results (photos + free-form sensory table) ---------- */
-function renderTrialPhotos(r){
-  const row = document.getElementById('trialPhotosRow');
-  const input = document.getElementById('trialPhotoInput');
-  if(!row) return;
-  row.innerHTML = r.trialPhotos.map((photo, idx) => `
-    <div class="trial-photo-thumb" data-idx="${idx}">
-      <img src="${escapeHtml(photo)}" alt="Trial photo ${idx+1}">
-      <button title="Remove this photo">✕</button>
-    </div>
-  `).join('');
-  row.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
-      r.trialPhotos.splice(idx, 1);
-      renderTrialPhotos(r);
-      scheduleSave();
-    });
-  });
-  if(input) input.style.display = r.trialPhotos.length >= 3 ? 'none' : '';
-}
-
-function renderTrialEval(r){
-  const body = document.getElementById('trialEvalBody');
-  if(!body) return;
-  if(r.trialEvaluation.length === 0){
-    body.innerHTML = '<tr><td colspan="4"><div class="overview-empty">No evaluation criteria added yet</div></td></tr>';
-    return;
-  }
-  body.innerHTML = r.trialEvaluation.map(() => `
-    <tr>
-      <td><input type="text" class="teval-criteria" placeholder="e.g. Appearance"></td>
-      <td class="col-score"><input type="text" class="teval-score" placeholder="e.g. 8/9"></td>
-      <td><input type="text" class="teval-comment" placeholder="Notes"></td>
-      <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
-    </tr>
-  `).join('');
-  [...body.querySelectorAll('tr')].forEach((tr, idx) => {
-    const row = r.trialEvaluation[idx];
-    const criteriaInput = tr.querySelector('.teval-criteria');
-    const scoreInput = tr.querySelector('.teval-score');
-    const commentInput = tr.querySelector('.teval-comment');
-    criteriaInput.value = row.criteria || '';
-    scoreInput.value = row.score || '';
-    commentInput.value = row.comment || '';
-    criteriaInput.addEventListener('input', e => { row.criteria = e.target.value; scheduleSave(); });
-    scoreInput.addEventListener('input', e => { row.score = e.target.value; scheduleSave(); });
-    commentInput.addEventListener('input', e => { row.comment = e.target.value; scheduleSave(); });
-    tr.querySelector('.icon-btn').addEventListener('click', () => {
-      r.trialEvaluation.splice(idx, 1);
-      renderTrialEval(r);
-      scheduleSave();
-    });
-  });
-}
-
 /* Read-only print layout for section 1 (info card) and section 3 (process
    steps as a plain numbered list) — reuses the same look as Compare Recipes
    instead of the on-screen editable form/step-badge styling. Filled in right
@@ -5043,7 +5624,8 @@ function exportAll(){
     exportedAt: new Date().toISOString(),
     recipes: recipes,
     ingredientMaster: ingredientMaster,
-    projects: projects
+    projects: projects,
+    trials: trials
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -5063,13 +5645,15 @@ function importFromFile(file){
       let importedRecipes = [];
       let importedMaterials = [];
       let importedProjects = [];
+      let importedTrials = [];
 
       if(Array.isArray(data)){
         importedRecipes = data; // old format: plain array of recipes
       }else if(data && Array.isArray(data.recipes)){
-        importedRecipes = data.recipes; // new format: {recipes, ingredientMaster, projects}
+        importedRecipes = data.recipes; // new format: {recipes, ingredientMaster, projects, trials}
         if(Array.isArray(data.ingredientMaster)) importedMaterials = data.ingredientMaster;
         if(Array.isArray(data.projects)) importedProjects = data.projects;
+        if(Array.isArray(data.trials)) importedTrials = data.trials;
       }else if(data && typeof data === 'object'){
         importedRecipes = [data]; // old format: a single recipe object
       }
@@ -5127,6 +5711,19 @@ function importFromFile(file){
         batch.set(doc(projectsCol, p.id), p);
       });
 
+      importedTrials.forEach(t => {
+        t.id = uid();
+        t.updatedAt = Date.now();
+        const legacyIds = Array.isArray(t.recipeIds) ? t.recipeIds : (t.recipeId ? [t.recipeId] : []);
+        t.recipeIds = legacyIds.map(rid => recipeIdMap[rid] || rid);
+        delete t.recipeId;
+        delete t.productName;
+        if(!Array.isArray(t.photos)) t.photos = [];
+        if(!Array.isArray(t.evaluation)) t.evaluation = [];
+        trials.push(t);
+        batch.set(doc(trialsCol, t.id), t);
+      });
+
       if(importedRecipes.length){
         currentId = recipes[recipes.length-1].id;
         unlockedRecipeId = null;
@@ -5134,9 +5731,10 @@ function importFromFile(file){
       batch.commit();
       if(importedMaterials.length) renderMaterialDatalist();
       if(document.getElementById('projectsModalOverlay').classList.contains('open')) renderProjectsList();
+      if(document.getElementById('trialsModalOverlay').classList.contains('open')) renderTrialsList();
       renderSidebar();
       renderMain();
-      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s)`);
+      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s), ${importedTrials.length} trial result(s)`);
     }catch(err){
       alert('Could not read file: ' + err.message);
     }
@@ -5188,6 +5786,7 @@ initVersionsModal();
 initRefListsModal();
 initMaterialLibrary();
 initProjectsModal();
+initTrialsModal();
 renderFooter();
 
 /* Firestore listeners only attach once someone is actually signed in — the
@@ -5199,6 +5798,7 @@ onAuthStateChanged(auth, user => {
     if(!unsubscribeMaterials) attachMaterialsListener();
     if(!unsubscribeMetaLists) attachMetaListsListener();
     if(!unsubscribeProjects) attachProjectsListener();
+    if(!unsubscribeTrials) attachTrialsListener();
     if(appView === 'auth') goToApp();
     document.getElementById('loginForm').reset();
     document.getElementById('registerForm').reset();
@@ -5210,13 +5810,17 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
     if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
     if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
+    if(unsubscribeTrials){ unsubscribeTrials(); unsubscribeTrials = null; }
     recipesLoaded = false;
     materialsLoaded = false;
     projectsLoaded = false;
+    trialsLoaded = false;
+    trialsMigrated = false;
     recipes = [];
     ingredientMaster = [];
     projects = [];
-    metaLists = { customers: [], destinationCountries: [], salesReps: [] };
+    trials = [];
+    metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [] };
     currentId = null;
     unlockedRecipeId = null;
     appView = 'auth';
