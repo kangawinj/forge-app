@@ -30,9 +30,9 @@
     --danger-light:#fbeae8;
     --ok:#2e8b3d;
     --ok-light:#e6f4ea;
-    --radius:10px;
-    --shadow:0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.08);
-    font-family:"Segoe UI","Leelawadee UI","Tahoma",sans-serif;
+    --radius:14px;
+    --shadow:0 1px 2px rgba(0,0,0,.04), 0 8px 24px rgba(0,0,0,.06);
+    font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","Leelawadee UI","Tahoma",sans-serif;
   }
   *{box-sizing:border-box;}
   body{
@@ -99,7 +99,7 @@
     position:absolute;
     top:12px; right:12px;
     width:30px;height:30px;
-    border-radius:8px;
+    border-radius:var(--radius);
     border:1px solid var(--border);
     background:var(--panel);
     font-size:16px;
@@ -111,14 +111,14 @@
     gap:8px;
     margin-bottom:16px;
     cursor:pointer;
-    border-radius:8px;
+    border-radius:var(--radius);
     padding:4px;
     margin:-4px -4px 12px;
     transition:background .15s;
   }
   .brand:hover{background:var(--primary-light);}
   .brand-icon{
-    width:34px;height:34px;border-radius:8px;
+    width:34px;height:34px;border-radius:var(--radius);
     background:#ffffff;
     border:1px solid var(--border);
     display:flex;align-items:center;justify-content:center;
@@ -140,7 +140,7 @@
     background:var(--panel);
     color:var(--text);
     padding:8px 12px;
-    border-radius:8px;
+    border-radius:var(--radius);
     cursor:pointer;
     font-size:13px;
     display:inline-flex;
@@ -168,7 +168,7 @@
     width:100%;
     padding:8px 10px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     font-size:13px;
     font-family:inherit;
   }
@@ -181,7 +181,7 @@
   }
   .recipe-item{
     padding:10px 10px;
-    border-radius:8px;
+    border-radius:var(--radius);
     cursor:pointer;
     border:1px solid transparent;
     position:relative;
@@ -218,7 +218,7 @@
     margin-bottom:14px;
     background:var(--primary-light);
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
   }
   .user-info-label{
     font-size:11px;
@@ -279,10 +279,9 @@
   }
   .card{
     background:var(--panel);
-    border:1px solid var(--border);
     border-radius:var(--radius);
     box-shadow:var(--shadow);
-    padding:20px;
+    padding:22px 24px;
     margin-bottom:20px;
   }
   .card-title{
@@ -314,7 +313,7 @@
     width:100%;
     padding:9px 10px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     font-family:inherit;
     font-size:14px;
     background:#fff;
@@ -441,11 +440,10 @@
   .add-row-btn{margin-top:10px;}
 
   .part-block{
-    border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     padding:14px 14px 16px;
     margin-bottom:16px;
-    background:#fbfcfb;
+    background:var(--bg);
   }
   .part-block:last-child{margin-bottom:0;}
   .part-block.collapsed{padding-bottom:14px;}
@@ -506,7 +504,7 @@
     padding:14px 16px;
     background:#fbfaf6;
     border:1px solid var(--accent);
-    border-radius:8px;
+    border-radius:var(--radius);
   }
   .overview-title{
     font-weight:700;
@@ -573,7 +571,7 @@
     padding:14px 16px;
     background:var(--primary-light);
     border:1px solid var(--primary);
-    border-radius:8px;
+    border-radius:var(--radius);
   }
   .batch-stat-label{
     font-size:12px;
@@ -607,7 +605,7 @@
     color:var(--text-dim);
     background:#f1f3f0;
     border:1px solid transparent;
-    border-radius:8px;
+    border-radius:var(--radius);
   }
 
   .ing-name-cell{
@@ -693,7 +691,7 @@
   .material-add-form{
     background:var(--accent-light);
     border:1px solid var(--accent);
-    border-radius:8px;
+    border-radius:var(--radius);
     padding:16px;
     margin-bottom:20px;
   }
@@ -788,16 +786,15 @@
   .compare-toggle-label input{width:auto;cursor:pointer;}
   .compare-picker-col{
     padding:10px 12px;
-    border:1px solid var(--border);
-    border-radius:8px;
-    background:#fbfcfb;
+    border-radius:var(--radius);
+    background:var(--bg);
   }
   .compare-picker-col label{margin-bottom:6px;}
   .compare-picker-col select{
     width:100%;
     padding:8px 10px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     font-family:inherit;
     font-size:13px;
     background:#fff;
@@ -816,9 +813,8 @@
   }
   .compare-info-col{
     padding:12px 14px;
-    border:1px solid var(--border);
-    border-radius:8px;
-    background:#fbfcfb;
+    border-radius:var(--radius);
+    background:var(--bg);
   }
   .compare-info-col .ci-name{
     font-weight:700;
@@ -867,9 +863,8 @@
   }
   .compare-steps-col{
     padding:12px 14px;
-    border:1px solid var(--border);
-    border-radius:8px;
-    background:#fbfcfb;
+    border-radius:var(--radius);
+    background:var(--bg);
     font-size:13px;
   }
   .compare-steps-col ol{margin:0 0 12px;padding-left:18px;}
@@ -901,7 +896,7 @@
     align-items:center;
     gap:12px;
     padding:10px 16px;
-    border-radius:8px;
+    border-radius:var(--radius);
     margin-bottom:16px;
     font-size:13px;
     font-weight:600;
@@ -934,7 +929,6 @@
   .fullpage-screen.active{display:flex;}
   .auth-card{
     background:var(--panel);
-    border:1px solid var(--border);
     border-radius:var(--radius);
     box-shadow:var(--shadow);
     padding:32px;
@@ -961,7 +955,7 @@
   .auth-tabs{
     display:flex;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     overflow:hidden;
     margin-bottom:20px;
   }
@@ -995,17 +989,6 @@
     margin:6px 0 10px;
   }
 
-  .home-desc{
-    font-size:14px;
-    color:var(--text-dim);
-    line-height:1.7;
-    margin-bottom:24px;
-  }
-  .home-welcome{
-    font-size:13px;
-    color:var(--text);
-    margin-bottom:20px;
-  }
 
   .steps-list, .process-steps-list{
     display:flex;
@@ -1032,10 +1015,9 @@
     margin-bottom:16px;
   }
   .process-block{
-    border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     padding:14px 14px 16px;
-    background:#fbfcfb;
+    background:var(--bg);
   }
   .process-header{
     display:flex;
@@ -1076,7 +1058,7 @@
     flex:1;
     padding:8px 10px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     font-family:inherit;
     font-size:13px;
     background:#fff;
@@ -1127,7 +1109,7 @@
     gap:10px;
     padding:10px 12px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     margin-bottom:8px;
   }
   .version-item-label{font-weight:700;font-size:13px;color:var(--primary-dark);}
@@ -1136,7 +1118,7 @@
   .reflist-tabs{
     display:flex;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     overflow:hidden;
     margin-bottom:16px;
   }
@@ -1161,7 +1143,7 @@
     gap:10px;
     padding:10px 12px;
     border:1px solid var(--border);
-    border-radius:8px;
+    border-radius:var(--radius);
     margin-bottom:8px;
   }
   .reflist-item-main{flex:1;min-width:0;}
@@ -1177,6 +1159,33 @@
   input.reflist-item-name-input:hover{border-color:var(--border);}
   input.reflist-item-name-input:focus{background:#fff;}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
+
+  /* ---------- Projects modal ---------- */
+  .project-header-grid{
+    display:grid;
+    grid-template-columns:repeat(4,1fr);
+    gap:10px;
+    margin-bottom:14px;
+  }
+  .project-header-grid input{font-weight:600;}
+  .proj-select{
+    width:100%;
+    padding:7px 8px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    font-family:inherit;
+    font-size:13px;
+    background:#fff;
+    color:var(--text);
+  }
+  .project-add-row{display:flex;gap:8px;margin-bottom:12px;}
+  .project-add-row select{flex:1;}
+  .project-log-entry{padding:10px 0;border-bottom:1px solid var(--border);}
+  .project-log-entry:last-child{border-bottom:none;}
+  .project-log-stage{font-weight:700;font-size:13px;color:var(--primary-dark);}
+  .project-log-date{font-size:11px;color:var(--text-dim);}
+  .project-log-note{font-size:13px;margin-top:4px;}
+  .project-log-by{font-size:11px;color:var(--text-dim);margin-top:4px;}
   .trial-section-title{
     font-weight:700;
     font-size:14px;
@@ -1198,7 +1207,7 @@
     width:100%;
     height:100%;
     object-fit:cover;
-    border-radius:8px;
+    border-radius:var(--radius);
     border:1px solid var(--border);
   }
   .trial-photo-thumb button{
@@ -1224,39 +1233,126 @@
     color:var(--text-dim);
     padding:60px 20px;
   }
-  .empty-state.in-app-home{
+
+  /* ---------- In-app home dashboard ---------- */
+  .home-dashboard-header{
     display:flex;
-    flex-direction:column;
     align-items:center;
-    padding:80px 20px;
+    gap:12px;
+    margin-bottom:20px;
   }
-  .empty-state.in-app-home .home-desc,
-  .empty-state.in-app-home .home-welcome{
-    max-width:480px;
-    text-align:center;
-  }
-  .empty-state.in-app-home img{
-    width:72px;height:72px;
-    margin-bottom:16px;
-  }
-  .empty-state.in-app-home .eh-title{
+  .home-dashboard-header img{width:40px;height:40px;flex-shrink:0;}
+  .home-dashboard-header .hd-title{
     font-size:20px;
     font-weight:700;
     color:var(--primary-dark);
-    margin-bottom:4px;
+    line-height:1.2;
   }
-  .empty-state.in-app-home .eh-sub{
+  .home-dashboard-header .hd-sub{
     font-size:13px;
     color:var(--accent);
     font-weight:600;
+  }
+  .home-dashboard-header .hd-welcome{
+    font-size:12px;
+    color:var(--text-dim);
+    margin-top:2px;
+  }
+  .dash-metrics{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
+    gap:12px;
     margin-bottom:16px;
   }
-  .empty-state.in-app-home .eh-hint{
-    font-size:13px;
-    color:var(--text-dim);
-    max-width:360px;
-    line-height:1.6;
+  .dash-metric{
+    background:var(--bg);
+    border-radius:var(--radius);
+    padding:12px 14px;
   }
+  .dash-metric-label{
+    font-size:11px;
+    color:var(--text-dim);
+    margin-bottom:4px;
+  }
+  .dash-metric-value{
+    font-size:20px;
+    font-weight:700;
+    color:var(--primary-dark);
+  }
+  .dash-metric-value .dm-suffix{
+    font-size:12px;
+    color:var(--text-dim);
+    font-weight:600;
+  }
+  .dash-row{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
+    gap:14px;
+    margin-bottom:14px;
+  }
+  .dash-card{
+    background:var(--panel);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:18px 20px;
+  }
+  .dash-card-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--primary-dark);
+    margin-bottom:10px;
+  }
+  .dash-bar-item{margin-bottom:8px;}
+  .dash-bar-item:last-child{margin-bottom:0;}
+  .dash-bar-label-row{
+    display:flex;
+    justify-content:space-between;
+    font-size:12px;
+    margin-bottom:3px;
+  }
+  .dash-bar-label-row .dbl-count{color:var(--text-dim);}
+  .dash-bar-track{
+    height:6px;
+    background:var(--border);
+    border-radius:3px;
+    overflow:hidden;
+  }
+  .dash-bar-fill{height:100%;border-radius:3px;background:var(--accent);}
+  .dash-bar-fill.alt{background:var(--primary);}
+  .dash-trend{display:flex;align-items:flex-end;gap:10px;height:70px;}
+  .dash-trend-bar-wrap{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    gap:4px;
+    height:100%;
+    justify-content:flex-end;
+  }
+  .dash-trend-bar{width:100%;background:var(--accent-light);border-radius:3px 3px 0 0;}
+  .dash-trend-bar.current{background:var(--accent);}
+  .dash-trend-label{font-size:10px;color:var(--text-dim);}
+  .dash-list-row{
+    display:flex;
+    justify-content:space-between;
+    gap:10px;
+    font-size:12px;
+    padding:6px 0;
+  }
+  .dash-list-row + .dash-list-row{border-top:1px solid var(--border);}
+  .dash-activity-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+    padding:8px 0;
+  }
+  .dash-activity-row + .dash-activity-row{border-top:1px solid var(--border);}
+  .dash-activity-name{font-size:13px;font-weight:600;}
+  .dash-activity-name .da-code{color:var(--text-dim);font-weight:400;}
+  .dash-activity-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .dash-activity-time{font-size:11px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;}
+  .dash-empty{font-size:12px;color:var(--text-dim);padding:6px 0;}
 
   .print-only{display:none;}
 
@@ -1446,6 +1542,7 @@
     <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">⚖️ Compare Recipes</button>
     <button class="btn btn-block" id="btnOpenMaterialLibSidebar" style="margin-top:8px;">📚 Ingredient Library</button>
     <button class="btn btn-block" id="btnOpenRefLists" style="margin-top:8px;">📇 Reference Lists</button>
+    <button class="btn btn-block" id="btnOpenProjects" style="margin-top:8px;">📁 Projects</button>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search product name...">
@@ -1654,6 +1751,40 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="projectsModalOverlay">
+  <div class="modal" style="max-width:1100px;">
+    <div class="modal-header">
+      <div class="modal-title">📁 Projects</div>
+      <button class="icon-btn" id="btnCloseProjectsModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
+      <div id="projectsList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="productLogModalOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title">🕒 Progress Log</div>
+      <button class="icon-btn" id="btnCloseProductLogModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Update Stage</label>
+        <select id="productLogStageSelect" class="proj-select"></select>
+      </div>
+      <div class="field">
+        <label>Note (optional)</label>
+        <textarea id="productLogNoteInput" placeholder="What happened at this stage..."></textarea>
+      </div>
+      <button class="btn btn-primary btn-sm" id="btnAddProductLogEntry" style="margin-bottom:16px;">+ Add Entry</button>
+      <div id="productLogList"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -1684,6 +1815,7 @@ const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
 const recipesCol = collection(db, "recipes");
 const materialsCol = collection(db, "ingredientMaster");
+const projectsCol = collection(db, "projects");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -1805,7 +1937,12 @@ const CHANGELOG = [
   { version: "3.0.48", date: "2026-07-21", note: "Reference Lists: clicking ✏️ Edit now swaps it for a 💾 Save button, and the ✕ Delete button becomes ↩️ Cancel while editing — instead of saving automatically when you click away or press Enter" },
   { version: "3.0.49", date: "2026-07-21", note: "Deleting a Reference Lists entry now asks for confirmation first, then requires your password before it's actually removed — matching the same safeguard already used for deleting a recipe" },
   { version: "3.0.50", date: "2026-07-21", note: "Deleting a recipe now also asks for a plain Yes/No confirmation before the approver password step (it used to jump straight to the password form). Deleting an ingredient from the Ingredient Library now requires the same approver email + password as deleting a recipe, instead of just a Yes/No confirmation" },
-  { version: "3.0.51", date: "2026-07-21", note: "The \"Confirm Identity\" password popup now always renders above any notification banner (e.g. a cloud connection error) and above any other open modal, instead of potentially being covered by them" }
+  { version: "3.0.51", date: "2026-07-21", note: "The \"Confirm Identity\" password popup now always renders above any notification banner (e.g. a cloud connection error) and above any other open modal, instead of potentially being covered by them" },
+  { version: "3.0.52", date: "2026-07-27", note: "Replaced the blank in-app homepage with a dashboard: recipe/material counts, recipes by country/customer/sales rep, most-used materials, trial evaluation score trend, most-iterated recipes, recently added materials, and recent activity" },
+  { version: "3.0.53", date: "2026-07-27", note: "Restyled the app with a lighter, more rounded look — system font stack, larger corner radius, and borderless cards with softer shadows — while keeping the existing navy/orange brand colors" },
+  { version: "3.0.54", date: "2026-07-27", note: "Added a Projects screen for tracking cross-recipe production projects — owner sales rep, responsible person, factory, and per-product sales rep/stage with an append-only progress log" },
+  { version: "3.0.55", date: "2026-07-27", note: "Projects are now included in Export All (JSON) and Import, with recipe references remapped correctly so imported product links still point at the right recipe" },
+  { version: "3.0.56", date: "2026-07-27", note: "The home dashboard now also shows total projects, products by stage, and recent project activity" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2215,6 +2352,269 @@ function initRefListsModal(){
   });
 }
 
+/* ---------- Projects modal (tracks a project's products against existing
+   recipes, each with a sales rep, a current stage, and an append-only
+   progress log — changing a product's stage always adds a log entry, so
+   the log stays the single source of truth for "what happened when"). ---------- */
+const PROJECT_STAGES = ['Requested','Formulating','Sampling','Customer Review','Approved','In Production','On Hold','Cancelled'];
+
+function blankProject(){
+  return {
+    id: uid(),
+    name: "",
+    ownerSalesRep: "",
+    responsiblePerson: "",
+    factoryName: "",
+    products: [],
+    createdBy: currentUser?.email || '',
+    createdAt: Date.now(),
+    updatedBy: currentUser?.email || '',
+    updatedAt: Date.now()
+  };
+}
+
+function blankProduct(recipeId){
+  const now = Date.now();
+  return {
+    id: uid(),
+    recipeId,
+    salesRep: '',
+    stage: PROJECT_STAGES[0],
+    updatedAt: now,
+    log: [ { id: uid(), date: now, stage: PROJECT_STAGES[0], note: 'Product added to project', by: currentUser?.email || '' } ]
+  };
+}
+
+function saveProjectToCloud(p){
+  return setDoc(doc(projectsCol, p.id), p);
+}
+function deleteProjectFromCloud(id){
+  return deleteDoc(doc(projectsCol, id));
+}
+function scheduleProjectSave(p){
+  p.updatedAt = Date.now();
+  p.updatedBy = currentUser?.email || '';
+  saveProjectToCloud(p);
+}
+function addProductLogEntry(product, stage, note){
+  product.log.push({ id: uid(), date: Date.now(), stage, note: (note || '').trim(), by: currentUser?.email || '' });
+  product.stage = stage;
+  product.updatedAt = Date.now();
+}
+
+function openProjectsModal(){
+  document.getElementById('projectsModalOverlay').classList.add('open');
+  renderProjectsList();
+}
+function closeProjectsModal(){
+  document.getElementById('projectsModalOverlay').classList.remove('open');
+}
+
+function renderProjectsList(){
+  const container = document.getElementById('projectsList');
+  if(!container) return;
+  if(projects.length === 0){
+    container.innerHTML = '<div class="overview-empty">No projects yet — click "+ New Project" above to start one</div>';
+    return;
+  }
+  const sorted = [...projects].sort((a,b) => b.updatedAt - a.updatedAt);
+  container.innerHTML = sorted.map(p => {
+    const usedRecipeIds = new Set(p.products.map(prod => prod.recipeId));
+    const availableRecipes = recipes.filter(r => !usedRecipeIds.has(r.id));
+    const activity = [];
+    if(p.createdBy) activity.push(`Created by ${escapeHtml(p.createdBy)}${p.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(p.createdAt)) : ''}`);
+    if(p.updatedBy && p.updatedAt !== p.createdAt) activity.push(`Last edited by ${escapeHtml(p.updatedBy)}${p.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(p.updatedAt)) : ''}`);
+
+    const rows = p.products.map(prod => {
+      const r = recipes.find(x => x.id === prod.recipeId);
+      const label = r
+        ? `${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}`
+        : '<span style="color:var(--danger);">Recipe not found (deleted?)</span>';
+      return `
+        <tr data-product-id="${escapeHtml(prod.id)}">
+          <td>${label}</td>
+          <td><input type="text" class="proj-product-rep" list="salesRepDatalist" value="${escapeHtml(prod.salesRep)}" placeholder="Sales rep"></td>
+          <td>
+            <select class="proj-select proj-product-stage">
+              ${PROJECT_STAGES.map(s => `<option value="${escapeHtml(s)}" ${s === prod.stage ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+            </select>
+          </td>
+          <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${escapeHtml(formatActivityDateTime(prod.updatedAt) || '')}</td>
+          <td style="white-space:nowrap;">
+            <button class="icon-btn" title="Progress log" data-role="open-log">🕒</button>
+            <button class="icon-btn" title="Remove product" data-role="remove-product">✕</button>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    return `
+      <div class="part-block" data-project-id="${escapeHtml(p.id)}">
+        <div class="project-header-grid">
+          <div class="field" style="margin-bottom:0;">
+            <label>Project Name</label>
+            <input type="text" class="proj-name" value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Owner Sales Rep</label>
+            <input type="text" class="proj-owner" list="salesRepDatalist" value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Responsible Person (PD)</label>
+            <input type="text" class="proj-responsible" value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Factory</label>
+            <input type="text" class="proj-factory" value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+          </div>
+        </div>
+        ${activity.length ? `<div class="reflist-item-meta" style="margin-bottom:10px;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+
+        ${p.products.length ? `
+        <table>
+          <thead><tr><th>Product</th><th>Sales Rep</th><th>Stage</th><th>Last Update</th><th></th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+        ` : '<div class="overview-empty">No products yet — add one below</div>'}
+
+        <div class="project-add-row" style="margin-top:12px;">
+          <select class="proj-select add-product-select">
+            <option value="">${availableRecipes.length ? 'Select a recipe to add...' : 'All recipes already added'}</option>
+            ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}</option>`).join('')}
+          </select>
+          <button class="btn btn-sm" data-role="add-product">+ Add Product</button>
+        </div>
+        <div class="danger-zone" style="margin-top:12px;padding-top:0;border-top:none;">
+          <button class="btn btn-sm btn-danger" data-role="delete-project">Delete Project</button>
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  container.querySelectorAll('.part-block').forEach(block => {
+    const id = block.dataset.projectId;
+    const p = projects.find(x => x.id === id);
+    if(!p) return;
+
+    block.querySelector('.proj-name').addEventListener('change', e => { p.name = e.target.value.trim(); scheduleProjectSave(p); });
+    block.querySelector('.proj-owner').addEventListener('change', e => { p.ownerSalesRep = e.target.value.trim(); scheduleProjectSave(p); });
+    block.querySelector('.proj-responsible').addEventListener('change', e => { p.responsiblePerson = e.target.value.trim(); scheduleProjectSave(p); });
+    block.querySelector('.proj-factory').addEventListener('change', e => { p.factoryName = e.target.value.trim(); scheduleProjectSave(p); });
+
+    block.querySelectorAll('tr[data-product-id]').forEach(row => {
+      const prodId = row.dataset.productId;
+      const prod = p.products.find(x => x.id === prodId);
+      if(!prod) return;
+
+      row.querySelector('.proj-product-rep').addEventListener('change', e => { prod.salesRep = e.target.value.trim(); scheduleProjectSave(p); });
+      row.querySelector('.proj-product-stage').addEventListener('change', e => {
+        addProductLogEntry(prod, e.target.value, '');
+        scheduleProjectSave(p);
+        renderProjectsList();
+      });
+      row.querySelector('[data-role="open-log"]').addEventListener('click', () => openProductLogModal(p.id, prod.id));
+      row.querySelector('[data-role="remove-product"]').addEventListener('click', () => {
+        const r = recipes.find(x => x.id === prod.recipeId);
+        if(!confirm(`Remove "${r ? recipeDisplayLabel(r) : 'this product'}" from the project? Its progress log will be lost.`)) return;
+        p.products = p.products.filter(x => x.id !== prodId);
+        scheduleProjectSave(p);
+        renderProjectsList();
+      });
+    });
+
+    const addSelect = block.querySelector('.add-product-select');
+    block.querySelector('[data-role="add-product"]').addEventListener('click', () => {
+      const recipeId = addSelect.value;
+      if(!recipeId) return;
+      p.products.push(blankProduct(recipeId));
+      scheduleProjectSave(p);
+      renderProjectsList();
+    });
+
+    block.querySelector('[data-role="delete-project"]').addEventListener('click', () => {
+      if(!confirm(`Delete project "${p.name || 'Untitled project'}"? This removes all its products and progress logs. This cannot be undone.`)) return;
+      requestAuthConfirm(
+        'Confirm Identity to Delete',
+        `Enter your password to delete "${p.name || 'Untitled project'}".`,
+        () => {
+          projects = projects.filter(x => x.id !== p.id);
+          deleteProjectFromCloud(p.id);
+          renderProjectsList();
+        }
+      );
+    });
+  });
+}
+
+/* ---------- Product progress log modal ---------- */
+let productLogContext = null; // { projectId, productId }
+
+function getProductLogTarget(){
+  if(!productLogContext) return null;
+  const p = projects.find(x => x.id === productLogContext.projectId);
+  if(!p) return null;
+  return p.products.find(x => x.id === productLogContext.productId) || null;
+}
+
+function openProductLogModal(projectId, productId){
+  productLogContext = { projectId, productId };
+  const select = document.getElementById('productLogStageSelect');
+  select.innerHTML = PROJECT_STAGES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('');
+  const product = getProductLogTarget();
+  if(product) select.value = product.stage;
+  document.getElementById('productLogNoteInput').value = '';
+  renderProductLog();
+  document.getElementById('productLogModalOverlay').classList.add('open');
+}
+function closeProductLogModal(){
+  document.getElementById('productLogModalOverlay').classList.remove('open');
+  productLogContext = null;
+}
+function renderProductLog(){
+  const listEl = document.getElementById('productLogList');
+  const product = getProductLogTarget();
+  if(!listEl) return;
+  if(!product){ listEl.innerHTML = ''; return; }
+  const sorted = [...product.log].sort((a,b) => b.date - a.date);
+  listEl.innerHTML = sorted.map(entry => `
+    <div class="project-log-entry">
+      <div class="project-log-stage">${escapeHtml(entry.stage)}</div>
+      <div class="project-log-date">${escapeHtml(formatActivityDateTime(entry.date) || '')}${entry.by ? ' · ' + escapeHtml(entry.by) : ''}</div>
+      ${entry.note ? `<div class="project-log-note">${escapeHtml(entry.note)}</div>` : ''}
+    </div>
+  `).join('');
+}
+
+function initProjectsModal(){
+  document.getElementById('btnOpenProjects').addEventListener('click', openProjectsModal);
+  document.getElementById('btnCloseProjectsModal').addEventListener('click', closeProjectsModal);
+  document.getElementById('projectsModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'projectsModalOverlay') closeProjectsModal();
+  });
+  document.getElementById('btnAddProject').addEventListener('click', () => {
+    const p = blankProject();
+    projects.push(p);
+    saveProjectToCloud(p);
+    renderProjectsList();
+  });
+
+  document.getElementById('btnCloseProductLogModal').addEventListener('click', closeProductLogModal);
+  document.getElementById('productLogModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'productLogModalOverlay') closeProductLogModal();
+  });
+  document.getElementById('btnAddProductLogEntry').addEventListener('click', () => {
+    const product = getProductLogTarget();
+    if(!product) return;
+    const stage = document.getElementById('productLogStageSelect').value;
+    const note = document.getElementById('productLogNoteInput').value;
+    addProductLogEntry(product, stage, note);
+    scheduleProjectSave(projects.find(x => x.id === productLogContext.projectId));
+    document.getElementById('productLogNoteInput').value = '';
+    renderProductLog();
+    renderProjectsList();
+  });
+}
+
 function initCompareModal(){
   document.getElementById('btnCompare').addEventListener('click', openCompareModal);
   document.getElementById('btnCloseCompareModal').addEventListener('click', closeCompareModal);
@@ -2467,8 +2867,10 @@ let saveTimer = null;
 let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
 let unsubscribeMetaLists = null;
+let unsubscribeProjects = null;
 let recipesLoaded = false;
 let materialsLoaded = false;
+let projectsLoaded = false;
 
 function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -2489,9 +2891,30 @@ function attachMaterialsListener(){
     materialsLoaded = true;
     renderMaterialDatalist();
     if(document.getElementById('materialModalOverlay').classList.contains('open')) renderMaterialTable();
+    if(!currentId && recipesLoaded) renderMain();
   }, err => {
     console.error('Forge: materials listener error', err);
     showCloudError('Failed to load the ingredient library from Firebase: ' + err.message);
+  });
+}
+
+/* ---------- Projects: cross-recipe production tracking (shared via Firestore) ---------- */
+let projects = [];
+
+function attachProjectsListener(){
+  unsubscribeProjects = onSnapshot(projectsCol, snapshot => {
+    projects = snapshot.docs.map(d => d.data());
+    projects.forEach(p => {
+      if(!Array.isArray(p.products)) p.products = [];
+      p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
+    });
+    projectsLoaded = true;
+    if(document.getElementById('projectsModalOverlay').classList.contains('open')) renderProjectsList();
+    if(document.getElementById('productLogModalOverlay').classList.contains('open')) renderProductLog();
+    if(!currentId && recipesLoaded) renderMain();
+  }, err => {
+    console.error('Forge: projects listener error', err);
+    showCloudError('Failed to load projects from Firebase: ' + err.message);
   });
 }
 
@@ -3064,7 +3487,10 @@ function attachRecipesListener(){
       currentId = null;
       unlockedRecipeId = null;
       renderMain();
-    }else if(firstLoad){
+    }else if(firstLoad || !currentId){
+      // no recipe is open (home dashboard is showing) -> safe to re-render on
+      // every update, since there's no in-progress edit whose object identity
+      // needs preserving
       renderMain();
     }
 
@@ -3186,20 +3612,279 @@ function escapeHtml(s){
 }
 
 /* ---------- Main render ---------- */
+/* Groups items by keyFn into descending counts, keeping only the top
+   `limit` labels and folding everything past that into a single "Others"
+   bucket — keeps bar lists readable regardless of how many distinct
+   countries/customers/reps/materials exist. */
+function topGroups(items, keyFn, limit){
+  const counts = new Map();
+  items.forEach(item => {
+    const key = (keyFn(item) || '').trim();
+    if(!key) return;
+    counts.set(key, (counts.get(key) || 0) + 1);
+  });
+  const sorted = [...counts.entries()].sort((a,b) => b[1] - a[1]);
+  const top = sorted.slice(0, limit);
+  const othersCount = sorted.slice(limit).reduce((s,[,c]) => s + c, 0);
+  if(othersCount > 0) top.push(['Others', othersCount]);
+  return top.map(([label,count]) => ({ label, count }));
+}
+
+/* Trial evaluation scores are free text (e.g. "8/9") rather than a fixed
+   scale, so only entries that actually match a number/number pattern can
+   be turned into a comparable ratio — anything else is silently skipped. */
+function parseScoreRatio(s){
+  const m = String(s || '').trim().match(/^(\d+(?:\.\d+)?)\s*\/\s*(\d+(?:\.\d+)?)$/);
+  if(!m) return null;
+  const num = parseFloat(m[1]), den = parseFloat(m[2]);
+  if(!den) return null;
+  return num / den;
+}
+
+function recipeAvgScoreRatio(r){
+  const ratios = (r.trialEvaluation || []).map(e => parseScoreRatio(e.score)).filter(v => v !== null);
+  if(!ratios.length) return null;
+  return ratios.reduce((s,v) => s+v, 0) / ratios.length;
+}
+
+function computeDashboardData(){
+  const now = Date.now();
+  const oneWeekMs = 7 * 24 * 60 * 60 * 1000;
+  const nowDate = new Date();
+  const curMonth = nowDate.getMonth(), curYear = nowDate.getFullYear();
+
+  const newThisMonth = recipes.filter(r => r.createdAt &&
+    new Date(r.createdAt).getMonth() === curMonth && new Date(r.createdAt).getFullYear() === curYear).length;
+  const updatedThisWeek = recipes.filter(r => r.updatedAt && (now - r.updatedAt) <= oneWeekMs).length;
+
+  const yields = recipes.map(r => parseFloat(r.yieldPct)).filter(v => !isNaN(v));
+  const avgYield = yields.length ? yields.reduce((s,v) => s+v, 0) / yields.length : null;
+
+  const totalVersions = recipes.reduce((s,r) => s + (Array.isArray(r.versions) ? r.versions.length : 0), 0);
+
+  const byCountry = topGroups(recipes, r => r.destinationCountry, 4);
+  const byCustomer = topGroups(recipes, r => r.customerName, 4);
+  const bySalesRep = topGroups(recipes, r => r.salesRep, 4);
+
+  const allIngredientRows = recipes.flatMap(r => (r.parts || []).flatMap(p => p.ingredients || []));
+  const materialUsage = topGroups(allIngredientRows, ing => {
+    if(ing.materialId){
+      const m = ingredientMaster.find(x => x.id === ing.materialId);
+      if(m) return m.nameEn;
+    }
+    return ing.name;
+  }, 5);
+
+  const mostIterated = [...recipes]
+    .filter(r => Array.isArray(r.versions) && r.versions.length > 0)
+    .sort((a,b) => b.versions.length - a.versions.length)
+    .slice(0, 3)
+    .map(r => ({ label: recipeDisplayLabel(r), count: r.versions.length }));
+
+  const recentMaterials = [...ingredientMaster]
+    .filter(m => m.createdAt)
+    .sort((a,b) => b.createdAt - a.createdAt)
+    .slice(0, 3);
+
+  const recentActivity = [...recipes]
+    .filter(r => r.updatedAt)
+    .sort((a,b) => b.updatedAt - a.updatedAt)
+    .slice(0, 4);
+
+  const months = [];
+  for(let i = 5; i >= 0; i--){
+    const d = new Date(curYear, curMonth - i, 1);
+    months.push({ year: d.getFullYear(), month: d.getMonth(), label: d.toLocaleString('en-US',{month:'short'}) });
+  }
+  const perRecipeScore = recipes.map(r => ({ r, ratio: recipeAvgScoreRatio(r) })).filter(x => x.ratio !== null);
+  const trend = months.map(mo => {
+    const inMonth = perRecipeScore.filter(({r}) => {
+      const basis = r.date ? new Date(r.date) : (r.createdAt ? new Date(r.createdAt) : null);
+      return basis && basis.getFullYear() === mo.year && basis.getMonth() === mo.month;
+    });
+    const avg = inMonth.length ? inMonth.reduce((s,{ratio}) => s+ratio, 0) / inMonth.length : null;
+    return { label: mo.label, avg };
+  });
+  const avgTrialScorePct = perRecipeScore.length
+    ? Math.round(perRecipeScore.reduce((s,x) => s+x.ratio, 0) / perRecipeScore.length * 100)
+    : null;
+
+  const allProducts = projects.flatMap(p => p.products || []);
+  // Kept in pipeline order (Requested -> ... -> Cancelled) rather than
+  // sorted by count — for a stage funnel, the natural sequence matters more
+  // than which stage currently has the most products.
+  const productsByStage = PROJECT_STAGES
+    .map(stage => ({ label: stage, count: allProducts.filter(prod => prod.stage === stage).length }))
+    .filter(g => g.count > 0);
+
+  const recentProjects = [...projects]
+    .filter(p => p.updatedAt)
+    .sort((a,b) => b.updatedAt - a.updatedAt)
+    .slice(0, 4);
+
+  return {
+    totalRecipes: recipes.length, totalMaterials: ingredientMaster.length, totalProjects: projects.length,
+    newThisMonth, updatedThisWeek, avgYield, totalVersions,
+    byCountry, byCustomer, bySalesRep, materialUsage, mostIterated, recentMaterials, recentActivity,
+    trend, avgTrialScorePct, productsByStage, recentProjects
+  };
+}
+
+function renderBarList(groups, altClass){
+  if(!groups.length) return '<div class="dash-empty">No data yet</div>';
+  const max = Math.max(...groups.map(g => g.count));
+  return groups.map(g => `
+    <div class="dash-bar-item">
+      <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
+      <div class="dash-bar-track"><div class="dash-bar-fill${altClass ? ' '+altClass : ''}" style="width:${Math.max(4, Math.round(g.count/max*100))}%"></div></div>
+    </div>
+  `).join('');
+}
+
+function renderDashboardHome(){
+  const d = computeDashboardData();
+
+  const metrics = [
+    { label:'Recipes', value:d.totalRecipes },
+    { label:'Projects', value:d.totalProjects },
+    { label:'Materials', value:d.totalMaterials },
+    { label:'New this month', value:d.newThisMonth },
+    { label:'Updated this week', value:d.updatedThisWeek },
+    { label:'Avg yield', value:d.avgYield != null ? `${d.avgYield.toFixed(1)}<span class="dm-suffix">%</span>` : '-' },
+    { label:'Versions saved', value:d.totalVersions }
+  ];
+
+  const trendMax = Math.max(0.0001, ...d.trend.map(t => t.avg || 0));
+  const trendHtml = d.trend.map((t,i) => `
+    <div class="dash-trend-bar-wrap">
+      <div class="dash-trend-bar${i === d.trend.length-1 ? ' current' : ''}" style="height:${t.avg != null ? Math.max(4, Math.round(t.avg/trendMax*100)) : 2}%"></div>
+      <div class="dash-trend-label">${escapeHtml(t.label)}</div>
+    </div>
+  `).join('');
+
+  const recentMaterialsHtml = d.recentMaterials.length
+    ? d.recentMaterials.map(m => `<div class="dash-list-row"><span>${escapeHtml(m.nameEn || 'Untitled')}</span><span class="dbl-count">${escapeHtml(formatActivityDateTime(m.createdAt) || '')}</span></div>`).join('')
+    : '<div class="dash-empty">No materials yet</div>';
+
+  const mostIteratedHtml = d.mostIterated.length
+    ? d.mostIterated.map(x => `<div class="dash-list-row"><span>${escapeHtml(x.label)}</span><span class="dbl-count">${x.count} version${x.count === 1 ? '' : 's'}</span></div>`).join('')
+    : '<div class="dash-empty">No saved versions yet</div>';
+
+  const recentProjectsHtml = d.recentProjects.length
+    ? d.recentProjects.map(p => {
+        const sub = [p.factoryName, p.ownerSalesRep].filter(Boolean).map(escapeHtml).join(' · ');
+        const count = (p.products || []).length;
+        return `
+          <div class="dash-activity-row">
+            <div>
+              <div class="dash-activity-name">${escapeHtml(p.name || 'Untitled project')}</div>
+              <div class="dash-activity-sub">${sub ? sub + ' · ' : ''}${count} product${count === 1 ? '' : 's'}</div>
+            </div>
+            <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(p.updatedAt) || '')}</div>
+          </div>
+        `;
+      }).join('')
+    : '<div class="dash-empty">No projects yet — click "📁 Projects" to start one</div>';
+
+  const recentActivityHtml = d.recentActivity.length
+    ? d.recentActivity.map(r => {
+        const who = r.updatedBy && r.updatedBy !== r.createdBy ? `Edited by ${escapeHtml(r.updatedBy)}` : (r.createdBy ? `Created by ${escapeHtml(r.createdBy)}` : '');
+        const code = fullCode(r);
+        return `
+          <div class="dash-activity-row">
+            <div>
+              <div class="dash-activity-name">${escapeHtml(recipeDisplayLabel(r))}${code ? ` <span class="da-code">${escapeHtml(code)}</span>` : ''}</div>
+              ${who ? `<div class="dash-activity-sub">${who}</div>` : ''}
+            </div>
+            <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(r.updatedAt) || '')}</div>
+          </div>
+        `;
+      }).join('')
+    : '<div class="dash-empty">No recipes yet — click "+ New Recipe" to start one</div>';
+
+  return `
+    <div class="home-dashboard">
+      <div class="home-dashboard-header">
+        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
+        <div>
+          <div class="hd-title">Forge</div>
+          <div class="hd-sub">Food Product Development</div>
+          ${currentUser ? `<div class="hd-welcome">Welcome, ${escapeHtml(currentUser.email)}</div>` : ''}
+        </div>
+      </div>
+
+      <div class="dash-metrics">
+        ${metrics.map(m => `
+          <div class="dash-metric">
+            <div class="dash-metric-label">${escapeHtml(m.label)}</div>
+            <div class="dash-metric-value">${m.value}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">Products by stage</div>
+          ${renderBarList(d.productsByStage)}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Recent projects</div>
+          ${recentProjectsHtml}
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">Recipes by country</div>
+          ${renderBarList(d.byCountry)}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Top customers</div>
+          ${renderBarList(d.byCustomer, 'alt')}
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">Recipes by sales rep</div>
+          ${renderBarList(d.bySalesRep)}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Most-used materials</div>
+          ${renderBarList(d.materialUsage, 'alt')}
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">Trial evaluation score, last 6 months${d.avgTrialScorePct != null ? ` <span class="dbl-count">(avg ${d.avgTrialScorePct}%)</span>` : ''}</div>
+          ${d.trend.some(t => t.avg != null) ? `<div class="dash-trend">${trendHtml}</div>` : '<div class="dash-empty">No scored trials yet</div>'}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Most-iterated recipes</div>
+          ${mostIteratedHtml}
+        </div>
+      </div>
+
+      <div class="dash-row">
+        <div class="dash-card">
+          <div class="dash-card-title">Recently added materials</div>
+          ${recentMaterialsHtml}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Recent activity</div>
+          ${recentActivityHtml}
+        </div>
+      </div>
+    </div>
+  `;
+}
+
 function renderMain(){
   const r = getCurrent();
   const main = document.getElementById('mainArea');
   if(!r){
-    main.innerHTML = `
-      <div class="empty-state in-app-home">
-        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
-        <div class="eh-title">Forge</div>
-        <div class="eh-sub">Food Product Development</div>
-        <div class="home-desc">Recipe development software for product development teams</div>
-        ${currentUser ? `<div class="home-welcome">Welcome, ${escapeHtml(currentUser.email)}</div>` : ''}
-        <div class="eh-hint">Select a recipe from the list on the left to view its details, or click "+ New Recipe" to start a new one.</div>
-      </div>
-    `;
+    main.innerHTML = renderDashboardHome();
     return;
   }
 
@@ -4357,7 +5042,8 @@ function exportAll(){
     appVersion: APP_VERSION,
     exportedAt: new Date().toISOString(),
     recipes: recipes,
-    ingredientMaster: ingredientMaster
+    ingredientMaster: ingredientMaster,
+    projects: projects
   };
   const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
@@ -4376,20 +5062,29 @@ function importFromFile(file){
 
       let importedRecipes = [];
       let importedMaterials = [];
+      let importedProjects = [];
 
       if(Array.isArray(data)){
         importedRecipes = data; // old format: plain array of recipes
       }else if(data && Array.isArray(data.recipes)){
-        importedRecipes = data.recipes; // new format: {recipes, ingredientMaster}
+        importedRecipes = data.recipes; // new format: {recipes, ingredientMaster, projects}
         if(Array.isArray(data.ingredientMaster)) importedMaterials = data.ingredientMaster;
+        if(Array.isArray(data.projects)) importedProjects = data.projects;
       }else if(data && typeof data === 'object'){
         importedRecipes = [data]; // old format: a single recipe object
       }
 
       const batch = writeBatch(db);
 
+      // Every imported recipe gets a fresh id (so it can't collide with what's
+      // already in the library) — recorded here so any imported project's
+      // product.recipeId can be rewritten to match, since it was captured
+      // against the recipe's old id at export time.
+      const recipeIdMap = {};
       importedRecipes.forEach(item => {
+        const oldId = item.id;
         item.id = uid();
+        if(oldId) recipeIdMap[oldId] = item.id;
         item.updatedAt = Date.now();
         migrateRecipe(item);
         recomputeFromWeights(item);
@@ -4420,15 +5115,28 @@ function importFromFile(file){
         }
       });
 
+      importedProjects.forEach(p => {
+        p.id = uid();
+        p.updatedAt = Date.now();
+        if(!Array.isArray(p.products)) p.products = [];
+        p.products.forEach(prod => {
+          prod.recipeId = recipeIdMap[prod.recipeId] || prod.recipeId;
+          if(!Array.isArray(prod.log)) prod.log = [];
+        });
+        projects.push(p);
+        batch.set(doc(projectsCol, p.id), p);
+      });
+
       if(importedRecipes.length){
         currentId = recipes[recipes.length-1].id;
         unlockedRecipeId = null;
       }
       batch.commit();
       if(importedMaterials.length) renderMaterialDatalist();
+      if(document.getElementById('projectsModalOverlay').classList.contains('open')) renderProjectsList();
       renderSidebar();
       renderMain();
-      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped)`);
+      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s)`);
     }catch(err){
       alert('Could not read file: ' + err.message);
     }
@@ -4479,6 +5187,7 @@ initCompareModal();
 initVersionsModal();
 initRefListsModal();
 initMaterialLibrary();
+initProjectsModal();
 renderFooter();
 
 /* Firestore listeners only attach once someone is actually signed in — the
@@ -4489,6 +5198,7 @@ onAuthStateChanged(auth, user => {
     if(!unsubscribeRecipes) attachRecipesListener();
     if(!unsubscribeMaterials) attachMaterialsListener();
     if(!unsubscribeMetaLists) attachMetaListsListener();
+    if(!unsubscribeProjects) attachProjectsListener();
     if(appView === 'auth') goToApp();
     document.getElementById('loginForm').reset();
     document.getElementById('registerForm').reset();
@@ -4499,10 +5209,13 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
     if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
     if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
+    if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
     recipesLoaded = false;
     materialsLoaded = false;
+    projectsLoaded = false;
     recipes = [];
     ingredientMaster = [];
+    projects = [];
     metaLists = { customers: [], destinationCountries: [], salesReps: [] };
     currentId = null;
     unlockedRecipeId = null;
