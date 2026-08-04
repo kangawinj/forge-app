@@ -379,6 +379,10 @@
     border-radius:0 8px 8px 0 !important;
     font-family:"Consolas","Courier New",monospace;
   }
+  /* The country segment leads the code row (CC-YYYYMMDD-XX), so when it's
+     showing, the date segment becomes a middle piece — no more rounded-left
+     corner or left border of its own (the country segment owns that edge). */
+  .code-row.has-country-badge #codePrefixDisplay{border-left:none;border-radius:0;}
   .unit-input{border-radius:8px 0 0 8px !important;}
   .unit-suffix{
     display:flex;
@@ -485,6 +489,17 @@
     white-space:nowrap;
   }
   .part-block.collapsed .part-body{display:none;}
+  .proj-fact-strip{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;}
+  .proj-fact-chip{
+    font-size:11px;
+    color:var(--text-dim);
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:3px 10px;
+    white-space:nowrap;
+  }
+  .proj-fact-chip b{color:var(--text);font-weight:600;}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
   /* Right-align every numeric column total (Parts/Components tfoot,
      Recipe Overview's plain-text data rows and its Total) so every digit
@@ -1187,6 +1202,22 @@
   input.reflist-item-location-input:hover{border-color:var(--border);}
   input.reflist-item-location-input:focus{background:#fff;color:var(--text);}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
+  .reflist-flag-badge{
+    flex-shrink:0;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    overflow:hidden;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    line-height:1;
+    background:#f1f3f0;
+    border:1px solid var(--border);
+  }
+  .reflist-flag-img{width:100%;height:100%;object-fit:cover;display:block;}
+  .reflist-flag-fallback{font-weight:700;color:var(--text-dim);letter-spacing:.02em;}
 
   /* ---------- Projects modal ---------- */
   .project-header-grid{
@@ -1338,6 +1369,9 @@
   }
   .dash-bar-fill{height:100%;border-radius:3px;background:var(--accent);}
   .dash-bar-fill.alt{background:var(--primary);}
+  .dash-country-row{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+  .dash-country-row:last-child{margin-bottom:0;}
+  .dash-country-main{flex:1;min-width:0;}
   .dash-trend{display:flex;align-items:flex-end;gap:10px;height:70px;}
   .dash-trend-bar-wrap{
     flex:1;
@@ -1994,7 +2028,14 @@ const CHANGELOG = [
   { version: "3.0.59", date: "2026-08-03", note: "Projects: added Edit/Save/Delete buttons, a collapsible list view, and a dashboard summary (project/product counts, products by stage) at the top of the screen. New fields: Request Date, Customer Name, Destination Country, Factory Sales Rep, and Requirements/Certifications" },
   { version: "3.0.60", date: "2026-08-03", note: "Recipes can now be linked to a Project directly from the recipe page — picking a project shows its customer, destination, and sales rep info inline. The recipe's own Customer Name/Destination Country/Sales Rep fields were removed, since that information now comes from the linked Project" },
   { version: "3.0.61", date: "2026-08-03", note: "Added a standalone Trial Results screen (moved out of the recipe page) for comparing up to 4 products side by side — shared photos plus a Sensory Evaluation table scored per product, instead of a single trial tied to one recipe" },
-  { version: "3.0.62", date: "2026-08-03", note: "Trial Results: product cards now line up column-for-column with the Sensory Evaluation table below them, and each trial has Edit/Save/Delete/Print buttons — fields are locked read-only until Edit is clicked, and Print outputs just that one trial" }
+  { version: "3.0.62", date: "2026-08-03", note: "Trial Results: product cards now line up column-for-column with the Sensory Evaluation table below them, and each trial has Edit/Save/Delete/Print buttons — fields are locked read-only until Edit is clicked, and Print outputs just that one trial" },
+  { version: "3.0.63", date: "2026-08-04", note: "Recipe Code now leads with a 2-letter ISO 3166-1 country code (e.g. \"TH-20260715-02A\") based on the linked Project's Destination Country — shown wherever the recipe code appears (recipe title, sidebar, Compare Recipes, Trial Results, print). Recipes without a linked Project, or with an unrecognized destination, are unaffected" },
+  { version: "3.0.64", date: "2026-08-04", note: "Reference Lists → Destination Countries now shows a small circular flag icon before each entry, resolved from the same country name → ISO code lookup used for Recipe Code. Entries that don't resolve to a real flag (e.g. \"EU\") show their code as text instead" },
+  { version: "3.0.65", date: "2026-08-04", note: "Projects: the \"Owner Sales Rep\" field/label is now called \"Project Owner\" everywhere it appears (recipe page, Trial Results product cards). No data changed — same field, clearer name" },
+  { version: "3.0.66", date: "2026-08-04", note: "Home dashboard: replaced \"Recipes by country\" with a \"By Country / Region\" ranked list — a flag icon (matching Reference Lists) plus a proportional bar per destination country, sourced from Projects' Destination Country instead of the recipe's own (now-unused) field" },
+  { version: "3.0.67", date: "2026-08-04", note: "Fixed the EU entry in Destination Countries (and everywhere else flags show) falling back to plain \"EU\" text — it now shows an actual EU flag (the 12-gold-star ring on blue), drawn directly rather than pulled from the flag icon set, which doesn't include it since the EU isn't a country" },
+  { version: "3.0.68", date: "2026-08-04", note: "Projects: added a Status field (Not Started / In Progress / Blocked-On Hold / In Review / Completed / Cancelled, English with a Thai translation) — editable via the same Edit/Save flow as the other project fields, and shown in each project's collapsed summary line" },
+  { version: "3.0.69", date: "2026-08-04", note: "Projects: clicking Save now collapses the project card back down automatically instead of leaving it expanded. Every project also now shows a compact row of chips (Status, Requested date, Customer, Destination, Owner, Factory Rep, PD, Factory) right under its name, so the key details are visible without expanding the card at all" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2306,6 +2347,7 @@ function renderRefListItems(){
   const container = document.getElementById('refListItems');
   if(!container) return;
   const isFactories = refListActiveTab === 'factories';
+  const isDestinations = refListActiveTab === 'destinationCountries';
   const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
@@ -2318,6 +2360,7 @@ function renderRefListItems(){
     if(item.updatedBy && item.updatedAt !== item.createdAt) activity.push(`Edited by ${escapeHtml(item.updatedBy)}${item.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(item.updatedAt)) : ''}`);
     return `
     <div class="reflist-item" data-id="${escapeHtml(item.id)}">
+      ${isDestinations ? countryFlagBadgeHtml(item.name) : ''}
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
         ${isFactories ? `<input type="text" class="reflist-item-location-input" placeholder="Location" value="${escapeHtml(item.location || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
@@ -2329,6 +2372,12 @@ function renderRefListItems(){
     </div>
   `;
   }).join('');
+
+  container.querySelectorAll('.reflist-flag-img').forEach(img => {
+    img.addEventListener('error', () => {
+      img.replaceWith(Object.assign(document.createElement('span'), { className: 'reflist-flag-fallback', textContent: img.dataset.fallback }));
+    }, { once: true });
+  });
 
   container.querySelectorAll('[data-role="edit"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -2423,10 +2472,23 @@ function initRefListsModal(){
    the log stays the single source of truth for "what happened when"). ---------- */
 const PROJECT_STAGES = ['Requested','Formulating','Sampling','Customer Review','Approved','In Production','On Hold','Cancelled'];
 
+// Overall project lifecycle status (distinct from PROJECT_STAGES, which
+// tracks each individual product's stage within a project).
+const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','In Review','Completed','Cancelled'];
+const PROJECT_STATUS_LABELS = {
+  'Not Started': 'Not Started (ยังไม่เริ่ม)',
+  'In Progress': 'In Progress (กำลังดำเนินการ)',
+  'Blocked / On Hold': 'Blocked / On Hold (ติดปัญหา / รอการตัดสินใจ)',
+  'In Review': 'In Review (รอตรวจสอบ)',
+  'Completed': 'Completed (เสร็จสมบูรณ์)',
+  'Cancelled': 'Cancelled (ยกเลิก)'
+};
+
 function blankProject(){
   return {
     id: uid(),
     name: "",
+    status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
     customerName: "",
     destinationCountry: "",
@@ -2595,7 +2657,7 @@ function renderTrialsList(){
           <div class="ci-row"><b>Total weight:</b> ${escapeHtml(formatWeight(totalWt))}</div>
           ${link?.project.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(link.project.customerName)}</div>` : ''}
           ${link?.project.destinationCountry ? `<div class="ci-row"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
-          ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Owner Sales Rep:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
+          ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Project Owner:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
           ${link ? `<div class="ci-row"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
           ${removeBtn}
         </div>
@@ -2899,24 +2961,47 @@ function renderProjectsList(){
       `;
     }).join('');
 
-    const summaryBits = [p.customerName, p.destinationCountry].filter(Boolean).join(' · ');
     const productCount = p.products.length;
+
+    // Compact "review" strip of every key field, one small chip each — sits
+    // outside .part-body so it stays visible even while the card is
+    // collapsed, instead of forcing a full expand just to see the details.
+    const factChips = [
+      ['Status', p.status || PROJECT_STATUSES[0]],
+      ['Requested', p.requestDate],
+      ['Customer', p.customerName],
+      ['Destination', p.destinationCountry],
+      ['Owner', p.ownerSalesRep],
+      ['Factory Rep', p.factorySalesRep],
+      ['PD', p.responsiblePerson],
+      ['Factory', p.factoryName]
+    ].filter(([,v]) => v);
+    const factStripHtml = factChips.length
+      ? `<div class="proj-fact-strip">${factChips.map(([label,v]) => `<span class="proj-fact-chip"><b>${escapeHtml(label)}:</b> ${escapeHtml(v)}</span>`).join('')}</div>`
+      : '';
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-project-id="${escapeHtml(p.id)}">
-        <div class="part-header" style="margin-bottom:12px;">
+        <div class="part-header" style="margin-bottom:8px;">
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">▶</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(p.name || 'Untitled project')}</span>
-          <span class="part-header-summary">${escapeHtml(summaryBits)}${summaryBits ? ' · ' : ''}${productCount} product${productCount === 1 ? '' : 's'}</span>
+          <span class="part-header-summary">${productCount} product${productCount === 1 ? '' : 's'}</span>
           ${isEditing
             ? `<button class="btn btn-sm" data-role="save-project">💾 Save</button><button class="btn btn-sm" data-role="cancel-project">↩️ Cancel</button>`
             : `<button class="btn btn-sm" data-role="edit-project">✏️ Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">✕ Delete</button>`}
         </div>
+        ${factStripHtml}
         <div class="part-body">
         <div class="project-header-grid">
           <div class="field" style="margin-bottom:0;">
             <label>Project Name</label>
             <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Status</label>
+            <select class="proj-select proj-status" ${isEditing ? '' : 'disabled'}>
+              ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}" ${s === (p.status || PROJECT_STATUSES[0]) ? 'selected' : ''}>${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
+            </select>
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Request Date</label>
@@ -2931,7 +3016,7 @@ function renderProjectsList(){
             <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label>Owner Sales Rep</label>
+            <label>Project Owner</label>
             <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
           </div>
           <div class="field" style="margin-bottom:0;">
@@ -2987,6 +3072,7 @@ function renderProjectsList(){
     if(isEditing){
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
         p.name = block.querySelector('.proj-name').value.trim();
+        p.status = block.querySelector('.proj-status').value;
         p.requestDate = block.querySelector('.proj-request-date').value;
         p.customerName = block.querySelector('.proj-customer').value.trim();
         p.destinationCountry = block.querySelector('.proj-destination').value.trim();
@@ -2996,7 +3082,7 @@ function renderProjectsList(){
         p.factoryName = block.querySelector('.proj-factory').value.trim();
         p.requirements = block.querySelector('.proj-requirements').value.trim();
         projectEditingId = null;
-        projectExpandedIds.add(p.id);
+        projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
         renderProjectsList();
       });
@@ -3683,7 +3769,7 @@ function renderLinkedProjectSection(r){
   const facts = [
     project.customerName ? `<b>Customer:</b> ${escapeHtml(project.customerName)}` : '',
     project.destinationCountry ? `<b>Destination:</b> ${escapeHtml(project.destinationCountry)}` : '',
-    project.ownerSalesRep ? `<b>Owner Sales Rep:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
+    project.ownerSalesRep ? `<b>Project Owner:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
     project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
     `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
   ].filter(Boolean);
@@ -4244,11 +4330,90 @@ function datePrefix(dateStr){
   return dateStr ? dateStr.replace(/-/g, '') : 'YYYYMMDD';
 }
 
+// ISO 3166-1 alpha-2 codes, keyed by lowercased common/short country name.
+// "eu" is included because ISO 3166-1 exceptionally reserves "EU" for the
+// European Union, and that's already one of this app's Destination Country
+// entries even though the EU isn't itself a country.
+const COUNTRY_ISO2 = {
+  "afghanistan":"AF","albania":"AL","algeria":"DZ","andorra":"AD","angola":"AO",
+  "argentina":"AR","armenia":"AM","australia":"AU","austria":"AT","azerbaijan":"AZ",
+  "bahamas":"BS","bahrain":"BH","bangladesh":"BD","belarus":"BY","belgium":"BE",
+  "belize":"BZ","bhutan":"BT","bolivia":"BO","bosnia and herzegovina":"BA","botswana":"BW",
+  "brazil":"BR","brunei":"BN","bulgaria":"BG","cambodia":"KH","cameroon":"CM",
+  "canada":"CA","chile":"CL","china":"CN","colombia":"CO","costa rica":"CR",
+  "croatia":"HR","cuba":"CU","cyprus":"CY","czech republic":"CZ","czechia":"CZ",
+  "denmark":"DK","dominican republic":"DO","ecuador":"EC","egypt":"EG","el salvador":"SV",
+  "estonia":"EE","ethiopia":"ET","eu":"EU","european union":"EU","fiji":"FJ",
+  "finland":"FI","france":"FR","georgia":"GE","germany":"DE","ghana":"GH",
+  "greece":"GR","guatemala":"GT","honduras":"HN","hong kong":"HK","hungary":"HU",
+  "iceland":"IS","india":"IN","indonesia":"ID","iran":"IR","iraq":"IQ",
+  "ireland":"IE","israel":"IL","italy":"IT","jamaica":"JM","japan":"JP",
+  "jordan":"JO","kazakhstan":"KZ","kenya":"KE","kuwait":"KW","laos":"LA",
+  "latvia":"LV","lebanon":"LB","libya":"LY","liechtenstein":"LI","lithuania":"LT",
+  "luxembourg":"LU","macau":"MO","madagascar":"MG","malaysia":"MY","maldives":"MV",
+  "malta":"MT","mexico":"MX","moldova":"MD","monaco":"MC","mongolia":"MN",
+  "morocco":"MA","myanmar":"MM","burma":"MM","namibia":"NA","nepal":"NP",
+  "netherlands":"NL","new zealand":"NZ","nicaragua":"NI","nigeria":"NG","north korea":"KP",
+  "north macedonia":"MK","norway":"NO","oman":"OM","pakistan":"PK","panama":"PA",
+  "papua new guinea":"PG","paraguay":"PY","peru":"PE","philippines":"PH","poland":"PL",
+  "portugal":"PT","qatar":"QA","romania":"RO","russia":"RU","rwanda":"RW",
+  "saudi arabia":"SA","serbia":"RS","singapore":"SG","slovakia":"SK","slovenia":"SI",
+  "south africa":"ZA","south korea":"KR","korea":"KR","spain":"ES","sri lanka":"LK",
+  "sweden":"SE","switzerland":"CH","syria":"SY","taiwan":"TW","tajikistan":"TJ",
+  "tanzania":"TZ","thailand":"TH","tunisia":"TN","turkey":"TR","turkiye":"TR",
+  "uganda":"UG","ukraine":"UA","united arab emirates":"AE","uae":"AE",
+  "united kingdom":"GB","uk":"GB","great britain":"GB",
+  "united states":"US","united states of america":"US","usa":"US","us":"US",
+  "uruguay":"UY","uzbekistan":"UZ","venezuela":"VE","vietnam":"VN","yemen":"YE","zambia":"ZM","zimbabwe":"ZW"
+};
+
+// Destination Country is a free-text field (via Reference Lists), so entries
+// often carry a parenthetical explainer, e.g. "USA (United States of
+// America)" or "UK (United Kingdom of Great Britain and Northern Ireland)" —
+// stripping that before lookup lets the short label alone resolve correctly.
+function countryToIso2(name){
+  if(!name) return '';
+  const stripped = name.replace(/\([^)]*\)/g, '').trim().toLowerCase();
+  if(COUNTRY_ISO2[stripped]) return COUNTRY_ISO2[stripped];
+  const full = name.trim().toLowerCase();
+  return COUNTRY_ISO2[full] || '';
+}
+
+// Small circular flag badge shown before a Destination Countries entry.
+// Uses actual flag images (a CDN-hosted circular-flag icon set) rather than
+// Unicode flag emoji, because flag emoji rendering is unreliable across
+// OS/browser combinations — many fall back to showing the bare two-letter
+// code as plain text instead of a real flag glyph. An <img> with an error
+// handler (wired in renderRefListItems) falls back to that same letter-code
+// text if the image itself ever fails to load (e.g. "EU", which has no
+// flag in this icon set since it isn't an ISO 3166-1 country).
+// The EU isn't a country, so the circle-flags icon set (used for every real
+// ISO country below) has no "eu" entry — drawn here by hand instead: the
+// official 12 gold-star ring on blue, geometrically accurate (stars evenly
+// spaced 30° apart, all upright) rather than pulled from an external image.
+const EU_FLAG_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="EU flag"><circle cx="50" cy="50" r="50" fill="#039"/><defs><polygon id="eu-star" points="0,-4 0.911,-1.254 3.804,-1.236 1.474,0.479 2.351,3.236 0,1.55 -2.351,3.236 -1.474,0.479 -3.804,-1.236 -0.911,-1.254" fill="#fc0"/></defs><use href="#eu-star" x="50" y="18"/><use href="#eu-star" x="66" y="22.29"/><use href="#eu-star" x="77.71" y="34"/><use href="#eu-star" x="82" y="50"/><use href="#eu-star" x="77.71" y="66"/><use href="#eu-star" x="66" y="77.71"/><use href="#eu-star" x="50" y="82"/><use href="#eu-star" x="34" y="77.71"/><use href="#eu-star" x="22.29" y="66"/><use href="#eu-star" x="18" y="50"/><use href="#eu-star" x="22.29" y="34"/><use href="#eu-star" x="34" y="22.29"/></svg>`;
+
+function countryFlagBadgeHtml(name){
+  const iso = countryToIso2(name);
+  if(!iso) return `<span class="reflist-flag-badge" title="Unrecognized country">🌐</span>`;
+  if(iso === 'EU') return `<span class="reflist-flag-badge" title="EU">${EU_FLAG_SVG}</span>`;
+  return `<span class="reflist-flag-badge" title="${escapeHtml(iso)}"><img class="reflist-flag-img" data-fallback="${escapeHtml(iso)}" alt="${escapeHtml(iso)}" src="https://cdn.jsdelivr.net/gh/HatScripts/circle-flags/flags/${iso.toLowerCase()}.svg"></span>`;
+}
+
+// The recipe's own Destination Country field was removed in favor of linking
+// a Project (see findProjectForRecipe) — that link is now the single source
+// of truth for where a recipe is headed.
+function recipeDestinationIso2(r){
+  const link = findProjectForRecipe(r.id);
+  return link ? countryToIso2(link.project.destinationCountry) : '';
+}
+
 function fullCode(r){
   const prefix = datePrefix(r.date);
   const suffix = (r.code || '').trim();
   if(prefix === 'YYYYMMDD' && !suffix) return '';
-  return prefix + '-' + (suffix || 'XX');
+  const iso = recipeDestinationIso2(r);
+  return (iso ? iso + '-' : '') + prefix + '-' + (suffix || 'XX');
 }
 
 /* Product name with the last 2 characters of the recipe code suffix appended,
@@ -4274,6 +4439,18 @@ function descriptionListHtml(r){
 function formatActivityDateTime(ts){
   if(!ts) return null;
   return new Date(ts).toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+function refreshCodeCountryBadge(r){
+  const row = document.getElementById('codePrefixDisplay')?.closest('.code-row');
+  const sep = document.getElementById('codeCountrySep');
+  const badge = document.getElementById('codeCountryDisplay');
+  if(!row || !sep || !badge) return;
+  const iso = recipeDestinationIso2(r);
+  row.classList.toggle('has-country-badge', !!iso);
+  sep.style.display = iso ? '' : 'none';
+  badge.style.display = iso ? '' : 'none';
+  badge.textContent = iso;
 }
 
 function updateRecipeTitleDisplay(r){
@@ -4346,7 +4523,11 @@ function computeDashboardData(){
 
   const totalVersions = recipes.reduce((s,r) => s + (Array.isArray(r.versions) ? r.versions.length : 0), 0);
 
-  const byCountry = topGroups(recipes, r => r.destinationCountry, 4);
+  // Sourced from Projects (not recipes) — Destination Country now lives on
+  // the Project since recipes link to a Project instead of carrying their
+  // own copy of it (see findProjectForRecipe). Uncapped (no "Others" bucket)
+  // since the world-map card plots every country individually.
+  const byCountry = topGroups(projects, p => p.destinationCountry, 999);
   const byCustomer = topGroups(recipes, r => r.customerName, 4);
   const bySalesRep = topGroups(recipes, r => r.salesRep, 4);
 
@@ -4423,6 +4604,27 @@ function renderBarList(groups, altClass){
       <div class="dash-bar-track"><div class="dash-bar-fill${altClass ? ' '+altClass : ''}" style="width:${Math.max(4, Math.round(g.count/max*100))}%"></div></div>
     </div>
   `).join('');
+}
+
+// Same flag-badge component used on the Reference Lists page (see
+// countryFlagBadgeHtml), reused here so a country reads the same way in
+// both places — a ranked bar list rather than a map, sized/ordered by
+// project count (topGroups already sorts descending).
+function renderCountryBarList(groups){
+  if(!groups.length) return '<div class="dash-empty">No data yet</div>';
+  const max = Math.max(...groups.map(g => g.count));
+  return groups.map(g => {
+    const shortLabel = g.label.replace(/\([^)]*\)/g, '').trim() || g.label;
+    return `
+      <div class="dash-country-row">
+        ${countryFlagBadgeHtml(g.label)}
+        <div class="dash-country-main">
+          <div class="dash-bar-label-row"><span>${escapeHtml(shortLabel)}</span><span class="dbl-count">${g.count}</span></div>
+          <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%"></div></div>
+        </div>
+      </div>
+    `;
+  }).join('');
 }
 
 function renderDashboardHome(){
@@ -4519,12 +4721,8 @@ function renderDashboardHome(){
 
       <div class="dash-row">
         <div class="dash-card">
-          <div class="dash-card-title">Recipes by country</div>
-          ${renderBarList(d.byCountry)}
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Top customers</div>
-          ${renderBarList(d.byCustomer, 'alt')}
+          <div class="dash-card-title">By Country / Region</div>
+          ${renderCountryBarList(d.byCountry)}
         </div>
       </div>
 
@@ -4536,6 +4734,10 @@ function renderDashboardHome(){
         <div class="dash-card">
           <div class="dash-card-title">Most-used materials</div>
           ${renderBarList(d.materialUsage, 'alt')}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Top customers</div>
+          ${renderBarList(d.byCustomer, 'alt')}
         </div>
       </div>
 
@@ -4617,8 +4819,10 @@ function renderMain(){
             <input type="file" id="descPhotoInput" accept="image/*">
           </div>
           <div class="field">
-            <label>Recipe Code — YYYYMMDD-XX</label>
+            <label>Recipe Code — CC-YYYYMMDD-XX</label>
             <div class="code-row">
+              <span class="code-prefix" id="codeCountryDisplay" style="display:none;" title="Country code auto-filled from the linked Project's Destination Country"></span>
+              <span class="code-sep" id="codeCountrySep" style="display:none;">-</span>
               <span class="code-prefix" id="codePrefixDisplay">YYYYMMDD</span>
               <span class="code-sep">-</span>
               <input type="text" id="f-codeSuffix" class="code-suffix" placeholder="XX" maxlength="10">
@@ -4703,6 +4907,7 @@ function renderMain(){
   document.getElementById('codePrefixDisplay').textContent = datePrefix(r.date);
   document.getElementById('f-date').value = r.date || '';
   renderLinkedProjectSection(r);
+  refreshCodeCountryBadge(r);
   document.getElementById('f-linkedProject').addEventListener('change', e => {
     const newProjectId = e.target.value;
     const oldLink = findProjectForRecipe(r.id);
@@ -4718,6 +4923,8 @@ function renderMain(){
       }
     }
     renderLinkedProjectSection(r);
+    refreshCodeCountryBadge(r);
+    updateRecipeTitleDisplay(r);
   });
   updateRecipeTitleDisplay(r);
   renderDescPoints(r);
