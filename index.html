@@ -489,17 +489,36 @@
     white-space:nowrap;
   }
   .part-block.collapsed .part-body{display:none;}
-  .proj-fact-strip{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 12px;}
-  .proj-fact-chip{
-    font-size:11px;
-    color:var(--text-dim);
-    background:var(--bg);
-    border:1px solid var(--border);
-    border-radius:20px;
-    padding:3px 10px;
-    white-space:nowrap;
+  .proj-overview-table th, .proj-overview-table td{white-space:nowrap;}
+  .proj-missing{color:var(--danger);font-weight:700;}
+  .proj-status-bar-track{
+    width:100%;
+    max-width:160px;
+    height:5px;
+    background:var(--border);
+    border-radius:3px;
+    overflow:hidden;
+    margin-top:5px;
   }
-  .proj-fact-chip b{color:var(--text);font-weight:600;}
+  .proj-status-bar-fill{height:100%;border-radius:3px;}
+  /* Bounded-height, scrolls both ways within itself — with 25+ rows, an
+     unbounded overflow-x:auto div puts its horizontal scrollbar at the very
+     bottom of the whole row list, which isn't reachable without scrolling
+     all the way down there first. Capping the height keeps both scrollbars
+     right where the table is. */
+  .proj-table-scroll{overflow:auto;max-height:60vh;border:1px solid var(--border);border-radius:var(--radius);}
+  .proj-table-scroll table{width:100%;}
+  .proj-table-scroll thead th{position:sticky;top:0;background:var(--panel);z-index:2;}
+  /* Edit/Save/Delete lives in the last column of a wide, horizontally
+     scrolling table — pinned to the right edge so it's always reachable
+     instead of getting scrolled out of view behind the other columns. */
+  .proj-actions-cell{
+    position:sticky;
+    right:0;
+    background:var(--panel);
+    box-shadow:-4px 0 6px -4px rgba(0,0,0,.15);
+  }
+  .proj-table-scroll thead th.proj-actions-cell{z-index:3;}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
   /* Right-align every numeric column total (Parts/Components tfoot,
      Recipe Overview's plain-text data rows and its Total) so every digit
@@ -2035,7 +2054,10 @@ const CHANGELOG = [
   { version: "3.0.66", date: "2026-08-04", note: "Home dashboard: replaced \"Recipes by country\" with a \"By Country / Region\" ranked list — a flag icon (matching Reference Lists) plus a proportional bar per destination country, sourced from Projects' Destination Country instead of the recipe's own (now-unused) field" },
   { version: "3.0.67", date: "2026-08-04", note: "Fixed the EU entry in Destination Countries (and everywhere else flags show) falling back to plain \"EU\" text — it now shows an actual EU flag (the 12-gold-star ring on blue), drawn directly rather than pulled from the flag icon set, which doesn't include it since the EU isn't a country" },
   { version: "3.0.68", date: "2026-08-04", note: "Projects: added a Status field (Not Started / In Progress / Blocked-On Hold / In Review / Completed / Cancelled, English with a Thai translation) — editable via the same Edit/Save flow as the other project fields, and shown in each project's collapsed summary line" },
-  { version: "3.0.69", date: "2026-08-04", note: "Projects: clicking Save now collapses the project card back down automatically instead of leaving it expanded. Every project also now shows a compact row of chips (Status, Requested date, Customer, Destination, Owner, Factory Rep, PD, Factory) right under its name, so the key details are visible without expanding the card at all" }
+  { version: "3.0.69", date: "2026-08-04", note: "Projects is now a scannable table (Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Reqs, Products as columns) instead of a stack of cards, so it's easy to see at a glance which projects are missing which fields — any empty field shows a red \"—\" instead of blank. Click a row's arrow to expand the full editable form below it, same as before. Saving now collapses the row back down automatically instead of leaving it expanded" },
+  { version: "3.0.70", date: "2026-08-04", note: "Projects table: each project name now has a small progress bar underneath showing its Status at a glance — empty for Not Started, partway (orange) for In Progress, partway in red for Blocked/On Hold, further along (navy) for In Review, and full green for Completed; Cancelled shows full grey" },
+  { version: "3.0.71", date: "2026-08-04", note: "Fixed the Projects table's Edit/Save/Delete column scrolling out of view on narrower screens (the table has enough columns that it scrolls horizontally) — that column is now pinned to the right edge so it's always reachable no matter how far the table is scrolled" },
+  { version: "3.0.72", date: "2026-08-04", note: "Fixed the Projects table's horizontal scrollbar being unreachable without first scrolling all the way down past every row. The table now scrolls within its own bounded box (both directions), with the column headers pinned to the top of that box, so both scrollbars stay within reach near the top of the list instead of at the bottom of 25+ rows" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2484,6 +2506,25 @@ const PROJECT_STATUS_LABELS = {
   'Cancelled': 'Cancelled (ยกเลิก)'
 };
 
+// Position along the pipeline (Not Started -> In Progress -> In Review ->
+// Completed) each status represents, plus a color that doubles as a status
+// signal: On Hold reuses the "stuck partway" position but in red (needs
+// attention), Cancelled shows full-width in muted grey (closed out, not
+// "achieved").
+const PROJECT_STATUS_BAR = {
+  'Not Started': { pct: 0, color: 'var(--border)' },
+  'In Progress': { pct: 40, color: 'var(--accent)' },
+  'Blocked / On Hold': { pct: 40, color: 'var(--danger)' },
+  'In Review': { pct: 75, color: 'var(--primary)' },
+  'Completed': { pct: 100, color: 'var(--ok)' },
+  'Cancelled': { pct: 100, color: 'var(--text-dim)' }
+};
+function projectStatusBarHtml(status){
+  const s = status || PROJECT_STATUSES[0];
+  const cfg = PROJECT_STATUS_BAR[s] || PROJECT_STATUS_BAR['Not Started'];
+  return `<div class="proj-status-bar-track" title="${escapeHtml(s)}"><div class="proj-status-bar-fill" style="width:${cfg.pct}%;background:${cfg.color};"></div></div>`;
+}
+
 function blankProject(){
   return {
     id: uid(),
@@ -2928,140 +2969,168 @@ function renderProjectsList(){
     </div>
   `;
 
-  container.innerHTML = dashboardHtml + sorted.map(p => {
-    const isEditing = p.id === projectEditingId;
-    const isExpanded = isEditing || projectExpandedIds.has(p.id);
-    const ro = isEditing ? '' : 'readonly';
-    const usedRecipeIds = new Set(p.products.map(prod => prod.recipeId));
-    const availableRecipes = recipes.filter(r => !usedRecipeIds.has(r.id));
-    const activity = [];
-    if(p.createdBy) activity.push(`Created by ${escapeHtml(p.createdBy)}${p.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(p.createdAt)) : ''}`);
-    if(p.updatedBy && p.updatedAt !== p.createdAt) activity.push(`Last edited by ${escapeHtml(p.updatedBy)}${p.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(p.updatedAt)) : ''}`);
+  // Empty-value marker for the overview table — a plain blank cell reads as
+  // "nothing to report", but a project missing Customer/Destination/etc. is
+  // usually a data gap that needs following up on, so it's flagged in
+  // --danger red instead of just left blank.
+  const missingCell = v => v ? escapeHtml(v) : '<span class="proj-missing" title="Missing">—</span>';
 
-    const rows = p.products.map(prod => {
-      const r = recipes.find(x => x.id === prod.recipeId);
-      const label = r
-        ? `${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}`
-        : '<span style="color:var(--danger);">Recipe not found (deleted?)</span>';
-      return `
-        <tr data-product-id="${escapeHtml(prod.id)}">
-          <td>${label}</td>
-          <td><input type="text" class="proj-product-rep" list="salesRepDatalist" value="${escapeHtml(prod.salesRep)}" placeholder="Sales rep"></td>
-          <td>
-            <select class="proj-select proj-product-stage">
-              ${PROJECT_STAGES.map(s => `<option value="${escapeHtml(s)}" ${s === prod.stage ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
-            </select>
-          </td>
-          <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${escapeHtml(formatActivityDateTime(prod.updatedAt) || '')}</td>
-          <td style="white-space:nowrap;">
-            <button class="icon-btn" title="Progress log" data-role="open-log">🕒</button>
-            <button class="icon-btn" title="Remove product" data-role="remove-product">✕</button>
-          </td>
+  container.innerHTML = dashboardHtml + `
+    <div class="proj-table-scroll">
+    <table class="proj-overview-table">
+      <thead>
+        <tr>
+          <th></th>
+          <th>Project</th>
+          <th>Status</th>
+          <th>Requested</th>
+          <th>Customer</th>
+          <th>Destination</th>
+          <th>Owner</th>
+          <th>Factory Rep</th>
+          <th>PD</th>
+          <th>Factory</th>
+          <th>Reqs</th>
+          <th>Products</th>
+          <th class="proj-actions-cell"></th>
         </tr>
-      `;
-    }).join('');
+      </thead>
+      ${sorted.map(p => {
+        const isEditing = p.id === projectEditingId;
+        const isExpanded = isEditing || projectExpandedIds.has(p.id);
+        const ro = isEditing ? '' : 'readonly';
+        const usedRecipeIds = new Set(p.products.map(prod => prod.recipeId));
+        const availableRecipes = recipes.filter(r => !usedRecipeIds.has(r.id));
+        const activity = [];
+        if(p.createdBy) activity.push(`Created by ${escapeHtml(p.createdBy)}${p.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(p.createdAt)) : ''}`);
+        if(p.updatedBy && p.updatedAt !== p.createdAt) activity.push(`Last edited by ${escapeHtml(p.updatedBy)}${p.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(p.updatedAt)) : ''}`);
 
-    const productCount = p.products.length;
+        const rows = p.products.map(prod => {
+          const r = recipes.find(x => x.id === prod.recipeId);
+          const label = r
+            ? `${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}`
+            : '<span style="color:var(--danger);">Recipe not found (deleted?)</span>';
+          return `
+            <tr data-product-id="${escapeHtml(prod.id)}">
+              <td>${label}</td>
+              <td><input type="text" class="proj-product-rep" list="salesRepDatalist" value="${escapeHtml(prod.salesRep)}" placeholder="Sales rep"></td>
+              <td>
+                <select class="proj-select proj-product-stage">
+                  ${PROJECT_STAGES.map(s => `<option value="${escapeHtml(s)}" ${s === prod.stage ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+                </select>
+              </td>
+              <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${escapeHtml(formatActivityDateTime(prod.updatedAt) || '')}</td>
+              <td style="white-space:nowrap;">
+                <button class="icon-btn" title="Progress log" data-role="open-log">🕒</button>
+                <button class="icon-btn" title="Remove product" data-role="remove-product">✕</button>
+              </td>
+            </tr>
+          `;
+        }).join('');
 
-    // Compact "review" strip of every key field, one small chip each — sits
-    // outside .part-body so it stays visible even while the card is
-    // collapsed, instead of forcing a full expand just to see the details.
-    const factChips = [
-      ['Status', p.status || PROJECT_STATUSES[0]],
-      ['Requested', p.requestDate],
-      ['Customer', p.customerName],
-      ['Destination', p.destinationCountry],
-      ['Owner', p.ownerSalesRep],
-      ['Factory Rep', p.factorySalesRep],
-      ['PD', p.responsiblePerson],
-      ['Factory', p.factoryName]
-    ].filter(([,v]) => v);
-    const factStripHtml = factChips.length
-      ? `<div class="proj-fact-strip">${factChips.map(([label,v]) => `<span class="proj-fact-chip"><b>${escapeHtml(label)}:</b> ${escapeHtml(v)}</span>`).join('')}</div>`
-      : '';
+        const productCount = p.products.length;
 
-    return `
-      <div class="part-block${isExpanded ? '' : ' collapsed'}" data-project-id="${escapeHtml(p.id)}">
-        <div class="part-header" style="margin-bottom:8px;">
-          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">▶</button>
-          <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(p.name || 'Untitled project')}</span>
-          <span class="part-header-summary">${productCount} product${productCount === 1 ? '' : 's'}</span>
-          ${isEditing
-            ? `<button class="btn btn-sm" data-role="save-project">💾 Save</button><button class="btn btn-sm" data-role="cancel-project">↩️ Cancel</button>`
-            : `<button class="btn btn-sm" data-role="edit-project">✏️ Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">✕ Delete</button>`}
-        </div>
-        ${factStripHtml}
-        <div class="part-body">
-        <div class="project-header-grid">
-          <div class="field" style="margin-bottom:0;">
-            <label>Project Name</label>
-            <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Status</label>
-            <select class="proj-select proj-status" ${isEditing ? '' : 'disabled'}>
-              ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}" ${s === (p.status || PROJECT_STATUSES[0]) ? 'selected' : ''}>${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
-            </select>
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Request Date</label>
-            <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Customer Name</label>
-            <input type="text" class="proj-customer" list="customerDatalist" ${ro} value="${escapeHtml(p.customerName)}" placeholder="e.g. ABC Trading Co.">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Destination Country</label>
-            <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Project Owner</label>
-            <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Factory Sales Rep</label>
-            <input type="text" class="proj-factory-rep" list="salesRepDatalist" ${ro} value="${escapeHtml(p.factorySalesRep)}" placeholder="e.g. Kenta-san">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Responsible Person (PD)</label>
-            <input type="text" class="proj-responsible" list="responsiblePersonDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Factory</label>
-            <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
-          </div>
-          <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-            <label>Requirements / Certifications</label>
-            <textarea class="proj-requirements" ${ro} placeholder="e.g. Halal certified, no MSG, shelf-life 12 months">${escapeHtml(p.requirements)}</textarea>
-          </div>
-        </div>
-        ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+        const summaryRow = `
+          <tr class="proj-row">
+            <td><button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">▶</button></td>
+            <td><b>${escapeHtml(p.name || 'Untitled project')}</b>${projectStatusBarHtml(p.status)}</td>
+            <td>${escapeHtml(p.status || PROJECT_STATUSES[0])}</td>
+            <td>${missingCell(p.requestDate)}</td>
+            <td>${missingCell(p.customerName)}</td>
+            <td>${missingCell(p.destinationCountry)}</td>
+            <td>${missingCell(p.ownerSalesRep)}</td>
+            <td>${missingCell(p.factorySalesRep)}</td>
+            <td>${missingCell(p.responsiblePerson)}</td>
+            <td>${missingCell(p.factoryName)}</td>
+            <td>${p.requirements ? '✓' : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td>${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
+            <td class="proj-actions-cell" style="white-space:nowrap;">
+              ${isEditing
+                ? `<button class="btn btn-sm" data-role="save-project">💾 Save</button><button class="btn btn-sm" data-role="cancel-project">↩️ Cancel</button>`
+                : `<button class="btn btn-sm" data-role="edit-project">✏️ Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">✕ Delete</button>`}
+            </td>
+          </tr>
+        `;
 
-        ${p.products.length ? `
-        <table>
-          <thead><tr><th>Product</th><th>Sales Rep</th><th>Stage</th><th>Last Update</th><th></th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-        ` : '<div class="overview-empty">No products yet — add one below</div>'}
+        const detailRow = isExpanded ? `
+          <tr class="proj-detail-row">
+            <td colspan="13">
+              <div class="project-header-grid">
+                <div class="field" style="margin-bottom:0;">
+                  <label>Project Name</label>
+                  <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Status</label>
+                  <select class="proj-select proj-status" ${isEditing ? '' : 'disabled'}>
+                    ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}" ${s === (p.status || PROJECT_STATUSES[0]) ? 'selected' : ''}>${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
+                  </select>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Request Date</label>
+                  <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Customer Name</label>
+                  <input type="text" class="proj-customer" list="customerDatalist" ${ro} value="${escapeHtml(p.customerName)}" placeholder="e.g. ABC Trading Co.">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Destination Country</label>
+                  <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Project Owner</label>
+                  <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Factory Sales Rep</label>
+                  <input type="text" class="proj-factory-rep" list="salesRepDatalist" ${ro} value="${escapeHtml(p.factorySalesRep)}" placeholder="e.g. Kenta-san">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Responsible Person (PD)</label>
+                  <input type="text" class="proj-responsible" list="responsiblePersonDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Factory</label>
+                  <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+                </div>
+                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
+                  <label>Requirements / Certifications</label>
+                  <textarea class="proj-requirements" ${ro} placeholder="e.g. Halal certified, no MSG, shelf-life 12 months">${escapeHtml(p.requirements)}</textarea>
+                </div>
+              </div>
+              ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
-        <div class="project-add-row" style="margin-top:12px;">
-          <select class="proj-select add-product-select">
-            <option value="">${availableRecipes.length ? 'Select a recipe to add...' : 'All recipes already added'}</option>
-            ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}</option>`).join('')}
-          </select>
-          <button class="btn btn-sm" data-role="add-product">+ Add Product</button>
-        </div>
-        </div>
-      </div>
-    `;
-  }).join('');
+              ${p.products.length ? `
+              <table>
+                <thead><tr><th>Product</th><th>Sales Rep</th><th>Stage</th><th>Last Update</th><th></th></tr></thead>
+                <tbody>${rows}</tbody>
+              </table>
+              ` : '<div class="overview-empty">No products yet — add one below</div>'}
 
-  container.querySelectorAll('.part-block').forEach(block => {
+              <div class="project-add-row" style="margin-top:12px;">
+                <select class="proj-select add-product-select">
+                  <option value="">${availableRecipes.length ? 'Select a recipe to add...' : 'All recipes already added'}</option>
+                  ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}</option>`).join('')}
+                </select>
+                <button class="btn btn-sm" data-role="add-product">+ Add Product</button>
+              </div>
+            </td>
+          </tr>
+        ` : '';
+
+        return `<tbody data-project-id="${escapeHtml(p.id)}">${summaryRow}${detailRow}</tbody>`;
+      }).join('')}
+    </table>
+    </div>
+  `;
+
+  container.querySelectorAll('tbody[data-project-id]').forEach(block => {
     const id = block.dataset.projectId;
     const p = projects.find(x => x.id === id);
     if(!p) return;
     const isEditing = id === projectEditingId;
+    const isExpanded = isEditing || projectExpandedIds.has(id);
 
     block.querySelector('.part-toggle-btn').addEventListener('click', () => {
       if(projectExpandedIds.has(id)) projectExpandedIds.delete(id);
@@ -3098,35 +3167,41 @@ function renderProjectsList(){
       });
     }
 
-    block.querySelectorAll('tr[data-product-id]').forEach(row => {
-      const prodId = row.dataset.productId;
-      const prod = p.products.find(x => x.id === prodId);
-      if(!prod) return;
+    // Everything below only exists in the DOM when the detail row is
+    // rendered (isExpanded) — unlike the old always-rendered-but-hidden
+    // .part-body, the table's detail <tr> is only emitted at all when
+    // expanded, so these queries would hit null while collapsed.
+    if(isExpanded){
+      block.querySelectorAll('tr[data-product-id]').forEach(row => {
+        const prodId = row.dataset.productId;
+        const prod = p.products.find(x => x.id === prodId);
+        if(!prod) return;
 
-      row.querySelector('.proj-product-rep').addEventListener('change', e => { prod.salesRep = e.target.value.trim(); scheduleProjectSave(p); });
-      row.querySelector('.proj-product-stage').addEventListener('change', e => {
-        addProductLogEntry(prod, e.target.value, '');
+        row.querySelector('.proj-product-rep').addEventListener('change', e => { prod.salesRep = e.target.value.trim(); scheduleProjectSave(p); });
+        row.querySelector('.proj-product-stage').addEventListener('change', e => {
+          addProductLogEntry(prod, e.target.value, '');
+          scheduleProjectSave(p);
+          renderProjectsList();
+        });
+        row.querySelector('[data-role="open-log"]').addEventListener('click', () => openProductLogModal(p.id, prod.id));
+        row.querySelector('[data-role="remove-product"]').addEventListener('click', () => {
+          const r = recipes.find(x => x.id === prod.recipeId);
+          if(!confirm(`Remove "${r ? recipeDisplayLabel(r) : 'this product'}" from the project? Its progress log will be lost.`)) return;
+          p.products = p.products.filter(x => x.id !== prodId);
+          scheduleProjectSave(p);
+          renderProjectsList();
+        });
+      });
+
+      const addSelect = block.querySelector('.add-product-select');
+      block.querySelector('[data-role="add-product"]').addEventListener('click', () => {
+        const recipeId = addSelect.value;
+        if(!recipeId) return;
+        p.products.push(blankProduct(recipeId));
         scheduleProjectSave(p);
         renderProjectsList();
       });
-      row.querySelector('[data-role="open-log"]').addEventListener('click', () => openProductLogModal(p.id, prod.id));
-      row.querySelector('[data-role="remove-product"]').addEventListener('click', () => {
-        const r = recipes.find(x => x.id === prod.recipeId);
-        if(!confirm(`Remove "${r ? recipeDisplayLabel(r) : 'this product'}" from the project? Its progress log will be lost.`)) return;
-        p.products = p.products.filter(x => x.id !== prodId);
-        scheduleProjectSave(p);
-        renderProjectsList();
-      });
-    });
-
-    const addSelect = block.querySelector('.add-product-select');
-    block.querySelector('[data-role="add-product"]').addEventListener('click', () => {
-      const recipeId = addSelect.value;
-      if(!recipeId) return;
-      p.products.push(blankProduct(recipeId));
-      scheduleProjectSave(p);
-      renderProjectsList();
-    });
+    }
 
     block.querySelector('[data-role="delete-project"]')?.addEventListener('click', () => {
       if(!confirm(`Delete project "${p.name || 'Untitled project'}"? This removes all its products and progress logs. This cannot be undone.`)) return;
