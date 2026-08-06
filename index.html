@@ -1525,6 +1525,106 @@
   .dash-activity-time{font-size:11px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;}
   .dash-empty{font-size:12px;color:var(--text-dim);padding:6px 0;}
 
+  /* ---------- Home dashboard v2: greeting / search / stats / action list ---------- */
+  .hd2-greeting{margin-bottom:16px;}
+  .hd2-hello{font-size:26px;font-weight:700;color:var(--primary-dark);line-height:1.2;}
+  .hd2-sub{font-size:13px;color:var(--text-dim);margin-top:4px;}
+  .hd2-searchrow{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
+  .hd2-search{
+    flex:1;
+    min-width:220px;
+    padding:10px 14px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    font-size:13px;
+    font-family:inherit;
+  }
+  .hd2-create-wrap{position:relative;flex-shrink:0;}
+  .hd2-create-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    right:0;
+    min-width:180px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:8px;
+    z-index:20;
+  }
+  .hd2-create-menu.open{display:block;}
+  .hd2-stats{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
+    gap:12px;
+    margin-bottom:16px;
+  }
+  .hd2-stat-card{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:16px;
+    cursor:pointer;
+    text-align:left;
+    font-family:inherit;
+    transition:border-color .15s;
+  }
+  .hd2-stat-card:hover{border-color:var(--primary);}
+  .hd2-stat-icon{font-size:22px;flex-shrink:0;}
+  .hd2-stat-text{flex:1;min-width:0;display:flex;flex-direction:column;gap:2px;}
+  .hd2-stat-label{font-size:12px;color:var(--text-dim);}
+  .hd2-stat-value{font-size:22px;font-weight:700;color:var(--primary-dark);}
+  .hd2-stat-arrow{font-size:18px;color:var(--text-dim);flex-shrink:0;}
+
+  .action-item{display:flex;align-items:flex-start;gap:10px;padding:9px 0;}
+  .action-item + .action-item{border-top:1px solid var(--border);}
+  .action-dot{width:8px;height:8px;border-radius:50%;margin-top:5px;flex-shrink:0;}
+  .action-item-body{flex:1;min-width:0;}
+  .action-item-title{font-size:13px;font-weight:600;}
+  .action-item-subject{font-size:11px;color:var(--text-dim);margin-top:2px;}
+
+  .status-pill{
+    display:inline-block;
+    padding:3px 9px;
+    border-radius:999px;
+    font-size:11px;
+    font-weight:600;
+    border:1px solid;
+    white-space:nowrap;
+  }
+
+  .dash-table-scroll{overflow-x:auto;}
+  .dash-projects-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .dash-projects-table th{
+    text-align:left;
+    font-size:11px;
+    color:var(--text-dim);
+    padding:0 10px 8px 0;
+    white-space:nowrap;
+  }
+  .dash-projects-table td{padding:8px 10px 8px 0;white-space:nowrap;vertical-align:middle;}
+  .dash-projects-table tr + tr td{border-top:1px solid var(--border);}
+  .dash-progress-pct{font-size:11px;color:var(--text-dim);margin-left:6px;}
+  .dash-next-action{color:var(--text-dim);}
+
+  .pipeline-funnel{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
+  .pipeline-step{
+    background:var(--bg);
+    border-radius:var(--radius);
+    padding:10px 16px;
+    text-align:center;
+    flex:1;
+    min-width:90px;
+  }
+  .pipeline-step-count{font-size:20px;font-weight:700;color:var(--primary-dark);}
+  .pipeline-step-label{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .pipeline-chevron{font-size:18px;color:var(--text-dim);flex-shrink:0;}
+
   .print-only{display:none;}
 
   @media print{
@@ -2018,7 +2118,8 @@ const CHANGELOG = [
   { version: "3.0.80", date: "2026-08-06", note: "Moved the 5 feature buttons (Compare Recipes, Ingredient Library, Reference Lists, Projects, Trial Results) out of the left sidebar and into a horizontal tab bar across the top of the screen, underlined to show which one is currently open. The sidebar now holds just the logo, account info, + New Recipe, search, and the recipe list" },
   { version: "3.0.81", date: "2026-08-06", note: "Redesigned the top bar to match a standard app-navbar layout: the Forge logo moved from the sidebar to the top-left (click it to go home), a Help icon and Notifications bell were added on the top-right, and the account box + Log Out button moved out of the sidebar into an avatar/name dropdown next to them (also holding Export All / Import). The sidebar itself now only has + New Recipe, search, and the recipe list" },
   { version: "3.0.82", date: "2026-08-06", note: "Added a \"Recipes\" tab to the top bar (the Home view — click it or the Forge logo to get there) and moved \"Compare Recipes\" off the top bar into the sidebar, right below + New Recipe, since it's a function you reach for while working with recipes rather than a standalone destination. The Recipes tab stays highlighted while comparing or editing any recipe" },
-  { version: "3.0.83", date: "2026-08-06", note: "The left sidebar (+ New Recipe, Compare Recipes, search, recipe list) now only shows up while in Recipes mode — every other tab (Ingredients, Reference Lists, Projects, Trials) gets the full width of the screen instead, with no sidebar at all" }
+  { version: "3.0.83", date: "2026-08-06", note: "The left sidebar (+ New Recipe, Compare Recipes, search, recipe list) now only shows up while in Recipes mode — every other tab (Ingredients, Reference Lists, Projects, Trials) gets the full width of the screen instead, with no sidebar at all" },
+  { version: "3.0.84", date: "2026-08-06", note: "Redesigned the Home dashboard: a personal greeting + a search-and-create bar up top, 4 clickable stat cards (Active Projects, Pending Review, Needs Attention, Updated This Week), a \"Needs Attention\" list surfacing real data gaps (projects with no products yet, unscored trials, projects missing this month's update, materials with no price), a merged Recent Activity feed across recipes/projects/trials, an Active Projects table with per-project progress and next action, and a Product Pipeline funnel. All existing analytics (By Country, sales rep/materials/customer breakdowns, trial score trend, most-iterated recipes, recently added materials) stay below, unchanged" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2525,6 +2626,85 @@ function projectStatusBarHtml(status){
   const s = status || PROJECT_STATUSES[0];
   const cfg = PROJECT_STATUS_BAR[s] || PROJECT_STATUS_BAR['Not Started'];
   return `<div class="proj-status-bar-track" title="${escapeHtml(s)}"><div class="proj-status-bar-fill" style="width:${cfg.pct}%;background:${cfg.color};"></div></div>`;
+}
+
+// Pill colors are separate from PROJECT_STATUS_BAR's progress-bar colors —
+// a bar fill can just be var(--accent) etc., but a pill needs a light
+// background + readable text + border all at once, which CSS custom
+// properties can't derive from a single color value via string concatenation
+// (var(...) isn't a hex string), so each status gets its own explicit triple.
+const PROJECT_STATUS_PILL = {
+  'Not Started': { bg:'var(--bg)', border:'var(--border)', text:'var(--text-dim)' },
+  'In Progress': { bg:'var(--accent-light)', border:'var(--accent)', text:'var(--primary-dark)' },
+  'Blocked / On Hold': { bg:'var(--danger-light)', border:'var(--danger)', text:'var(--danger)' },
+  'In Review': { bg:'var(--primary-light)', border:'var(--primary)', text:'var(--primary-dark)' },
+  'Completed': { bg:'var(--ok-light)', border:'var(--ok)', text:'var(--ok)' },
+  'Cancelled': { bg:'var(--bg)', border:'var(--border)', text:'var(--text-dim)' }
+};
+function statusPillHtml(status){
+  const s = status || PROJECT_STATUSES[0];
+  const cfg = PROJECT_STATUS_PILL[s] || PROJECT_STATUS_PILL['Not Started'];
+  return `<span class="status-pill" style="background:${cfg.bg};color:${cfg.text};border-color:${cfg.border};">${escapeHtml(s)}</span>`;
+}
+
+// Only stages that represent forward progress toward a finished product —
+// On Hold/Cancelled products don't have a meaningful position on this scale,
+// so they're excluded from the average rather than distorting it.
+const STAGE_PROGRESS_ORDER = ['Requested','Formulating','Sampling','Customer Review','Approved','In Production'];
+function projectProgressPct(p){
+  const prods = (p.products || []).filter(pr => STAGE_PROGRESS_ORDER.includes(pr.stage));
+  if(!prods.length) return 0;
+  const sum = prods.reduce((s, pr) => s + STAGE_PROGRESS_ORDER.indexOf(pr.stage), 0);
+  return Math.round((sum / prods.length) / (STAGE_PROGRESS_ORDER.length - 1) * 100);
+}
+function projectHasUpdateThisMonth(p){
+  const now = new Date();
+  return (p.monthlyUpdates || []).some(mu => {
+    if(!mu.date) return false;
+    const d = new Date(mu.date);
+    return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
+  });
+}
+// The single most useful next step for this project, shown in the Active
+// Projects table — same underlying signals as computeActionItems(), just
+// reduced to one line per project instead of a global flat list.
+function projectNextAction(p){
+  if(!(p.products || []).length) return 'Add a product';
+  if(p.status === 'In Progress' && !projectHasUpdateThisMonth(p)) return "Add this month's update";
+  return '—';
+}
+
+// Real, derivable "needs attention" signals — deliberately NOT a fabricated
+// due-date/task system (Forge has no due-date field anywhere), just honest
+// gaps in data that already exists: projects with no products yet, trials
+// nobody has scored, active projects missing this month's update, and
+// materials with no price on file (which silently breaks Compare Costing).
+// Sorted by severity so the dashboard card can show the most pressing first.
+const ACTION_SEVERITY_ORDER = { high: 0, medium: 1, low: 2 };
+function computeActionItems(){
+  const items = [];
+  projects.forEach(p => {
+    if(!(p.products || []).length){
+      items.push({ severity: 'high', title: 'Add a product to this project', subjectIcon: '📁', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
+    }
+  });
+  trials.forEach(t => {
+    if((t.recipeIds || []).length && trialAvgScoreRatio(t) === null){
+      const label = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial';
+      items.push({ severity: 'medium', title: 'Score this trial', subjectIcon: '🧪', subject: label, itemType: 'trial', itemId: t.id });
+    }
+  });
+  projects.forEach(p => {
+    if(p.status === 'In Progress' && (p.products || []).length && !projectHasUpdateThisMonth(p)){
+      items.push({ severity: 'medium', title: "Add this month's update", subjectIcon: '📁', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
+    }
+  });
+  ingredientMaster.forEach(m => {
+    if(m.price === '' || m.price == null){
+      items.push({ severity: 'low', title: 'Add a price', subjectIcon: '📚', subject: m.nameEn || 'Untitled material', itemType: 'material', itemId: m.id });
+    }
+  });
+  return items.sort((a, b) => ACTION_SEVERITY_ORDER[a.severity] - ACTION_SEVERITY_ORDER[b.severity]);
 }
 
 // Reads the Monthly Update draft fields (date/results/next-plan) out of a
@@ -4996,11 +5176,33 @@ function computeDashboardData(){
     .sort((a,b) => b.updatedAt - a.updatedAt)
     .slice(0, 4);
 
+  const activeProjectsCount = projects.filter(p => p.status === 'In Progress').length;
+  const inReviewProjectsCount = projects.filter(p => p.status === 'In Review').length;
+  const updatedThisWeekAll = updatedThisWeek
+    + projects.filter(p => p.updatedAt && (now - p.updatedAt) <= oneWeekMs).length
+    + trials.filter(t => t.updatedAt && (now - t.updatedAt) <= oneWeekMs).length;
+
+  const topActiveProjects = projects
+    .filter(p => p.status === 'In Progress')
+    .sort((a,b) => (b.updatedAt||0) - (a.updatedAt||0))
+    .slice(0, 5);
+
+  // A single merged feed across all 3 editable record types, newest first —
+  // there's no "recently opened" tracking anywhere in Forge, so this is
+  // built from real edit timestamps instead of fabricating a view-history
+  // feature that doesn't exist.
+  const mergedRecentActivity = [
+    ...recipes.filter(r => r.updatedAt).map(r => ({ type: 'recipe', icon: '📄', id: r.id, name: recipeDisplayLabel(r), updatedAt: r.updatedAt })),
+    ...projects.filter(p => p.updatedAt).map(p => ({ type: 'project', icon: '📁', id: p.id, name: p.name || 'Untitled project', updatedAt: p.updatedAt })),
+    ...trials.filter(t => t.updatedAt).map(t => ({ type: 'trial', icon: '🧪', id: t.id, name: (t.recipeIds||[]).map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial', updatedAt: t.updatedAt }))
+  ].sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 5);
+
   return {
     totalRecipes: recipes.length, totalMaterials: ingredientMaster.length, totalProjects: projects.length,
     newThisMonth, updatedThisWeek, avgYield, totalVersions,
     byCountry, byCustomer, bySalesRep, materialUsage, mostIterated, recentMaterials, recentActivity,
-    trend, avgTrialScorePct, productsByStage, recentProjects
+    trend, avgTrialScorePct, productsByStage, recentProjects,
+    activeProjectsCount, inReviewProjectsCount, updatedThisWeekAll, topActiveProjects, mergedRecentActivity
   };
 }
 
@@ -5038,13 +5240,13 @@ function renderCountryBarList(groups){
 
 function renderDashboardHome(){
   const d = computeDashboardData();
+  const actionItems = computeActionItems();
 
   const metrics = [
     { label:'Recipes', value:d.totalRecipes },
     { label:'Projects', value:d.totalProjects },
     { label:'Materials', value:d.totalMaterials },
     { label:'New this month', value:d.newThisMonth },
-    { label:'Updated this week', value:d.updatedThisWeek },
     { label:'Avg yield', value:d.avgYield != null ? `${d.avgYield.toFixed(1)}<span class="dm-suffix">%</span>` : '-' },
     { label:'Versions saved', value:d.totalVersions }
   ];
@@ -5065,47 +5267,128 @@ function renderDashboardHome(){
     ? d.mostIterated.map(x => `<div class="dash-list-row"><span>${escapeHtml(x.label)}</span><span class="dbl-count">${x.count} version${x.count === 1 ? '' : 's'}</span></div>`).join('')
     : '<div class="dash-empty">No saved versions yet</div>';
 
-  const recentProjectsHtml = d.recentProjects.length
-    ? d.recentProjects.map(p => {
-        const sub = [p.factoryName, p.ownerSalesRep].filter(Boolean).map(escapeHtml).join(' · ');
-        const count = (p.products || []).length;
-        return `
-          <div class="dash-activity-row">
-            <div>
-              <div class="dash-activity-name">${escapeHtml(p.name || 'Untitled project')}</div>
-              <div class="dash-activity-sub">${sub ? sub + ' · ' : ''}${count} product${count === 1 ? '' : 's'}</div>
-            </div>
-            <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(p.updatedAt) || '')}</div>
-          </div>
-        `;
-      }).join('')
-    : '<div class="dash-empty">No projects yet — click "📁 Projects" to start one</div>';
+  const { name: greetingName } = accountDisplayFromEmail(currentUser?.email);
+  const todayLabel = new Date().toLocaleDateString('en-US', { day:'numeric', month:'long', year:'numeric' });
 
-  const recentActivityHtml = d.recentActivity.length
-    ? d.recentActivity.map(r => {
-        const who = r.updatedBy && r.updatedBy !== r.createdBy ? `Edited by ${escapeHtml(r.updatedBy)}` : (r.createdBy ? `Created by ${escapeHtml(r.createdBy)}` : '');
-        const code = fullCode(r);
-        return `
-          <div class="dash-activity-row">
-            <div>
-              <div class="dash-activity-name">${escapeHtml(recipeDisplayLabel(r))}${code ? ` <span class="da-code">${escapeHtml(code)}</span>` : ''}</div>
-              ${who ? `<div class="dash-activity-sub">${who}</div>` : ''}
-            </div>
-            <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(r.updatedAt) || '')}</div>
+  const statCards = [
+    { icon:'📁', label:'Active Projects', value:d.activeProjectsCount, action:'filter-in-progress' },
+    { icon:'📋', label:'Pending Review', value:d.inReviewProjectsCount, action:'filter-in-review' },
+    { icon:'⚠️', label:'Needs Attention', value:actionItems.length, action:'scroll-attention' },
+    { icon:'🔄', label:'Updated This Week', value:d.updatedThisWeekAll, action:'scroll-activity' }
+  ];
+  const statCardsHtml = statCards.map(s => `
+    <button type="button" class="hd2-stat-card" data-stat-action="${s.action}">
+      <span class="hd2-stat-icon">${s.icon}</span>
+      <span class="hd2-stat-text">
+        <span class="hd2-stat-label">${escapeHtml(s.label)}</span>
+        <span class="hd2-stat-value">${s.value}</span>
+      </span>
+      <span class="hd2-stat-arrow">›</span>
+    </button>
+  `).join('');
+
+  // No due-date field exists anywhere in Forge, so these are honest data
+  // gaps (missing products/scores/updates/prices) rather than a fabricated
+  // task/deadline system — see computeActionItems() for exactly what each
+  // one checks.
+  const SEVERITY_DOT_COLOR = { high:'var(--danger)', medium:'var(--accent)', low:'var(--text-dim)' };
+  const shownActionItems = actionItems.slice(0, 5);
+  const actionItemsHtml = shownActionItems.length
+    ? shownActionItems.map(item => `
+        <div class="action-item">
+          <span class="action-dot" style="background:${SEVERITY_DOT_COLOR[item.severity]};"></span>
+          <div class="action-item-body">
+            <div class="action-item-title">${escapeHtml(item.title)}</div>
+            <div class="action-item-subject">${item.subjectIcon} ${escapeHtml(item.subject)}</div>
           </div>
-        `;
-      }).join('')
-    : '<div class="dash-empty">No recipes yet — click "+ New Recipe" to start one</div>';
+          <button class="btn btn-sm action-go-btn" data-item-type="${escapeHtml(item.itemType)}" data-item-id="${escapeHtml(item.itemId)}">Go</button>
+        </div>
+      `).join('') + (actionItems.length > shownActionItems.length ? `<div class="dash-empty">+${actionItems.length - shownActionItems.length} more</div>` : '')
+    : '<div class="dash-empty">Nothing needs attention right now 🎉</div>';
+
+  const mergedActivityHtml = d.mergedRecentActivity.length
+    ? d.mergedRecentActivity.map(item => `
+        <div class="dash-activity-row action-go-btn" data-item-type="${item.type}" data-item-id="${escapeHtml(item.id)}" style="cursor:pointer;">
+          <div class="dash-activity-name">${item.icon} ${escapeHtml(item.name)}</div>
+          <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(item.updatedAt) || '')}</div>
+        </div>
+      `).join('')
+    : '<div class="dash-empty">No activity yet</div>';
+
+  const activeProjectsTableHtml = d.topActiveProjects.length
+    ? `
+      <div class="dash-table-scroll">
+      <table class="dash-projects-table">
+        <thead><tr><th>Project</th><th>Customer</th><th>Progress</th><th>Status</th><th>Next action</th><th></th></tr></thead>
+        <tbody>
+          ${d.topActiveProjects.map(p => `
+            <tr>
+              <td><b>${escapeHtml(p.name || 'Untitled project')}</b></td>
+              <td>${escapeHtml(p.customerName || '—')}</td>
+              <td>
+                <div class="proj-status-bar-track" style="max-width:120px;"><div class="proj-status-bar-fill" style="width:${projectProgressPct(p)}%;background:var(--accent);"></div></div>
+                <span class="dash-progress-pct">${projectProgressPct(p)}%</span>
+              </td>
+              <td>${statusPillHtml(p.status)}</td>
+              <td class="dash-next-action">${escapeHtml(projectNextAction(p))}</td>
+              <td><button class="btn btn-sm action-go-btn" data-item-type="project" data-item-id="${escapeHtml(p.id)}">View</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+      </div>
+    `
+    : '<div class="dash-empty">No active projects right now</div>';
+
+  const pipelineHtml = d.productsByStage.length
+    ? `<div class="pipeline-funnel">${d.productsByStage.map((g,i) => `
+        ${i > 0 ? '<div class="pipeline-chevron">›</div>' : ''}
+        <div class="pipeline-step">
+          <div class="pipeline-step-count">${g.count}</div>
+          <div class="pipeline-step-label">${escapeHtml(g.label)}</div>
+        </div>
+      `).join('')}</div>`
+    : '<div class="dash-empty">No products in the pipeline yet</div>';
 
   return `
     <div class="home-dashboard">
-      <div class="home-dashboard-header">
-        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
-        <div>
-          <div class="hd-title">Forge</div>
-          <div class="hd-sub">Food Product Development</div>
-          ${currentUser ? `<div class="hd-welcome">Welcome, ${escapeHtml(currentUser.email)}</div>` : ''}
+      <div class="hd2-greeting">
+        <div class="hd2-hello">Hello, ${escapeHtml(greetingName || 'there')}</div>
+        <div class="hd2-sub">Your work overview · ${escapeHtml(todayLabel)}</div>
+      </div>
+
+      <div class="hd2-searchrow">
+        <input type="text" class="hd2-search" id="hdSearchInput" placeholder="Search recipes, projects, materials...">
+        <div class="hd2-create-wrap">
+          <button type="button" class="btn btn-primary" id="hdCreateBtn">+ Create ▾</button>
+          <div class="hd2-create-menu" id="hdCreateMenu">
+            <button type="button" class="navbar-account-menu-item" id="hdCreateRecipeBtn">📄 New Recipe</button>
+            <button type="button" class="navbar-account-menu-item" id="hdCreateProjectBtn">📁 New Project</button>
+          </div>
         </div>
+      </div>
+
+      <div class="hd2-stats">${statCardsHtml}</div>
+
+      <div class="dash-row">
+        <div class="dash-card" id="needsAttentionCard">
+          <div class="dash-card-title">Needs Attention</div>
+          ${actionItemsHtml}
+        </div>
+        <div class="dash-card" id="recentActivityCard">
+          <div class="dash-card-title">Recent Activity</div>
+          ${mergedActivityHtml}
+        </div>
+      </div>
+
+      <div class="dash-card" style="margin-bottom:14px;">
+        <div class="dash-card-title">Active Projects</div>
+        ${activeProjectsTableHtml}
+      </div>
+
+      <div class="dash-card" style="margin-bottom:14px;">
+        <div class="dash-card-title">Product Pipeline</div>
+        ${pipelineHtml}
       </div>
 
       <div class="dash-metrics">
@@ -5115,17 +5398,6 @@ function renderDashboardHome(){
             <div class="dash-metric-value">${m.value}</div>
           </div>
         `).join('')}
-      </div>
-
-      <div class="dash-row">
-        <div class="dash-card">
-          <div class="dash-card-title">Products by stage</div>
-          ${renderBarList(d.productsByStage)}
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Recent projects</div>
-          ${recentProjectsHtml}
-        </div>
       </div>
 
       <div class="dash-row">
@@ -5166,13 +5438,65 @@ function renderDashboardHome(){
           <div class="dash-card-title">Recently added materials</div>
           ${recentMaterialsHtml}
         </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Recent activity</div>
-          ${recentActivityHtml}
-        </div>
       </div>
     </div>
   `;
+}
+
+function wireDashboardHome(){
+  const main = document.getElementById('mainArea');
+
+  main.querySelectorAll('.action-go-btn').forEach(el => {
+    el.addEventListener('click', () => {
+      const type = el.dataset.itemType, id = el.dataset.itemId;
+      if(type === 'project') openProjectFromDashboard(id);
+      else if(type === 'trial') openTrialFromDashboard(id);
+      else if(type === 'material') openMaterialFromDashboard(id);
+    });
+  });
+
+  main.querySelectorAll('.hd2-stat-card').forEach(el => {
+    el.addEventListener('click', () => {
+      const action = el.dataset.statAction;
+      if(action === 'filter-in-progress' || action === 'filter-in-review'){
+        projectStatusFilter = action === 'filter-in-progress' ? 'In Progress' : 'In Review';
+        mainFeatureView = 'projects';
+        renderMain();
+        renderSidebar();
+      }else if(action === 'scroll-attention'){
+        document.getElementById('needsAttentionCard')?.scrollIntoView({ behavior:'smooth', block:'start' });
+      }else if(action === 'scroll-activity'){
+        document.getElementById('recentActivityCard')?.scrollIntoView({ behavior:'smooth', block:'start' });
+      }
+    });
+  });
+
+  const searchInputHome = document.getElementById('hdSearchInput');
+  searchInputHome?.addEventListener('input', () => {
+    const sidebarSearch = document.getElementById('searchInput');
+    if(sidebarSearch){
+      sidebarSearch.value = searchInputHome.value;
+      renderSidebar();
+    }
+  });
+
+  const createBtn = document.getElementById('hdCreateBtn');
+  const createMenu = document.getElementById('hdCreateMenu');
+  createBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    createMenu.classList.toggle('open');
+  });
+  document.getElementById('hdCreateRecipeBtn')?.addEventListener('click', () => {
+    createMenu.classList.remove('open');
+    document.getElementById('btnNew').click();
+  });
+  document.getElementById('hdCreateProjectBtn')?.addEventListener('click', () => {
+    createMenu.classList.remove('open');
+    mainFeatureView = 'projects';
+    renderMain();
+    renderSidebar();
+    document.getElementById('btnAddProject')?.click();
+  });
 }
 
 // Each entry mounts one of the 5 sidebar features into #mainArea. Checked
@@ -5191,6 +5515,37 @@ function closeFeatureView(){
   renderSidebar();
 }
 
+// "Go" targets for dashboard action items / the Active Projects table —
+// open the relevant feature view already expanded (and, for a project,
+// filtered down to it) instead of just dropping the user on an unfiltered
+// list they'd have to search through themselves.
+function openProjectFromDashboard(projectId){
+  const p = projects.find(x => x.id === projectId);
+  mainFeatureView = 'projects';
+  renderMain();
+  renderSidebar();
+  projectExpandedIds.add(projectId);
+  const input = document.getElementById('projectSearchInput');
+  if(input && p && p.name) input.value = p.name;
+  renderProjectsList();
+}
+function openTrialFromDashboard(trialId){
+  mainFeatureView = 'trials';
+  renderMain();
+  renderSidebar();
+  trialExpandedIds.add(trialId);
+  renderTrialsList();
+}
+function openMaterialFromDashboard(materialId){
+  const m = ingredientMaster.find(x => x.id === materialId);
+  mainFeatureView = 'materials';
+  renderMain();
+  renderSidebar();
+  const input = document.getElementById('materialSearchInput');
+  if(input && m && m.nameEn) input.value = m.nameEn;
+  renderMaterialTable();
+}
+
 function renderMain(){
   const main = document.getElementById('mainArea');
   // The recipe-navigator sidebar (New Recipe / Compare / search / list) only
@@ -5206,6 +5561,7 @@ function renderMain(){
   main.classList.remove('main-wide');
   if(!r){
     main.innerHTML = renderDashboardHome();
+    wireDashboardHome();
     return;
   }
 
@@ -6424,6 +6780,7 @@ document.getElementById('navbarAccount').addEventListener('click', e => {
 });
 document.addEventListener('click', () => {
   document.getElementById('navbarAccount').classList.remove('open');
+  document.getElementById('hdCreateMenu')?.classList.remove('open');
 });
 
 /* Mobile sidebar drawer: hidden off-screen by default below 800px width,
