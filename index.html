@@ -256,6 +256,19 @@
     gap:6px;
     transition:background .15s,border-color .15s;
   }
+  /* Inline Lucide icons (see the icon() helper / LUCIDE_ICONS map in JS) —
+     inside a flex .btn the gap/align-items above already lines them up with
+     adjacent text; the vertical-align nudge is for icons used outside a
+     flex container (e.g. inline in a table cell or a sort-header label). */
+  .lucide-icon{flex-shrink:0;vertical-align:-3px;color:var(--primary);}
+  /* Two-tone icon system: navy (--primary) everywhere by default, orange
+     (--accent) only for "active/selected" state and .btn-primary's filled
+     navy buttons need their icon to stay white for contrast, same as the
+     button's own text. Delete/danger icons stay red — that color carries a
+     real warning meaning, not just a decorative accent. */
+  .btn-primary .lucide-icon{color:#fff;}
+  .btn-danger .lucide-icon{color:var(--danger);}
+  .active .lucide-icon{color:var(--accent);}
   .btn:hover{background:var(--primary-light);border-color:var(--primary);}
   .btn-primary{
     background:var(--primary);
@@ -284,6 +297,25 @@
     font-size:13px;
     font-family:inherit;
   }
+  .search-clear-btn{
+    position:absolute;
+    right:6px;
+    top:50%;
+    transform:translateY(-50%);
+    width:20px;
+    height:20px;
+    border:none;
+    background:none;
+    border-radius:50%;
+    color:var(--text-dim);
+    cursor:pointer;
+    align-items:center;
+    justify-content:center;
+    font-size:12px;
+    line-height:1;
+    padding:0;
+  }
+  .search-clear-btn:hover{background:var(--primary-light);color:var(--primary-dark);}
   .recipe-list{
     flex:1;
     overflow-y:auto;
@@ -358,6 +390,21 @@
     line-height:1.15;
     margin-bottom:6px;
   }
+  /* Full-page section headers (Compare Recipes, Ingredient Library,
+     Reference Lists, Projects, Trial Results, Recipes) are short, static
+     labels, not a document title the way an actual recipe name is — reusing
+     .recipe-title-display's 54px made them look oversized relative to the
+     page's own content, so they get a smaller header style instead. */
+  .section-title-display{
+    font-size:26px;
+    font-weight:700;
+    color:var(--primary-dark);
+    line-height:1.2;
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  .section-title-display .lucide-icon{vertical-align:0;}
   .recipe-title-display .rt-code{
     font-size:25px;
     font-weight:600;
@@ -597,14 +644,33 @@
     margin-top:5px;
   }
   .proj-status-bar-fill{height:100%;border-radius:3px;}
-  /* Bounded-height, scrolls both ways within itself — with 25+ rows, an
-     unbounded overflow-x:auto div puts its horizontal scrollbar at the very
-     bottom of the whole row list, which isn't reachable without scrolling
-     all the way down there first. Capping the height keeps both scrollbars
-     right where the table is. */
-  .proj-table-scroll{overflow:auto;max-height:60vh;border:1px solid var(--border);border-radius:var(--radius);}
+  /* The table scrolls with the rest of the page now (no bounded max-height
+     / border box around it — that read as a nested scrollable window sitting
+     inside the page). Only horizontal overflow gets its own scroll, since
+     the table has more columns than comfortably fit most screens. */
+  /* Still scrollable (mouse-drag, Shift+wheel, touch, and the proxy bar
+     below all still work) — just visually scrollbar-less, so the sticky
+     proxy bar is the only horizontal scrollbar actually on screen instead
+     of two redundant ones stacked on top of each other. */
+  .proj-table-scroll{overflow-x:auto;scrollbar-width:none;-ms-overflow-style:none;}
+  .proj-table-scroll::-webkit-scrollbar{display:none;}
   .proj-table-scroll table{width:100%;}
-  .proj-table-scroll thead th{position:sticky;top:0;background:var(--panel);z-index:2;}
+  /* Thin proxy scrollbar pinned to the bottom of the viewport (not the
+     bottom of the table) — see the JS wiring in renderProjectsList() for
+     why: the real horizontal scrollbar on a page-height table sits below
+     the fold, this stand-in stays reachable the whole time the table is
+     anywhere on screen. */
+  .proj-scrollbar-proxy{
+    display:none;
+    position:sticky;
+    bottom:28px; /* sits just above the fixed 28px app-footer bar, not under it */
+    height:16px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    background:var(--panel);
+    z-index:5;
+  }
+  #projScrollbarProxyInner{height:1px;}
   /* Edit/Save/Delete lives in the last column of a wide, horizontally
      scrolling table — pinned to the right edge so it's always reachable
      instead of getting scrolled out of view behind the other columns. */
@@ -614,7 +680,6 @@
     background:var(--panel);
     box-shadow:-4px 0 6px -4px rgba(0,0,0,.15);
   }
-  .proj-table-scroll thead th.proj-actions-cell{z-index:3;}
   .proj-th-sortable{cursor:pointer;user-select:none;}
   .proj-th-sortable:hover{color:var(--primary);}
   .proj-th-sortable.active{color:var(--primary-dark);font-weight:700;}
@@ -909,7 +974,10 @@
 
   .compare-pickers{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    /* Same leading 220px spacer as .compare-info-grid below, so the Recipe
+       1/2/3 pickers line up with their own recipe's column everywhere else
+       on the page (info card, ingredient/costing tables, process steps). */
+    grid-template-columns:220px repeat(3,1fr);
     gap:14px;
     margin-bottom:20px;
   }
@@ -1011,7 +1079,9 @@
   .compare-missing{color:var(--text-dim);}
   .compare-steps-grid{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    /* Same leading 220px spacer as .compare-info-grid — keeps this section's
+       columns aligned with the pickers/info/tables above it. */
+    grid-template-columns:220px repeat(3,1fr);
     gap:14px;
   }
   .compare-steps-col{
@@ -1815,11 +1885,11 @@
     <span class="navbar-brand-title">Forge</span>
   </div>
   <div class="navbar-tabs">
+    <button class="nav-tab" id="btnOpenProjects">Projects</button>
     <button class="nav-tab" id="btnRecipesTab">Recipes</button>
+    <button class="nav-tab" id="btnOpenTrials">Trials</button>
     <button class="nav-tab" id="btnOpenMaterialLibSidebar">Ingredients</button>
     <button class="nav-tab" id="btnOpenRefLists">Reference Lists</button>
-    <button class="nav-tab" id="btnOpenProjects">Projects</button>
-    <button class="nav-tab" id="btnOpenTrials">Trials</button>
   </div>
   <div class="navbar-right">
     <button class="navbar-icon-btn" id="btnNavbarHelp" title="Help">?</button>
@@ -1830,10 +1900,10 @@
       <span class="navbar-account-chevron">▾</span>
       <div class="navbar-account-menu" id="navbarAccountMenu">
         <div class="navbar-account-email" id="navbarAccountEmail"></div>
-        <button class="navbar-account-menu-item" id="btnExportAll">⬇ Export All (JSON)</button>
-        <button class="navbar-account-menu-item" id="btnImport">⬆ Import (JSON)</button>
+        <button class="navbar-account-menu-item" id="btnExportAll">Export All (JSON)</button>
+        <button class="navbar-account-menu-item" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
-        <button class="navbar-account-menu-item" id="btnLogoutFromApp">🚪 Log Out</button>
+        <button class="navbar-account-menu-item" id="btnLogoutFromApp">Log Out</button>
       </div>
     </div>
   </div>
@@ -2128,7 +2198,17 @@ const CHANGELOG = [
   { version: "3.0.82", date: "2026-08-06", note: "Added a \"Recipes\" tab to the top bar (the Home view — click it or the Forge logo to get there) and moved \"Compare Recipes\" off the top bar into the sidebar, right below + New Recipe, since it's a function you reach for while working with recipes rather than a standalone destination. The Recipes tab stays highlighted while comparing or editing any recipe" },
   { version: "3.0.83", date: "2026-08-06", note: "The left sidebar (+ New Recipe, Compare Recipes, search, recipe list) now only shows up while in Recipes mode — every other tab (Ingredients, Reference Lists, Projects, Trials) gets the full width of the screen instead, with no sidebar at all" },
   { version: "3.0.84", date: "2026-08-06", note: "Redesigned the Home dashboard: a personal greeting + a search-and-create bar up top, 4 clickable stat cards (Active Projects, Pending Review, Needs Attention, Updated This Week), a \"Needs Attention\" list surfacing real data gaps (projects with no products yet, unscored trials, projects missing this month's update, materials with no price), a merged Recent Activity feed across recipes/projects/trials, an Active Projects table with per-project progress and next action, and a Product Pipeline funnel. All existing analytics (By Country, sales rep/materials/customer breakdowns, trial score trend, most-iterated recipes, recently added materials) stay below, unchanged" },
-  { version: "3.0.85", date: "2026-08-06", note: "The Forge logo now goes to the Home dashboard specifically (no sidebar), while the \"Recipes\" tab opens a new full-page Recipes browser (also no sidebar, cards laid out in a wider grid) instead of just aliasing to Home. Opening a specific recipe from either place hands off to the compact sidebar list, which now only appears while a recipe is actually open — not on Home, and not on the Recipes browser itself" }
+  { version: "3.0.85", date: "2026-08-06", note: "The Forge logo now goes to the Home dashboard specifically (no sidebar), while the \"Recipes\" tab opens a new full-page Recipes browser (also no sidebar, cards laid out in a wider grid) instead of just aliasing to Home. Opening a specific recipe from either place hands off to the compact sidebar list, which now only appears while a recipe is actually open — not on Home, and not on the Recipes browser itself" },
+  { version: "3.0.86", date: "2026-08-06", note: "Compare Recipes: fixed the Recipe 1/2/3 pickers, ingredient/costing tables, and Process Steps columns not lining up with each other (the pickers and steps were missing the same leading spacer the ingredient table already used, so everything after the picker row was shifted one column to the right). Also shrunk the page-header title on Compare Recipes, Ingredient Library, Reference Lists, Projects, Trial Results, and Recipes from the same oversized 54px used for an actual recipe's title down to 26px, since these are short section labels, not a document title" },
+  { version: "3.0.87", date: "2026-08-06", note: "Projects table no longer sits in its own bounded, bordered scroll box (max-height 60vh) inside the page — it now grows and scrolls with the page like the rest of the screen. Still scrolls sideways on its own for the wide column set, with Edit/Save/Delete still pinned to the right edge while doing so" },
+  { version: "3.0.88", date: "2026-08-06", note: "Projects table: added a thin scrollbar pinned to the bottom of the screen (not the bottom of the table) so the sideways scroll is reachable no matter where you've scrolled down to — dragging it or the table's own scrollbar moves both together" },
+  { version: "3.0.89", date: "2026-08-06", note: "Reordered the top navbar tabs to Projects, Recipes, Trials, Ingredients, Reference Lists" },
+  { version: "3.0.90", date: "2026-08-06", note: "Projects table: hid the table's own horizontal scrollbar (still fully scrollable by drag/wheel/touch, just visually silent) so only the bottom-pinned proxy scrollbar shows, instead of two redundant scrollbars stacked on top of each other" },
+  { version: "3.0.91", date: "2026-08-06", note: "Projects: added an optional photo per project — upload/remove it from the project's expanded edit form, shown as a thumbnail in a new Photo column in the Projects table" },
+  { version: "3.0.92", date: "2026-08-06", note: "Projects: added a Duplicate button (appears once you click Edit, next to Save) that copies a project's name/photo/customer/destination/owner/requirements/products as a starting template, resetting status to Not Started, each product's stage, and clearing monthly updates — then opens the new copy straight into editing" },
+  { version: "3.0.93", date: "2026-08-06", note: "Projects: \"Projects by Status\" bars are now colored by status (matching the mini status bar under each project's name in the table below) instead of every bar being the same color. Also added a clear (✕) button to the Projects search box that appears once you start typing" },
+  { version: "3.0.94", date: "2026-08-07", note: "Replaced every emoji used as a UI icon (section headers, buttons, stat cards, status badges, etc.) with Lucide icons — embedded inline as SVG so the app still works offline, rather than loaded from a CDN. Emoji left untouched in changelog history text, since those are just describing what a past version looked like at the time" },
+  { version: "3.0.95", date: "2026-08-07", note: "Icons are now navy by default, switching to orange only for active/selected state (the current tab, an active sort column, Compare Recipes while open). Delete/trash icons stay red as a warning color, and icons on solid navy buttons stay white for contrast" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2393,7 +2473,7 @@ function renderVersionsList(r){
       </div>
       <div class="version-item-actions">
         <button class="btn btn-sm" data-role="restore-version">Restore</button>
-        <button class="icon-btn" data-role="delete-version" title="Delete this version">✕</button>
+        <button class="icon-btn" data-role="delete-version" title="Delete this version">${icon('x')}</button>
       </div>
     </div>
   `).join('');
@@ -2449,9 +2529,9 @@ function mountRefListsView(){
   refListEditingId = null;
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">📇 Reference Lists</div>
+      <div class="section-title-display">${icon('list', 24)} Reference Lists</div>
       <div class="toolbar">
-        <button class="btn" id="btnCloseRefLists">← Back</button>
+        <button class="btn" id="btnCloseRefLists">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
@@ -2527,8 +2607,8 @@ function renderRefListItems(){
         ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
       </div>
       ${isEditing
-        ? `<button class="icon-btn" title="Save" data-role="save">💾</button><button class="icon-btn" title="Cancel" data-role="cancel">↩️</button>`
-        : `<button class="icon-btn" title="Edit" data-role="edit">✏️</button><button class="icon-btn" title="Delete" data-role="delete">✕</button>`}
+        ? `<button class="icon-btn" title="Save" data-role="save">${icon('save')}</button><button class="icon-btn" title="Cancel" data-role="cancel">${icon('undo-2')}</button>`
+        : `<button class="icon-btn" title="Edit" data-role="edit">${icon('pencil')}</button><button class="icon-btn" title="Delete" data-role="delete">${icon('x')}</button>`}
     </div>
   `;
   }).join('');
@@ -2694,23 +2774,23 @@ function computeActionItems(){
   const items = [];
   projects.forEach(p => {
     if(!(p.products || []).length){
-      items.push({ severity: 'high', title: 'Add a product to this project', subjectIcon: '📁', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
+      items.push({ severity: 'high', title: 'Add a product to this project', subjectIcon: 'folder', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
     }
   });
   trials.forEach(t => {
     if((t.recipeIds || []).length && trialAvgScoreRatio(t) === null){
       const label = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial';
-      items.push({ severity: 'medium', title: 'Score this trial', subjectIcon: '🧪', subject: label, itemType: 'trial', itemId: t.id });
+      items.push({ severity: 'medium', title: 'Score this trial', subjectIcon: 'flask-conical', subject: label, itemType: 'trial', itemId: t.id });
     }
   });
   projects.forEach(p => {
     if(p.status === 'In Progress' && (p.products || []).length && !projectHasUpdateThisMonth(p)){
-      items.push({ severity: 'medium', title: "Add this month's update", subjectIcon: '📁', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
+      items.push({ severity: 'medium', title: "Add this month's update", subjectIcon: 'folder', subject: p.name || 'Untitled project', itemType: 'project', itemId: p.id });
     }
   });
   ingredientMaster.forEach(m => {
     if(m.price === '' || m.price == null){
-      items.push({ severity: 'low', title: 'Add a price', subjectIcon: '📚', subject: m.nameEn || 'Untitled material', itemType: 'material', itemId: m.id });
+      items.push({ severity: 'low', title: 'Add a price', subjectIcon: 'book-open', subject: m.nameEn || 'Untitled material', itemType: 'material', itemId: m.id });
     }
   });
   return items.sort((a, b) => ACTION_SEVERITY_ORDER[a.severity] - ACTION_SEVERITY_ORDER[b.severity]);
@@ -2742,6 +2822,7 @@ function blankProject(){
   return {
     id: uid(),
     name: "",
+    image: "",
     status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
     customerName: "",
@@ -2769,6 +2850,37 @@ function blankProduct(recipeId){
     stage: PROJECT_STAGES[0],
     updatedAt: now,
     log: [ { id: uid(), date: now, stage: PROJECT_STAGES[0], note: 'Product added to project', by: currentUser?.email || '' } ]
+  };
+}
+
+// Copies the template-like fields (name, photo, customer/destination/owner,
+// requirements, linked products) but resets everything that represents this
+// specific run's history and progress — status, request date, each
+// product's stage/log, monthly updates, and the created/updated trail —
+// since a duplicate is meant to start over, not carry the original's
+// progress forward. Duplicates whatever was last saved on the original, not
+// any unsaved edits still sitting in its form.
+function duplicateProject(p){
+  const now = Date.now();
+  return {
+    ...p,
+    id: uid(),
+    name: (p.name || 'Untitled project').trim() + ' (Copy)',
+    status: PROJECT_STATUSES[0],
+    requestDate: new Date().toISOString().slice(0,10),
+    monthlyUpdates: [],
+    products: (p.products || []).map(prod => ({
+      id: uid(),
+      recipeId: prod.recipeId,
+      salesRep: prod.salesRep,
+      stage: PROJECT_STAGES[0],
+      updatedAt: now,
+      log: [ { id: uid(), date: now, stage: PROJECT_STAGES[0], note: 'Product added to project', by: currentUser?.email || '' } ]
+    })),
+    createdBy: currentUser?.email || '',
+    createdAt: now,
+    updatedBy: currentUser?.email || '',
+    updatedAt: now
   };
 }
 
@@ -2862,9 +2974,9 @@ function mountTrialsView(){
   main.classList.remove('main-wide');
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">🧪 Trial Results</div>
+      <div class="section-title-display">${icon('flask-conical', 24)} Trial Results</div>
       <div class="toolbar">
-        <button class="btn" id="btnCloseTrialsView">← Back</button>
+        <button class="btn" id="btnCloseTrialsView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
@@ -2914,7 +3026,7 @@ function renderTrialsList(){
     // instead of a click-to-reveal list — the whole point of a comparison.
     const productCardsHtml = (t.recipeIds || []).map(recipeId => {
       const r = recipes.find(x => x.id === recipeId);
-      const removeBtn = isEditing ? `<button class="icon-btn" data-role="remove-trial-recipe" data-recipe-id="${escapeHtml(recipeId)}" title="Remove this product" style="margin-top:8px;">✕ Remove</button>` : '';
+      const removeBtn = isEditing ? `<button class="icon-btn" data-role="remove-trial-recipe" data-recipe-id="${escapeHtml(recipeId)}" title="Remove this product" style="margin-top:8px;">${icon('x')} Remove</button>` : '';
       if(!r){
         return `
           <div class="compare-info-col">
@@ -2950,7 +3062,7 @@ function renderTrialsList(){
     const photosHtml = t.photos.map((photo, idx) => `
       <div class="trial-photo-thumb" data-idx="${idx}">
         <img src="${escapeHtml(photo)}" alt="Trial photo ${idx+1}">
-        ${isEditing ? '<button class="icon-btn" title="Remove this photo">✕</button>' : ''}
+        ${isEditing ? `<button class="icon-btn" title="Remove this photo">${icon('x')}</button>` : ''}
       </div>
     `).join('');
 
@@ -2975,7 +3087,7 @@ function renderTrialsList(){
             <td><input type="text" class="teval-criteria" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.criteria || '')}" placeholder="e.g. Appearance"></td>
             ${scoreCells}
             <td><input type="text" class="teval-comment" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.comment || '')}" placeholder="Notes"></td>
-            <td class="col-del">${isEditing ? '<button class="icon-btn" data-role="delete-eval-row" title="Delete">✕</button>' : ''}</td>
+            <td class="col-del">${isEditing ? `<button class="icon-btn" data-role="delete-eval-row" title="Delete">${icon('x')}</button>` : ''}</td>
           </tr>
         `;
       }).join('');
@@ -2987,12 +3099,12 @@ function renderTrialsList(){
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
         <div class="part-header" style="margin-bottom:12px;">
-          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this trial">▶</button>
+          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this trial">${icon('chevron-right')}</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
           <span class="part-header-summary">${linkedRecipes.length} product${linkedRecipes.length === 1 ? '' : 's'} · ${t.photos.length} photo${t.photos.length === 1 ? '' : 's'} · ${t.evaluation.length} criteri${t.evaluation.length === 1 ? 'on' : 'a'}</span>
-          ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">💾 Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">✏️ Edit</button>`}
-          <button class="btn btn-sm" data-role="print-trial">🖨️ Print</button>
-          <button class="btn btn-sm btn-danger" data-role="delete-trial">✕ Delete</button>
+          ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
+          <button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>
+          <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
         <div class="part-body">
           <div class="field">
@@ -3157,17 +3269,18 @@ function mountProjectsView(){
   main.classList.add('main-wide');
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">📁 Projects</div>
+      <div class="section-title-display">${icon('folder', 24)} Projects</div>
       <div class="toolbar">
-        <button class="btn" id="btnCloseProjectsView">← Back</button>
+        <button class="btn" id="btnCloseProjectsView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
       <div id="projectsDashboard"></div>
       <div style="display:flex;gap:12px;margin-bottom:16px;">
-        <div class="search-box" style="margin:0;flex:1;">
-          <input type="text" id="projectSearchInput" placeholder="Search projects (name, customer, destination, owner, factory...)">
+        <div class="search-box" style="margin:0;flex:1;position:relative;">
+          <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
+          <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
         </div>
         <select class="proj-select" id="projectStatusFilter" style="max-width:200px;">
           <option value="all">All statuses</option>
@@ -3187,7 +3300,22 @@ function mountProjectsView(){
     projectExpandedIds.add(p.id);
     renderProjectsList();
   });
-  document.getElementById('projectSearchInput').addEventListener('input', renderProjectsList);
+  const projectSearchInputEl = document.getElementById('projectSearchInput');
+  const clearProjectSearchBtn = document.getElementById('btnClearProjectSearch');
+  function updateClearProjectSearchBtn(){
+    clearProjectSearchBtn.style.display = projectSearchInputEl.value ? 'flex' : 'none';
+  }
+  updateClearProjectSearchBtn();
+  projectSearchInputEl.addEventListener('input', () => {
+    updateClearProjectSearchBtn();
+    renderProjectsList();
+  });
+  clearProjectSearchBtn.addEventListener('click', () => {
+    projectSearchInputEl.value = '';
+    updateClearProjectSearchBtn();
+    projectSearchInputEl.focus();
+    renderProjectsList();
+  });
   const statusFilterEl = document.getElementById('projectStatusFilter');
   statusFilterEl.value = projectStatusFilter;
   statusFilterEl.addEventListener('change', () => {
@@ -3200,9 +3328,14 @@ function mountProjectsView(){
 
 let projectEditingId = null;
 let projectExpandedIds = new Set();
+let editingProjectImage = ''; // staged photo as a data URL for whichever project is being edited
 let projectStatusFilter = 'all';
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
+// Whichever renderProjectsList() call is most recent owns this — see the
+// single persistent window resize listener wired near the bottom of the
+// script, which just calls whatever this currently points at.
+let activeProjScrollbarProxySync = null;
 
 // Accessor per sortable column — keeps the header-click handler and the
 // comparator working off the same single source of truth for "what does
@@ -3229,8 +3362,8 @@ function compareProjects(a, b){
 }
 function sortableProjectHeader(label, key){
   const active = projectSortKey === key;
-  const arrow = active ? (projectSortDir === 'asc' ? ' ▲' : ' ▼') : '';
-  return `<th class="proj-th-sortable${active ? ' active' : ''}" data-sort-key="${key}">${escapeHtml(label)}${arrow}</th>`;
+  const arrow = active ? icon(projectSortDir === 'asc' ? 'chevron-up' : 'chevron-down', 12) : '';
+  return `<th class="proj-th-sortable${active ? ' active' : ''}" data-sort-key="${key}">${escapeHtml(label)} ${arrow}</th>`;
 }
 
 function renderProjectsList(){
@@ -3284,7 +3417,7 @@ function renderProjectsList(){
       <div class="dash-row" style="margin-bottom:16px;">
         <div class="dash-card">
           <div class="dash-card-title">Projects by Status</div>
-          ${renderBarList(projectsByStatus)}
+          ${renderStatusBarList(projectsByStatus)}
         </div>
         <div class="dash-card">
           <div class="dash-card-title">Products by stage</div>
@@ -3313,6 +3446,7 @@ function renderProjectsList(){
       <thead>
         <tr>
           <th></th>
+          <th>Photo</th>
           ${sortableProjectHeader('Project', 'name')}
           ${sortableProjectHeader('Status', 'status')}
           ${sortableProjectHeader('Requested', 'requestDate')}
@@ -3353,8 +3487,8 @@ function renderProjectsList(){
               </td>
               <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${escapeHtml(formatActivityDateTime(prod.updatedAt) || '')}</td>
               <td style="white-space:nowrap;">
-                <button class="icon-btn" title="Progress log" data-role="open-log">🕒</button>
-                <button class="icon-btn" title="Remove product" data-role="remove-product">✕</button>
+                <button class="icon-btn" title="Progress log" data-role="open-log">${icon('clock')}</button>
+                <button class="icon-btn" title="Remove product" data-role="remove-product">${icon('x')}</button>
               </td>
             </tr>
           `;
@@ -3369,7 +3503,7 @@ function renderProjectsList(){
         const monthlyUpdatesHtml = (p.monthlyUpdates && p.monthlyUpdates.length)
           ? [...p.monthlyUpdates].sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(mu => `
               <div class="project-log-entry" data-update-id="${escapeHtml(mu.id)}">
-                <div class="project-log-stage">${escapeHtml(mu.date || '-')}${isEditing ? '<button class="icon-btn" title="Delete this update" data-role="delete-monthly-update" style="float:right;">✕</button>' : ''}</div>
+                <div class="project-log-stage">${escapeHtml(mu.date || '-')}${isEditing ? `<button class="icon-btn" title="Delete this update" data-role="delete-monthly-update" style="float:right;">${icon('x')}</button>` : ''}</div>
                 <div class="project-log-date">${mu.createdBy ? 'Added by ' + escapeHtml(mu.createdBy) : ''}${mu.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(mu.createdAt)) : ''}</div>
                 ${mu.results ? `<div class="project-log-note"><b>ผลการดำเนินงาน:</b> ${escapeHtml(mu.results)}</div>` : ''}
                 ${mu.nextPlan ? `<div class="project-log-note"><b>Next Plan:</b> ${escapeHtml(mu.nextPlan)}</div>` : ''}
@@ -3379,7 +3513,8 @@ function renderProjectsList(){
 
         const summaryRow = `
           <tr class="proj-row">
-            <td><button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">▶</button></td>
+            <td><button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">${icon('chevron-right')}</button></td>
+            <td>${p.image ? `<img src="${escapeHtml(p.image)}" class="material-thumb" alt="${escapeHtml(p.name || 'Project photo')}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
             <td><b>${escapeHtml(p.name || 'Untitled project')}</b>${projectStatusBarHtml(p.status)}</td>
             <td>${escapeHtml(p.status || PROJECT_STATUSES[0])}</td>
             <td>${missingCell(p.requestDate)}</td>
@@ -3389,23 +3524,31 @@ function renderProjectsList(){
             <td>${missingCell(p.factorySalesRep)}</td>
             <td>${missingCell(p.responsiblePerson)}</td>
             <td>${missingCell(p.factoryName)}</td>
-            <td>${p.requirements ? '✓' : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td>${p.requirements ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td>${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
-                ? `<button class="btn btn-sm" data-role="save-project">💾 Save</button><button class="btn btn-sm" data-role="cancel-project">↩️ Cancel</button>`
-                : `<button class="btn btn-sm" data-role="edit-project">✏️ Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">✕ Delete</button>`}
+                ? `<button class="btn btn-sm" data-role="save-project">${icon('save')} Save</button><button class="btn btn-sm" data-role="duplicate-project">${icon('copy')} Duplicate</button><button class="btn btn-sm" data-role="cancel-project">${icon('undo-2')} Cancel</button>`
+                : `<button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
             </td>
           </tr>
         `;
 
         const detailRow = isExpanded ? `
           <tr class="proj-detail-row">
-            <td colspan="13">
+            <td colspan="14">
               <div class="project-header-grid">
                 <div class="field" style="margin-bottom:0;">
                   <label>Project Name</label>
                   <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Photo (optional)</label>
+                  ${isEditing ? `<input type="file" class="proj-image-input" accept="image/*">` : ''}
+                  <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+                    <img class="proj-image-preview" src="${p.image ? escapeHtml(p.image) : ''}" style="${p.image ? '' : 'display:none;'}width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+                    ${isEditing ? `<button type="button" class="btn btn-sm proj-image-remove" style="${p.image ? '' : 'display:none;'}">Remove photo</button>` : ''}
+                  </div>
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Status</label>
@@ -3483,7 +3626,31 @@ function renderProjectsList(){
       }).join('')}
     </table>
     </div>
+    <div class="proj-scrollbar-proxy" id="projScrollbarProxy"><div id="projScrollbarProxyInner"></div></div>
   `;
+
+  // The table scrolls sideways within the page now (no bounded vertical
+  // box), which means its own horizontal scrollbar sits at the bottom of
+  // the (long) row list — not reachable without scrolling all the way down
+  // first. This thin proxy bar stays pinned to the bottom of the viewport
+  // while any part of the table is on screen, and its scroll position stays
+  // in sync with the real table so dragging either one moves both.
+  const tableScroll = container.querySelector('.proj-table-scroll');
+  const scrollbarProxy = document.getElementById('projScrollbarProxy');
+  const scrollbarProxyInner = document.getElementById('projScrollbarProxyInner');
+  function syncProjScrollbarProxy(){
+    const needsScroll = tableScroll.scrollWidth > tableScroll.clientWidth + 1;
+    scrollbarProxy.style.display = needsScroll ? 'block' : 'none';
+    scrollbarProxyInner.style.width = tableScroll.scrollWidth + 'px';
+  }
+  syncProjScrollbarProxy();
+  // renderProjectsList() re-runs on every search/sort/edit, which would
+  // otherwise stack up a new window resize listener each time — routing
+  // through this single persistent listener (attached once, below) instead
+  // just reassigns which sync function it calls.
+  activeProjScrollbarProxySync = syncProjScrollbarProxy;
+  tableScroll.addEventListener('scroll', () => { scrollbarProxy.scrollLeft = tableScroll.scrollLeft; });
+  scrollbarProxy.addEventListener('scroll', () => { tableScroll.scrollLeft = scrollbarProxy.scrollLeft; });
 
   container.querySelectorAll('.proj-th-sortable').forEach(th => {
     th.addEventListener('click', () => {
@@ -3512,8 +3679,33 @@ function renderProjectsList(){
     });
 
     if(isEditing){
+      editingProjectImage = p.image || '';
+      const projImageInput = block.querySelector('.proj-image-input');
+      const projImagePreview = block.querySelector('.proj-image-preview');
+      const projImageRemoveBtn = block.querySelector('.proj-image-remove');
+      projImageInput?.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        if(!file) return;
+        try{
+          editingProjectImage = await resizeImageFile(file, 400);
+          projImagePreview.src = editingProjectImage;
+          projImagePreview.style.display = 'block';
+          projImageRemoveBtn.style.display = 'inline-flex';
+        }catch(err){
+          alert(err.message || 'Could not read that image file');
+        }
+      });
+      projImageRemoveBtn?.addEventListener('click', () => {
+        editingProjectImage = '';
+        projImageInput.value = '';
+        projImagePreview.src = '';
+        projImagePreview.style.display = 'none';
+        projImageRemoveBtn.style.display = 'none';
+      });
+
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
         p.name = block.querySelector('.proj-name').value.trim();
+        p.image = editingProjectImage;
         p.status = block.querySelector('.proj-status').value;
         p.requestDate = block.querySelector('.proj-request-date').value;
         p.customerName = block.querySelector('.proj-customer').value.trim();
@@ -3532,6 +3724,14 @@ function renderProjectsList(){
         projectEditingId = null;
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
+        renderProjectsList();
+      });
+      block.querySelector('[data-role="duplicate-project"]').addEventListener('click', () => {
+        const copy = duplicateProject(p);
+        projects.push(copy);
+        saveProjectToCloud(copy);
+        projectEditingId = copy.id;
+        projectExpandedIds.add(copy.id);
         renderProjectsList();
       });
       block.querySelector('[data-role="cancel-project"]').addEventListener('click', () => {
@@ -3714,14 +3914,14 @@ function mountCompareView(){
 
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">⚖️ Compare Recipes</div>
+      <div class="section-title-display">${icon('scale', 24)} Compare Recipes</div>
       <div class="toolbar">
-        <button class="btn" id="btnPrintCompare">🖨️ Print</button>
-        <button class="btn" id="btnCloseCompareView">← Back</button>
+        <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
+        <button class="btn" id="btnCloseCompareView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
-      <div class="compare-pickers" id="comparePickers">${pickersHtml}</div>
+      <div class="compare-pickers" id="comparePickers"><div class="compare-info-spacer"></div>${pickersHtml}</div>
       <div id="compareContent"></div>
     </div>
   `;
@@ -4040,7 +4240,7 @@ function renderCompareContent(){
     <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
 
     <div class="compare-section-title">Compare Process Steps</div>
-    <div class="compare-steps-grid">${stepsHtml}</div>
+    <div class="compare-steps-grid"><div class="compare-info-spacer"></div>${stepsHtml}</div>
   `;
 
   document.getElementById('compareShowCodes').addEventListener('change', e => {
@@ -4110,6 +4310,7 @@ function attachProjectsListener(){
     projects.forEach(p => {
       if(!Array.isArray(p.products)) p.products = [];
       p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
+      if(p.image === undefined) p.image = '';
     });
     projectsLoaded = true;
     if(mainFeatureView === 'projects') renderProjectsList();
@@ -4274,7 +4475,7 @@ function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
     const v = input.value.trim();
     const exists = v === '' || metaLists[metaKey].some(item => metaItemName(item) === v);
     if(!exists){
-      alert(`"${v}" is not in the list yet. Please add it via 📇 Reference Lists first, then pick it here.`);
+      alert(`"${v}" is not in the list yet. Please add it via Reference Lists first, then pick it here.`);
       input.value = lastValidValue;
       r[fieldKey] = lastValidValue;
       scheduleSave();
@@ -4386,9 +4587,9 @@ function renderMaterialTable(){
       <td>${m.price !== '' && m.price != null ? '฿' + escapeHtml(String(m.price)) : '-'}</td>
       <td>${escapeHtml(formatMoq(m.moq) || '-')}</td>
       <td>
-        <button class="icon-btn" data-edit-material="${escapeHtml(m.id)}" title="Edit this ingredient">✏️</button>
-        <button class="icon-btn" data-copy-material="${escapeHtml(m.id)}" title="Copy as a new ingredient">⧉</button>
-        <button class="icon-btn" data-del-material="${escapeHtml(m.id)}" title="Remove this ingredient from the library">✕</button>
+        <button class="icon-btn" data-edit-material="${escapeHtml(m.id)}" title="Edit this ingredient">${icon('pencil')}</button>
+        <button class="icon-btn" data-copy-material="${escapeHtml(m.id)}" title="Copy as a new ingredient">${icon('copy')}</button>
+        <button class="icon-btn" data-del-material="${escapeHtml(m.id)}" title="Remove this ingredient from the library">${icon('x')}</button>
       </td>
     </tr>
   `).join('');
@@ -4439,9 +4640,9 @@ function mountMaterialsView(){
   main.classList.remove('main-wide');
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">📚 Ingredient Library</div>
+      <div class="section-title-display">${icon('book-open', 24)} Ingredient Library</div>
       <div class="toolbar">
-        <button class="btn" id="btnCloseMaterialsView">← Back</button>
+        <button class="btn" id="btnCloseMaterialsView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
@@ -4675,7 +4876,7 @@ function fillMaterialForm(m){
 function startEditMaterial(m){
   editingMaterialId = m.id;
   fillMaterialForm(m);
-  document.getElementById('materialFormTitle').textContent = `✏️ Editing: ${materialLabel(m)}`;
+  document.getElementById('materialFormTitle').innerHTML = `${icon('pencil')} Editing: ${escapeHtml(materialLabel(m))}`;
   document.getElementById('btnAddMaterial').textContent = 'Save Changes';
   document.getElementById('btnCancelEditMaterial').style.display = 'inline-flex';
   document.getElementById('materialFormError').textContent = '';
@@ -4686,7 +4887,7 @@ function startEditMaterial(m){
 function startCopyMaterial(m){
   editingMaterialId = null;
   fillMaterialForm(m);
-  document.getElementById('materialFormTitle').textContent = `⧉ Copy of "${materialLabel(m)}" — review and add as new`;
+  document.getElementById('materialFormTitle').innerHTML = `${icon('copy')} Copy of "${escapeHtml(materialLabel(m))}" — review and add as new`;
   document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
   document.getElementById('btnCancelEditMaterial').style.display = 'inline-flex';
   document.getElementById('materialFormError').textContent = '';
@@ -4955,15 +5156,15 @@ function mountRecipesListView(){
   main.classList.add('main-wide');
   main.innerHTML = `
     <div class="main-header">
-      <div class="recipe-title-display">📄 Recipes</div>
+      <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
       <div class="toolbar">
-        <button class="btn" id="btnCloseRecipesListView">← Back</button>
+        <button class="btn" id="btnCloseRecipesListView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
         <button class="btn btn-primary" id="btnNewFromRecipesList">+ New Recipe</button>
-        <button class="btn" id="btnCompareFromRecipesList">⚖️ Compare Recipes</button>
+        <button class="btn" id="btnCompareFromRecipesList">${icon('scale')} Compare Recipes</button>
       </div>
       <div class="search-box" style="margin:0 0 16px;">
         <input type="text" id="recipesListSearchInput" placeholder="Search product name...">
@@ -5056,7 +5257,7 @@ const EU_FLAG_SVG = `<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/sv
 
 function countryFlagBadgeHtml(name){
   const iso = countryToIso2(name);
-  if(!iso) return `<span class="reflist-flag-badge" title="Unrecognized country">🌐</span>`;
+  if(!iso) return `<span class="reflist-flag-badge" title="Unrecognized country">${icon('globe', 14)}</span>`;
   if(iso === 'EU') return `<span class="reflist-flag-badge" title="EU">${EU_FLAG_SVG}</span>`;
   return `<span class="reflist-flag-badge" title="${escapeHtml(iso)}"><img class="reflist-flag-img" data-fallback="${escapeHtml(iso)}" alt="${escapeHtml(iso)}" src="https://cdn.jsdelivr.net/gh/HatScripts/circle-flags/flags/${iso.toLowerCase()}.svg"></span>`;
 }
@@ -5131,6 +5332,50 @@ function updateRecipeTitleDisplay(r){
 
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Inline Lucide icons (https://lucide.dev, ISC license) — embedded as raw
+// path/shape data rather than loaded from a CDN, so the app still works
+// offline and isn't a broken pile of missing icons if that CDN ever goes
+// down. stroke="currentColor" means every icon just inherits whatever CSS
+// color already applies to its container — no separate color wiring needed.
+const LUCIDE_ICONS = {
+  'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
+  'arrow-left': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
+  'bell': '<path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />',
+  'book-open': '<path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />',
+  'check': '<path d="M20 6 9 17l-5-5" />',
+  'clipboard-check': '<rect width="8" height="4" x="8" y="2" rx="1" ry="1" /><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2" /><path d="m9 14 2 2 4-4" />',
+  'chevron-down': '<path d="m6 9 6 6 6-6" />',
+  'chevron-right': '<path d="m9 18 6-6-6-6" />',
+  'chevron-up': '<path d="m18 15-6-6-6 6" />',
+  'clock': '<circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />',
+  'copy': '<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
+  'download': '<path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" />',
+  'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
+  'flask-conical': '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /><path d="M6.453 15h11.094" /><path d="M8.5 2h7" />',
+  'folder': '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />',
+  'globe': '<circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />',
+  'list': '<path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" />',
+  'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
+  'log-out': '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
+  'menu': '<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />',
+  'party-popper': '<path d="M5.8 11.3 2 22l10.7-3.79" /><path d="M4 3h.01" /><path d="M22 8h.01" /><path d="M15 2h.01" /><path d="M22 20h.01" /><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" /><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" /><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" /><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />',
+  'pencil': '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
+  'printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
+  'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
+  'save': '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+  'scale': '<path d="M12 3v18" /><path d="m19 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" /><path d="m5 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M7 21h10" />',
+  'trash-2': '<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
+  'undo-2': '<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
+  'unlock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />',
+  'upload': '<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />',
+  'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />'
+};
+function icon(name, size){
+  const inner = LUCIDE_ICONS[name];
+  if(!inner) return '';
+  return `<svg class="lucide-icon" width="${size||16}" height="${size||16}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${inner}</svg>`;
 }
 
 /* ---------- Main render ---------- */
@@ -5264,9 +5509,9 @@ function computeDashboardData(){
   // built from real edit timestamps instead of fabricating a view-history
   // feature that doesn't exist.
   const mergedRecentActivity = [
-    ...recipes.filter(r => r.updatedAt).map(r => ({ type: 'recipe', icon: '📄', id: r.id, name: recipeDisplayLabel(r), updatedAt: r.updatedAt })),
-    ...projects.filter(p => p.updatedAt).map(p => ({ type: 'project', icon: '📁', id: p.id, name: p.name || 'Untitled project', updatedAt: p.updatedAt })),
-    ...trials.filter(t => t.updatedAt).map(t => ({ type: 'trial', icon: '🧪', id: t.id, name: (t.recipeIds||[]).map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial', updatedAt: t.updatedAt }))
+    ...recipes.filter(r => r.updatedAt).map(r => ({ type: 'recipe', icon: 'file-text', id: r.id, name: recipeDisplayLabel(r), updatedAt: r.updatedAt })),
+    ...projects.filter(p => p.updatedAt).map(p => ({ type: 'project', icon: 'folder', id: p.id, name: p.name || 'Untitled project', updatedAt: p.updatedAt })),
+    ...trials.filter(t => t.updatedAt).map(t => ({ type: 'trial', icon: 'flask-conical', id: t.id, name: (t.recipeIds||[]).map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial', updatedAt: t.updatedAt }))
   ].sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 5);
 
   return {
@@ -5287,6 +5532,24 @@ function renderBarList(groups, altClass){
       <div class="dash-bar-track"><div class="dash-bar-fill${altClass ? ' '+altClass : ''}" style="width:${Math.max(4, Math.round(g.count/max*100))}%"></div></div>
     </div>
   `).join('');
+}
+
+// Same layout as renderBarList, but each bar is colored by its own status
+// (via PROJECT_STATUS_BAR) instead of one flat color for every bar — so
+// "Projects by Status" reads the same way the mini status bar under each
+// project's name in the table already does.
+function renderStatusBarList(groups){
+  if(!groups.length) return '<div class="dash-empty">No data yet</div>';
+  const max = Math.max(...groups.map(g => g.count));
+  return groups.map(g => {
+    const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
+    return `
+      <div class="dash-bar-item">
+        <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
+        <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${color};"></div></div>
+      </div>
+    `;
+  }).join('');
 }
 
 // Same flag-badge component used on the Reference Lists page (see
@@ -5343,19 +5606,19 @@ function renderDashboardHome(){
   const todayLabel = new Date().toLocaleDateString('en-US', { day:'numeric', month:'long', year:'numeric' });
 
   const statCards = [
-    { icon:'📁', label:'Active Projects', value:d.activeProjectsCount, action:'filter-in-progress' },
-    { icon:'📋', label:'Pending Review', value:d.inReviewProjectsCount, action:'filter-in-review' },
-    { icon:'⚠️', label:'Needs Attention', value:actionItems.length, action:'scroll-attention' },
-    { icon:'🔄', label:'Updated This Week', value:d.updatedThisWeekAll, action:'scroll-activity' }
+    { icon:'folder', label:'Active Projects', value:d.activeProjectsCount, action:'filter-in-progress' },
+    { icon:'clipboard-check', label:'Pending Review', value:d.inReviewProjectsCount, action:'filter-in-review' },
+    { icon:'alert-triangle', label:'Needs Attention', value:actionItems.length, action:'scroll-attention' },
+    { icon:'refresh-cw', label:'Updated This Week', value:d.updatedThisWeekAll, action:'scroll-activity' }
   ];
   const statCardsHtml = statCards.map(s => `
     <button type="button" class="hd2-stat-card" data-stat-action="${s.action}">
-      <span class="hd2-stat-icon">${s.icon}</span>
+      <span class="hd2-stat-icon">${icon(s.icon, 20)}</span>
       <span class="hd2-stat-text">
         <span class="hd2-stat-label">${escapeHtml(s.label)}</span>
         <span class="hd2-stat-value">${s.value}</span>
       </span>
-      <span class="hd2-stat-arrow">›</span>
+      <span class="hd2-stat-arrow">${icon('chevron-right', 16)}</span>
     </button>
   `).join('');
 
@@ -5371,17 +5634,17 @@ function renderDashboardHome(){
           <span class="action-dot" style="background:${SEVERITY_DOT_COLOR[item.severity]};"></span>
           <div class="action-item-body">
             <div class="action-item-title">${escapeHtml(item.title)}</div>
-            <div class="action-item-subject">${item.subjectIcon} ${escapeHtml(item.subject)}</div>
+            <div class="action-item-subject">${icon(item.subjectIcon, 14)} ${escapeHtml(item.subject)}</div>
           </div>
           <button class="btn btn-sm action-go-btn" data-item-type="${escapeHtml(item.itemType)}" data-item-id="${escapeHtml(item.itemId)}">Go</button>
         </div>
       `).join('') + (actionItems.length > shownActionItems.length ? `<div class="dash-empty">+${actionItems.length - shownActionItems.length} more</div>` : '')
-    : '<div class="dash-empty">Nothing needs attention right now 🎉</div>';
+    : `<div class="dash-empty">Nothing needs attention right now ${icon('party-popper', 14)}</div>`;
 
   const mergedActivityHtml = d.mergedRecentActivity.length
     ? d.mergedRecentActivity.map(item => `
         <div class="dash-activity-row action-go-btn" data-item-type="${item.type}" data-item-id="${escapeHtml(item.id)}" style="cursor:pointer;">
-          <div class="dash-activity-name">${item.icon} ${escapeHtml(item.name)}</div>
+          <div class="dash-activity-name">${icon(item.icon, 14)} ${escapeHtml(item.name)}</div>
           <div class="dash-activity-time">${escapeHtml(formatActivityDateTime(item.updatedAt) || '')}</div>
         </div>
       `).join('')
@@ -5432,10 +5695,10 @@ function renderDashboardHome(){
       <div class="hd2-searchrow">
         <input type="text" class="hd2-search" id="hdSearchInput" placeholder="Search recipes, projects, materials...">
         <div class="hd2-create-wrap">
-          <button type="button" class="btn btn-primary" id="hdCreateBtn">+ Create ▾</button>
+          <button type="button" class="btn btn-primary" id="hdCreateBtn">+ Create ${icon('chevron-down', 14)}</button>
           <div class="hd2-create-menu" id="hdCreateMenu">
-            <button type="button" class="navbar-account-menu-item" id="hdCreateRecipeBtn">📄 New Recipe</button>
-            <button type="button" class="navbar-account-menu-item" id="hdCreateProjectBtn">📁 New Project</button>
+            <button type="button" class="navbar-account-menu-item" id="hdCreateRecipeBtn">${icon('file-text')} New Recipe</button>
+            <button type="button" class="navbar-account-menu-item" id="hdCreateProjectBtn">${icon('folder')} New Project</button>
           </div>
         </div>
       </div>
@@ -5664,9 +5927,9 @@ function renderMain(){
         <div class="recipe-activity-display" id="recipeActivityDisplay"></div>
       </div>
       <div class="toolbar">
-        <button class="btn" id="btnVersions">🕒 Versions</button>
-        <button class="btn" id="btnDuplicate">⧉ Duplicate</button>
-        <button class="btn" id="btnPrint">🖨 Print / PDF</button>
+        <button class="btn" id="btnVersions">${icon('clock')} Versions</button>
+        <button class="btn" id="btnDuplicate">${icon('copy')} Duplicate</button>
+        <button class="btn" id="btnPrint">${icon('printer')} Print / PDF</button>
       </div>
     </div>
 
@@ -5717,7 +5980,7 @@ function renderMain(){
 
     <div class="card">
       <div class="card-title">2. Ingredients, Percentage & Weight</div>
-      <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">📚 Ingredient Library (select existing / add new)</button>
+      <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
       <div class="batch-summary">
         <div>
           <div class="batch-stat-label">Total Recipe Weight (auto-calculated from all ingredient weights)</div>
@@ -5780,7 +6043,7 @@ function renderMain(){
     </div>
 
     <div class="danger-zone">
-      <button class="btn btn-danger btn-block" id="btnDelete">🗑 Delete Recipe</button>
+      <button class="btn btn-danger btn-block" id="btnDelete">${icon('trash-2')} Delete Recipe</button>
     </div>
   `;
 
@@ -5927,10 +6190,10 @@ function renderLockState(r){
 
   if(isUnlocked){
     banner.className = 'lock-banner unlocked';
-    banner.innerHTML = `🔓 This recipe is unlocked for editing (will lock again when you switch recipes)`;
+    banner.innerHTML = `${icon('unlock')} This recipe is unlocked for editing (will lock again when you switch recipes)`;
   }else{
     banner.className = 'lock-banner locked';
-    banner.innerHTML = `🔒 This recipe is read-only <button class="btn btn-sm btn-primary" id="btnUnlockEdit">🔓 Unlock to Edit</button>`;
+    banner.innerHTML = `${icon('lock')} This recipe is read-only <button class="btn btn-sm btn-primary" id="btnUnlockEdit">${icon('unlock')} Unlock to Edit</button>`;
     document.getElementById('btnUnlockEdit').addEventListener('click', () => {
       requestAuthConfirm(
         'Confirm Identity to Edit',
@@ -6030,10 +6293,10 @@ function renderParts(r){
     block.className = 'part-block';
     block.innerHTML = `
       <div class="part-header">
-        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">▶</button>
+        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
         <input type="text" class="part-name" placeholder="Part ${pIdx+1} name">
         <span class="part-header-summary"></span>
-        <button class="icon-btn" title="Delete this part">✕</button>
+        <button class="icon-btn" title="Delete this part">${icon('x')}</button>
       </div>
       <div class="part-body">
         <div style="overflow-x:auto;">
@@ -6089,7 +6352,7 @@ function renderParts(r){
     function setCollapsed(collapsed){
       block.classList.toggle('collapsed', collapsed);
       toggleBtn.classList.toggle('open', !collapsed);
-      toggleBtn.textContent = collapsed ? '▶' : '▼';
+      toggleBtn.innerHTML = icon(collapsed ? 'chevron-right' : 'chevron-down');
     }
 
     toggleBtn.addEventListener('click', () => {
@@ -6114,7 +6377,7 @@ function renderParts(r){
           <td class="col-pct"><span class="ing-pct-display" title="Calculated automatically from weight"></span></td>
           <td class="col-wt"><input type="number" class="ing-wt num-input" step="0.01" min="0"></td>
           <td><input type="text" class="ing-note" placeholder=""></td>
-          <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
+          <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
         `;
         const nameInput = tr.querySelector('.ing-name');
         const hintEl = tr.querySelector('.ing-hint');
@@ -6333,9 +6596,9 @@ function renderProcesses(r){
       <div class="process-header">
         <div class="step-badge">${pIdx+1}</div>
         <input type="text" class="process-title" placeholder="Process ${pIdx+1} name (e.g. Mixing)">
-        <button class="icon-btn" title="Move this process up">▲</button>
-        <button class="icon-btn" title="Move this process down">▼</button>
-        <button class="icon-btn" title="Delete this process">✕</button>
+        <button class="icon-btn" title="Move this process up">${icon('chevron-up')}</button>
+        <button class="icon-btn" title="Move this process down">${icon('chevron-down')}</button>
+        <button class="icon-btn" title="Delete this process">${icon('x')}</button>
       </div>
       <div class="process-components">
         <div class="process-components-title">Components</div>
@@ -6391,9 +6654,9 @@ function renderProcesses(r){
           <div class="step-badge">${idx+1}</div>
           <div class="step-body"><textarea placeholder="Describe step ${idx+1}..."></textarea></div>
           <div class="step-controls">
-            <button class="icon-btn" title="Move up">▲</button>
-            <button class="icon-btn" title="Move down">▼</button>
-            <button class="icon-btn" title="Delete">✕</button>
+            <button class="icon-btn" title="Move up">${icon('chevron-up')}</button>
+            <button class="icon-btn" title="Move down">${icon('chevron-down')}</button>
+            <button class="icon-btn" title="Delete">${icon('x')}</button>
           </div>
         `;
         const ta = row.querySelector('textarea');
@@ -6489,7 +6752,7 @@ function renderProcesses(r){
           <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
           <td class="col-range comp-range"></td>
           <td class="col-pct"><span class="comp-pct-display" title="Calculated automatically from weight"></span></td>
-          <td class="col-del"><button class="icon-btn" title="Delete">✕</button></td>
+          <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
         `;
         const nameInput = tr.querySelector('.comp-name');
         const wtInput = tr.querySelector('.comp-wt');
@@ -6581,7 +6844,7 @@ function renderDescPoints(r){
     row.innerHTML = `
       <span class="step-badge">${idx+1}</span>
       <textarea rows="2" placeholder="e.g. Product characteristics, selling point, target audience..."></textarea>
-      <button class="icon-btn" title="Delete">✕</button>
+      <button class="icon-btn" title="Delete">${icon('x')}</button>
     `;
     const ta = row.querySelector('textarea');
     ta.value = point;
@@ -6605,7 +6868,7 @@ function renderDescPhotos(r){
   row.innerHTML = r.descPhotos.map((photo, idx) => `
     <div class="trial-photo-thumb" data-idx="${idx}">
       <img src="${escapeHtml(photo)}" alt="Description photo ${idx+1}">
-      <button title="Remove this photo">✕</button>
+      <button title="Remove this photo">${icon('x')}</button>
     </div>
   `).join('');
   row.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
@@ -6868,6 +7131,42 @@ document.addEventListener('click', () => {
   document.getElementById('navbarAccount').classList.remove('open');
   document.getElementById('hdCreateMenu')?.classList.remove('open');
 });
+
+window.addEventListener('resize', () => { activeProjScrollbarProxySync?.(); });
+
+// The handful of icon spots that live in the page's static HTML (outside
+// any JS-rendered template) rather than being generated fresh each render —
+// those can just call icon() directly in their template string, these can't,
+// so they get their icon swapped in once here at startup instead.
+function applyStaticIcons(){
+  const setIcon = (id, name, size) => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = icon(name, size);
+  };
+  const prefixIcon = (id, name) => {
+    const el = document.getElementById(id);
+    if(el) el.innerHTML = icon(name) + ' ' + el.textContent.trim();
+  };
+  setIcon('btnMobileSidebarToggle', 'menu', 20);
+  setIcon('btnNavbarNotifications', 'bell', 18);
+  setIcon('btnSidebarClose', 'x', 16);
+  setIcon('btnCloseMaterialDetail', 'x', 16);
+  setIcon('btnCloseAuthConfirm', 'x', 16);
+  setIcon('btnCloseVersionsModal', 'x', 16);
+  setIcon('btnCloseProductLogModal', 'x', 16);
+  prefixIcon('btnCompare', 'scale');
+  prefixIcon('btnSaveVersion', 'save');
+  prefixIcon('btnExportAll', 'download');
+  prefixIcon('btnImport', 'upload');
+  prefixIcon('btnLogoutFromApp', 'log-out');
+  const versionsTitle = document.querySelector('#versionsModalOverlay .modal-title');
+  if(versionsTitle) versionsTitle.innerHTML = icon('clock') + ' ' + versionsTitle.textContent.trim();
+  const productLogTitle = document.querySelector('#productLogModalOverlay .modal-title');
+  if(productLogTitle) productLogTitle.innerHTML = icon('clock') + ' ' + productLogTitle.textContent.trim();
+  const accountChevron = document.querySelector('.navbar-account-chevron');
+  if(accountChevron) accountChevron.innerHTML = icon('chevron-down', 12);
+}
+applyStaticIcons();
 
 /* Mobile sidebar drawer: hidden off-screen by default below 800px width,
    toggled via a fixed hamburger button, closed via the backdrop, the
