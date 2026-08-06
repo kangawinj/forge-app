@@ -291,6 +291,14 @@
     flex-direction:column;
     gap:4px;
   }
+  /* Full-page Recipes view has the horizontal room the 280px sidebar never
+     did, so its cards lay out as a wrapping grid instead of a single
+     column — same .recipe-item cards, just a different container layout. */
+  .recipe-list-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
+    gap:10px;
+  }
   .recipe-item{
     padding:10px 10px;
     border-radius:var(--radius);
@@ -2119,7 +2127,8 @@ const CHANGELOG = [
   { version: "3.0.81", date: "2026-08-06", note: "Redesigned the top bar to match a standard app-navbar layout: the Forge logo moved from the sidebar to the top-left (click it to go home), a Help icon and Notifications bell were added on the top-right, and the account box + Log Out button moved out of the sidebar into an avatar/name dropdown next to them (also holding Export All / Import). The sidebar itself now only has + New Recipe, search, and the recipe list" },
   { version: "3.0.82", date: "2026-08-06", note: "Added a \"Recipes\" tab to the top bar (the Home view — click it or the Forge logo to get there) and moved \"Compare Recipes\" off the top bar into the sidebar, right below + New Recipe, since it's a function you reach for while working with recipes rather than a standalone destination. The Recipes tab stays highlighted while comparing or editing any recipe" },
   { version: "3.0.83", date: "2026-08-06", note: "The left sidebar (+ New Recipe, Compare Recipes, search, recipe list) now only shows up while in Recipes mode — every other tab (Ingredients, Reference Lists, Projects, Trials) gets the full width of the screen instead, with no sidebar at all" },
-  { version: "3.0.84", date: "2026-08-06", note: "Redesigned the Home dashboard: a personal greeting + a search-and-create bar up top, 4 clickable stat cards (Active Projects, Pending Review, Needs Attention, Updated This Week), a \"Needs Attention\" list surfacing real data gaps (projects with no products yet, unscored trials, projects missing this month's update, materials with no price), a merged Recent Activity feed across recipes/projects/trials, an Active Projects table with per-project progress and next action, and a Product Pipeline funnel. All existing analytics (By Country, sales rep/materials/customer breakdowns, trial score trend, most-iterated recipes, recently added materials) stay below, unchanged" }
+  { version: "3.0.84", date: "2026-08-06", note: "Redesigned the Home dashboard: a personal greeting + a search-and-create bar up top, 4 clickable stat cards (Active Projects, Pending Review, Needs Attention, Updated This Week), a \"Needs Attention\" list surfacing real data gaps (projects with no products yet, unscored trials, projects missing this month's update, materials with no price), a merged Recent Activity feed across recipes/projects/trials, an Active Projects table with per-project progress and next action, and a Product Pipeline funnel. All existing analytics (By Country, sales rep/materials/customer breakdowns, trial score trend, most-iterated recipes, recently added materials) stay below, unchanged" },
+  { version: "3.0.85", date: "2026-08-06", note: "The Forge logo now goes to the Home dashboard specifically (no sidebar), while the \"Recipes\" tab opens a new full-page Recipes browser (also no sidebar, cards laid out in a wider grid) instead of just aliasing to Home. Opening a specific recipe from either place hands off to the compact sidebar list, which now only appears while a recipe is actually open — not on Home, and not on the Recipes browser itself" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4047,12 +4056,13 @@ function renderCompareContent(){
 let recipes = [];
 let currentId = null;
 // Which full-page feature (if any) currently owns #mainArea, overriding the
-// normal home-dashboard/recipe-editor split. null = normal (home or recipe,
-// per currentId). Deliberately independent of currentId — entering a
-// feature from inside a recipe (e.g. the Ingredient Library button) leaves
-// currentId untouched, so closing the feature naturally resumes that recipe
-// instead of bouncing to home.
-let mainFeatureView = null; // null | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
+// normal home-dashboard/recipe-editor split. null = normal (home dashboard
+// if currentId is also null, otherwise the recipe editor for currentId).
+// Deliberately independent of currentId — entering a feature from inside a
+// recipe (e.g. the Ingredient Library button) leaves currentId untouched,
+// so closing the feature naturally resumes that recipe instead of bouncing
+// to home.
+let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
 let saveTimer = null;
 let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
@@ -4877,18 +4887,15 @@ const FEATURE_VIEW_BUTTON_IDS = {
   refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
 };
 
-function renderSidebar(){
-  Object.entries(FEATURE_VIEW_BUTTON_IDS).forEach(([view, id]) => {
-    document.getElementById(id)?.classList.toggle('active', mainFeatureView === view);
-  });
-  // "Recipes" is the top navbar's Home tab — Compare Recipes counts as still
-  // being "in" Recipes mode since it's just a function nested inside it now,
-  // rather than its own top-level destination.
-  document.getElementById('btnRecipesTab')?.classList.toggle('active', mainFeatureView === null || mainFeatureView === 'compare');
-  const list = document.getElementById('recipeList');
-  const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
+// Shared by the compact sidebar list (shown while a recipe is open) and the
+// full-page Recipes view (shown from the "Recipes" tab) — same cards, same
+// click-to-open behavior, just mounted into whichever container is visible
+// right now so the two never have to duplicate this logic separately.
+function renderRecipeCards(container, query){
+  if(!container) return;
+  const q = (query || '').trim().toLowerCase();
   const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
-  list.innerHTML = '';
+  container.innerHTML = '';
   sorted.filter(r => !q || (r.name||'Untitled').toLowerCase().includes(q))
     .forEach(r => {
       const div = document.createElement('div');
@@ -4911,8 +4918,73 @@ function renderSidebar(){
         renderMain();
         renderSidebar();
       });
-      list.appendChild(div);
+      container.appendChild(div);
     });
+}
+
+function createNewRecipe(){
+  const r = blankRecipe();
+  recipes.push(r);
+  currentId = r.id;
+  unlockedRecipeId = r.id;
+  mainFeatureView = null;
+  saveRecipeToCloud(r);
+  renderSidebar();
+  renderMain();
+}
+
+function renderSidebar(){
+  Object.entries(FEATURE_VIEW_BUTTON_IDS).forEach(([view, id]) => {
+    document.getElementById(id)?.classList.toggle('active', mainFeatureView === view);
+  });
+  // The Recipes tab covers browsing (mainFeatureView === 'recipesList'),
+  // Compare (nested under Recipes rather than its own destination), and
+  // actively editing a specific recipe — but NOT the Home dashboard, which
+  // is now its own separate destination reached via the Forge logo.
+  document.getElementById('btnRecipesTab')?.classList.toggle('active',
+    mainFeatureView === 'recipesList' || mainFeatureView === 'compare' || (mainFeatureView === null && !!currentId));
+  renderRecipeCards(document.getElementById('recipeList'), document.getElementById('searchInput').value);
+}
+
+// The "Recipes" tab's full-page view — browsing recipes without committing
+// to one yet. Opening a specific recipe from here hands off to the compact
+// sidebar list instead (see renderMain()'s hide-recipes-nav toggle), so
+// these two recipe lists are never both on screen at once.
+function mountRecipesListView(){
+  const main = document.getElementById('mainArea');
+  main.classList.add('main-wide');
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">📄 Recipes</div>
+      <div class="toolbar">
+        <button class="btn" id="btnCloseRecipesListView">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="btnNewFromRecipesList">+ New Recipe</button>
+        <button class="btn" id="btnCompareFromRecipesList">⚖️ Compare Recipes</button>
+      </div>
+      <div class="search-box" style="margin:0 0 16px;">
+        <input type="text" id="recipesListSearchInput" placeholder="Search product name...">
+      </div>
+      <div class="recipe-list recipe-list-grid" id="recipesListGrid"></div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseRecipesListView').addEventListener('click', closeFeatureView);
+  document.getElementById('btnNewFromRecipesList').addEventListener('click', createNewRecipe);
+  document.getElementById('btnCompareFromRecipesList').addEventListener('click', () => {
+    mainFeatureView = 'compare';
+    renderMain();
+    renderSidebar();
+  });
+  document.getElementById('recipesListSearchInput').addEventListener('input', renderRecipesListGrid);
+
+  renderRecipesListGrid();
+}
+function renderRecipesListGrid(){
+  renderRecipeCards(document.getElementById('recipesListGrid'), document.getElementById('recipesListSearchInput')?.value);
 }
 
 function datePrefix(dateStr){
@@ -5452,6 +5524,7 @@ function wireDashboardHome(){
       if(type === 'project') openProjectFromDashboard(id);
       else if(type === 'trial') openTrialFromDashboard(id);
       else if(type === 'material') openMaterialFromDashboard(id);
+      else if(type === 'recipe') openRecipeFromDashboard(id);
     });
   });
 
@@ -5471,12 +5544,22 @@ function wireDashboardHome(){
     });
   });
 
+  // The sidebar is hidden on the Home dashboard now, so this can't just
+  // mirror into it like before — instead it hands off to the full-page
+  // Recipes view on the first keystroke and refocuses that view's own
+  // search box so typing can continue uninterrupted.
   const searchInputHome = document.getElementById('hdSearchInput');
   searchInputHome?.addEventListener('input', () => {
-    const sidebarSearch = document.getElementById('searchInput');
-    if(sidebarSearch){
-      sidebarSearch.value = searchInputHome.value;
-      renderSidebar();
+    const query = searchInputHome.value;
+    mainFeatureView = 'recipesList';
+    renderMain();
+    renderSidebar();
+    const newInput = document.getElementById('recipesListSearchInput');
+    if(newInput){
+      newInput.value = query;
+      newInput.focus();
+      newInput.setSelectionRange(query.length, query.length);
+      renderRecipesListGrid();
     }
   });
 
@@ -5488,7 +5571,7 @@ function wireDashboardHome(){
   });
   document.getElementById('hdCreateRecipeBtn')?.addEventListener('click', () => {
     createMenu.classList.remove('open');
-    document.getElementById('btnNew').click();
+    createNewRecipe();
   });
   document.getElementById('hdCreateProjectBtn')?.addEventListener('click', () => {
     createMenu.classList.remove('open');
@@ -5499,9 +5582,10 @@ function wireDashboardHome(){
   });
 }
 
-// Each entry mounts one of the 5 sidebar features into #mainArea. Checked
-// first in renderMain(), ahead of the normal home/recipe-editor split.
+// Each entry mounts one of the top-navbar features into #mainArea. Checked
+// first in renderMain(), ahead of the Home dashboard/recipe-editor split.
 const FEATURE_VIEW_MOUNTERS = {
+  recipesList: mountRecipesListView,
   compare: mountCompareView,
   materials: mountMaterialsView,
   refLists: mountRefListsView,
@@ -5545,14 +5629,21 @@ function openMaterialFromDashboard(materialId){
   if(input && m && m.nameEn) input.value = m.nameEn;
   renderMaterialTable();
 }
+function openRecipeFromDashboard(recipeId){
+  if(recipeId !== currentId) unlockedRecipeId = null;
+  currentId = recipeId;
+  mainFeatureView = null;
+  renderMain();
+  renderSidebar();
+}
 
 function renderMain(){
   const main = document.getElementById('mainArea');
   // The recipe-navigator sidebar (New Recipe / Compare / search / list) only
-  // makes sense while in Recipes mode (mainFeatureView === null, whether
-  // that's the home dashboard or an open recipe) — every other feature view
-  // gets the full width instead, with no left-hand navigator at all.
-  document.body.classList.toggle('hide-recipes-nav', mainFeatureView !== null);
+  // makes sense while actively viewing/editing one specific recipe — Home,
+  // the full-page Recipes list, and every other feature view all get the
+  // full screen width instead, with no left-hand navigator at all.
+  document.body.classList.toggle('hide-recipes-nav', !(mainFeatureView === null && !!currentId));
   if(mainFeatureView && FEATURE_VIEW_MOUNTERS[mainFeatureView]){
     FEATURE_VIEW_MOUNTERS[mainFeatureView]();
     return;
@@ -6746,16 +6837,7 @@ function importFromFile(file){
 }
 
 /* ---------- Init ---------- */
-document.getElementById('btnNew').addEventListener('click', () => {
-  const r = blankRecipe();
-  recipes.push(r);
-  currentId = r.id;
-  unlockedRecipeId = r.id;
-  mainFeatureView = null;
-  saveRecipeToCloud(r);
-  renderSidebar();
-  renderMain();
-});
+document.getElementById('btnNew').addEventListener('click', createNewRecipe);
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
 document.getElementById('btnExportAll').addEventListener('click', exportAll);
 document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
@@ -6772,7 +6854,11 @@ function goHome(){
   renderSidebar();
 }
 document.getElementById('navbarBrand').addEventListener('click', goHome);
-document.getElementById('btnRecipesTab').addEventListener('click', goHome);
+document.getElementById('btnRecipesTab').addEventListener('click', () => {
+  mainFeatureView = 'recipesList';
+  renderMain();
+  renderSidebar();
+});
 
 document.getElementById('navbarAccount').addEventListener('click', e => {
   e.stopPropagation();
