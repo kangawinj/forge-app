@@ -47,6 +47,146 @@
     min-height:100vh;
     padding-bottom:28px;
   }
+  /* Recipes-mode-only navigator: every other top-navbar tab (Ingredients/
+     RefLists/Projects/Trials, and Compare while it's open) collapses the
+     sidebar away entirely and gives #mainArea the full width instead. */
+  body.hide-recipes-nav .app{grid-template-columns:1fr;}
+  body.hide-recipes-nav .sidebar{display:none;}
+  body.hide-recipes-nav .mobile-sidebar-toggle{display:none !important;}
+  /* Top navbar: brand + the 5 full-page feature tabs (Compare/Materials/
+     RefLists/Projects/Trials) + account menu. The left sidebar below it
+     holds only recipe search/list and + New Recipe. */
+  .top-navbar{
+    display:none;
+    align-items:center;
+    gap:8px;
+    padding:0 20px;
+    height:56px;
+    background:var(--panel);
+    border-bottom:1px solid var(--border);
+    position:sticky;
+    top:0;
+    z-index:50;
+  }
+  .navbar-brand{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+    cursor:pointer;
+    padding:4px;
+    margin:-4px 0;
+    border-radius:var(--radius);
+    transition:background .15s;
+  }
+  .navbar-brand:hover{background:var(--primary-light);}
+  .navbar-brand-icon{width:26px;height:26px;object-fit:contain;display:block;}
+  .navbar-brand-title{font-weight:700;font-size:16px;color:var(--primary-dark);}
+  .navbar-tabs{
+    display:flex;
+    align-items:center;
+    flex:1;
+    overflow-x:auto;
+    margin-left:12px;
+  }
+  .nav-tab{
+    flex-shrink:0;
+    background:none;
+    border:none;
+    border-bottom:3px solid transparent;
+    padding:8px 4px;
+    margin:0 14px;
+    font-size:13px;
+    font-weight:600;
+    font-family:inherit;
+    color:var(--text-dim);
+    cursor:pointer;
+    white-space:nowrap;
+    transition:color .15s,border-color .15s;
+  }
+  .nav-tab:hover{color:var(--primary);}
+  .nav-tab.active{color:var(--primary-dark);border-bottom-color:var(--primary);}
+  .navbar-right{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-shrink:0;
+    margin-left:auto;
+  }
+  .navbar-icon-btn{
+    width:32px;height:32px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--panel);
+    display:flex;align-items:center;justify-content:center;
+    font-size:14px;
+    color:var(--text-dim);
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .navbar-icon-btn:hover{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+  .navbar-account{
+    position:relative;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:4px 8px 4px 4px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    flex-shrink:0;
+  }
+  .navbar-account:hover{background:var(--primary-light);}
+  .navbar-avatar{
+    width:28px;height:28px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+  }
+  .navbar-account-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
+  .navbar-account-chevron{font-size:10px;color:var(--text-dim);transition:transform .15s;}
+  .navbar-account.open .navbar-account-chevron{transform:rotate(180deg);}
+  .navbar-account-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    min-width:220px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:8px;
+    z-index:60;
+  }
+  .navbar-account.open .navbar-account-menu{display:block;}
+  .navbar-account-email{
+    font-size:12px;
+    color:var(--text-dim);
+    padding:4px 8px 10px;
+    margin-bottom:6px;
+    border-bottom:1px solid var(--border);
+    word-break:break-all;
+  }
+  .navbar-account-menu-item{
+    width:100%;
+    text-align:left;
+    background:none;
+    border:none;
+    padding:8px;
+    border-radius:var(--radius);
+    cursor:pointer;
+    font-size:13px;
+    font-family:inherit;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    color:var(--text);
+  }
+  .navbar-account-menu-item:hover{background:var(--primary-light);}
   .app-footer{
     position:fixed;
     left:0; right:0; bottom:0;
@@ -74,17 +214,15 @@
   }
   .mobile-sidebar-toggle{
     display:none;
-    position:fixed;
-    top:14px; left:14px;
-    z-index:60;
-    width:40px;height:40px;
+    flex-shrink:0;
+    width:36px;height:36px;
     align-items:center;justify-content:center;
     border-radius:10px;
     border:1px solid var(--border);
     background:var(--panel);
-    box-shadow:var(--shadow);
     font-size:18px;
     cursor:pointer;
+    margin-right:4px;
   }
   .sidebar-backdrop{
     display:none;
@@ -104,36 +242,6 @@
     background:var(--panel);
     font-size:16px;
     cursor:pointer;
-  }
-  .brand{
-    display:flex;
-    align-items:center;
-    gap:8px;
-    margin-bottom:16px;
-    cursor:pointer;
-    border-radius:var(--radius);
-    padding:4px;
-    margin:-4px -4px 12px;
-    transition:background .15s;
-  }
-  .brand:hover{background:var(--primary-light);}
-  .brand-icon{
-    width:34px;height:34px;border-radius:var(--radius);
-    background:#ffffff;
-    border:1px solid var(--border);
-    display:flex;align-items:center;justify-content:center;
-    padding:5px;
-    flex-shrink:0;
-  }
-  .brand-icon img{width:100%;height:100%;object-fit:contain;display:block;}
-  .brand-title{
-    font-weight:700;
-    font-size:15px;
-    line-height:1.2;
-  }
-  .brand-sub{
-    font-size:11px;
-    color:var(--text-dim);
   }
   .btn{
     border:1px solid var(--border);
@@ -158,6 +266,10 @@
   .btn-danger{color:var(--danger);}
   .btn-danger:hover{background:var(--danger-light);border-color:var(--danger);}
   .btn-block{width:100%;justify-content:center;}
+  /* Compare Recipes lives in the sidebar as a function of the Recipes
+     tab (not its own top-level nav tab) — same active treatment
+     .recipe-item.active uses for the currently-open recipe. */
+  #btnCompare.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600;}
   .btn-sm{padding:4px 8px;font-size:12px;}
   .btn-icon{padding:6px 8px;line-height:1;}
 
@@ -203,40 +315,16 @@
     color:var(--text-dim);
     margin-top:2px;
   }
-  .sidebar-footer{
-    border-top:1px solid var(--border);
-    padding-top:10px;
-    margin-top:10px;
-    display:flex;
-    flex-direction:column;
-    gap:6px;
-  }
   .hidden-file{display:none;}
-
-  .user-info{
-    padding:8px 10px;
-    margin-bottom:14px;
-    background:var(--primary-light);
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-  }
-  .user-info-label{
-    font-size:11px;
-    color:var(--text-dim);
-    margin-bottom:2px;
-  }
-  .user-info-email{
-    font-size:13px;
-    font-weight:600;
-    color:var(--primary-dark);
-    word-break:break-all;
-  }
 
   /* Main */
   .main{
     padding:24px 32px 60px;
     max-width:960px;
   }
+  /* Compare Recipes and Projects need more room than the 960px default
+     (they used wider modals before converting to full-page views). */
+  .main.main-wide{max-width:1300px;}
   .main-header{
     display:flex;
     justify-content:space-between;
@@ -519,6 +607,9 @@
     box-shadow:-4px 0 6px -4px rgba(0,0,0,.15);
   }
   .proj-table-scroll thead th.proj-actions-cell{z-index:3;}
+  .proj-th-sortable{cursor:pointer;user-select:none;}
+  .proj-th-sortable:hover{color:var(--primary);}
+  .proj-th-sortable.active{color:var(--primary-dark);font-weight:700;}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
   /* Right-align every numeric column total (Parts/Components tfoot,
      Recipe Overview's plain-text data rows and its Total) so every digit
@@ -808,7 +899,6 @@
     color:var(--text-dim);
   }
 
-  .compare-modal{max-width:1180px;}
   .compare-pickers{
     display:grid;
     grid-template-columns:repeat(3,1fr);
@@ -1263,6 +1353,15 @@
   .project-log-stage{font-weight:700;font-size:13px;color:var(--primary-dark);}
   .project-log-date{font-size:11px;color:var(--text-dim);}
   .project-log-note{font-size:13px;margin-top:4px;}
+  .proj-monthly-list{margin-bottom:10px;}
+  /* Fixed widths (not flex:1) on purpose — this form sits inside a colspan
+     cell of a very wide, horizontally-scrolling table, so anything that
+     grows to "fill available width" ends up matching the table's full
+     content width (1000px+) instead of the visible viewport. */
+  .proj-monthly-add{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;}
+  .proj-monthly-add .proj-mu-date{width:150px;flex:0 0 auto;}
+  .proj-monthly-add textarea{width:260px;flex:0 0 auto;min-height:44px;}
+  .proj-monthly-add .btn{flex:0 0 auto;white-space:nowrap;align-self:center;}
   .project-log-by{font-size:11px;color:var(--text-dim);margin-top:4px;}
   .trial-photos-row{
     display:flex;
@@ -1430,7 +1529,7 @@
 
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
-    .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
+    .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list{display:none !important;}
     .print-only{display:block !important;}
     .app{display:block !important;}
@@ -1513,7 +1612,10 @@
     .app{grid-template-columns:1fr;}
     .mobile-sidebar-toggle{display:flex;}
     .sidebar-close-btn{display:flex;}
-    .main{padding-top:64px;}
+    .top-navbar{padding:0 12px;gap:6px;}
+    .navbar-brand-title{display:none;}
+    .navbar-icon-btn{display:none;}
+    .navbar-account-name{display:none;}
     .sidebar{
       position:fixed;
       top:0; left:0; bottom:0;
@@ -1596,46 +1698,51 @@
   </div>
 </div>
 
-<button class="mobile-sidebar-toggle" id="btnMobileSidebarToggle" aria-label="Open menu">☰</button>
 <div class="sidebar-backdrop" id="sidebarBackdrop"></div>
+
+<nav class="top-navbar" id="topNavbar">
+  <button class="mobile-sidebar-toggle" id="btnMobileSidebarToggle" aria-label="Open menu">☰</button>
+  <div class="navbar-brand" id="navbarBrand" title="Home">
+    <img class="navbar-brand-icon" src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
+    <span class="navbar-brand-title">Forge</span>
+  </div>
+  <div class="navbar-tabs">
+    <button class="nav-tab" id="btnRecipesTab">Recipes</button>
+    <button class="nav-tab" id="btnOpenMaterialLibSidebar">Ingredients</button>
+    <button class="nav-tab" id="btnOpenRefLists">Reference Lists</button>
+    <button class="nav-tab" id="btnOpenProjects">Projects</button>
+    <button class="nav-tab" id="btnOpenTrials">Trials</button>
+  </div>
+  <div class="navbar-right">
+    <button class="navbar-icon-btn" id="btnNavbarHelp" title="Help">?</button>
+    <button class="navbar-icon-btn" id="btnNavbarNotifications" title="Notifications">🔔</button>
+    <div class="navbar-account" id="navbarAccount">
+      <div class="navbar-avatar" id="navbarAvatar"></div>
+      <span class="navbar-account-name" id="navbarAccountName"></span>
+      <span class="navbar-account-chevron">▾</span>
+      <div class="navbar-account-menu" id="navbarAccountMenu">
+        <div class="navbar-account-email" id="navbarAccountEmail"></div>
+        <button class="navbar-account-menu-item" id="btnExportAll">⬇ Export All (JSON)</button>
+        <button class="navbar-account-menu-item" id="btnImport">⬆ Import (JSON)</button>
+        <input type="file" id="importFile" class="hidden-file" accept="application/json">
+        <button class="navbar-account-menu-item" id="btnLogoutFromApp">🚪 Log Out</button>
+      </div>
+    </div>
+  </div>
+</nav>
 
 <div class="app" id="appRoot">
   <aside class="sidebar">
     <button class="sidebar-close-btn" id="btnSidebarClose" aria-label="Close menu">✕</button>
-    <div class="brand">
-      <div class="brand-icon">
-        <img src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
-      </div>
-      <div>
-        <div class="brand-title">Forge</div>
-        <div class="brand-sub">Food Product Development</div>
-      </div>
-    </div>
-
-    <div class="user-info">
-      <div class="user-info-label">Logged in as</div>
-      <div class="user-info-email" id="sidebarUserEmail"></div>
-    </div>
 
     <button class="btn btn-primary btn-block" id="btnNew">+ New Recipe</button>
     <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">⚖️ Compare Recipes</button>
-    <button class="btn btn-block" id="btnOpenMaterialLibSidebar" style="margin-top:8px;">📚 Ingredient Library</button>
-    <button class="btn btn-block" id="btnOpenRefLists" style="margin-top:8px;">📇 Reference Lists</button>
-    <button class="btn btn-block" id="btnOpenProjects" style="margin-top:8px;">📁 Projects</button>
-    <button class="btn btn-block" id="btnOpenTrials" style="margin-top:8px;">🧪 Trial Results</button>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search product name...">
     </div>
 
     <div class="recipe-list" id="recipeList"></div>
-
-    <div class="sidebar-footer">
-      <button class="btn btn-sm" id="btnExportAll">⬇ Export All (JSON)</button>
-      <button class="btn btn-sm" id="btnImport">⬆ Import (JSON)</button>
-      <input type="file" id="importFile" class="hidden-file" accept="application/json">
-      <button class="btn btn-sm" id="btnLogoutFromApp">🚪 Log Out</button>
-    </div>
   </aside>
 
   <main class="main" id="mainArea">
@@ -1653,97 +1760,6 @@
 <datalist id="salesRepDatalist"></datalist>
 <datalist id="responsiblePersonDatalist"></datalist>
 <datalist id="factoryDatalist"></datalist>
-
-<div class="modal-overlay" id="materialModalOverlay">
-  <div class="modal">
-    <div class="modal-header">
-      <div class="modal-title">📚 Ingredient Library</div>
-      <button class="icon-btn" id="btnCloseMaterialModal" title="Close">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="material-add-form">
-        <div class="card-title" id="materialFormTitle" style="font-size:13px;margin-bottom:10px;">+ Add New Ingredient</div>
-        <div class="grid-3">
-          <div class="field">
-            <label>1. Ingredient Name (English)*</label>
-            <input type="text" id="mf-nameEn" placeholder="e.g. Vegan Mayonnaise">
-          </div>
-          <div class="field">
-            <label>2. Ingredient Name (Thai)*</label>
-            <input type="text" id="mf-nameTh" placeholder="Thai name">
-          </div>
-          <div class="field">
-            <label>3. Vendor Code (from supplier)</label>
-            <input type="text" id="mf-vendorCode" placeholder="e.g. RM-00123">
-          </div>
-        </div>
-        <div class="grid-3">
-          <div class="field">
-            <label>4. Vendor Name</label>
-            <input type="text" id="mf-vendorName" placeholder="e.g. ABC Co., Ltd.">
-          </div>
-          <div class="field">
-            <label>5. Manufacturer Name (if any)</label>
-            <input type="text" id="mf-manufacturer" placeholder="e.g. XYZ Manufacturing">
-          </div>
-          <div class="field">
-            <label>6. Price/kg (฿)</label>
-            <div class="code-row">
-              <span class="code-prefix">฿</span>
-              <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00" class="code-suffix">
-            </div>
-          </div>
-        </div>
-        <div class="grid-3">
-          <div class="field">
-            <label>7. MOQ/kg (if any)</label>
-            <div class="code-row">
-              <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25" class="unit-input">
-              <span class="unit-suffix">kg</span>
-            </div>
-          </div>
-          <div class="field">
-            <label>8. Photo (optional)</label>
-            <input type="file" id="mf-image" accept="image/*">
-          </div>
-          <div class="field" style="display:flex;align-items:center;gap:10px;">
-            <img id="mf-imagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
-            <button type="button" class="btn btn-sm" id="btnRemoveMaterialImage" style="display:none;">Remove photo</button>
-          </div>
-        </div>
-        <div class="field">
-          <label>9. Usage Notes (optional)</label>
-          <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
-        </div>
-        <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
-        <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
-        <span class="ing-hint" id="materialFormError"></span>
-      </div>
-
-      <div class="material-search">
-        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor / usage notes)...">
-      </div>
-      <div style="overflow-x:auto;">
-        <table class="material-table">
-          <thead>
-            <tr>
-              <th>Photo</th>
-              <th>English</th>
-              <th>Thai</th>
-              <th>Code</th>
-              <th>Vendor</th>
-              <th>Manufacturer</th>
-              <th>Price/kg (฿)</th>
-              <th>MOQ</th>
-              <th></th>
-            </tr>
-          </thead>
-          <tbody id="materialTableBody"></tbody>
-        </table>
-      </div>
-    </div>
-  </div>
-</div>
 
 <div class="modal-overlay" id="materialDetailModalOverlay">
   <div class="modal" style="max-width:480px;">
@@ -1779,22 +1795,6 @@
   </div>
 </div>
 
-<div class="modal-overlay" id="compareModalOverlay">
-  <div class="modal compare-modal">
-    <div class="modal-header">
-      <div class="modal-title">⚖️ Compare Recipes</div>
-      <div style="display:flex; gap:8px;">
-        <button class="icon-btn" id="btnPrintCompare" title="Print">🖨️</button>
-        <button class="icon-btn" id="btnCloseCompareModal" title="Close">✕</button>
-      </div>
-    </div>
-    <div class="modal-body">
-      <div class="compare-pickers" id="comparePickers"></div>
-      <div id="compareContent"></div>
-    </div>
-  </div>
-</div>
-
 <div class="modal-overlay" id="versionsModalOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
@@ -1808,43 +1808,6 @@
       </div>
       <div class="version-hint">Keeps the last 5 saved versions. Restoring replaces the recipe's name, description, ingredients, process steps/components, and yield — it does not affect trial photos.</div>
       <div id="versionsList"></div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="refListsModalOverlay">
-  <div class="modal" style="max-width:680px;">
-    <div class="modal-header">
-      <div class="modal-title">📇 Reference Lists</div>
-      <button class="icon-btn" id="btnCloseRefListsModal" title="Close">✕</button>
-    </div>
-    <div class="modal-body">
-      <div class="reflist-tabs">
-        <button class="reflist-tab-btn active" data-key="customers">Customers</button>
-        <button class="reflist-tab-btn" data-key="salesReps">Sales Reps</button>
-        <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
-        <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
-        <button class="reflist-tab-btn" data-key="factories">Factories</button>
-      </div>
-      <div class="reflist-add-row">
-        <input type="text" id="refListNewInput" placeholder="Add a new entry...">
-        <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
-        <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
-      </div>
-      <div id="refListItems"></div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="projectsModalOverlay">
-  <div class="modal" style="max-width:1100px;">
-    <div class="modal-header">
-      <div class="modal-title">📁 Projects</div>
-      <button class="icon-btn" id="btnCloseProjectsModal" title="Close">✕</button>
-    </div>
-    <div class="modal-body">
-      <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
-      <div id="projectsList"></div>
     </div>
   </div>
 </div>
@@ -1866,19 +1829,6 @@
       </div>
       <button class="btn btn-primary btn-sm" id="btnAddProductLogEntry" style="margin-bottom:16px;">+ Add Entry</button>
       <div id="productLogList"></div>
-    </div>
-  </div>
-</div>
-
-<div class="modal-overlay" id="trialsModalOverlay">
-  <div class="modal" style="max-width:900px;">
-    <div class="modal-header">
-      <div class="modal-title">🧪 Trial Results</div>
-      <button class="icon-btn" id="btnCloseTrialsModal" title="Close">✕</button>
-    </div>
-    <div class="modal-body">
-      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Trial</button>
-      <div id="trialsList"></div>
     </div>
   </div>
 </div>
@@ -2057,7 +2007,18 @@ const CHANGELOG = [
   { version: "3.0.69", date: "2026-08-04", note: "Projects is now a scannable table (Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Reqs, Products as columns) instead of a stack of cards, so it's easy to see at a glance which projects are missing which fields — any empty field shows a red \"—\" instead of blank. Click a row's arrow to expand the full editable form below it, same as before. Saving now collapses the row back down automatically instead of leaving it expanded" },
   { version: "3.0.70", date: "2026-08-04", note: "Projects table: each project name now has a small progress bar underneath showing its Status at a glance — empty for Not Started, partway (orange) for In Progress, partway in red for Blocked/On Hold, further along (navy) for In Review, and full green for Completed; Cancelled shows full grey" },
   { version: "3.0.71", date: "2026-08-04", note: "Fixed the Projects table's Edit/Save/Delete column scrolling out of view on narrower screens (the table has enough columns that it scrolls horizontally) — that column is now pinned to the right edge so it's always reachable no matter how far the table is scrolled" },
-  { version: "3.0.72", date: "2026-08-04", note: "Fixed the Projects table's horizontal scrollbar being unreachable without first scrolling all the way down past every row. The table now scrolls within its own bounded box (both directions), with the column headers pinned to the top of that box, so both scrollbars stay within reach near the top of the list instead of at the bottom of 25+ rows" }
+  { version: "3.0.72", date: "2026-08-04", note: "Fixed the Projects table's horizontal scrollbar being unreachable without first scrolling all the way down past every row. The table now scrolls within its own bounded box (both directions), with the column headers pinned to the top of that box, so both scrollbars stay within reach near the top of the list instead of at the bottom of 25+ rows" },
+  { version: "3.0.73", date: "2026-08-04", note: "Projects: added a Monthly Updates log to each project (below Requirements/Certifications when expanded) for reporting progress up the chain — each entry records a date, ผลการดำเนินงาน (what was accomplished), and Next Plan, plus who added it and when. Entries are listed newest-first and can be deleted individually if one was added by mistake" },
+  { version: "3.0.74", date: "2026-08-04", note: "Monthly Updates: the date/results/next-plan fields now sit side by side in one row instead of stacked, and adding or deleting an entry now requires clicking Edit first (like the rest of a project's fields) instead of being editable any time the row is expanded" },
+  { version: "3.0.75", date: "2026-08-04", note: "Projects: added a search box (matches name, customer, destination, owner, factory rep, PD, factory, or status) that filters the table, plus a new \"Projects by Status\" breakdown alongside \"Products by stage\" at the top of the screen" },
+  { version: "3.0.76", date: "2026-08-04", note: "Moved the Projects search box below the dashboard summary, right above the table, instead of above it" },
+  { version: "3.0.77", date: "2026-08-04", note: "Fixed a data-loss bug: typing a Monthly Update (date/results/next-plan) and clicking the project's main Save button — instead of the separate \"+ Add Update\" button — silently discarded what was typed. Save now captures a pending Monthly Update too, so nothing is lost regardless of which button is clicked" },
+  { version: "3.0.78", date: "2026-08-06", note: "Compare Recipes, Ingredient Library, Reference Lists, Projects, and Trial Results no longer open as pop-up windows — each now takes over the main screen (with a \"← Back\" button), matching how opening a recipe already works. Smaller dialogs nested inside them (password confirm, version history, ingredient add/edit, project's product log) are unchanged" },
+  { version: "3.0.79", date: "2026-08-06", note: "Projects table: added a Status filter dropdown next to the search box, and every column header (Project, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Products) is now clickable to sort the table by that column — click again to reverse the order" },
+  { version: "3.0.80", date: "2026-08-06", note: "Moved the 5 feature buttons (Compare Recipes, Ingredient Library, Reference Lists, Projects, Trial Results) out of the left sidebar and into a horizontal tab bar across the top of the screen, underlined to show which one is currently open. The sidebar now holds just the logo, account info, + New Recipe, search, and the recipe list" },
+  { version: "3.0.81", date: "2026-08-06", note: "Redesigned the top bar to match a standard app-navbar layout: the Forge logo moved from the sidebar to the top-left (click it to go home), a Help icon and Notifications bell were added on the top-right, and the account box + Log Out button moved out of the sidebar into an avatar/name dropdown next to them (also holding Export All / Import). The sidebar itself now only has + New Recipe, search, and the recipe list" },
+  { version: "3.0.82", date: "2026-08-06", note: "Added a \"Recipes\" tab to the top bar (the Home view — click it or the Forge logo to get there) and moved \"Compare Recipes\" off the top bar into the sidebar, right below + New Recipe, since it's a function you reach for while working with recipes rather than a standalone destination. The Recipes tab stays highlighted while comparing or editing any recipe" },
+  { version: "3.0.83", date: "2026-08-06", note: "The left sidebar (+ New Recipe, Compare Recipes, search, recipe list) now only shows up while in Recipes mode — every other tab (Ingredients, Reference Lists, Projects, Trials) gets the full width of the screen instead, with no sidebar at all" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2097,10 +2058,24 @@ function authErrorMessage(err){
   return map[err.code] || ('Error: ' + err.message);
 }
 
+// Derives a display name + avatar initials from the account email — there's
+// no separate "display name" field, so the local-part (before the @) stands
+// in for one, same as the old sidebar's "Logged in as" box did.
+function accountDisplayFromEmail(email){
+  const local = (email || '').split('@')[0] || '';
+  const name = local ? local.charAt(0).toUpperCase() + local.slice(1) : '';
+  const initials = local ? local.slice(0, 2).toUpperCase() : '';
+  return { name, initials };
+}
+
 function renderApp(){
   document.getElementById('authScreen').classList.toggle('active', appView === 'auth');
   document.getElementById('appRoot').style.display = appView === 'app' ? 'grid' : 'none';
-  document.getElementById('sidebarUserEmail').textContent = currentUser ? currentUser.email : '';
+  document.getElementById('topNavbar').style.display = appView === 'app' ? 'flex' : 'none';
+  const { name, initials } = accountDisplayFromEmail(currentUser?.email);
+  document.getElementById('navbarAvatar').textContent = initials;
+  document.getElementById('navbarAccountName').textContent = name;
+  document.getElementById('navbarAccountEmail').textContent = currentUser ? currentUser.email : '';
 }
 
 function goToAuth(){
@@ -2110,6 +2085,7 @@ function goToAuth(){
 function goToApp(){
   currentId = null;
   unlockedRecipeId = null;
+  mainFeatureView = null;
   appView = 'app';
   renderApp();
   renderSidebar();
@@ -2357,13 +2333,65 @@ function initVersionsModal(){
 let refListActiveTab = 'customers';
 let refListEditingId = null;
 
-function openRefListsModal(){
-  document.getElementById('refListsModalOverlay').classList.add('open');
+function mountRefListsView(){
+  const main = document.getElementById('mainArea');
+  main.classList.remove('main-wide');
   refListEditingId = null;
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">📇 Reference Lists</div>
+      <div class="toolbar">
+        <button class="btn" id="btnCloseRefLists">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="reflist-tabs">
+        <button class="reflist-tab-btn active" data-key="customers">Customers</button>
+        <button class="reflist-tab-btn" data-key="salesReps">Sales Reps</button>
+        <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
+        <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
+        <button class="reflist-tab-btn" data-key="factories">Factories</button>
+      </div>
+      <div class="reflist-add-row">
+        <input type="text" id="refListNewInput" placeholder="Add a new entry...">
+        <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
+        <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
+      </div>
+      <div id="refListItems"></div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseRefLists').addEventListener('click', closeFeatureView);
+  document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
+    btn.classList.toggle('active', btn.dataset.key === refListActiveTab);
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.reflist-tab-btn').forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      refListActiveTab = btn.dataset.key;
+      refListEditingId = null;
+      document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
+      renderRefListItems();
+    });
+  });
+  document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
+  const addNewEntry = () => {
+    const input = document.getElementById('refListNewInput');
+    const locationInput = document.getElementById('refListNewLocationInput');
+    const extra = refListActiveTab === 'factories' ? { location: locationInput.value.trim() } : {};
+    addMetaListValue(refListActiveTab, input.value, extra);
+    input.value = '';
+    locationInput.value = '';
+    renderRefListItems();
+  };
+  document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
+  document.getElementById('refListNewInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+  document.getElementById('refListNewLocationInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+
   renderRefListItems();
-}
-function closeRefListsModal(){
-  document.getElementById('refListsModalOverlay').classList.remove('open');
 }
 function renderRefListItems(){
   const container = document.getElementById('refListItems');
@@ -2454,37 +2482,11 @@ function renderRefListItems(){
     });
   });
 }
-function initRefListsModal(){
-  document.getElementById('btnOpenRefLists').addEventListener('click', openRefListsModal);
-  document.getElementById('btnCloseRefListsModal').addEventListener('click', closeRefListsModal);
-  document.getElementById('refListsModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'refListsModalOverlay') closeRefListsModal();
-  });
-  document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      document.querySelectorAll('.reflist-tab-btn').forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-      refListActiveTab = btn.dataset.key;
-      refListEditingId = null;
-      document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
-      renderRefListItems();
-    });
-  });
-  const addNewEntry = () => {
-    const input = document.getElementById('refListNewInput');
-    const locationInput = document.getElementById('refListNewLocationInput');
-    const extra = refListActiveTab === 'factories' ? { location: locationInput.value.trim() } : {};
-    addMetaListValue(refListActiveTab, input.value, extra);
-    input.value = '';
-    locationInput.value = '';
-    renderRefListItems();
-  };
-  document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
-  document.getElementById('refListNewInput').addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
-  });
-  document.getElementById('refListNewLocationInput').addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+function initRefListsView(){
+  document.getElementById('btnOpenRefLists').addEventListener('click', () => {
+    mainFeatureView = 'refLists';
+    renderMain();
+    renderSidebar();
   });
 }
 
@@ -2525,6 +2527,28 @@ function projectStatusBarHtml(status){
   return `<div class="proj-status-bar-track" title="${escapeHtml(s)}"><div class="proj-status-bar-fill" style="width:${cfg.pct}%;background:${cfg.color};"></div></div>`;
 }
 
+// Reads the Monthly Update draft fields (date/results/next-plan) out of a
+// project's expanded row and, if there's anything worth keeping, appends it
+// to monthlyUpdates. Shared by "+ Add Update" and the main Save button —
+// Save needs this too, otherwise exiting edit mode silently discards
+// whatever was typed there but never explicitly added.
+function captureMonthlyUpdateDraft(p, block){
+  const dateInput = block.querySelector('.proj-mu-date');
+  const resultsInput = block.querySelector('.proj-mu-results');
+  const nextPlanInput = block.querySelector('.proj-mu-nextplan');
+  if(!dateInput) return false;
+  const date = dateInput.value;
+  const results = resultsInput.value.trim();
+  const nextPlan = nextPlanInput.value.trim();
+  if(!date || (!results && !nextPlan)) return false;
+  if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
+  p.monthlyUpdates.push({
+    id: uid(), date, results, nextPlan,
+    createdBy: currentUser?.email || '', createdAt: Date.now()
+  });
+  return true;
+}
+
 function blankProject(){
   return {
     id: uid(),
@@ -2539,6 +2563,7 @@ function blankProject(){
     factoryName: "",
     requirements: "",
     products: [],
+    monthlyUpdates: [],
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
     updatedBy: currentUser?.email || '',
@@ -2640,15 +2665,36 @@ function migrateTrialsFromRecipes(){
     saveTrialToCloud(t);
     migratedAny = true;
   });
-  if(migratedAny && document.getElementById('trialsModalOverlay')?.classList.contains('open')) renderTrialsList();
+  if(migratedAny && mainFeatureView === 'trials') renderTrialsList();
 }
 
-function openTrialsModal(){
-  document.getElementById('trialsModalOverlay').classList.add('open');
+function mountTrialsView(){
+  const main = document.getElementById('mainArea');
+  main.classList.remove('main-wide');
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">🧪 Trial Results</div>
+      <div class="toolbar">
+        <button class="btn" id="btnCloseTrialsView">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Trial</button>
+      <div id="trialsList"></div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseTrialsView').addEventListener('click', closeFeatureView);
+  document.getElementById('btnAddTrial').addEventListener('click', () => {
+    const t = blankTrial();
+    trials.push(t);
+    saveTrialToCloud(t);
+    trialEditingId = t.id;
+    trialExpandedIds.add(t.id);
+    renderTrialsList();
+  });
+
   renderTrialsList();
-}
-function closeTrialsModal(){
-  document.getElementById('trialsModalOverlay').classList.remove('open');
 }
 
 function renderTrialsList(){
@@ -2909,65 +2955,162 @@ function renderTrialsList(){
   });
 }
 
-function initTrialsModal(){
-  document.getElementById('btnOpenTrials').addEventListener('click', openTrialsModal);
-  document.getElementById('btnCloseTrialsModal').addEventListener('click', closeTrialsModal);
-  document.getElementById('trialsModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'trialsModalOverlay') closeTrialsModal();
-  });
-  document.getElementById('btnAddTrial').addEventListener('click', () => {
-    const t = blankTrial();
-    trials.push(t);
-    saveTrialToCloud(t);
-    trialEditingId = t.id;
-    trialExpandedIds.add(t.id);
-    renderTrialsList();
+function initTrialsView(){
+  document.getElementById('btnOpenTrials').addEventListener('click', () => {
+    mainFeatureView = 'trials';
+    renderMain();
+    renderSidebar();
   });
 }
 
-function openProjectsModal(){
-  document.getElementById('projectsModalOverlay').classList.add('open');
+function mountProjectsView(){
+  const main = document.getElementById('mainArea');
+  main.classList.add('main-wide');
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">📁 Projects</div>
+      <div class="toolbar">
+        <button class="btn" id="btnCloseProjectsView">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
+      <div id="projectsDashboard"></div>
+      <div style="display:flex;gap:12px;margin-bottom:16px;">
+        <div class="search-box" style="margin:0;flex:1;">
+          <input type="text" id="projectSearchInput" placeholder="Search projects (name, customer, destination, owner, factory...)">
+        </div>
+        <select class="proj-select" id="projectStatusFilter" style="max-width:200px;">
+          <option value="all">All statuses</option>
+          ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+      </div>
+      <div id="projectsList"></div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseProjectsView').addEventListener('click', closeFeatureView);
+  document.getElementById('btnAddProject').addEventListener('click', () => {
+    const p = blankProject();
+    projects.push(p);
+    saveProjectToCloud(p);
+    projectEditingId = p.id;
+    projectExpandedIds.add(p.id);
+    renderProjectsList();
+  });
+  document.getElementById('projectSearchInput').addEventListener('input', renderProjectsList);
+  const statusFilterEl = document.getElementById('projectStatusFilter');
+  statusFilterEl.value = projectStatusFilter;
+  statusFilterEl.addEventListener('change', () => {
+    projectStatusFilter = statusFilterEl.value;
+    renderProjectsList();
+  });
+
   renderProjectsList();
-}
-function closeProjectsModal(){
-  document.getElementById('projectsModalOverlay').classList.remove('open');
 }
 
 let projectEditingId = null;
 let projectExpandedIds = new Set();
+let projectStatusFilter = 'all';
+let projectSortKey = 'updatedAt';
+let projectSortDir = 'desc';
+
+// Accessor per sortable column — keeps the header-click handler and the
+// comparator working off the same single source of truth for "what does
+// this column's value mean," text columns lowercased so sorting isn't
+// case-sensitive.
+const PROJECT_SORT_ACCESSORS = {
+  name: p => (p.name || '').toLowerCase(),
+  status: p => p.status || PROJECT_STATUSES[0],
+  requestDate: p => p.requestDate || '',
+  customerName: p => (p.customerName || '').toLowerCase(),
+  destinationCountry: p => (p.destinationCountry || '').toLowerCase(),
+  ownerSalesRep: p => (p.ownerSalesRep || '').toLowerCase(),
+  factorySalesRep: p => (p.factorySalesRep || '').toLowerCase(),
+  responsiblePerson: p => (p.responsiblePerson || '').toLowerCase(),
+  factoryName: p => (p.factoryName || '').toLowerCase(),
+  productCount: p => p.products.length,
+  updatedAt: p => p.updatedAt || 0
+};
+function compareProjects(a, b){
+  const accessor = PROJECT_SORT_ACCESSORS[projectSortKey] || PROJECT_SORT_ACCESSORS.updatedAt;
+  const av = accessor(a), bv = accessor(b);
+  const cmp = (typeof av === 'number' && typeof bv === 'number') ? av - bv : String(av).localeCompare(String(bv));
+  return projectSortDir === 'asc' ? cmp : -cmp;
+}
+function sortableProjectHeader(label, key){
+  const active = projectSortKey === key;
+  const arrow = active ? (projectSortDir === 'asc' ? ' ▲' : ' ▼') : '';
+  return `<th class="proj-th-sortable${active ? ' active' : ''}" data-sort-key="${key}">${escapeHtml(label)}${arrow}</th>`;
+}
 
 function renderProjectsList(){
   const container = document.getElementById('projectsList');
+  const dashboardContainer = document.getElementById('projectsDashboard');
   if(!container) return;
   if(projects.length === 0){
+    if(dashboardContainer) dashboardContainer.innerHTML = '';
     container.innerHTML = '<div class="overview-empty">No projects yet — click "+ New Project" above to start one</div>';
     return;
   }
-  const sorted = [...projects].sort((a,b) => b.updatedAt - a.updatedAt);
 
-  // Compact summary strip at the top — with dozens of projects, this gives
-  // an at-a-glance pipeline view before scrolling through the (collapsed
-  // by default) list below.
+  // The search box lives outside both #projectsDashboard and #projectsList
+  // (a sibling, static element) so re-rendering these containers on every
+  // keystroke never destroys/recreates the input itself — the cursor and
+  // focus just stay put, same trick the recipe sidebar search already uses.
+  const searchQuery = (document.getElementById('projectSearchInput')?.value || '').trim().toLowerCase();
+  const matchesSearch = p => {
+    if(!searchQuery) return true;
+    const haystack = [
+      p.name, p.customerName, p.destinationCountry, p.ownerSalesRep,
+      p.factorySalesRep, p.responsiblePerson, p.factoryName,
+      p.status || PROJECT_STATUSES[0]
+    ].filter(Boolean).join(' ').toLowerCase();
+    return haystack.includes(searchQuery);
+  };
+  const matchesStatus = p => projectStatusFilter === 'all' || (p.status || PROJECT_STATUSES[0]) === projectStatusFilter;
+  const sorted = projects.filter(p => matchesSearch(p) && matchesStatus(p)).sort(compareProjects);
+
+  // Dashboard summary always reflects ALL projects (not the search filter)
+  // — searching narrows the table below, not the overview stats above it.
   const allProductsGlobal = projects.flatMap(pr => pr.products || []);
   const productsByStage = PROJECT_STAGES
     .map(stage => ({ label: stage, count: allProductsGlobal.filter(x => x.stage === stage).length }))
     .filter(g => g.count > 0);
-  const dashboardHtml = `
-    <div class="dash-metrics" style="margin-bottom:14px;">
-      <div class="dash-metric">
-        <div class="dash-metric-label">Projects</div>
-        <div class="dash-metric-value">${projects.length}</div>
+  const projectsByStatus = PROJECT_STATUSES
+    .map(status => ({ label: status, count: projects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status).length }))
+    .filter(g => g.count > 0);
+  if(dashboardContainer){
+    dashboardContainer.innerHTML = `
+      <div class="dash-metrics" style="margin-bottom:14px;">
+        <div class="dash-metric">
+          <div class="dash-metric-label">Projects</div>
+          <div class="dash-metric-value">${projects.length}</div>
+        </div>
+        <div class="dash-metric">
+          <div class="dash-metric-label">Products</div>
+          <div class="dash-metric-value">${allProductsGlobal.length}</div>
+        </div>
       </div>
-      <div class="dash-metric">
-        <div class="dash-metric-label">Products</div>
-        <div class="dash-metric-value">${allProductsGlobal.length}</div>
+      <div class="dash-row" style="margin-bottom:16px;">
+        <div class="dash-card">
+          <div class="dash-card-title">Projects by Status</div>
+          ${renderBarList(projectsByStatus)}
+        </div>
+        <div class="dash-card">
+          <div class="dash-card-title">Products by stage</div>
+          ${renderBarList(productsByStage)}
+        </div>
       </div>
-    </div>
-    <div class="dash-card" style="margin-bottom:16px;">
-      <div class="dash-card-title">Products by stage</div>
-      ${renderBarList(productsByStage)}
-    </div>
-  `;
+    `;
+  }
+
+  if(sorted.length === 0){
+    const q = document.getElementById('projectSearchInput').value.trim();
+    const label = q ? `No projects match "${escapeHtml(q)}"` : 'No projects match the selected status filter';
+    container.innerHTML = `<div class="overview-empty">${label}</div>`;
+    return;
+  }
 
   // Empty-value marker for the overview table — a plain blank cell reads as
   // "nothing to report", but a project missing Customer/Destination/etc. is
@@ -2975,23 +3118,23 @@ function renderProjectsList(){
   // --danger red instead of just left blank.
   const missingCell = v => v ? escapeHtml(v) : '<span class="proj-missing" title="Missing">—</span>';
 
-  container.innerHTML = dashboardHtml + `
+  container.innerHTML = `
     <div class="proj-table-scroll">
     <table class="proj-overview-table">
       <thead>
         <tr>
           <th></th>
-          <th>Project</th>
-          <th>Status</th>
-          <th>Requested</th>
-          <th>Customer</th>
-          <th>Destination</th>
-          <th>Owner</th>
-          <th>Factory Rep</th>
-          <th>PD</th>
-          <th>Factory</th>
+          ${sortableProjectHeader('Project', 'name')}
+          ${sortableProjectHeader('Status', 'status')}
+          ${sortableProjectHeader('Requested', 'requestDate')}
+          ${sortableProjectHeader('Customer', 'customerName')}
+          ${sortableProjectHeader('Destination', 'destinationCountry')}
+          ${sortableProjectHeader('Owner', 'ownerSalesRep')}
+          ${sortableProjectHeader('Factory Rep', 'factorySalesRep')}
+          ${sortableProjectHeader('PD', 'responsiblePerson')}
+          ${sortableProjectHeader('Factory', 'factoryName')}
           <th>Reqs</th>
-          <th>Products</th>
+          ${sortableProjectHeader('Products', 'productCount')}
           <th class="proj-actions-cell"></th>
         </tr>
       </thead>
@@ -3029,6 +3172,21 @@ function renderProjectsList(){
         }).join('');
 
         const productCount = p.products.length;
+
+        // Append-only monthly reporting log (results done + next plan per
+        // entry) — separate from the per-product progress log, since this
+        // is a project-level summary meant for handing straight to a
+        // supervisor, not tied to any one product's pipeline stage.
+        const monthlyUpdatesHtml = (p.monthlyUpdates && p.monthlyUpdates.length)
+          ? [...p.monthlyUpdates].sort((a,b) => (b.date||'').localeCompare(a.date||'')).map(mu => `
+              <div class="project-log-entry" data-update-id="${escapeHtml(mu.id)}">
+                <div class="project-log-stage">${escapeHtml(mu.date || '-')}${isEditing ? '<button class="icon-btn" title="Delete this update" data-role="delete-monthly-update" style="float:right;">✕</button>' : ''}</div>
+                <div class="project-log-date">${mu.createdBy ? 'Added by ' + escapeHtml(mu.createdBy) : ''}${mu.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(mu.createdAt)) : ''}</div>
+                ${mu.results ? `<div class="project-log-note"><b>ผลการดำเนินงาน:</b> ${escapeHtml(mu.results)}</div>` : ''}
+                ${mu.nextPlan ? `<div class="project-log-note"><b>Next Plan:</b> ${escapeHtml(mu.nextPlan)}</div>` : ''}
+              </div>
+            `).join('')
+          : '<div class="overview-empty">No monthly updates yet</div>';
 
         const summaryRow = `
           <tr class="proj-row">
@@ -3115,6 +3273,19 @@ function renderProjectsList(){
                 </select>
                 <button class="btn btn-sm" data-role="add-product">+ Add Product</button>
               </div>
+
+              <div class="field" style="margin-bottom:0;margin-top:16px;">
+                <label>Monthly Updates (for reporting)</label>
+                <div class="proj-monthly-list">${monthlyUpdatesHtml}</div>
+                ${isEditing ? `
+                  <div class="proj-monthly-add">
+                    <input type="date" class="proj-mu-date" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
+                    <textarea class="proj-mu-results" placeholder="ผลการดำเนินงาน (what was accomplished)"></textarea>
+                    <textarea class="proj-mu-nextplan" placeholder="Next Plan (what's planned next)"></textarea>
+                    <button class="btn btn-sm" data-role="add-monthly-update">+ Add Update</button>
+                  </div>
+                ` : ''}
+              </div>
             </td>
           </tr>
         ` : '';
@@ -3124,6 +3295,19 @@ function renderProjectsList(){
     </table>
     </div>
   `;
+
+  container.querySelectorAll('.proj-th-sortable').forEach(th => {
+    th.addEventListener('click', () => {
+      const key = th.dataset.sortKey;
+      if(projectSortKey === key){
+        projectSortDir = projectSortDir === 'asc' ? 'desc' : 'asc';
+      }else{
+        projectSortKey = key;
+        projectSortDir = 'asc';
+      }
+      renderProjectsList();
+    });
+  });
 
   container.querySelectorAll('tbody[data-project-id]').forEach(block => {
     const id = block.dataset.projectId;
@@ -3150,6 +3334,12 @@ function renderProjectsList(){
         p.responsiblePerson = block.querySelector('.proj-responsible').value.trim();
         p.factoryName = block.querySelector('.proj-factory').value.trim();
         p.requirements = block.querySelector('.proj-requirements').value.trim();
+        // Also picks up a Monthly Update draft — otherwise clicking Save
+        // (top-right, for the header fields) while text sits in the
+        // date/results/next-plan boxes silently throws that text away,
+        // since Save re-renders the row and only "+ Add Update" used to
+        // actually commit it.
+        captureMonthlyUpdateDraft(p, block);
         projectEditingId = null;
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
@@ -3159,6 +3349,25 @@ function renderProjectsList(){
         projectEditingId = null;
         projectExpandedIds.add(p.id);
         renderProjectsList();
+      });
+
+      block.querySelector('[data-role="add-monthly-update"]').addEventListener('click', () => {
+        if(!captureMonthlyUpdateDraft(p, block)){
+          alert('Please pick a date and fill in at least one of ผลการดำเนินงาน / Next Plan.');
+          return;
+        }
+        scheduleProjectSave(p);
+        renderProjectsList();
+      });
+
+      block.querySelectorAll('[data-role="delete-monthly-update"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const updateId = btn.closest('[data-update-id]').dataset.updateId;
+          if(!confirm('Delete this monthly update? This cannot be undone.')) return;
+          p.monthlyUpdates = (p.monthlyUpdates || []).filter(mu => mu.id !== updateId);
+          scheduleProjectSave(p);
+          renderProjectsList();
+        });
       });
     }else{
       block.querySelector('[data-role="edit-project"]').addEventListener('click', () => {
@@ -3257,19 +3466,14 @@ function renderProductLog(){
   `).join('');
 }
 
+// One-time wiring for the sidebar entry point plus the persistent nested
+// "product progress log" popup (stays a real modal, per the decision to
+// keep small utility dialogs as popups).
 function initProjectsModal(){
-  document.getElementById('btnOpenProjects').addEventListener('click', openProjectsModal);
-  document.getElementById('btnCloseProjectsModal').addEventListener('click', closeProjectsModal);
-  document.getElementById('projectsModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'projectsModalOverlay') closeProjectsModal();
-  });
-  document.getElementById('btnAddProject').addEventListener('click', () => {
-    const p = blankProject();
-    projects.push(p);
-    saveProjectToCloud(p);
-    projectEditingId = p.id;
-    projectExpandedIds.add(p.id);
-    renderProjectsList();
+  document.getElementById('btnOpenProjects').addEventListener('click', () => {
+    mainFeatureView = 'projects';
+    renderMain();
+    renderSidebar();
   });
 
   document.getElementById('btnCloseProductLogModal').addEventListener('click', closeProductLogModal);
@@ -3289,17 +3493,17 @@ function initProjectsModal(){
   });
 }
 
-function initCompareModal(){
-  document.getElementById('btnCompare').addEventListener('click', openCompareModal);
-  document.getElementById('btnCloseCompareModal').addEventListener('click', closeCompareModal);
-  document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
-  document.getElementById('compareModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'compareModalOverlay') closeCompareModal();
+function initCompareView(){
+  document.getElementById('btnCompare').addEventListener('click', () => {
+    mainFeatureView = 'compare';
+    renderMain();
+    renderSidebar();
   });
 }
 
-function openCompareModal(){
-  const picker = document.getElementById('comparePickers');
+function mountCompareView(){
+  const main = document.getElementById('mainArea');
+  main.classList.add('main-wide');
   // Alphabetical by product name, then by code, so recipes are easy to find
   // in the dropdown instead of jumping around by last-edited time.
   const sorted = [...recipes].sort((a,b) =>
@@ -3307,8 +3511,9 @@ function openCompareModal(){
     (a.code||'').localeCompare(b.code||'', undefined, {numeric:true})
   );
   const options = sorted.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('');
-
-  picker.innerHTML = [0,1,2].map(i => `
+  // Always start blank — the user picks recipes fresh every time this view
+  // opens, rather than defaulting to the most recently updated ones.
+  const pickersHtml = [0,1,2].map(i => `
     <div class="compare-picker-col">
       <label>Recipe ${i+1}</label>
       <select class="compare-select" data-slot="${i}">
@@ -3318,18 +3523,27 @@ function openCompareModal(){
     </div>
   `).join('');
 
-  // Always start blank — the user picks recipes fresh every time the modal
-  // opens, rather than defaulting to the most recently updated ones.
-  picker.querySelectorAll('.compare-select').forEach(sel => {
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">⚖️ Compare Recipes</div>
+      <div class="toolbar">
+        <button class="btn" id="btnPrintCompare">🖨️ Print</button>
+        <button class="btn" id="btnCloseCompareView">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="compare-pickers" id="comparePickers">${pickersHtml}</div>
+      <div id="compareContent"></div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseCompareView').addEventListener('click', closeFeatureView);
+  document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
+  document.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
   });
 
-  document.getElementById('compareModalOverlay').classList.add('open');
   renderCompareContent();
-}
-
-function closeCompareModal(){
-  document.getElementById('compareModalOverlay').classList.remove('open');
 }
 
 function stripIngredientCode(label){
@@ -3652,6 +3866,13 @@ function renderCompareContent(){
 
 let recipes = [];
 let currentId = null;
+// Which full-page feature (if any) currently owns #mainArea, overriding the
+// normal home-dashboard/recipe-editor split. null = normal (home or recipe,
+// per currentId). Deliberately independent of currentId — entering a
+// feature from inside a recipe (e.g. the Ingredient Library button) leaves
+// currentId untouched, so closing the feature naturally resumes that recipe
+// instead of bouncing to home.
+let mainFeatureView = null; // null | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
 let saveTimer = null;
 let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
@@ -3682,8 +3903,8 @@ function attachMaterialsListener(){
     ingredientMaster = snapshot.docs.map(d => d.data());
     materialsLoaded = true;
     renderMaterialDatalist();
-    if(document.getElementById('materialModalOverlay').classList.contains('open')) renderMaterialTable();
-    if(!currentId && recipesLoaded) renderMain();
+    if(mainFeatureView === 'materials') renderMaterialTable();
+    if(!currentId && !mainFeatureView && recipesLoaded) renderMain();
   }, err => {
     console.error('Forge: materials listener error', err);
     showCloudError('Failed to load the ingredient library from Firebase: ' + err.message);
@@ -3701,9 +3922,9 @@ function attachProjectsListener(){
       p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
     });
     projectsLoaded = true;
-    if(document.getElementById('projectsModalOverlay').classList.contains('open')) renderProjectsList();
+    if(mainFeatureView === 'projects') renderProjectsList();
     if(document.getElementById('productLogModalOverlay').classList.contains('open')) renderProductLog();
-    if(!currentId && recipesLoaded) renderMain();
+    if(!currentId && !mainFeatureView && recipesLoaded) renderMain();
   }, err => {
     console.error('Forge: projects listener error', err);
     showCloudError('Failed to load projects from Firebase: ' + err.message);
@@ -3719,7 +3940,7 @@ function attachTrialsListener(){
     });
     trialsLoaded = true;
     migrateTrialsFromRecipes();
-    if(document.getElementById('trialsModalOverlay')?.classList.contains('open')) renderTrialsList();
+    if(mainFeatureView === 'trials') renderTrialsList();
   }, err => {
     console.error('Forge: trials listener error', err);
     showCloudError('Failed to load trial results from Firebase: ' + err.message);
@@ -3757,7 +3978,7 @@ function attachMetaListsListener(){
       factories: (Array.isArray(data.factories) ? data.factories : []).map(metaItem)
     };
     renderMetaDatalists();
-    if(document.getElementById('refListsModalOverlay')?.classList.contains('open')) renderRefListItems();
+    if(mainFeatureView === 'refLists') renderRefListItems();
   }, err => {
     console.error('Forge: meta lists listener error', err);
   });
@@ -4023,14 +4244,149 @@ function renderMaterialTable(){
   });
 }
 
-function openMaterialModal(){
-  document.getElementById('materialModalOverlay').classList.add('open');
-  renderMaterialTable();
-}
+function mountMaterialsView(){
+  const main = document.getElementById('mainArea');
+  main.classList.remove('main-wide');
+  main.innerHTML = `
+    <div class="main-header">
+      <div class="recipe-title-display">📚 Ingredient Library</div>
+      <div class="toolbar">
+        <button class="btn" id="btnCloseMaterialsView">← Back</button>
+      </div>
+    </div>
+    <div class="card">
+      <div class="material-add-form">
+        <div class="card-title" id="materialFormTitle" style="font-size:13px;margin-bottom:10px;">+ Add New Ingredient</div>
+        <div class="grid-3">
+          <div class="field">
+            <label>1. Ingredient Name (English)*</label>
+            <input type="text" id="mf-nameEn" placeholder="e.g. Vegan Mayonnaise">
+          </div>
+          <div class="field">
+            <label>2. Ingredient Name (Thai)*</label>
+            <input type="text" id="mf-nameTh" placeholder="Thai name">
+          </div>
+          <div class="field">
+            <label>3. Vendor Code (from supplier)</label>
+            <input type="text" id="mf-vendorCode" placeholder="e.g. RM-00123">
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>4. Vendor Name</label>
+            <input type="text" id="mf-vendorName" placeholder="e.g. ABC Co., Ltd.">
+          </div>
+          <div class="field">
+            <label>5. Manufacturer Name (if any)</label>
+            <input type="text" id="mf-manufacturer" placeholder="e.g. XYZ Manufacturing">
+          </div>
+          <div class="field">
+            <label>6. Price/kg (฿)</label>
+            <div class="code-row">
+              <span class="code-prefix">฿</span>
+              <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00" class="code-suffix">
+            </div>
+          </div>
+        </div>
+        <div class="grid-3">
+          <div class="field">
+            <label>7. MOQ/kg (if any)</label>
+            <div class="code-row">
+              <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25" class="unit-input">
+              <span class="unit-suffix">kg</span>
+            </div>
+          </div>
+          <div class="field">
+            <label>8. Photo (optional)</label>
+            <input type="file" id="mf-image" accept="image/*">
+          </div>
+          <div class="field" style="display:flex;align-items:center;gap:10px;">
+            <img id="mf-imagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+            <button type="button" class="btn btn-sm" id="btnRemoveMaterialImage" style="display:none;">Remove photo</button>
+          </div>
+        </div>
+        <div class="field">
+          <label>9. Usage Notes (optional)</label>
+          <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
+        </div>
+        <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
+        <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
+        <span class="ing-hint" id="materialFormError"></span>
+      </div>
 
-function closeMaterialModal(){
-  document.getElementById('materialModalOverlay').classList.remove('open');
+      <div class="material-search">
+        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor / usage notes)...">
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="material-table">
+          <thead>
+            <tr>
+              <th>Photo</th>
+              <th>English</th>
+              <th>Thai</th>
+              <th>Code</th>
+              <th>Vendor</th>
+              <th>Manufacturer</th>
+              <th>Price/kg (฿)</th>
+              <th>MOQ</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="materialTableBody"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('btnCloseMaterialsView').addEventListener('click', closeFeatureView);
+  document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
+  document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
+  document.getElementById('mf-image').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    const errEl = document.getElementById('materialFormError');
+    try{
+      setMaterialImagePreview(await resizeImageFile(file, 200));
+      errEl.textContent = '';
+    }catch(err){
+      errEl.textContent = err.message || 'Could not read that image file';
+    }
+  });
+  document.getElementById('btnRemoveMaterialImage').addEventListener('click', () => {
+    document.getElementById('mf-image').value = '';
+    setMaterialImagePreview(null);
+  });
+  document.getElementById('btnAddMaterial').addEventListener('click', () => {
+    const nameEn = document.getElementById('mf-nameEn').value.trim();
+    const nameTh = document.getElementById('mf-nameTh').value.trim();
+    const errEl = document.getElementById('materialFormError');
+    if(!nameEn || !nameTh){
+      errEl.textContent = 'Please enter both the English and Thai ingredient names';
+      return;
+    }
+    errEl.textContent = '';
+    const existing = editingMaterialId ? ingredientMaster.find(m => m.id === editingMaterialId) : null;
+    saveMaterialToCloud({
+      id: editingMaterialId || uid(),
+      nameEn,
+      nameTh,
+      vendorCode: document.getElementById('mf-vendorCode').value.trim(),
+      vendorName: document.getElementById('mf-vendorName').value.trim(),
+      manufacturer: document.getElementById('mf-manufacturer').value.trim(),
+      price: document.getElementById('mf-price').value.trim(),
+      moq: document.getElementById('mf-moq').value.trim(),
+      usageNotes: document.getElementById('mf-usageNotes').value.trim(),
+      image: editingMaterialImage || '',
+      createdBy: existing?.createdBy || currentUser?.email || '',
+      createdAt: existing?.createdAt || Date.now(),
+      updatedBy: currentUser?.email || '',
+      updatedAt: Date.now()
+    });
+    cancelEditMaterial();
+  });
+
   cancelEditMaterial();
+  renderMaterialTable();
 }
 
 function openMaterialDetail(m){
@@ -4159,63 +4515,23 @@ function cancelEditMaterial(){
   document.getElementById('materialFormError').textContent = '';
 }
 
+// One-time wiring for the persistent nested "ingredient detail" popup
+// (stays a real modal, per the decision to keep small utility dialogs as
+// popups) plus the two entry points into the full-page library view — the
+// sidebar button, and the "Ingredient Library" button inside the recipe
+// editor's ingredients card (wired here since it's part of the always-
+// present sidebar/shell, not recreated per-recipe like the recipe editor's
+// own controls).
 function initMaterialLibrary(){
-  document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', openMaterialModal);
-  document.getElementById('btnCloseMaterialModal').addEventListener('click', closeMaterialModal);
-  document.getElementById('materialModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'materialModalOverlay') closeMaterialModal();
-  });
-  document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
-  document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
+  const openMaterialsView = () => {
+    mainFeatureView = 'materials';
+    renderMain();
+    renderSidebar();
+  };
+  document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', openMaterialsView);
   document.getElementById('btnCloseMaterialDetail').addEventListener('click', closeMaterialDetail);
   document.getElementById('materialDetailModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'materialDetailModalOverlay') closeMaterialDetail();
-  });
-
-  document.getElementById('mf-image').addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    const errEl = document.getElementById('materialFormError');
-    try{
-      setMaterialImagePreview(await resizeImageFile(file, 200));
-      errEl.textContent = '';
-    }catch(err){
-      errEl.textContent = err.message || 'Could not read that image file';
-    }
-  });
-  document.getElementById('btnRemoveMaterialImage').addEventListener('click', () => {
-    document.getElementById('mf-image').value = '';
-    setMaterialImagePreview(null);
-  });
-
-  document.getElementById('btnAddMaterial').addEventListener('click', () => {
-    const nameEn = document.getElementById('mf-nameEn').value.trim();
-    const nameTh = document.getElementById('mf-nameTh').value.trim();
-    const errEl = document.getElementById('materialFormError');
-    if(!nameEn || !nameTh){
-      errEl.textContent = 'Please enter both the English and Thai ingredient names';
-      return;
-    }
-    errEl.textContent = '';
-    const existing = editingMaterialId ? ingredientMaster.find(m => m.id === editingMaterialId) : null;
-    saveMaterialToCloud({
-      id: editingMaterialId || uid(),
-      nameEn,
-      nameTh,
-      vendorCode: document.getElementById('mf-vendorCode').value.trim(),
-      vendorName: document.getElementById('mf-vendorName').value.trim(),
-      manufacturer: document.getElementById('mf-manufacturer').value.trim(),
-      price: document.getElementById('mf-price').value.trim(),
-      moq: document.getElementById('mf-moq').value.trim(),
-      usageNotes: document.getElementById('mf-usageNotes').value.trim(),
-      image: editingMaterialImage || '',
-      createdBy: existing?.createdBy || currentUser?.email || '',
-      createdAt: existing?.createdAt || Date.now(),
-      updatedBy: currentUser?.email || '',
-      updatedAt: Date.now()
-    });
-
-    cancelEditMaterial();
   });
 }
 
@@ -4332,10 +4648,15 @@ function attachRecipesListener(){
       currentId = null;
       unlockedRecipeId = null;
       renderMain();
-    }else if(firstLoad || !currentId){
-      // no recipe is open (home dashboard is showing) -> safe to re-render on
-      // every update, since there's no in-progress edit whose object identity
-      // needs preserving
+    }else if(firstLoad || (!currentId && !mainFeatureView)){
+      // no recipe is open and no full-page feature view is active (home
+      // dashboard is showing) -> safe to re-render on every update, since
+      // there's no in-progress edit/selection whose state needs preserving.
+      // The mainFeatureView check matters now that Compare/Materials/
+      // RefLists/Projects/Trials live in #mainArea too — re-mounting one of
+      // those from scratch (like this branch does) would silently wipe out
+      // whatever the user had picked/typed there, which used to be
+      // impossible when they were separate, always-persistent modals.
       renderMain();
     }
 
@@ -4371,7 +4692,19 @@ function scheduleSave(){
 }
 
 /* ---------- Sidebar ---------- */
+const FEATURE_VIEW_BUTTON_IDS = {
+  compare: 'btnCompare', materials: 'btnOpenMaterialLibSidebar',
+  refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
+};
+
 function renderSidebar(){
+  Object.entries(FEATURE_VIEW_BUTTON_IDS).forEach(([view, id]) => {
+    document.getElementById(id)?.classList.toggle('active', mainFeatureView === view);
+  });
+  // "Recipes" is the top navbar's Home tab — Compare Recipes counts as still
+  // being "in" Recipes mode since it's just a function nested inside it now,
+  // rather than its own top-level destination.
+  document.getElementById('btnRecipesTab')?.classList.toggle('active', mainFeatureView === null || mainFeatureView === 'compare');
   const list = document.getElementById('recipeList');
   const q = (document.getElementById('searchInput').value || '').trim().toLowerCase();
   const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
@@ -4394,6 +4727,7 @@ function renderSidebar(){
       div.addEventListener('click', () => {
         if(r.id !== currentId) unlockedRecipeId = null;
         currentId = r.id;
+        mainFeatureView = null;
         renderMain();
         renderSidebar();
       });
@@ -4841,9 +5175,35 @@ function renderDashboardHome(){
   `;
 }
 
+// Each entry mounts one of the 5 sidebar features into #mainArea. Checked
+// first in renderMain(), ahead of the normal home/recipe-editor split.
+const FEATURE_VIEW_MOUNTERS = {
+  compare: mountCompareView,
+  materials: mountMaterialsView,
+  refLists: mountRefListsView,
+  projects: mountProjectsView,
+  trials: mountTrialsView
+};
+
+function closeFeatureView(){
+  mainFeatureView = null;
+  renderMain();
+  renderSidebar();
+}
+
 function renderMain(){
-  const r = getCurrent();
   const main = document.getElementById('mainArea');
+  // The recipe-navigator sidebar (New Recipe / Compare / search / list) only
+  // makes sense while in Recipes mode (mainFeatureView === null, whether
+  // that's the home dashboard or an open recipe) — every other feature view
+  // gets the full width instead, with no left-hand navigator at all.
+  document.body.classList.toggle('hide-recipes-nav', mainFeatureView !== null);
+  if(mainFeatureView && FEATURE_VIEW_MOUNTERS[mainFeatureView]){
+    FEATURE_VIEW_MOUNTERS[mainFeatureView]();
+    return;
+  }
+  const r = getCurrent();
+  main.classList.remove('main-wide');
   if(!r){
     main.innerHTML = renderDashboardHome();
     return;
@@ -5035,7 +5395,11 @@ function renderMain(){
     scheduleSave();
   });
 
-  document.getElementById('btnOpenMaterialLib').addEventListener('click', openMaterialModal);
+  document.getElementById('btnOpenMaterialLib').addEventListener('click', () => {
+    mainFeatureView = 'materials';
+    renderMain();
+    renderSidebar();
+  });
 
   document.getElementById('btnScale').addEventListener('click', () => {
     const target = parseFloat(document.getElementById('f-scaleTo').value) || 0;
@@ -6009,11 +6373,12 @@ function importFromFile(file){
       if(importedRecipes.length){
         currentId = recipes[recipes.length-1].id;
         unlockedRecipeId = null;
+        mainFeatureView = null;
       }
       batch.commit();
       if(importedMaterials.length) renderMaterialDatalist();
-      if(document.getElementById('projectsModalOverlay').classList.contains('open')) renderProjectsList();
-      if(document.getElementById('trialsModalOverlay').classList.contains('open')) renderTrialsList();
+      if(mainFeatureView === 'projects') renderProjectsList();
+      if(mainFeatureView === 'trials') renderTrialsList();
       renderSidebar();
       renderMain();
       alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s), ${importedTrials.length} trial result(s)`);
@@ -6030,6 +6395,7 @@ document.getElementById('btnNew').addEventListener('click', () => {
   recipes.push(r);
   currentId = r.id;
   unlockedRecipeId = r.id;
+  mainFeatureView = null;
   saveRecipeToCloud(r);
   renderSidebar();
   renderMain();
@@ -6042,11 +6408,22 @@ document.getElementById('importFile').addEventListener('change', e => {
   e.target.value = '';
 });
 document.getElementById('btnLogoutFromApp').addEventListener('click', goToAuth);
-document.querySelector('.brand').addEventListener('click', () => {
+function goHome(){
   currentId = null;
   unlockedRecipeId = null;
+  mainFeatureView = null;
   renderMain();
   renderSidebar();
+}
+document.getElementById('navbarBrand').addEventListener('click', goHome);
+document.getElementById('btnRecipesTab').addEventListener('click', goHome);
+
+document.getElementById('navbarAccount').addEventListener('click', e => {
+  e.stopPropagation();
+  document.getElementById('navbarAccount').classList.toggle('open');
+});
+document.addEventListener('click', () => {
+  document.getElementById('navbarAccount').classList.remove('open');
 });
 
 /* Mobile sidebar drawer: hidden off-screen by default below 800px width,
@@ -6063,12 +6440,12 @@ document.querySelector('.sidebar').addEventListener('click', e => {
 
 initAuthScreen();
 initAuthConfirmModal();
-initCompareModal();
+initCompareView();
 initVersionsModal();
-initRefListsModal();
+initRefListsView();
 initMaterialLibrary();
 initProjectsModal();
-initTrialsModal();
+initTrialsView();
 renderFooter();
 
 /* Firestore listeners only attach once someone is actually signed in — the
