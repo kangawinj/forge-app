@@ -9,11 +9,12 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="Forge">
-<link rel="manifest" href="site.webmanifest">
-<link rel="icon" href="favicon.ico" sizes="any">
-<link rel="icon" type="image/svg+xml" href="Forge_Logo_Navy_Orange_Vector_Large.svg">
-<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
-<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
+<link rel="manifest" href="site.webmanifest?v=3">
+<link rel="icon" href="favicon.ico?v=2" sizes="16x16 32x32 48x48">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png?v=2">
+<link rel="icon" type="image/svg+xml" href="Forge_Logo_Navy_Orange_Vector_Large.svg?v=2" media="(prefers-color-scheme: light)">
+<link rel="icon" type="image/svg+xml" href="Forge_Logo_White_Orange_Dark.svg?v=2" media="(prefers-color-scheme: dark)">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png?v=3">
 <style>
   :root{
     --bg:#f4f6f8;
@@ -35,22 +36,26 @@
     font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI","Leelawadee UI","Tahoma",sans-serif;
   }
   *{box-sizing:border-box;}
+  html{min-width:0;}
   body{
     margin:0;
     background:var(--bg);
     color:var(--text);
     font-size:14px;
+    min-width:0;
   }
   .app{
     display:none;
     grid-template-columns:280px 1fr;
     min-height:100vh;
     padding-bottom:28px;
+    width:100%;
+    min-width:0;
   }
   /* Recipes-mode-only navigator: every other top-navbar tab (Ingredients/
      RefLists/Projects/Trials, and Compare while it's open) collapses the
      sidebar away entirely and gives #mainArea the full width instead. */
-  body.hide-recipes-nav .app{grid-template-columns:1fr;}
+  body.hide-recipes-nav .app{grid-template-columns:minmax(0,1fr);}
   body.hide-recipes-nav .sidebar{display:none;}
   body.hide-recipes-nav .mobile-sidebar-toggle{display:none !important;}
   /* Top navbar: brand + the 5 full-page feature tabs (Compare/Materials/
@@ -67,6 +72,8 @@
     position:sticky;
     top:0;
     z-index:50;
+    width:100%;
+    min-width:0;
   }
   .navbar-brand{
     display:flex;
@@ -86,9 +93,12 @@
     display:flex;
     align-items:center;
     flex:1;
+    min-width:0;
     overflow-x:auto;
     margin-left:12px;
+    scrollbar-width:none;
   }
+  .navbar-tabs::-webkit-scrollbar{display:none;}
   .nav-tab{
     flex-shrink:0;
     background:none;
@@ -106,6 +116,8 @@
   }
   .nav-tab:hover{color:var(--primary);}
   .nav-tab.active{color:var(--primary-dark);border-bottom-color:var(--primary);}
+  .nav-tab:focus:not(:focus-visible){outline:none;}
+  .nav-tab:focus-visible{outline:2px solid var(--accent);outline-offset:-2px;border-radius:8px;}
   .navbar-right{
     display:flex;
     align-items:center;
@@ -323,14 +335,6 @@
     flex-direction:column;
     gap:4px;
   }
-  /* Full-page Recipes view has the horizontal room the 280px sidebar never
-     did, so its cards lay out as a wrapping grid instead of a single
-     column — same .recipe-item cards, just a different container layout. */
-  .recipe-list-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fill,minmax(260px,1fr));
-    gap:10px;
-  }
   .recipe-item{
     padding:10px 10px;
     border-radius:var(--radius);
@@ -361,10 +365,14 @@
   .main{
     padding:24px 32px 60px;
     max-width:960px;
+    width:100%;
+    min-width:0;
+    margin:0 auto;
   }
   /* Compare Recipes and Projects need more room than the 960px default
      (they used wider modals before converting to full-page views). */
   .main.main-wide{max-width:1300px;}
+  .main:has(.home-dashboard){max-width:1200px;}
   .main-header{
     display:flex;
     justify-content:space-between;
@@ -476,12 +484,12 @@
   textarea{resize:vertical;min-height:60px;}
   .grid-2{
     display:grid;
-    grid-template-columns:2fr 1fr;
+    grid-template-columns:minmax(0,2fr) minmax(0,1fr);
     gap:14px;
   }
   .grid-3{
     display:grid;
-    grid-template-columns:repeat(3,1fr);
+    grid-template-columns:repeat(3,minmax(0,1fr));
     gap:14px;
   }
   .combo-row{display:flex;gap:6px;align-items:center;}
@@ -1481,6 +1489,7 @@
   }
 
   /* ---------- In-app home dashboard ---------- */
+  .home-dashboard{width:100%;min-width:0;}
   .home-dashboard-header{
     display:flex;
     align-items:center;
@@ -1535,12 +1544,14 @@
     grid-template-columns:repeat(auto-fit,minmax(240px,1fr));
     gap:14px;
     margin-bottom:14px;
+    min-width:0;
   }
   .dash-card{
     background:var(--panel);
     border-radius:var(--radius);
     box-shadow:var(--shadow);
     padding:18px 20px;
+    min-width:0;
   }
   .dash-card-title{
     font-size:13px;
@@ -1609,8 +1620,8 @@
   .hd2-sub{font-size:13px;color:var(--text-dim);margin-top:4px;}
   .hd2-searchrow{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;}
   .hd2-search{
-    flex:1;
-    min-width:220px;
+    flex:1 1 220px;
+    min-width:0;
     padding:10px 14px;
     border:1px solid var(--border);
     border-radius:var(--radius);
@@ -1637,6 +1648,7 @@
     grid-template-columns:repeat(auto-fit,minmax(200px,1fr));
     gap:12px;
     margin-bottom:16px;
+    min-width:0;
   }
   .hd2-stat-card{
     display:flex;
@@ -1676,7 +1688,7 @@
     white-space:nowrap;
   }
 
-  .dash-table-scroll{overflow-x:auto;}
+  .dash-table-scroll{overflow-x:auto;max-width:100%;-webkit-overflow-scrolling:touch;}
   .dash-projects-table{width:100%;border-collapse:collapse;font-size:12px;}
   .dash-projects-table th{
     text-align:left;
@@ -1786,7 +1798,7 @@
     [data-role="print-trial"], .project-add-row, .trial-photo-input{display:none !important;}
   }
 
-  @media (max-width:800px){
+  @media (max-width:1024px){
     .app{grid-template-columns:1fr;}
     .mobile-sidebar-toggle{display:flex;}
     .sidebar-close-btn{display:flex;}
@@ -1794,6 +1806,10 @@
     .navbar-brand-title{display:none;}
     .navbar-icon-btn{display:none;}
     .navbar-account-name{display:none;}
+    .navbar-tabs{margin-left:4px;}
+    .nav-tab{margin:0 6px;padding-inline:6px;}
+    .main{padding:24px 24px 60px;}
+    .hd2-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
     .sidebar{
       position:fixed;
       top:0; left:0; bottom:0;
@@ -1809,12 +1825,30 @@
     body.mobile-sidebar-open{overflow:hidden;}
     body.mobile-sidebar-open .sidebar{transform:translateX(0);}
     body.mobile-sidebar-open .sidebar-backdrop{display:block;}
-    .grid-2,.grid-3,
-    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:1fr;}
   }
 
   @media (max-width:700px){
-    .main{padding:64px 16px 60px;}
+    .main{padding:20px 16px calc(60px + env(safe-area-inset-bottom));}
+    .grid-2,.grid-3,
+    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:1fr;}
+    .card{padding:18px 16px;}
+    .home-dashboard{max-width:100%;}
+    .hd2-greeting{margin-bottom:14px;}
+    .hd2-hello{font-size:24px;}
+    .hd2-searchrow{gap:8px;margin-bottom:14px;}
+    .hd2-stat-card{min-width:0;min-height:82px;padding:12px;gap:8px;}
+    .hd2-stat-arrow{display:none;}
+    .hd2-stat-label{font-size:11px;line-height:1.25;}
+    .hd2-stat-value{font-size:21px;}
+    .dash-row{grid-template-columns:minmax(0,1fr);gap:12px;margin-bottom:12px;}
+    .dash-card{padding:16px;}
+    .dash-projects-table{min-width:720px;}
+    .card > div:has(> .search-box > #projectSearchInput){flex-wrap:wrap;gap:8px !important;}
+    .search-box:has(> #projectSearchInput){flex:1 1 100% !important;width:100%;}
+    #projectStatusFilter{flex:1 1 100%;width:100%;max-width:none !important;}
+    .pipeline-funnel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
+    .pipeline-step{min-width:0;padding:10px 8px;}
+    .pipeline-chevron{display:none;}
     .recipe-title-display{font-size:30px;line-height:1.2;}
     .recipe-title-display .rt-code{
       display:block;
@@ -1825,9 +1859,49 @@
     .lock-banner{flex-wrap:wrap;}
     .version-item{flex-wrap:wrap;}
     .modal-overlay{padding:8px;}
+    .modal{max-height:calc(100dvh - 16px);}
+    .modal-header{padding:14px 16px;}
     .modal-body{padding:14px;}
     .batch-scale-row input{width:100px;}
     .batch-summary{grid-template-columns:1fr;}
+    .navbar-account-menu{max-width:calc(100vw - 24px);}
+    .app-footer{
+      height:calc(28px + env(safe-area-inset-bottom));
+      padding:0 8px env(safe-area-inset-bottom);
+      font-size:10px;
+    }
+  }
+
+  @media (max-width:600px){
+    .top-navbar{
+      height:auto;
+      min-height:56px;
+      padding:8px 12px 0;
+      flex-wrap:wrap;
+      align-content:flex-start;
+      gap:6px 8px;
+    }
+    .mobile-sidebar-toggle{order:0;}
+    .navbar-brand{order:1;}
+    .navbar-right{order:2;margin-left:auto;}
+    .navbar-tabs{
+      order:3;
+      flex:0 0 calc(100% + 24px);
+      height:44px;
+      margin:0 -12px;
+      padding:0 6px;
+      border-top:1px solid var(--border);
+    }
+    .nav-tab{height:44px;margin:0 2px;padding:10px 8px 8px;font-size:12px;}
+    .navbar-account{padding-right:2px;}
+    .hd2-stat-icon{font-size:20px;}
+    .action-item{gap:8px;}
+  }
+
+  @media (max-width:360px){
+    .hd2-search{flex-basis:100%;}
+    .hd2-create-wrap,.hd2-create-wrap > .btn{width:100%;}
+    .hd2-create-wrap > .btn{justify-content:center;}
   }
 </style>
 </head>
@@ -1835,7 +1909,7 @@
 
 <div class="fullpage-screen" id="authScreen">
   <div class="auth-card">
-    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
+    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector_Large.svg?v=2" alt="Forge logo">
     <div class="auth-title">Forge</div>
     <div class="auth-sub">Food Product Development</div>
 
@@ -1881,7 +1955,7 @@
 <nav class="top-navbar" id="topNavbar">
   <button class="mobile-sidebar-toggle" id="btnMobileSidebarToggle" aria-label="Open menu">☰</button>
   <div class="navbar-brand" id="navbarBrand" title="Home">
-    <img class="navbar-brand-icon" src="Forge_Logo_Navy_Orange_Vector_Large.svg" alt="Forge logo">
+    <img class="navbar-brand-icon" src="Forge_Logo_Navy_Orange_Vector_Large.svg?v=2" alt="Forge logo">
     <span class="navbar-brand-title">Forge</span>
   </div>
   <div class="navbar-tabs">
@@ -1914,7 +1988,7 @@
     <button class="sidebar-close-btn" id="btnSidebarClose" aria-label="Close menu">✕</button>
 
     <button class="btn btn-primary btn-block" id="btnNew">+ New Recipe</button>
-    <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">⚖️ Compare Recipes</button>
+    <button class="btn btn-block" id="btnCompare" style="margin-top:8px;">Compare Recipes</button>
 
     <div class="search-box">
       <input type="text" id="searchInput" placeholder="Search product name...">
@@ -1976,13 +2050,13 @@
 <div class="modal-overlay" id="versionsModalOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
-      <div class="modal-title">🕒 Version History</div>
+      <div class="modal-title">Version History</div>
       <button class="icon-btn" id="btnCloseVersionsModal" title="Close">✕</button>
     </div>
     <div class="modal-body">
       <div class="version-save-row">
         <input type="text" id="versionLabelInput" placeholder="Label this version, e.g. &quot;Before flavor adjustment&quot;">
-        <button class="btn btn-primary btn-sm" id="btnSaveVersion">💾 Save Current as Version</button>
+        <button class="btn btn-primary btn-sm" id="btnSaveVersion">Save Current as Version</button>
       </div>
       <div class="version-hint">Keeps the last 5 saved versions. Restoring replaces the recipe's name, description, ingredients, process steps/components, and yield — it does not affect trial photos.</div>
       <div id="versionsList"></div>
@@ -1993,7 +2067,7 @@
 <div class="modal-overlay" id="productLogModalOverlay">
   <div class="modal" style="max-width:480px;">
     <div class="modal-header">
-      <div class="modal-title">🕒 Progress Log</div>
+      <div class="modal-title">Progress Log</div>
       <button class="icon-btn" id="btnCloseProductLogModal" title="Close">✕</button>
     </div>
     <div class="modal-body">
@@ -2208,7 +2282,13 @@ const CHANGELOG = [
   { version: "3.0.92", date: "2026-08-06", note: "Projects: added a Duplicate button (appears once you click Edit, next to Save) that copies a project's name/photo/customer/destination/owner/requirements/products as a starting template, resetting status to Not Started, each product's stage, and clearing monthly updates — then opens the new copy straight into editing" },
   { version: "3.0.93", date: "2026-08-06", note: "Projects: \"Projects by Status\" bars are now colored by status (matching the mini status bar under each project's name in the table below) instead of every bar being the same color. Also added a clear (✕) button to the Projects search box that appears once you start typing" },
   { version: "3.0.94", date: "2026-08-07", note: "Replaced every emoji used as a UI icon (section headers, buttons, stat cards, status badges, etc.) with Lucide icons — embedded inline as SVG so the app still works offline, rather than loaded from a CDN. Emoji left untouched in changelog history text, since those are just describing what a past version looked like at the time" },
-  { version: "3.0.95", date: "2026-08-07", note: "Icons are now navy by default, switching to orange only for active/selected state (the current tab, an active sort column, Compare Recipes while open). Delete/trash icons stay red as a warning color, and icons on solid navy buttons stay white for contrast" }
+  { version: "3.0.95", date: "2026-08-07", note: "Icons are now navy by default, switching to orange only for active/selected state (the current tab, an active sort column, Compare Recipes while open). Delete/trash icons stay red as a warning color, and icons on solid navy buttons stay white for contrast" },
+  { version: "3.0.96", date: "2026-08-07", note: "Recipes browser: recipe cards go back to a single-column list instead of a wrapping grid, and the page itself is back to the standard width instead of the wide layout that grid needed" },
+  { version: "3.0.97", date: "2026-08-07", note: "Responsive layout: centered and widened the dashboard on laptops, added a tablet breakpoint for iPad Air, and rebuilt the compact navigation, cards, tables, modals, and safe spacing for iPhone-sized screens without page-level horizontal overflow" },
+  { version: "3.0.98", date: "2026-08-07", note: "Mobile polish: stacked the Projects search and status filter at phone widths and replaced the browser-default tab focus box with a compact brand-colored keyboard focus ring" },
+  { version: "3.0.99", date: "2026-08-07", note: "Installed web apps now check for a new Service Worker whenever they open or return to the foreground, then reload automatically so iPhone users receive the latest deployed version" },
+  { version: "3.0.100", date: "2026-08-07", note: "Removed the redundant Back button from every full-page mode; navigation now uses the top tabs and Forge logo only" },
+  { version: "3.0.101", date: "2026-08-07", note: "Fixed a leftover-emoji bug from the earlier Lucide icon conversion: the sidebar's Compare Recipes button, the Save Current as Version button, and the Version History / Progress Log modal titles were showing their new icon right next to the old emoji instead of replacing it, since the emoji was still baked into their static HTML text underneath" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2530,9 +2610,6 @@ function mountRefListsView(){
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('list', 24)} Reference Lists</div>
-      <div class="toolbar">
-        <button class="btn" id="btnCloseRefLists">${icon('arrow-left')} Back</button>
-      </div>
     </div>
     <div class="card">
       <div class="reflist-tabs">
@@ -2551,7 +2628,6 @@ function mountRefListsView(){
     </div>
   `;
 
-  document.getElementById('btnCloseRefLists').addEventListener('click', closeFeatureView);
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.key === refListActiveTab);
     btn.addEventListener('click', () => {
@@ -2975,9 +3051,6 @@ function mountTrialsView(){
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('flask-conical', 24)} Trial Results</div>
-      <div class="toolbar">
-        <button class="btn" id="btnCloseTrialsView">${icon('arrow-left')} Back</button>
-      </div>
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Trial</button>
@@ -2985,7 +3058,6 @@ function mountTrialsView(){
     </div>
   `;
 
-  document.getElementById('btnCloseTrialsView').addEventListener('click', closeFeatureView);
   document.getElementById('btnAddTrial').addEventListener('click', () => {
     const t = blankTrial();
     trials.push(t);
@@ -3270,9 +3342,6 @@ function mountProjectsView(){
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('folder', 24)} Projects</div>
-      <div class="toolbar">
-        <button class="btn" id="btnCloseProjectsView">${icon('arrow-left')} Back</button>
-      </div>
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
@@ -3291,7 +3360,6 @@ function mountProjectsView(){
     </div>
   `;
 
-  document.getElementById('btnCloseProjectsView').addEventListener('click', closeFeatureView);
   document.getElementById('btnAddProject').addEventListener('click', () => {
     const p = blankProject();
     projects.push(p);
@@ -3917,7 +3985,6 @@ function mountCompareView(){
       <div class="section-title-display">${icon('scale', 24)} Compare Recipes</div>
       <div class="toolbar">
         <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
-        <button class="btn" id="btnCloseCompareView">${icon('arrow-left')} Back</button>
       </div>
     </div>
     <div class="card">
@@ -3926,7 +3993,6 @@ function mountCompareView(){
     </div>
   `;
 
-  document.getElementById('btnCloseCompareView').addEventListener('click', closeFeatureView);
   document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
   document.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
@@ -4641,9 +4707,6 @@ function mountMaterialsView(){
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('book-open', 24)} Ingredient Library</div>
-      <div class="toolbar">
-        <button class="btn" id="btnCloseMaterialsView">${icon('arrow-left')} Back</button>
-      </div>
     </div>
     <div class="card">
       <div class="material-add-form">
@@ -4729,7 +4792,6 @@ function mountMaterialsView(){
     </div>
   `;
 
-  document.getElementById('btnCloseMaterialsView').addEventListener('click', closeFeatureView);
   document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
   document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
   document.getElementById('mf-image').addEventListener('change', async e => {
@@ -5153,13 +5215,10 @@ function renderSidebar(){
 // these two recipe lists are never both on screen at once.
 function mountRecipesListView(){
   const main = document.getElementById('mainArea');
-  main.classList.add('main-wide');
+  main.classList.remove('main-wide');
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
-      <div class="toolbar">
-        <button class="btn" id="btnCloseRecipesListView">${icon('arrow-left')} Back</button>
-      </div>
     </div>
     <div class="card">
       <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
@@ -5169,11 +5228,10 @@ function mountRecipesListView(){
       <div class="search-box" style="margin:0 0 16px;">
         <input type="text" id="recipesListSearchInput" placeholder="Search product name...">
       </div>
-      <div class="recipe-list recipe-list-grid" id="recipesListGrid"></div>
+      <div class="recipe-list" id="recipesListGrid"></div>
     </div>
   `;
 
-  document.getElementById('btnCloseRecipesListView').addEventListener('click', closeFeatureView);
   document.getElementById('btnNewFromRecipesList').addEventListener('click', createNewRecipe);
   document.getElementById('btnCompareFromRecipesList').addEventListener('click', () => {
     mainFeatureView = 'compare';
@@ -5341,7 +5399,6 @@ function escapeHtml(s){
 // color already applies to its container — no separate color wiring needed.
 const LUCIDE_ICONS = {
   'alert-triangle': '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3" /><path d="M12 9v4" /><path d="M12 17h.01" />',
-  'arrow-left': '<path d="m12 19-7-7 7-7" /><path d="M19 12H5" />',
   'bell': '<path d="M10.268 21a2 2 0 0 0 3.464 0" /><path d="M3.262 15.326A1 1 0 0 0 4 17h16a1 1 0 0 0 .74-1.673C19.41 13.956 18 12.499 18 8A6 6 0 0 0 6 8c0 4.499-1.411 5.956-2.738 7.326" />',
   'book-open': '<path d="M12 5v16" /><path d="M20.001 19A2 2 0 0022 17V5a2 2 0 00-1.999-2L16 3.002A5 5 0 0012 5a5 5 0 00-4-2H4a2 2 0 00-2 2v12a2 2 0 001.999 2H8a5 5 0 014 2 5 5 0 014-2z" />',
   'check': '<path d="M20 6 9 17l-5-5" />',
@@ -5855,12 +5912,6 @@ const FEATURE_VIEW_MOUNTERS = {
   projects: mountProjectsView,
   trials: mountTrialsView
 };
-
-function closeFeatureView(){
-  mainFeatureView = null;
-  renderMain();
-  renderSidebar();
-}
 
 // "Go" targets for dashboard action items / the Active Projects table —
 // open the relevant feature view already expanded (and, for a project,
@@ -7231,8 +7282,29 @@ onAuthStateChanged(auth, user => {
 </script>
 <script>
   if ("serviceWorker" in navigator) {
+    const hadServiceWorkerController = Boolean(navigator.serviceWorker.controller);
+    let reloadingForServiceWorkerUpdate = false;
+
+    navigator.serviceWorker.addEventListener("controllerchange", () => {
+      if (!hadServiceWorkerController || reloadingForServiceWorkerUpdate) return;
+      reloadingForServiceWorkerUpdate = true;
+      window.location.reload();
+    });
+
     window.addEventListener("load", () => {
       navigator.serviceWorker.register("./sw.js", { updateViaCache: "none" })
+        .then(registration => {
+          const checkForServiceWorkerUpdate = () => {
+            registration.update()
+              .catch(error => console.warn("Service worker update check failed:", error));
+          };
+
+          checkForServiceWorkerUpdate();
+          window.addEventListener("pageshow", checkForServiceWorkerUpdate);
+          document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "visible") checkForServiceWorkerUpdate();
+          });
+        })
         .catch(error => console.warn("Service worker registration failed:", error));
     });
   }

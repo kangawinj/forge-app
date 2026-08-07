@@ -1,7 +1,7 @@
-const VERSION = "forge-pwa-v1";
+const VERSION = "forge-pwa-v3.0.100";
 
-self.addEventListener("install", () => {
-  self.skipWaiting();
+self.addEventListener("install", event => {
+  event.waitUntil(self.skipWaiting());
 });
 
 self.addEventListener("activate", event => {

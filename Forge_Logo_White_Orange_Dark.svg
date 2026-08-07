@@ -2,14 +2,14 @@
 <svg xmlns="http://www.w3.org/2000/svg"
      width="512" height="512"
      viewBox="340 291.5 617 617">
-  <title>Forge Logo — Navy and Orange, Transparent</title>
-  <desc>Forge logo with transparent background and optical padding for small-size display.</desc>
+  <title>Forge Logo — White and Orange, Transparent</title>
+  <desc>Forge logo for dark backgrounds, with transparent background and optical padding.</desc>
 
   <defs>
     <linearGradient id="navyGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#173C78"/>
-      <stop offset="48%" stop-color="#0B2B62"/>
-      <stop offset="100%" stop-color="#082455"/>
+      <stop offset="0%" stop-color="#FFFFFF"/>
+      <stop offset="48%" stop-color="#FFFFFF"/>
+      <stop offset="100%" stop-color="#FFFFFF"/>
     </linearGradient>
 
     <linearGradient id="orangeGradient" x1="0%" y1="0%" x2="100%" y2="100%">
