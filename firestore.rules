@@ -38,5 +38,22 @@ service cloud.firestore {
           || request.auth.token.email == 'forge-setup-test@example.com'
         );
     }
+    // Append-only sign-in audit log: any team member can read the whole
+    // log (shown via the notification bell), but a client can only ever
+    // create an event for its own account — never someone else's — and
+    // can never update or delete an entry once written.
+    match /loginEvents/{eventId} {
+      allow read: if request.auth != null
+        && (
+          request.auth.token.email.matches('.*@th-umios[.]com$')
+          || request.auth.token.email == 'forge-setup-test@example.com'
+        );
+      allow create: if request.auth != null
+        && (
+          request.auth.token.email.matches('.*@th-umios[.]com$')
+          || request.auth.token.email == 'forge-setup-test@example.com'
+        )
+        && request.resource.data.email == request.auth.token.email;
+    }
   }
 }

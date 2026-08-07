@@ -199,6 +199,54 @@
     color:var(--text);
   }
   .navbar-account-menu-item:hover{background:var(--primary-light);}
+  .navbar-notifications{position:relative;flex-shrink:0;}
+  .navbar-notif-badge{
+    position:absolute;
+    top:-4px;
+    right:-4px;
+    min-width:16px;
+    height:16px;
+    padding:0 4px;
+    border-radius:8px;
+    background:var(--danger);
+    color:#fff;
+    font-size:10px;
+    font-weight:700;
+    align-items:center;
+    justify-content:center;
+    line-height:1;
+    pointer-events:none;
+  }
+  .navbar-notif-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 8px);
+    right:0;
+    width:300px;
+    max-width:calc(100vw - 24px);
+    max-height:360px;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:8px;
+    z-index:60;
+  }
+  .navbar-notifications.open .navbar-notif-menu{display:block;}
+  .navbar-notif-title{
+    font-size:12px;
+    font-weight:700;
+    color:var(--primary-dark);
+    padding:4px 8px 10px;
+    margin-bottom:6px;
+    border-bottom:1px solid var(--border);
+  }
+  .navbar-notif-item{padding:8px;border-radius:var(--radius);font-size:12px;}
+  .navbar-notif-item:hover{background:var(--primary-light);}
+  .navbar-notif-item .ni-email{font-weight:600;color:var(--text);word-break:break-all;}
+  .navbar-notif-item .ni-time{color:var(--text-dim);margin-top:2px;}
+  .navbar-notif-empty{font-size:12px;color:var(--text-dim);padding:16px 8px;text-align:center;}
   .app-footer{
     position:fixed;
     left:0; right:0; bottom:0;
@@ -1967,7 +2015,14 @@
   </div>
   <div class="navbar-right">
     <button class="navbar-icon-btn" id="btnNavbarHelp" title="Help">?</button>
-    <button class="navbar-icon-btn" id="btnNavbarNotifications" title="Notifications">🔔</button>
+    <div class="navbar-notifications" id="navbarNotifications">
+      <button class="navbar-icon-btn" id="btnNavbarNotifications" title="Notifications">🔔</button>
+      <span class="navbar-notif-badge" id="navbarNotifBadge" style="display:none;"></span>
+      <div class="navbar-notif-menu" id="navbarNotifMenu">
+        <div class="navbar-notif-title">Recent Sign-ins</div>
+        <div id="navbarNotifList"></div>
+      </div>
+    </div>
     <div class="navbar-account" id="navbarAccount">
       <div class="navbar-avatar" id="navbarAvatar"></div>
       <span class="navbar-account-name" id="navbarAccountName"></span>
@@ -2097,7 +2152,8 @@ import {
   EmailAuthProvider, reauthenticateWithCredential
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch
+  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
+  query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 const firebaseConfig = {
@@ -2117,6 +2173,11 @@ const recipesCol = collection(db, "recipes");
 const materialsCol = collection(db, "ingredientMaster");
 const projectsCol = collection(db, "projects");
 const trialsCol = collection(db, "trials");
+// Append-only audit log of sign-ins — who, and when. Read by everyone on the
+// team (via the notification bell), written once per successful login/signup
+// by that same user (see the Firestore rule: create is allowed only when the
+// event's own email matches the signed-in requester's).
+const loginEventsCol = collection(db, "loginEvents");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -2288,7 +2349,8 @@ const CHANGELOG = [
   { version: "3.0.98", date: "2026-08-07", note: "Mobile polish: stacked the Projects search and status filter at phone widths and replaced the browser-default tab focus box with a compact brand-colored keyboard focus ring" },
   { version: "3.0.99", date: "2026-08-07", note: "Installed web apps now check for a new Service Worker whenever they open or return to the foreground, then reload automatically so iPhone users receive the latest deployed version" },
   { version: "3.0.100", date: "2026-08-07", note: "Removed the redundant Back button from every full-page mode; navigation now uses the top tabs and Forge logo only" },
-  { version: "3.0.101", date: "2026-08-07", note: "Fixed a leftover-emoji bug from the earlier Lucide icon conversion: the sidebar's Compare Recipes button, the Save Current as Version button, and the Version History / Progress Log modal titles were showing their new icon right next to the old emoji instead of replacing it, since the emoji was still baked into their static HTML text underneath" }
+  { version: "3.0.101", date: "2026-08-07", note: "Fixed a leftover-emoji bug from the earlier Lucide icon conversion: the sidebar's Compare Recipes button, the Save Current as Version button, and the Version History / Progress Log modal titles were showing their new icon right next to the old emoji instead of replacing it, since the emoji was still baked into their static HTML text underneath" },
+  { version: "3.0.102", date: "2026-08-07", note: "Added a sign-in log: every login/signup now records who and when to Firestore, viewable by anyone on the team from the notification bell (with an unread-count badge). Read-only audit trail — a client can only ever write its own sign-in event, never someone else's, and can't edit or delete entries once written" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2388,6 +2450,7 @@ function initAuthScreen(){
     const errEl = document.getElementById('loginError');
     errEl.textContent = '';
     signInWithEmailAndPassword(auth, email, password)
+      .then(cred => logLoginEvent(cred.user.email))
       .catch(err => { errEl.textContent = authErrorMessage(err); });
   });
 
@@ -2413,8 +2476,14 @@ function initAuthScreen(){
     }
     errEl.textContent = '';
     createUserWithEmailAndPassword(auth, email, password)
+      .then(cred => logLoginEvent(cred.user.email))
       .catch(err => { errEl.textContent = authErrorMessage(err); });
   });
+}
+
+function logLoginEvent(email){
+  return setDoc(doc(loginEventsCol, uid()), { email, timestamp: Date.now() })
+    .catch(err => console.error('Forge: failed to log login event', err));
 }
 
 let pendingRequiredEmail = null;
@@ -4335,11 +4404,13 @@ let unsubscribeMaterials = null;
 let unsubscribeMetaLists = null;
 let unsubscribeProjects = null;
 let unsubscribeTrials = null;
+let unsubscribeLoginEvents = null;
 let recipesLoaded = false;
 let materialsLoaded = false;
 let projectsLoaded = false;
 let trialsLoaded = false;
 let trialsMigrated = false;
+let loginEvents = [];
 
 function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -4401,6 +4472,20 @@ function attachTrialsListener(){
   }, err => {
     console.error('Forge: trials listener error', err);
     showCloudError('Failed to load trial results from Firebase: ' + err.message);
+  });
+}
+
+// Most-recent-50 sign-ins, newest first — bounded by the query itself
+// (rather than fetching the whole ever-growing collection client-side like
+// the other collections do) since this log only ever grows and never gets
+// cleaned up.
+function attachLoginEventsListener(){
+  const q = query(loginEventsCol, orderBy('timestamp', 'desc'), limit(50));
+  unsubscribeLoginEvents = onSnapshot(q, snapshot => {
+    loginEvents = snapshot.docs.map(d => d.data());
+    renderNotificationsBell();
+  }, err => {
+    console.error('Forge: login events listener error', err);
   });
 }
 
@@ -5359,6 +5444,30 @@ function descriptionListHtml(r){
 function formatActivityDateTime(ts){
   if(!ts) return null;
   return new Date(ts).toLocaleString('en-GB', { day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit' });
+}
+
+// "Unread" is tracked client-side only (localStorage, per browser) against
+// the newest sign-in the user has actually opened this panel to see —
+// there's no per-user read-state stored in Firestore for this, since it's
+// just a lightweight badge count, not something that needs to sync across
+// devices.
+const LOGIN_EVENTS_LAST_SEEN_KEY = 'forgeLastSeenLoginEventAt';
+function renderNotificationsBell(){
+  const list = document.getElementById('navbarNotifList');
+  const badge = document.getElementById('navbarNotifBadge');
+  if(!list || !badge) return;
+  list.innerHTML = loginEvents.length
+    ? loginEvents.map(ev => `
+        <div class="navbar-notif-item">
+          <div class="ni-email">${escapeHtml(ev.email || 'Unknown')}</div>
+          <div class="ni-time">${escapeHtml(formatActivityDateTime(ev.timestamp) || '')}</div>
+        </div>
+      `).join('')
+    : '<div class="navbar-notif-empty">No sign-ins recorded yet</div>';
+  const lastSeen = Number(localStorage.getItem(LOGIN_EVENTS_LAST_SEEN_KEY) || 0);
+  const unreadCount = loginEvents.filter(ev => ev.timestamp > lastSeen).length;
+  badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
+  badge.style.display = unreadCount > 0 ? 'flex' : 'none';
 }
 
 function refreshCodeCountryBadge(r){
@@ -7178,8 +7287,19 @@ document.getElementById('navbarAccount').addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('navbarAccount').classList.toggle('open');
 });
+document.getElementById('navbarNotifications').addEventListener('click', e => {
+  e.stopPropagation();
+  const wrap = document.getElementById('navbarNotifications');
+  const opening = !wrap.classList.contains('open');
+  wrap.classList.toggle('open');
+  if(opening){
+    localStorage.setItem(LOGIN_EVENTS_LAST_SEEN_KEY, String(Date.now()));
+    renderNotificationsBell();
+  }
+});
 document.addEventListener('click', () => {
   document.getElementById('navbarAccount').classList.remove('open');
+  document.getElementById('navbarNotifications').classList.remove('open');
   document.getElementById('hdCreateMenu')?.classList.remove('open');
 });
 
@@ -7251,6 +7371,7 @@ onAuthStateChanged(auth, user => {
     if(!unsubscribeMetaLists) attachMetaListsListener();
     if(!unsubscribeProjects) attachProjectsListener();
     if(!unsubscribeTrials) attachTrialsListener();
+    if(!unsubscribeLoginEvents) attachLoginEventsListener();
     if(appView === 'auth') goToApp();
     document.getElementById('loginForm').reset();
     document.getElementById('registerForm').reset();
@@ -7263,6 +7384,7 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
     if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
     if(unsubscribeTrials){ unsubscribeTrials(); unsubscribeTrials = null; }
+    if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
     recipesLoaded = false;
     materialsLoaded = false;
     projectsLoaded = false;
@@ -7272,6 +7394,7 @@ onAuthStateChanged(auth, user => {
     ingredientMaster = [];
     projects = [];
     trials = [];
+    loginEvents = [];
     metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [] };
     currentId = null;
     unlockedRecipeId = null;
