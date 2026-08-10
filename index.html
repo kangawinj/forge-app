@@ -2359,7 +2359,8 @@ const CHANGELOG = [
   { version: "3.0.102", date: "2026-08-07", note: "Added a sign-in log: every login/signup now records who and when to Firestore, viewable by anyone on the team from the notification bell (with an unread-count badge). Read-only audit trail — a client can only ever write its own sign-in event, never someone else's, and can't edit or delete entries once written" },
   { version: "3.0.103", date: "2026-08-07", note: "Projects table: Save/Duplicate/Cancel were plain white buttons that nearly disappeared against the white row background — Save is now a solid navy primary button, Duplicate and Cancel got a light tint so all three read clearly as buttons" },
   { version: "3.0.104", date: "2026-08-10", note: "Customers in Reference Lists can now have a Country, picked from the existing Destination Countries list (with a flag badge shown next to the name) — matches the same must-exist-in-the-list rule already used for Destination Country elsewhere in Forge" },
-  { version: "3.0.105", date: "2026-08-10", note: "Adding a new Destination Country is now a search-and-pick from a full world list of ~250 countries and territories instead of free typing, so names come out consistent and correctly spelled every time" }
+  { version: "3.0.105", date: "2026-08-10", note: "Adding a new Destination Country is now a search-and-pick from a full world list of ~250 countries and territories instead of free typing, so names come out consistent and correctly spelled every time" },
+  { version: "3.0.106", date: "2026-08-10", note: "Projects: picking a Customer Name that already has a Country on file (Reference Lists) now auto-fills Destination Country, instead of having to type it again for every project" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3880,6 +3881,16 @@ function renderProjectsList(){
         projImagePreview.src = '';
         projImagePreview.style.display = 'none';
         projImageRemoveBtn.style.display = 'none';
+      });
+
+      // Customers can carry a Country in Reference Lists (see addNewEntry /
+      // saveEdit in renderRefListItems) — picking a customer that has one
+      // on file saves re-typing the same destination on every project.
+      block.querySelector('.proj-customer').addEventListener('change', e => {
+        const match = metaLists.customers.find(c => metaItemName(c) === e.target.value.trim());
+        if(match && match.country){
+          block.querySelector('.proj-destination').value = match.country;
+        }
       });
 
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
