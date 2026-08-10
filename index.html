@@ -739,6 +739,11 @@
   .proj-th-sortable{cursor:pointer;user-select:none;}
   .proj-th-sortable:hover{color:var(--primary);}
   .proj-th-sortable.active{color:var(--primary-dark);font-weight:700;}
+  /* Plain .btn (white fill, faint border) was nearly invisible sitting in
+     a white table row — a light tint gives Duplicate/Cancel enough
+     presence to read as buttons without competing with Save's solid fill. */
+  .proj-action-duplicate{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);}
+  .proj-action-cancel{background:var(--bg);}
   .part-subtotal-pct, .part-subtotal-wt{font-weight:700;}
   /* Right-align every numeric column total (Parts/Components tfoot,
      Recipe Overview's plain-text data rows and its Total) so every digit
@@ -1432,7 +1437,7 @@
   }
   input.reflist-item-name-input:hover{border-color:var(--border);}
   input.reflist-item-name-input:focus{background:#fff;}
-  input.reflist-item-location-input{
+  input.reflist-item-location-input, input.reflist-item-country-input{
     display:block;
     font-size:12px;
     color:var(--text-dim);
@@ -1442,8 +1447,8 @@
     margin:2px -6px 0;
     width:calc(100% + 12px);
   }
-  input.reflist-item-location-input:hover{border-color:var(--border);}
-  input.reflist-item-location-input:focus{background:#fff;color:var(--text);}
+  input.reflist-item-location-input:hover, input.reflist-item-country-input:hover{border-color:var(--border);}
+  input.reflist-item-location-input:focus, input.reflist-item-country-input:focus{background:#fff;color:var(--text);}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
   .reflist-flag-badge{
     flex-shrink:0;
@@ -2350,7 +2355,9 @@ const CHANGELOG = [
   { version: "3.0.99", date: "2026-08-07", note: "Installed web apps now check for a new Service Worker whenever they open or return to the foreground, then reload automatically so iPhone users receive the latest deployed version" },
   { version: "3.0.100", date: "2026-08-07", note: "Removed the redundant Back button from every full-page mode; navigation now uses the top tabs and Forge logo only" },
   { version: "3.0.101", date: "2026-08-07", note: "Fixed a leftover-emoji bug from the earlier Lucide icon conversion: the sidebar's Compare Recipes button, the Save Current as Version button, and the Version History / Progress Log modal titles were showing their new icon right next to the old emoji instead of replacing it, since the emoji was still baked into their static HTML text underneath" },
-  { version: "3.0.102", date: "2026-08-07", note: "Added a sign-in log: every login/signup now records who and when to Firestore, viewable by anyone on the team from the notification bell (with an unread-count badge). Read-only audit trail — a client can only ever write its own sign-in event, never someone else's, and can't edit or delete entries once written" }
+  { version: "3.0.102", date: "2026-08-07", note: "Added a sign-in log: every login/signup now records who and when to Firestore, viewable by anyone on the team from the notification bell (with an unread-count badge). Read-only audit trail — a client can only ever write its own sign-in event, never someone else's, and can't edit or delete entries once written" },
+  { version: "3.0.103", date: "2026-08-07", note: "Projects table: Save/Duplicate/Cancel were plain white buttons that nearly disappeared against the white row background — Save is now a solid navy primary button, Duplicate and Cancel got a light tint so all three read clearly as buttons" },
+  { version: "3.0.104", date: "2026-08-10", note: "Customers in Reference Lists can now have a Country, picked from the existing Destination Countries list (with a flag badge shown next to the name) — matches the same must-exist-in-the-list rule already used for Destination Country elsewhere in Forge" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2691,12 +2698,17 @@ function mountRefListsView(){
       <div class="reflist-add-row">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
         <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
+        <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
         <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
       </div>
       <div id="refListItems"></div>
     </div>
   `;
 
+  const updateAddRowFields = () => {
+    document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
+    document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
+  };
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.key === refListActiveTab);
     btn.addEventListener('click', () => {
@@ -2704,18 +2716,30 @@ function mountRefListsView(){
       btn.classList.add('active');
       refListActiveTab = btn.dataset.key;
       refListEditingId = null;
-      document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
+      updateAddRowFields();
       renderRefListItems();
     });
   });
-  document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
+  updateAddRowFields();
   const addNewEntry = () => {
     const input = document.getElementById('refListNewInput');
     const locationInput = document.getElementById('refListNewLocationInput');
-    const extra = refListActiveTab === 'factories' ? { location: locationInput.value.trim() } : {};
+    const countryInput = document.getElementById('refListNewCountryInput');
+    let extra = {};
+    if(refListActiveTab === 'factories'){
+      extra = { location: locationInput.value.trim() };
+    }else if(refListActiveTab === 'customers'){
+      const country = countryInput.value.trim();
+      if(country && !metaLists.destinationCountries.some(item => metaItemName(item) === country)){
+        alert(`"${country}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
+        return;
+      }
+      extra = { country };
+    }
     addMetaListValue(refListActiveTab, input.value, extra);
     input.value = '';
     locationInput.value = '';
+    countryInput.value = '';
     renderRefListItems();
   };
   document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
@@ -2723,6 +2747,9 @@ function mountRefListsView(){
     if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
   });
   document.getElementById('refListNewLocationInput').addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+  document.getElementById('refListNewCountryInput').addEventListener('keydown', e => {
     if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
   });
 
@@ -2733,6 +2760,7 @@ function renderRefListItems(){
   if(!container) return;
   const isFactories = refListActiveTab === 'factories';
   const isDestinations = refListActiveTab === 'destinationCountries';
+  const isCustomers = refListActiveTab === 'customers';
   const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
@@ -2746,9 +2774,11 @@ function renderRefListItems(){
     return `
     <div class="reflist-item" data-id="${escapeHtml(item.id)}">
       ${isDestinations ? countryFlagBadgeHtml(item.name) : ''}
+      ${isCustomers && item.country ? countryFlagBadgeHtml(item.country) : ''}
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
         ${isFactories ? `<input type="text" class="reflist-item-location-input" placeholder="Location" value="${escapeHtml(item.location || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
+        ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
         ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
       </div>
       ${isEditing
@@ -2777,8 +2807,13 @@ function renderRefListItems(){
     const item = metaLists[refListActiveTab].find(x => x.id === id);
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
     const newLocation = isFactories ? row.querySelector('.reflist-item-location-input').value.trim() : undefined;
-    const extra = isFactories ? { location: newLocation } : {};
-    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')))){
+    const newCountry = isCustomers ? row.querySelector('.reflist-item-country-input').value.trim() : undefined;
+    if(isCustomers && newCountry && !metaLists.destinationCountries.some(x => metaItemName(x) === newCountry)){
+      alert(`"${newCountry}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
+      return; // stay in edit mode so the country can be fixed
+    }
+    const extra = isFactories ? { location: newLocation } : (isCustomers ? { country: newCountry } : {});
+    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')) && (!isCustomers || newCountry === (item.country || '')))){
       refListEditingId = null; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
@@ -2794,7 +2829,7 @@ function renderRefListItems(){
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
     btn.addEventListener('click', () => { refListEditingId = null; renderRefListItems(); });
   });
-  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input').forEach(inp => {
+  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input, .reflist-item-country-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
       else if(e.key === 'Escape'){ refListEditingId = null; renderRefListItems(); }
@@ -3665,7 +3700,7 @@ function renderProjectsList(){
             <td>${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
-                ? `<button class="btn btn-sm" data-role="save-project">${icon('save')} Save</button><button class="btn btn-sm" data-role="duplicate-project">${icon('copy')} Duplicate</button><button class="btn btn-sm" data-role="cancel-project">${icon('undo-2')} Cancel</button>`
+                ? `<button class="btn btn-primary btn-sm" data-role="save-project">${icon('save')} Save</button><button class="btn btn-sm proj-action-duplicate" data-role="duplicate-project">${icon('copy')} Duplicate</button><button class="btn btn-sm proj-action-cancel" data-role="cancel-project">${icon('undo-2')} Cancel</button>`
                 : `<button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
             </td>
           </tr>
