@@ -694,6 +694,13 @@
     outline-offset:-2px;
     border-radius:var(--radius);
   }
+  /* Reorder indicators — a solid line on whichever edge of the drop
+     target the dragged Part/ingredient will land next to, instead of the
+     dashed "nest inside" highlight above. Shared by an ingredient row
+     (.ing-edit-row) and a Part's own header (.part-header), whichever one
+     is currently the drop target. */
+  .drop-before{box-shadow:0 -3px 0 0 var(--primary);}
+  .drop-after{box-shadow:0 3px 0 0 var(--primary);}
 
   .part-block{
     border-radius:var(--radius);
@@ -993,6 +1000,15 @@
     margin-left:auto;
     padding-left:12px;
     white-space:nowrap;
+  }
+  .tree-root-wt-wrap{
+    display:inline-flex;
+    align-items:center;
+    gap:4px;
+  }
+  .tree-root-wt-input{
+    width:90px;
+    flex:0 0 auto;
   }
   .tree-children{
     margin-left:9px;
@@ -2983,7 +2999,11 @@ const CHANGELOG = [
   { version: "3.0.145", date: "2026-08-12", note: "Swapped the order of an ingredient row's Note and %/Weight fields — Note now comes right after the ingredient name, with % and Weight after it" },
   { version: "3.0.146", date: "2026-08-12", note: "Added unit labels (% and g) next to each ingredient's own %-of-Part and Weight fields, matching the \"% of recipe\"/\"g\" labels a Part's own header already shows" },
   { version: "3.0.147", date: "2026-08-12", note: "A Sub-part nested inside a Part now reads like one more row in that Part's list — plain bordered name field and a compact \"%\" label, same as an ingredient row — instead of looking like its own distinct titled section. Top-level Parts keep their existing bold header look" },
-  { version: "3.0.148", date: "2026-08-12", note: "A nested Sub-part's own columns (handle, name, note, %, weight, delete) now line up exactly with its sibling ingredient rows' columns — dropped the Sub-part's own card padding (which was shifting everything after it out of alignment) and matched its header's spacing to the ingredient row's" }
+  { version: "3.0.148", date: "2026-08-12", note: "A nested Sub-part's own columns (handle, name, note, %, weight, delete) now line up exactly with its sibling ingredient rows' columns — dropped the Sub-part's own card padding (which was shifting everything after it out of alignment) and matched its header's spacing to the ingredient row's" },
+  { version: "3.0.149", date: "2026-08-12", note: "Swapped the order of a Sub-part's drag handle and expand/collapse chevron — drag handle now comes first, matching a top-level Part's own header" },
+  { version: "3.0.150", date: "2026-08-12", note: "The grip handle on a Part or ingredient can now also reorder items up/down within the same list, not just move them into a different Part — drag it just above or below a neighboring row/header (a highlight line shows before or after) and drop to reorder; dragging onto the middle of a Part's title still moves it inside as a Sub-part like before" },
+  { version: "3.0.151", date: "2026-08-12", note: "The recipe tree's total weight (top right, next to \"Formula per Portion\") is now editable — type a new total and every ingredient at every level scales to match proportionally, same as the existing \"Scale Recipe To\" field but directly where the total is already shown" },
+  { version: "3.0.152", date: "2026-08-12", note: "Swapped the order of a top-level Part's ingredient count and its %/weight fields — %/weight now comes right after the Part name, with the ingredient count after it, closer to the delete button" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -8000,7 +8020,10 @@ function renderMain(){
         <div class="tree-node tree-root-node">
           <span class="tree-node-label">Formula per Portion</span>
           <span class="tree-node-pct">100.00%</span>
-          <span class="tree-node-wt" id="treeRootWt">0.00 g</span>
+          <span class="tree-node-wt tree-root-wt-wrap">
+            <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
+            <span class="ing-unit">g</span>
+          </span>
         </div>
         <div id="partsContainer" class="tree-children"></div>
       </div>
@@ -8142,6 +8165,33 @@ function renderMain(){
     renderParts(r);
     scheduleSave();
   });
+
+  // The tree root's own weight (g) — always 100% of the recipe by
+  // definition, so there's no % field to edit, just weight. Typing here
+  // scales every top-level Part (and everything nested inside it)
+  // proportionally, same math as the "Scale Recipe To" button above, just
+  // inline where the total is already shown. A no-op with nothing yet
+  // weighed in (0g total) since there's no ratio to scale from.
+  const treeRootWtInput = document.getElementById('treeRootWt');
+  function scaleRecipeTo(targetWeight){
+    const currentTotal = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    if(targetWeight < 0 || currentTotal <= 0) return;
+    const factor = targetWeight / currentTotal;
+    r.parts.forEach(part => scaleIngredientsInPart(part, factor));
+  }
+  treeRootWtInput.addEventListener('input', e => {
+    const target = parseFloat(e.target.value);
+    if(!isNaN(target)) scaleRecipeTo(target);
+    refreshDisplays(r);
+    scheduleSave();
+  });
+  treeRootWtInput.addEventListener('blur', () => {
+    treeRootWtInput.value = (r.batchWeight || 0).toFixed(2);
+  });
+  let treeRootWtJustFocused = false;
+  treeRootWtInput.addEventListener('mousedown', () => { treeRootWtJustFocused = document.activeElement !== treeRootWtInput; });
+  treeRootWtInput.addEventListener('focus', () => treeRootWtInput.select());
+  treeRootWtInput.addEventListener('mouseup', e => { if(treeRootWtJustFocused){ e.preventDefault(); treeRootWtJustFocused = false; } });
 
   document.getElementById('f-yieldPct').value = r.yieldPct ?? '';
   document.getElementById('f-yieldPct').addEventListener('input', e => {
@@ -8385,7 +8435,7 @@ function refreshDisplays(r){
 // every edit is its own weight (it's always 100% of itself by definition).
 function updateTreeRoot(r){
   const wtEl = document.getElementById('treeRootWt');
-  if(wtEl) wtEl.textContent = formatWeight(r.batchWeight || 0);
+  if(wtEl && document.activeElement !== wtEl) wtEl.value = (r.batchWeight || 0).toFixed(2);
 }
 
 function renderParts(r){
@@ -8429,8 +8479,8 @@ function renderPartNode(r, part, container, siblingsCtx){
   // right-aligned via margin-left:auto) unchanged.
   const headerInnerHtml = isNested ? `
       <div class="row-handle-col">
-        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
         <span class="drag-handle" draggable="true" title="Drag onto another Part's title to move this Part (and everything inside it) there">${icon('grip-vertical', 14)}</span>
+        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       </div>
       <input type="text" class="part-name" placeholder="Part name">
       <span class="part-ing-count"></span>
@@ -8448,11 +8498,11 @@ function renderPartNode(r, part, container, siblingsCtx){
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       <input type="text" class="part-name" placeholder="Part name">
       <div class="part-header-fields">
-        <span class="part-ing-count"></span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span>% of recipe</span>
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
+        <span class="part-ing-count"></span>
       </div>
       <button class="icon-btn" title="Delete this part">${icon('x')}</button>
     `;
@@ -8492,27 +8542,49 @@ function renderPartNode(r, part, container, siblingsCtx){
     dragPayload = null;
   });
 
-  // Drop TARGET: this Part's title bar is where either a dragged Part
-  // (becomes a Sub-part here) or a dragged ingredient (moves into this
-  // Part's own ingredient list) can be dropped.
+  // Drop TARGET: this Part's title bar. Dragging an ingredient here always
+  // just adds it to this Part's own list (no "before/after" — an
+  // ingredient can't be positioned relative to a Part, they're different
+  // lists). Dragging a Part is split into three vertical zones so both
+  // "move up/down" and "nest inside" are reachable from the same target:
+  // the top slice inserts the dragged Part as a sibling BEFORE this one,
+  // the bottom slice AFTER, and the middle nests it inside as a Sub-part
+  // (the original behavior).
+  function partDropZone(e){
+    const rect = headerEl.getBoundingClientRect();
+    const relY = (e.clientY - rect.top) / rect.height;
+    if(relY < 0.3) return 'before';
+    if(relY > 0.7) return 'after';
+    return 'into';
+  }
+
   headerEl.addEventListener('dragover', e => {
     if(!dragPayload) return;
     // Dropping a Part onto ITSELF or onto one of ITS OWN descendants would
     // nest it inside itself — check whether the drop TARGET (this `part`)
     // is the dragged Part or reachable by descending from it, not the
-    // other way around.
+    // other way around. Applies to all three zones alike: inserting
+    // draggedPart as a sibling of one of its own descendants is exactly as
+    // cyclic as nesting it inside one directly.
     if(dragPayload.type === 'part' && isPartOrDescendant(part, dragPayload.item)) return;
     if(dragPayload.type === 'ingredient' && dragPayload.sourcePart === part) return; // already here
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
-    headerEl.classList.add('drop-target');
+    headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
+    if(dragPayload.type === 'part'){
+      const zone = partDropZone(e);
+      headerEl.classList.add(zone === 'before' ? 'drop-before' : zone === 'after' ? 'drop-after' : 'drop-target');
+    } else {
+      headerEl.classList.add('drop-target');
+    }
   });
   headerEl.addEventListener('dragleave', () => {
-    headerEl.classList.remove('drop-target');
+    headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
   });
   headerEl.addEventListener('drop', e => {
     e.preventDefault();
-    headerEl.classList.remove('drop-target');
+    const zone = (dragPayload && dragPayload.type === 'part') ? partDropZone(e) : 'into';
+    headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
     if(!dragPayload) return;
     if(dragPayload.type === 'part'){
       const draggedPart = dragPayload.item;
@@ -8520,7 +8592,17 @@ function renderPartNode(r, part, container, siblingsCtx){
       const idx = dragPayload.sourceArray.indexOf(draggedPart);
       if(idx === -1){ dragPayload = null; return; }
       dragPayload.sourceArray.splice(idx, 1);
-      part.parts.push(draggedPart);
+      if(zone === 'into'){
+        part.parts.push(draggedPart);
+      } else {
+        // Insert as a sibling of `part` within its own containing array —
+        // re-found by reference AFTER the removal above, since if
+        // draggedPart came from this very array, `part`'s own index may
+        // have shifted down by one.
+        let targetIdx = siblingsCtx.parts.indexOf(part);
+        if(zone === 'after') targetIdx += 1;
+        siblingsCtx.parts.splice(targetIdx, 0, draggedPart);
+      }
     } else if(dragPayload.type === 'ingredient'){
       const draggedIng = dragPayload.item;
       const sourcePart = dragPayload.sourcePart;
@@ -8669,6 +8751,53 @@ function renderPartNode(r, part, container, siblingsCtx){
       ingDragHandle.addEventListener('dragend', () => {
         branch.classList.remove('dragging');
         dragPayload = null;
+      });
+
+      // Drop TARGET: an ingredient row only ever means "reorder relative
+      // to this one" — top half of the row inserts the dragged ingredient
+      // just before it, bottom half just after. Works the same whether the
+      // dragged ingredient started in this same Part (a plain reorder) or
+      // a different one (moves it here, landing at this exact position,
+      // rather than always at the end the way dropping on a Part's title
+      // does).
+      const rowEl = branch.querySelector('.ing-edit-row');
+      rowEl.addEventListener('dragover', e => {
+        if(!dragPayload || dragPayload.type !== 'ingredient' || dragPayload.item === ing) return;
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+        const rect = rowEl.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        rowEl.classList.toggle('drop-before', before);
+        rowEl.classList.toggle('drop-after', !before);
+      });
+      rowEl.addEventListener('dragleave', () => {
+        rowEl.classList.remove('drop-before', 'drop-after');
+      });
+      rowEl.addEventListener('drop', e => {
+        e.preventDefault();
+        const rect = rowEl.getBoundingClientRect();
+        const before = e.clientY < rect.top + rect.height / 2;
+        rowEl.classList.remove('drop-before', 'drop-after');
+        if(!dragPayload || dragPayload.type !== 'ingredient') return;
+        const draggedIng = dragPayload.item;
+        if(draggedIng === ing){ dragPayload = null; return; }
+        const sourcePart = dragPayload.sourcePart;
+        const sourceIdx = sourcePart.ingredients.indexOf(draggedIng);
+        if(sourceIdx === -1){ dragPayload = null; return; }
+        sourcePart.ingredients.splice(sourceIdx, 1);
+        if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
+          sourcePart.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+        }
+        // Re-found by reference AFTER the removal above, since if the
+        // dragged ingredient came from this same Part, this row's own
+        // index may have shifted down by one.
+        let targetIdx = part.ingredients.indexOf(ing);
+        if(!before) targetIdx += 1;
+        part.ingredients.splice(targetIdx, 0, draggedIng);
+        dragPayload = null;
+        renderParts(r);
+        renderProcesses(r);
+        scheduleSave();
       });
 
       nameInput.value = ing.name || '';
