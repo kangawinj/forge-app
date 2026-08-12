@@ -523,6 +523,12 @@
     border-color:var(--primary);
     box-shadow:0 0 0 3px var(--primary-light);
   }
+  input[type=number]{-moz-appearance:textfield;}
+  input[type=number]::-webkit-outer-spin-button,
+  input[type=number]::-webkit-inner-spin-button{
+    -webkit-appearance:none;
+    margin:0;
+  }
   input[readonly]{
     background:#f1f3f0;
     color:var(--text-dim);
@@ -541,7 +547,8 @@
     gap:14px;
   }
   .combo-row{display:flex;gap:6px;align-items:center;}
-  .combo-row input{flex:1;min-width:0;}
+  .combo-row input, .combo-row select{flex:1;min-width:0;width:auto;}
+  .combo-row span{color:var(--text-dim);flex-shrink:0;}
   .field{margin-bottom:14px;}
   .field:last-child{margin-bottom:0;}
 
@@ -657,6 +664,36 @@
   }
   .icon-btn:hover{background:var(--danger-light);color:var(--danger);}
   .add-row-btn{margin-top:10px;}
+  /* Sub-parts nest one more .tree-children/.tree-branch level under a
+     Part's own ingredient rows — same indent + connector-line treatment,
+     no extra CSS needed since those classes are already generic. The two
+     "+ Add" buttons just need a row of their own instead of the default
+     inline-block wrap, which put unpredictable gaps between them. */
+  .part-body-actions{display:flex;gap:10px;flex-wrap:wrap;}
+  .part-body-actions .add-row-btn{margin-top:10px;}
+
+  /* Drag a Part or ingredient by its grip handle onto another Part's title
+     bar to move it there — see renderPartNode/renderRows' dragstart/
+     dragover/drop wiring. */
+  .drag-handle{
+    display:flex;
+    align-items:center;
+    flex-shrink:0;
+    color:var(--text-dim);
+    cursor:grab;
+  }
+  .drag-handle:active{cursor:grabbing;}
+  .drag-handle:hover{color:var(--primary);}
+  /* Both a Part's own block and an ingredient's row wrapper carry
+     .tree-branch already (see block.className/branch.className above), so
+     one rule covers whichever kind is currently being dragged. */
+  .tree-branch.dragging{opacity:0.4;}
+  .part-header.drop-target{
+    background:var(--primary-light);
+    outline:2px dashed var(--primary);
+    outline-offset:-2px;
+    border-radius:var(--radius);
+  }
 
   .part-block{
     border-radius:var(--radius);
@@ -666,11 +703,27 @@
   }
   .part-block:last-child{margin-bottom:0;}
   .part-block.collapsed{padding-bottom:14px;}
+  /* A nested Sub-part shouldn't sit inside its own padded/backgrounded
+     "card" the way a top-level Part does — that padding is exactly what
+     was shifting its header's columns out of alignment with its sibling
+     ingredient rows (which have no such wrapper). Dropping it here lets
+     the Sub-part's header sit flush, at the same left edge as an
+     ingredient row, so every column lines up. */
+  .part-block.sub-part-row{
+    padding:0;
+    background:transparent;
+    margin-bottom:0;
+  }
+  .part-block.sub-part-row.collapsed{padding-bottom:0;}
+  .sub-part-row > .part-header{
+    margin-bottom:0;
+    padding:5px 0;
+  }
   .part-header{
     margin-bottom:10px;
     display:flex;
     align-items:center;
-    gap:6px;
+    gap:10px;
   }
   .part-header input{
     font-weight:700;
@@ -683,6 +736,34 @@
   }
   .part-header input:hover{border-color:var(--border);}
   .part-header input:focus{background:#fff;}
+  /* A Sub-part nested inside a Part should read as one more row in that
+     Part's list, not a distinct titled section the way a top-level Part
+     is — so its name field gets the same plain bordered-box look as an
+     ingredient's own name field (see .ing-name / input[type=text] base
+     rule), instead of the bold, borderless "section title" treatment
+     above. */
+  .sub-part-row > .part-header .part-name{
+    font-weight:400;
+    color:var(--text);
+    border:1px solid var(--border);
+    background:#fff;
+    padding:9px 10px;
+    max-width:none;
+    /* Same flex sizing as .ing-name-wrap, so the name column ends up the
+       same width as a sibling ingredient row's, not just styled to look
+       alike. */
+    flex:2 1 160px;
+    min-width:120px;
+  }
+  .sub-part-row > .part-header .part-name:focus{border-color:var(--primary);}
+  /* Same flex sizing as .ing-note, so this column's boundary — and
+     everything after it — lines up with a sibling ingredient row's,
+     even though this holds a count instead of a note. */
+  .sub-part-row > .part-header > .part-ing-count{
+    flex:1 1 120px;
+    min-width:100px;
+    font-size:13px;
+  }
   .part-toggle-btn{
     background:none;
     border:none;
@@ -703,6 +784,21 @@
     color:var(--text-dim);
     white-space:nowrap;
   }
+  /* Part header's own editable %-of-recipe / weight fields — same
+     bidirectional behavior as an ingredient's own % OF PART field (see
+     .ing-edit-row), just one level up: editing either one scales every
+     ingredient inside this Part proportionally. */
+  .part-header-fields{
+    margin-left:auto;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    font-size:12px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .part-header-fields .part-pct-display{width:64px;flex:0 0 auto;}
+  .part-header-fields .part-wt-display{width:80px;flex:0 0 auto;}
   .part-block.collapsed .part-body{display:none;}
   /* Data cells used to force nowrap, which made long Customer/Destination/
      Factory names push the whole table past the viewport width, requiring
@@ -844,6 +940,158 @@
     font-size:12px;
     padding:6px 0;
   }
+  /* Parts -> Ingredients breakdown, laid out as the actual data-entry form
+     (see renderParts) — classic indented tree with elbow connectors: root
+     = whole recipe (always 100%), each branch = a Part (name/%/weight,
+     collapsible, deletable), each leaf = an ingredient with its own name/
+     %-of-part/weight/note inputs. */
+  .ingredient-tree{
+    margin:10px 0 16px;
+    padding:14px 16px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow-x:auto;
+  }
+  .tree-node{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    padding:5px 0;
+  }
+  .tree-root-node{
+    font-weight:800;
+    font-size:14px;
+  }
+  .tree-node-label{
+    font-weight:600;
+    color:var(--text);
+    white-space:nowrap;
+  }
+  .tree-part-node .tree-node-label{
+    color:var(--primary-dark);
+  }
+  .tree-ing-node{
+    font-size:13px;
+  }
+  .tree-ing-node .tree-node-label{
+    font-weight:500;
+  }
+  .tree-node-pct{
+    font-weight:700;
+    color:var(--primary-dark);
+    font-size:12px;
+    white-space:nowrap;
+  }
+  .tree-ing-node .tree-node-pct{
+    font-weight:600;
+    color:var(--text-dim);
+  }
+  .tree-node-wt{
+    color:var(--text-dim);
+    font-size:12px;
+    margin-left:auto;
+    padding-left:12px;
+    white-space:nowrap;
+  }
+  .tree-children{
+    margin-left:9px;
+    padding-left:17px;
+    border-left:2px solid var(--border);
+  }
+  .tree-branch{
+    position:relative;
+  }
+  .tree-branch::before{
+    content:'';
+    position:absolute;
+    left:-17px;
+    top:15px;
+    width:15px;
+    height:0;
+    border-top:2px solid var(--border);
+  }
+  /* An ingredient leaf is also the data-entry row for that ingredient —
+     same inputs the old table had (name/%/weight/note/delete), just laid
+     out as one flex row instead of table cells. align-items/flex-wrap
+     deliberately override the plain .tree-node defaults above, which were
+     tuned for static label/value text, not form controls. */
+  .ing-edit-row{
+    align-items:center;
+    flex-wrap:wrap;
+  }
+  .ing-edit-row .ing-name-wrap{
+    flex:2 1 160px;
+    min-width:120px;
+    position:relative;
+  }
+  .ing-edit-row .ing-note{
+    flex:1 1 120px;
+    min-width:100px;
+  }
+  .ing-edit-row .icon-btn{
+    flex:0 0 auto;
+  }
+  /* Shared column widths so an ingredient row and a nested Sub-part's own
+     header line up as if they belonged to the same table, even though
+     they're separate flex rows in separate DOM branches (see
+     .sub-part-row's matching use of the same classes below). Every
+     ingredient row AND every nested Sub-part header uses these same
+     wrapper widths for the corresponding column, so a fixed pixel width —
+     not a flexible one — is what guarantees the boundary lands in the
+     same spot regardless of what's inside. */
+  .row-handle-col{
+    flex:0 0 48px;
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
+  .row-value-col{
+    flex:0 0 90px;
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
+  .row-value-col.row-value-wt{
+    flex:0 0 108px;
+  }
+  .row-value-col input{
+    flex:1;
+    min-width:0;
+  }
+  .row-value-col .ing-unit{
+    flex:0 0 auto;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  /* Custom fuzzy-search dropdown for the ingredient name field — see
+     fuzzyMaterialMatches/renderSuggestions in renderParts. Floats below
+     the input rather than pushing the row's layout around. */
+  .ing-suggestions{
+    display:none;
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    z-index:20;
+    margin-top:4px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 6px 16px rgba(0,0,0,.12);
+    max-height:220px;
+    overflow-y:auto;
+  }
+  .ing-suggestions.open{display:block;}
+  .ing-suggestion-item{
+    padding:8px 12px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .ing-suggestion-item:hover, .ing-suggestion-item:active{
+    background:var(--primary-light);
+  }
+  .ing-suggestion-name{color:var(--text);}
   .overview-ing-cell{
     display:flex;
     align-items:center;
@@ -904,27 +1152,6 @@
      the 8px gap meant for that row's separate Scale button. */
   .batch-scale-row:has(.unit-suffix){gap:0;}
   .batch-scale-row .unit-input{width:70px !important;text-align:right;}
-  .ing-pct-display{
-    display:block;
-    text-align:right;
-    padding:7px 8px;
-    font-size:13px;
-    font-weight:600;
-    color:var(--text-dim);
-    background:#f1f3f0;
-    border:1px solid transparent;
-    border-radius:var(--radius);
-  }
-
-  .ing-name-cell{
-    min-width:180px;
-  }
-  .ing-name-row{
-    display:flex;
-    gap:4px;
-    align-items:center;
-  }
-  .ing-name-row input{flex:1;}
   .ing-linked{
     border-color:var(--primary) !important;
     background:var(--primary-light);
@@ -947,7 +1174,7 @@
     font-weight:600;
     font-family:"Consolas","Courier New",monospace;
   }
-  .ing-wt:disabled{
+  .ing-wt:disabled, .ing-pct-display:disabled{
     background:#f1f3f0;
     color:var(--text-dim);
     cursor:not-allowed;
@@ -1232,40 +1459,44 @@
     vertical-align:middle;
   }
 
-  .lock-banner{
-    display:flex;
-    align-items:center;
-    gap:12px;
-    padding:10px 16px;
-    border-radius:var(--radius);
-    margin-bottom:16px;
-    font-size:13px;
-    font-weight:600;
-  }
-  /* Read-only banner and the Versions/Duplicate/Print buttons share one row
-     instead of stacking as two separate bars — the banner grows to fill
-     whatever space the buttons don't need. */
+  /* The lock/unlock status colors the whole row (icon+message+Save/Unlock
+     AND the Versions/Duplicate/Print toolbar) as one continuous bar, rather
+     than a small colored pill sitting beside separate white buttons — :has()
+     picks up the color from the inner .lock-banner's own state class so
+     renderLockState only needs to toggle that one class, same as before. */
   .recipe-header-actions{
     display:flex;
     align-items:center;
     gap:12px;
-    flex-wrap:wrap;
+    flex-wrap:nowrap;
     margin-bottom:20px;
+    padding:10px 16px;
+    border-radius:var(--radius);
   }
-  .recipe-header-actions .lock-banner{
-    flex:1 1 240px;
-    margin-bottom:0;
-  }
-  .lock-banner.locked{
+  .recipe-header-actions:has(.lock-banner.locked){
     background:var(--danger-light);
     border:1px solid var(--danger);
-    color:var(--danger);
   }
-  .lock-banner.unlocked{
+  .recipe-header-actions:has(.lock-banner.unlocked){
     background:var(--ok-light);
     border:1px solid var(--ok);
-    color:var(--ok);
   }
+  .lock-banner{
+    display:flex;
+    align-items:center;
+    gap:12px;
+    flex:1 1 auto;
+    min-width:0;
+    font-size:13px;
+    font-weight:600;
+  }
+  .lock-banner.locked{color:var(--danger);}
+  .lock-banner.unlocked{color:var(--ok);}
+  /* Pushes the Unlock/Save button to the banner's own right edge, landing
+     it right next to Versions/Duplicate/Print instead of sitting right
+     after the status text with a big gap before the toolbar — same
+     position whether the recipe is locked or unlocked. */
+  .lock-banner-action{margin-left:auto;}
   .danger-zone{
     margin-top:24px;
     padding-top:16px;
@@ -1671,6 +1902,8 @@
   .mu-entry-by{font-size:11px;color:var(--text-dim);margin-top:2px;}
   .mu-card-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;}
   .mu-card{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;}
+  .mu-card-clickable{cursor:pointer;transition:border-color .15s,box-shadow .15s;}
+  .mu-card-clickable:hover{border-color:var(--primary);box-shadow:0 0 0 1px var(--primary) inset;}
   /* AUTO-CREATED / PLANNED / Due-date all sit inline on the card's own
      title row now (each was previously its own extra line below the
      title) — margin-left:auto on .mu-due-inline pushes just that one to
@@ -2204,6 +2437,7 @@
       margin-left:0;
       margin-top:4px;
     }
+    .recipe-header-actions{flex-wrap:wrap;}
     .lock-banner{flex-wrap:wrap;}
     .version-item{flex-wrap:wrap;}
     .modal-overlay{padding:8px;}
@@ -2361,7 +2595,6 @@
 
 <div id="cloudErrorBanner" style="display:none;position:fixed;top:0;left:0;right:0;z-index:200;background:#c0392b;color:#fff;padding:10px 16px;font-size:13px;text-align:center;"></div>
 
-<datalist id="materialDatalist"></datalist>
 <datalist id="customerDatalist"></datalist>
 <datalist id="destinationDatalist"></datalist>
 <datalist id="salesRepDatalist"></datalist>
@@ -2417,6 +2650,22 @@
       </div>
       <div class="version-hint">Keeps the last 5 saved versions. Restoring replaces the recipe's name, description, ingredients, process steps/components, and yield — it does not affect trial photos.</div>
       <div id="versionsList"></div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="versionPreviewModalOverlay">
+  <div class="modal" style="max-width:680px;">
+    <div class="modal-header">
+      <div class="modal-title" id="versionPreviewTitle">Version Preview</div>
+      <button class="icon-btn" id="btnCloseVersionPreviewModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="versionPreviewContent"></div>
+      <div style="display:flex;gap:8px;margin-top:16px;">
+        <button class="btn btn-primary btn-sm" id="btnRestoreFromPreview">Restore this version</button>
+        <button class="btn btn-sm" id="btnCloseVersionPreviewModal2">Close</button>
+      </div>
     </div>
   </div>
 </div>
@@ -2715,7 +2964,26 @@ const CHANGELOG = [
   { version: "3.0.126", date: "2026-08-10", note: "Activities Updates cards: the PLANNED pill now sits on the same line as PLAN/AUTO-CREATED instead of its own line below, and a Next Action's due date now sits on the same line as the NEXT ACTION title (right-aligned) instead of its own line below" },
   { version: "3.0.127", date: "2026-08-11", note: "Added Task Tracking to the Home dashboard — every open Activities Updates task (a Plan with no Action Taken yet) across all projects, grouped into Overdue, Due Today, and Due Soon (next 7 days), each clickable straight to its project" },
   { version: "3.0.128", date: "2026-08-11", note: "Activities Updates entries now show a status accent (a colored left border + badge — red \"Overdue N days\", amber \"Due Today\", blue \"Upcoming\", grey \"No Due Date\") instead of changing the whole card background, so a long history doesn't turn into a wall of color. A completed entry (Action Taken filled in) always shows a calm green \"Completed\" badge with no border, regardless of its date — and an old entry's own Next Action due-date stops being highlighted once it's already been auto-chained into a new Planned entry below, so the same task doesn't read as urgent in two places at once" },
-  { version: "3.0.129", date: "2026-08-11", note: "Clicking an Activities Updates status badge (Overdue / Due Today / etc.) now opens a popup to update that entry directly — Date, Plan, Action Taken, Next Action, due date, and the auto-create-next-plan checkbox — instead of needing to first switch the whole project into Edit mode" }
+  { version: "3.0.129", date: "2026-08-11", note: "Clicking an Activities Updates status badge (Overdue / Due Today / etc.) now opens a popup to update that entry directly — Date, Plan, Action Taken, Next Action, due date, and the auto-create-next-plan checkbox — instead of needing to first switch the whole project into Edit mode" },
+  { version: "3.0.130", date: "2026-08-11", note: "Activities Updates: clicking anywhere on the PLAN, ACTION TAKEN, or NEXT ACTION card (not just the status badge) now opens the same update popup" },
+  { version: "3.0.131", date: "2026-08-11", note: "Fixed the Recipe Code's Run Number: it's now based on the highest number already used within that Product Type, not a raw count — a raw count could repeat an in-use number once any recipe of that type was deleted" },
+  { version: "3.0.132", date: "2026-08-11", note: "Projects now capture packaging spec: Portion Weight (e.g. 30 g), Inner Packing (e.g. 30 g / pack), and Outer Packing (e.g. 24 pack / carton) — each with its own selectable unit — shown in the project's summary and editable in New Project / Edit" },
+  { version: "3.0.133", date: "2026-08-11", note: "Recipe Ingredients (section 2) is now entered directly as a tree instead of a table: Total Recipe at the root, each Part underneath it showing its own share of the whole recipe, and each ingredient underneath its Part showing its share of that Part — name/weight/note are still typed in exactly as before, just laid out so the breakdown is visible while you fill it in instead of only in a separate view" },
+  { version: "3.0.134", date: "2026-08-11", note: "Renamed the Ingredients tree's root label from \"Total Recipe\" to \"Formula per Portion\"" },
+  { version: "3.0.135", date: "2026-08-12", note: "Each ingredient's % of Part field is now editable both ways: type a weight and the % updates, or type a % and the weight is back-calculated automatically (holding every other ingredient in that Part fixed)" },
+  { version: "3.0.136", date: "2026-08-12", note: "Recipes: added an explicit Save button. If a recipe has an edit sitting unsaved for 1 minute with no manual Save, it's auto-saved AND a Version History checkpoint is taken automatically, so that auto-save is always revertible. Version History entries can now be Previewed (name, description, ingredients tree, process steps) before deciding whether to Restore. Also: scrolling the mouse wheel over a focused number field no longer changes its value anywhere in the app — only typing does" },
+  { version: "3.0.137", date: "2026-08-12", note: "Clicking the recipe's Save button now also drops a Version History checkpoint by itself — no need to separately open Version History and click \"Save Current as Version\" just to have a restore point for what you saved" },
+  { version: "3.0.138", date: "2026-08-12", note: "Removed the separate toolbar Save button — the lock banner's own button now does double duty: \"Unlock to Edit\" while read-only, \"Save\" once unlocked. The banner now also colors the whole header row it shares with Versions/Duplicate/Print (red while locked, green once unlocked) instead of just a small pill next to plain white buttons — everything sits together on one colored bar" },
+  { version: "3.0.139", date: "2026-08-12", note: "Trimmed \"(will lock again when you switch recipes)\" off the unlocked banner message" },
+  { version: "3.0.140", date: "2026-08-12", note: "Each Part's own % of recipe and weight (g) — shown in its header — are now editable the same way an ingredient's % of Part already is: type either one and every ingredient inside that Part scales proportionally to match, keeping their ratios to each other unchanged" },
+  { version: "3.0.141", date: "2026-08-12", note: "Parts can now nest inside Parts, to unlimited depth — every Part gets its own \"+ Add Sub-part\" button alongside \"+ Add Ingredient\", so a Part can hold ingredients, further Sub-parts, or both. Every Sub-part has its own editable %/weight (scoped to its immediate parent) and its own Add/Delete controls, same as a top-level Part; Compare Recipes, Print, Recipe Overview, Ingredient Library usage, Trial totals, Version History, and the Process Steps component picker all now see ingredients nested inside Sub-parts too, not just a top-level Part's own direct ones" },
+  { version: "3.0.142", date: "2026-08-12", note: "Press-and-hold the grip handle on a Part or an ingredient and drag it onto another Part's title to move it there — a Part becomes a Sub-part of wherever it's dropped, an ingredient moves into that Part's own ingredient list. Dropping a Part onto itself or one of its own Sub-parts is blocked (would nest it inside itself); a Part left completely empty by a move gets the same blank starter row as deleting its last ingredient by hand" },
+  { version: "3.0.143", date: "2026-08-12", note: "Typing an ingredient name now shows a custom dropdown of close/similar matches from the Ingredient Library as you type — ranks an exact-start match highest, then anything containing what you typed, then a looser fuzzy match (typos/partial words still find the right ingredient), and searches the Thai name and vendor code too, not just the English name. Replaces the old browser-native suggestion list, which only did a plain substring match and looked different in every browser" },
+  { version: "3.0.144", date: "2026-08-12", note: "The lock banner's Unlock/Save button now sits at the banner's right edge, right next to Versions/Duplicate/Print, in both the locked and unlocked states — instead of right after the status text with a big empty gap before the toolbar. Clicking Save now also locks the recipe back to read-only view, the same way finishing an edit and stepping away from it should feel" },
+  { version: "3.0.145", date: "2026-08-12", note: "Swapped the order of an ingredient row's Note and %/Weight fields — Note now comes right after the ingredient name, with % and Weight after it" },
+  { version: "3.0.146", date: "2026-08-12", note: "Added unit labels (% and g) next to each ingredient's own %-of-Part and Weight fields, matching the \"% of recipe\"/\"g\" labels a Part's own header already shows" },
+  { version: "3.0.147", date: "2026-08-12", note: "A Sub-part nested inside a Part now reads like one more row in that Part's list — plain bordered name field and a compact \"%\" label, same as an ingredient row — instead of looking like its own distinct titled section. Top-level Parts keep their existing bold header look" },
+  { version: "3.0.148", date: "2026-08-12", note: "A nested Sub-part's own columns (handle, name, note, %, weight, delete) now line up exactly with its sibling ingredient rows' columns — dropped the Sub-part's own card padding (which was shifting everything after it out of alignment) and matched its header's spacing to the ingredient row's" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2986,23 +3254,25 @@ function renderVersionsList(r){
         <div class="version-item-date">${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
       </div>
       <div class="version-item-actions">
+        <button class="btn btn-sm" data-role="preview-version">Preview</button>
         <button class="btn btn-sm" data-role="restore-version">Restore</button>
         <button class="icon-btn" data-role="delete-version" title="Delete this version">${icon('x')}</button>
       </div>
     </div>
   `).join('');
 
+  listEl.querySelectorAll('[data-role="preview-version"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.version-item').dataset.id;
+      const v = r.versions.find(x => x.id === id);
+      if(v) openVersionPreview(r, v);
+    });
+  });
   listEl.querySelectorAll('[data-role="restore-version"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.closest('.version-item').dataset.id;
       const v = r.versions.find(x => x.id === id);
-      if(!v) return;
-      if(!confirm(`Restore version "${v.label || 'Untitled version'}"? This overwrites the recipe's current name, description, ingredients, process steps/components, and yield (trial photos are not affected).`)) return;
-      Object.assign(r, JSON.parse(JSON.stringify(v.snapshot)));
-      migrateRecipe(r);
-      closeVersionsModal();
-      renderMain();
-      scheduleSave();
+      if(v) restoreVersion(r, v);
     });
   });
   listEl.querySelectorAll('[data-role="delete-version"]').forEach(btn => {
@@ -3015,6 +3285,64 @@ function renderVersionsList(r){
   });
 }
 
+// Shared by the Versions list's own Restore button and the Preview modal's
+// Restore button, so restoring a version behaves identically regardless of
+// which one the user reached it from.
+function restoreVersion(r, v){
+  if(!confirm(`Restore version "${v.label || 'Untitled version'}"? This overwrites the recipe's current name, description, ingredients, process steps/components, and yield (trial photos are not affected).`)) return;
+  Object.assign(r, JSON.parse(JSON.stringify(v.snapshot)));
+  migrateRecipe(r);
+  closeVersionPreview();
+  closeVersionsModal();
+  renderMain();
+  scheduleSave();
+}
+
+let versionPreviewContext = null;
+
+// Read-only look at a saved version before committing to Restore — reuses
+// the same tree/process markup as the live editor and the print view, just
+// fed from the version's frozen snapshot instead of the live recipe.
+function openVersionPreview(r, v){
+  versionPreviewContext = { recipe: r, version: v };
+  const snap = v.snapshot || {};
+  const totalWt = allIngredientsInRecipe(snap).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+
+  document.getElementById('versionPreviewTitle').textContent = v.label || 'Untitled version';
+  document.getElementById('versionPreviewContent').innerHTML = `
+    <div class="reflist-item-meta" style="margin-bottom:12px;">Saved ${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
+    <div class="compare-info-col">
+      <div class="ci-name">${escapeHtml(snap.name || 'Untitled recipe')}</div>
+      <div class="ci-row"><b>Code:</b> ${escapeHtml(snap.code || '-')}</div>
+      <div class="ci-row"><b>Date:</b> ${escapeHtml(snap.date || '-')}</div>
+      <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
+      ${descriptionListHtml(snap)}
+    </div>
+    <div class="overview-title" style="margin-top:16px;">Ingredients</div>
+    ${readOnlyIngredientTreeHtml(snap.parts, totalWt)}
+    <div class="overview-title" style="margin-top:16px;">Process Steps</div>
+    <div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes)}</div>
+  `;
+  document.getElementById('versionPreviewModalOverlay').classList.add('open');
+}
+
+function closeVersionPreview(){
+  document.getElementById('versionPreviewModalOverlay').classList.remove('open');
+  versionPreviewContext = null;
+}
+
+function initVersionPreviewModal(){
+  document.getElementById('btnCloseVersionPreviewModal').addEventListener('click', closeVersionPreview);
+  document.getElementById('btnCloseVersionPreviewModal2').addEventListener('click', closeVersionPreview);
+  document.getElementById('versionPreviewModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'versionPreviewModalOverlay') closeVersionPreview();
+  });
+  document.getElementById('btnRestoreFromPreview').addEventListener('click', () => {
+    if(!versionPreviewContext) return;
+    restoreVersion(versionPreviewContext.recipe, versionPreviewContext.version);
+  });
+}
+
 function initVersionsModal(){
   document.getElementById('btnCloseVersionsModal').addEventListener('click', closeVersionsModal);
   document.getElementById('versionsModalOverlay').addEventListener('click', e => {
@@ -3024,9 +3352,7 @@ function initVersionsModal(){
     const r = versionsModalRecipe;
     if(!r) return;
     const label = document.getElementById('versionLabelInput').value.trim();
-    if(!Array.isArray(r.versions)) r.versions = [];
-    r.versions.push({ id: uid(), label, savedAt: Date.now(), snapshot: snapshotRecipeCore(r) });
-    if(r.versions.length > 5) r.versions = r.versions.slice(r.versions.length - 5);
+    pushVersionCheckpoint(r, label);
     document.getElementById('versionLabelInput').value = '';
     renderVersionsList(r);
     scheduleSave();
@@ -3296,6 +3622,15 @@ function initRefListsView(){
    the log stays the single source of truth for "what happened when"). ---------- */
 const PROJECT_STAGES = ['Requested','Formulating','Sampling','Customer Review','Approved','In Production','On Hold','Cancelled'];
 
+// Packaging spec units — Portion Weight / Inner Packing / Outer Packing.
+// WEIGHT_UNIT_OPTIONS covers the portion weight and the inner packing's own
+// net-weight; PACK_UNIT_OPTIONS is the inner container word ("30 g / pack")
+// and doubles as the count unit on the outer line ("24 pack / carton");
+// OUTER_UNIT_OPTIONS is the outer container itself.
+const WEIGHT_UNIT_OPTIONS = ['g','kg','ml','L','oz','lb'];
+const PACK_UNIT_OPTIONS = ['pack','bag','box','sachet','pouch','tray'];
+const OUTER_UNIT_OPTIONS = ['carton','case','box'];
+
 // Overall project lifecycle status (distinct from PROJECT_STAGES, which
 // tracks each individual product's stage within a project).
 const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','In Review','Completed','Cancelled'];
@@ -3525,6 +3860,14 @@ function blankProject(){
     responsiblePerson: "",
     factoryName: "",
     requirements: "",
+    portionWeightQty: "",
+    portionWeightUnit: "g",
+    innerPackQty: "",
+    innerPackWeightUnit: "g",
+    innerPackUnit: "pack",
+    outerPackQty: "",
+    outerPackUnit: "pack",
+    outerPackContainerUnit: "carton",
     products: [],
     monthlyUpdates: [],
     createdBy: currentUser?.email || '',
@@ -3544,6 +3887,19 @@ function blankProduct(recipeId){
     updatedAt: now,
     log: [ { id: uid(), date: now, stage: PROJECT_STAGES[0], note: 'Product added to project', by: currentUser?.email || '' } ]
   };
+}
+
+// Packaging spec display strings — "-" when the quantity hasn't been filled
+// in yet, same convention as every other optional field in the read-only
+// summary (see readOnlyDetailRows).
+function formatPortionWeight(p){
+  return p.portionWeightQty ? `${p.portionWeightQty} ${p.portionWeightUnit || 'g'}` : '-';
+}
+function formatInnerPacking(p){
+  return p.innerPackQty ? `${p.innerPackQty} ${p.innerPackWeightUnit || 'g'} / ${p.innerPackUnit || 'pack'}` : '-';
+}
+function formatOuterPacking(p){
+  return p.outerPackQty ? `${p.outerPackQty} ${p.outerPackUnit || 'pack'} / ${p.outerPackContainerUnit || 'carton'}` : '-';
 }
 
 // Copies the template-like fields (name, photo, customer/destination/owner,
@@ -3738,7 +4094,7 @@ function renderTrialsList(){
           </div>
         `;
       }
-      const totalWt = r.parts.flatMap(p => p.ingredients).reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
+      const totalWt = allIngredientsInRecipe(r).reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
       const link = findProjectForRecipe(r.id);
       return `
         <div class="compare-info-col">
@@ -4216,6 +4572,31 @@ function renderNewProjectPanel(){
           <label>Factory</label>
           <input type="text" id="newProjFactory" list="factoryDatalist" placeholder="e.g. Rayong Plant 2">
         </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Portion Weight</label>
+          <div class="combo-row">
+            <input type="number" id="newProjPortionQty" placeholder="e.g. 30" step="any" min="0">
+            <select class="proj-select" id="newProjPortionUnit">${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Inner Packing</label>
+          <div class="combo-row">
+            <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
+            <select class="proj-select" id="newProjInnerWeightUnit">${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <span>/</span>
+            <select class="proj-select" id="newProjInnerPackUnit">${PACK_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Outer Packing</label>
+          <div class="combo-row">
+            <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
+            <select class="proj-select" id="newProjOuterPackUnit">${PACK_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <span>/</span>
+            <select class="proj-select" id="newProjOuterContainerUnit">${OUTER_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+          </div>
+        </div>
         <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
           <label>Requirements / Certifications</label>
           <textarea id="newProjRequirements" placeholder="e.g. Halal certified, no MSG, shelf-life 12 months"></textarea>
@@ -4279,6 +4660,14 @@ function renderNewProjectPanel(){
     p.factorySalesRep = document.getElementById('newProjFactoryRep').value.trim();
     p.responsiblePerson = document.getElementById('newProjResponsible').value.trim();
     p.factoryName = document.getElementById('newProjFactory').value.trim();
+    p.portionWeightQty = document.getElementById('newProjPortionQty').value.trim();
+    p.portionWeightUnit = document.getElementById('newProjPortionUnit').value;
+    p.innerPackQty = document.getElementById('newProjInnerQty').value.trim();
+    p.innerPackWeightUnit = document.getElementById('newProjInnerWeightUnit').value;
+    p.innerPackUnit = document.getElementById('newProjInnerPackUnit').value;
+    p.outerPackQty = document.getElementById('newProjOuterQty').value.trim();
+    p.outerPackUnit = document.getElementById('newProjOuterPackUnit').value;
+    p.outerPackContainerUnit = document.getElementById('newProjOuterContainerUnit').value;
     p.requirements = document.getElementById('newProjRequirements').value.trim();
     projects.push(p);
     saveProjectToCloud(p);
@@ -4529,16 +4918,16 @@ function renderProjectsList(){
                     <div class="mu-entry-by">${mu.createdBy ? escapeHtml(mu.createdBy) : ''}</div>
                   </div>
                   <div class="mu-card-grid">
-                    <div class="mu-card">
+                    <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('file-text', 14)} PLAN${source ? ' <span class="mu-badge">AUTO-CREATED</span>' : ''}${status === 'planned' ? ' <span class="mu-status-pill">PLANNED</span>' : ''}</div>
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
                       ${source ? `<div class="mu-source-link">${icon('undo-2', 12)} From Next action · ${escapeHtml(formatDateLong(source.date))}${source.createdAt ? ', ' + escapeHtml(formatTimeOnly(source.createdAt)) : ''}</div>` : ''}
                     </div>
-                    <div class="mu-card">
+                    <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('check', 14)} ACTION TAKEN</div>
                       <div class="mu-card-text">${mu.actionTaken ? escapeHtml(mu.actionTaken) : '<span class="mu-empty">Not yet taken action</span>'}</div>
                     </div>
-                    <div class="mu-card">
+                    <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('clock', 14)} NEXT ACTION${mu.nextActionDue ? `<span class="mu-due-inline${nextActionSuperseded ? ' mu-due-superseded' : ''}">Due ${escapeHtml(formatDateLong(mu.nextActionDue))}</span>` : ''}</div>
                       <div class="mu-card-text">${mu.nextAction ? escapeHtml(mu.nextAction) : '<span class="mu-empty">Add after recording Action taken</span>'}</div>
                     </div>
@@ -4584,7 +4973,10 @@ function renderProjectsList(){
           ['Project Owner', p.ownerSalesRep],
           ['Factory Sales Rep', p.factorySalesRep],
           ['Responsible Person (PD)', p.responsiblePerson],
-          ['Factory', p.factoryName]
+          ['Factory', p.factoryName],
+          ['Portion Weight', p.portionWeightQty ? formatPortionWeight(p) : ''],
+          ['Inner Packing', p.innerPackQty ? formatInnerPacking(p) : ''],
+          ['Outer Packing', p.outerPackQty ? formatOuterPacking(p) : '']
         ].map(([label, value]) => `
           <dt>${escapeHtml(label)}</dt>
           <dd>${escapeHtml(value || '-')}</dd>
@@ -4653,6 +5045,31 @@ function renderProjectsList(){
                 <div class="field" style="margin-bottom:0;">
                   <label>Factory</label>
                   <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Portion Weight</label>
+                  <div class="combo-row">
+                    <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 30" step="any" min="0">
+                    <select class="proj-select proj-portion-unit" ${isEditing ? '' : 'disabled'}>${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.portionWeightUnit || 'g') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                  </div>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Inner Packing</label>
+                  <div class="combo-row">
+                    <input type="number" class="proj-inner-qty" ${ro} value="${escapeHtml(p.innerPackQty || '')}" placeholder="e.g. 30" step="any" min="0">
+                    <select class="proj-select proj-inner-weight-unit" ${isEditing ? '' : 'disabled'}>${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.innerPackWeightUnit || 'g') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <span>/</span>
+                    <select class="proj-select proj-inner-pack-unit" ${isEditing ? '' : 'disabled'}>${PACK_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.innerPackUnit || 'pack') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                  </div>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Outer Packing</label>
+                  <div class="combo-row">
+                    <input type="number" class="proj-outer-qty" ${ro} value="${escapeHtml(p.outerPackQty || '')}" placeholder="e.g. 24" step="any" min="0">
+                    <select class="proj-select proj-outer-pack-unit" ${isEditing ? '' : 'disabled'}>${PACK_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.outerPackUnit || 'pack') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <span>/</span>
+                    <select class="proj-select proj-outer-container-unit" ${isEditing ? '' : 'disabled'}>${OUTER_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.outerPackContainerUnit || 'carton') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                  </div>
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
                   <label>Requirements / Certifications</label>
@@ -4801,6 +5218,14 @@ function renderProjectsList(){
         p.factorySalesRep = block.querySelector('.proj-factory-rep').value.trim();
         p.responsiblePerson = block.querySelector('.proj-responsible').value.trim();
         p.factoryName = block.querySelector('.proj-factory').value.trim();
+        p.portionWeightQty = block.querySelector('.proj-portion-qty').value.trim();
+        p.portionWeightUnit = block.querySelector('.proj-portion-unit').value;
+        p.innerPackQty = block.querySelector('.proj-inner-qty').value.trim();
+        p.innerPackWeightUnit = block.querySelector('.proj-inner-weight-unit').value;
+        p.innerPackUnit = block.querySelector('.proj-inner-pack-unit').value;
+        p.outerPackQty = block.querySelector('.proj-outer-qty').value.trim();
+        p.outerPackUnit = block.querySelector('.proj-outer-pack-unit').value;
+        p.outerPackContainerUnit = block.querySelector('.proj-outer-container-unit').value;
         p.requirements = block.querySelector('.proj-requirements').value.trim();
         // Also picks up a Monthly Update draft — otherwise clicking Save
         // (top-right, for the header fields) while text sits in the
@@ -4943,12 +5368,13 @@ function renderProjectsList(){
         });
       }
 
-      // Status badge opens the update-popup directly — works whether or
-      // not the project itself is currently in Edit mode, same as
-      // Progress Log's "open-log" button above.
-      block.querySelectorAll('.mu-status-badge').forEach(badge => {
-        badge.addEventListener('click', () => {
-          const updateId = badge.closest('[data-update-id]')?.dataset.updateId;
+      // Status badge and the PLAN / ACTION TAKEN / NEXT ACTION cards all
+      // open the same update-popup — works whether or not the project
+      // itself is currently in Edit mode, same as Progress Log's
+      // "open-log" button above.
+      block.querySelectorAll('.mu-status-badge, .mu-card-clickable').forEach(el => {
+        el.addEventListener('click', () => {
+          const updateId = el.closest('[data-update-id]')?.dataset.updateId;
           if(updateId) openMuEditModal(p.id, updateId);
         });
       });
@@ -5170,7 +5596,7 @@ function renderCompareContent(){
   const infoHtml = ids.map(id => {
     const r = recipes.find(x => x.id === id);
     if(!r) return '<div class="compare-info-col"><div class="compare-empty" style="padding:8px 0;">— Not selected —</div></div>';
-    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     return `
       <div class="compare-info-col">
         <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
@@ -5188,7 +5614,7 @@ function renderCompareContent(){
   // --- ingredient comparison (union across selected recipes) ---
   const ingredientRows = new Map(); // key -> { label, values: {recipeId: pct}, weights: {recipeId: g} }
   selected.forEach(r => {
-    const allIng = r.parts.flatMap(p => p.ingredients).filter(i => (i.name||'').trim() !== '');
+    const allIng = allIngredientsInRecipe(r).filter(i => (i.name||'').trim() !== '');
     allIng.forEach(i => {
       const key = i.name.trim().toLowerCase();
       if(!ingredientRows.has(key)) ingredientRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
@@ -5200,7 +5626,7 @@ function renderCompareContent(){
   // ingredient's % of its own part, not of the whole recipe, so it can't be
   // summed directly here.
   selected.forEach(r => {
-    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     ingredientRows.forEach(row => {
       const wt = row.weights[r.id];
       if(wt !== undefined) row.values[r.id] = totalWt > 0 ? (wt / totalWt * 100) : 0;
@@ -5279,8 +5705,12 @@ function renderCompareContent(){
     selected.forEach(r => {
       const part = (r.parts || [])[pIdx];
       if(!part) return;
-      const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-      (part.ingredients || []).filter(i => (i.name||'').trim() !== '').forEach(i => {
+      const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+      // Includes ingredients nested inside this Part's own Sub-parts too
+      // (allIngredientsInPart), so the comparison numbers stay complete —
+      // this section just doesn't visually distinguish which Sub-part each
+      // one came from.
+      allIngredientsInPart(part).filter(i => (i.name||'').trim() !== '').forEach(i => {
         const key = i.name.trim().toLowerCase();
         if(!partRows.has(key)) partRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
         const row = partRows.get(key);
@@ -5341,7 +5771,7 @@ function renderCompareContent(){
     // 99.99%) purely from rounding noise. % is always weight/totalWeight, so
     // the true total is exactly 100% by construction whenever there's any
     // weight at all — same fix as the Grand Total box on the recipe page.
-    const totalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     const totalPct = totalWt > 0 ? 100 : 0;
     return `<td class="${boundaryClass(idx)}">${totalPct.toFixed(2)}%</td>`;
   }).join('');
@@ -5479,6 +5909,17 @@ let currentId = null;
 // to home.
 let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
 let saveTimer = null;
+// One entry per recipe with a pending "haven't clicked Save in a while"
+// checkpoint — keyed by id (not a single global timer) so editing recipe A
+// then switching to recipe B within the window still checkpoints each one
+// independently instead of the second edit silently getting dropped. See
+// scheduleVersionCheckpoint/cancelVersionCheckpoint/autoCheckpointVersion.
+const versionCheckpointTimers = new Map();
+// Set on dragstart (see renderPartNode/renderRows' drag-handle wiring),
+// read by whichever Part header the item gets dropped on, cleared on
+// dragend/drop either way. A plain module-level variable is enough since
+// only one drag can be in flight in the whole document at a time.
+let dragPayload = null;
 let unsubscribeRecipes = null;
 let unsubscribeMaterials = null;
 let unsubscribeMetaLists = null;
@@ -5509,7 +5950,6 @@ function attachMaterialsListener(){
   unsubscribeMaterials = onSnapshot(materialsCol, snapshot => {
     ingredientMaster = snapshot.docs.map(d => d.data());
     materialsLoaded = true;
-    renderMaterialDatalist();
     if(mainFeatureView === 'materials') renderMaterialTable();
     if(!currentId && !mainFeatureView && recipesLoaded) renderMain();
   }, err => {
@@ -5807,13 +6247,38 @@ function hasUnresolvedIngredient(part){
   return part.ingredients.some(i => (i.name || '').trim() !== '' && !i.materialId);
 }
 
-function renderMaterialDatalist(){
-  const list = document.getElementById('materialDatalist');
-  if(!list) return;
-  list.innerHTML = ingredientMaster
-    .map(m => `<option value="${escapeHtml(materialLabel(m))}"></option>`)
-    .join('');
+// True if every character of `query` appears in `text`, in order, letting
+// anything else sit between them — classic fuzzy-search matching (e.g.
+// "ckn brst" matches "chicken breast"). Case handling is the caller's job.
+function isSubsequence(query, text){
+  let qi = 0;
+  for(let i = 0; i < text.length && qi < query.length; i++){
+    if(text[i] === query[qi]) qi++;
+  }
+  return qi === query.length;
 }
+
+// Ranks the library by closeness to what's been typed so far — an exact
+// prefix match ("chi" -> "Chicken...") ranks above a plain substring match
+// ("hic" -> "Chicken..."), which ranks above a looser fuzzy/subsequence
+// match, so the most likely intended ingredient sits at the top. Matches
+// against the same combined "EN / TH (code)" label shown in the field
+// itself, so searching in Thai, English, or by vendor code all work.
+function fuzzyMaterialMatches(query, limit){
+  const q = (query || '').trim().toLowerCase();
+  if(!q) return [];
+  const scored = ingredientMaster.map(m => {
+    const label = materialLabel(m).toLowerCase();
+    let score = 0;
+    if(label.startsWith(q)) score = 3;
+    else if(label.includes(q)) score = 2;
+    else if(isSubsequence(q, label)) score = 1;
+    return { m, score, label };
+  }).filter(x => x.score > 0);
+  scored.sort((a,b) => b.score - a.score || a.label.localeCompare(b.label));
+  return scored.slice(0, limit || 8).map(x => x.m);
+}
+
 
 function renderMaterialTable(){
   const body = document.getElementById('materialTableBody');
@@ -6182,7 +6647,7 @@ function initMaterialLibrary(){
 const PART_COUNT = 4;
 
 function blankPart(name){
-  return { name, ingredients: [ { name:"", percent:0, weight:0, note:"" } ] };
+  return { name, ingredients: [ { name:"", percent:0, weight:0, note:"" } ], parts: [] };
 }
 
 function blankRecipe(){
@@ -6219,13 +6684,19 @@ function migrateRecipe(r){
     }
     delete r.ingredients;
   }
-  r.parts.forEach(p => {
+  // Recursive so it also normalizes Sub-parts nested arbitrarily deep
+  // inside a Part — older saved recipes never had Sub-parts at all, so
+  // `p.parts` simply won't exist on them yet; this backfills it as empty.
+  function migratePart(p){
     if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
       p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
     }
     const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
     if(oldPartName) p.name = `Part ${oldPartName[1]}`;
-  });
+    if(!Array.isArray(p.parts)) p.parts = [];
+    p.parts.forEach(migratePart);
+  }
+  r.parts.forEach(migratePart);
 
   if(!Array.isArray(r.processes)){
     const oldSteps = Array.isArray(r.steps) ? r.steps.filter(s => (s||'').trim() !== '') : [];
@@ -6317,24 +6788,96 @@ function getCurrent(){
   return recipes.find(r => r.id === currentId);
 }
 
-function scheduleSave(){
-  const status = document.getElementById('saveStatus');
-  if(status){ status.textContent = 'Saving...'; status.classList.remove('saved'); }
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => {
-    const r = getCurrent();
-    if(!r) return;
-    r.updatedAt = Date.now();
-    r.updatedBy = currentUser?.email || '';
-    saveRecipeToCloud(r);
-    renderSidebar();
+function performSave(r){
+  if(!r) return;
+  r.updatedAt = Date.now();
+  r.updatedBy = currentUser?.email || '';
+  saveRecipeToCloud(r);
+  renderSidebar();
+  if(r.id === currentId){
     updateRecipeTitleDisplay(r); // refresh "Last edited by/at" now that it's current
     const s = document.getElementById('saveStatus');
     if(s){
       s.textContent = 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
       s.classList.add('saved');
     }
-  }, 400);
+  }
+}
+
+function scheduleSave(){
+  // Captured now (while the edit that triggered this call is still the
+  // current recipe) rather than inside the timeout — otherwise switching
+  // recipes within the debounce window would save whatever recipe happens
+  // to be open 400ms later instead of the one actually edited.
+  const r = getCurrent();
+  const status = document.getElementById('saveStatus');
+  if(status){ status.textContent = 'Saving...'; status.classList.remove('saved'); }
+  clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => performSave(r), 400);
+  if(r) scheduleVersionCheckpoint(r);
+}
+
+// Shared by every path that should leave a Version History entry (manual
+// Save, the 1-minute idle auto-checkpoint, and "Save Current as Version" in
+// the modal) — same snapshot shape, same 5-version cap, one place to change.
+function pushVersionCheckpoint(r, label){
+  if(!Array.isArray(r.versions)) r.versions = [];
+  r.versions.push({ id: uid(), label, savedAt: Date.now(), snapshot: snapshotRecipeCore(r) });
+  if(r.versions.length > 5) r.versions = r.versions.slice(r.versions.length - 5);
+}
+
+// Manual Save button — flushes the pending debounced save immediately,
+// cancels this recipe's pending idle auto-checkpoint (redundant now that
+// we're checkpointing right here), takes its own Version History
+// checkpoint — so clicking Save is enough on its own; there's no separate
+// "Save Current as Version" step needed for a plain save to be revertible
+// — and locks the recipe back to read-only view, the same way finishing an
+// edit and stepping away from it should feel: Save = "I'm done for now."
+function saveNow(){
+  const r = getCurrent();
+  if(!r) return;
+  clearTimeout(saveTimer);
+  cancelVersionCheckpoint(r);
+  pushVersionCheckpoint(r, 'Saved');
+  performSave(r);
+  if(versionsModalRecipe === r) renderVersionsList(r);
+  unlockedRecipeId = null;
+  renderMain();
+}
+
+// Idle auto-checkpoint: if a recipe has an edit sitting for 60s with no
+// manual Save click, snapshot it into Version History so that auto-save is
+// always revertible, then arms again on the next edit — so a long
+// uninterrupted editing session still gets a checkpoint roughly once a
+// minute, not just once total.
+function scheduleVersionCheckpoint(r){
+  let entry = versionCheckpointTimers.get(r.id);
+  if(!entry){
+    entry = { timer: null, dirty: false };
+    versionCheckpointTimers.set(r.id, entry);
+  }
+  entry.dirty = true;
+  if(entry.timer) return;
+  entry.timer = setTimeout(() => {
+    entry.timer = null;
+    if(!entry.dirty) return;
+    entry.dirty = false;
+    autoCheckpointVersion(r);
+  }, 60000);
+}
+
+function cancelVersionCheckpoint(r){
+  const entry = versionCheckpointTimers.get(r.id);
+  if(!entry) return;
+  clearTimeout(entry.timer);
+  entry.timer = null;
+  entry.dirty = false;
+}
+
+function autoCheckpointVersion(r){
+  pushVersionCheckpoint(r, 'Auto-saved (unsaved for 1 min)');
+  performSave(r);
+  if(versionsModalRecipe === r) renderVersionsList(r);
 }
 
 /* ---------- Sidebar ---------- */
@@ -6356,7 +6899,7 @@ function renderRecipeCards(container, query){
     .forEach(r => {
       const div = document.createElement('div');
       div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
-      const allIngredients = (r.parts||[]).flatMap(p => p.ingredients||[]);
+      const allIngredients = allIngredientsInRecipe(r);
       // % is always weight / totalWeight, so it's exactly 100% by
       // construction whenever there's any weight at all (ing.percent is now
       // per-part, so it can't be summed directly to check this).
@@ -6612,11 +7155,17 @@ function recipeProductTypeCode(r){
 }
 
 // Auto-assigned recipe sequence number (see codeRecipeSeqDisplay, not
-// manually editable) — counts existing recipes already using this product
-// type, +1.
+// manually editable) — one past the highest number already used by this
+// product type. Deliberately max-based rather than count-based: a raw
+// count of same-type recipes collides with an in-use number as soon as one
+// same-type recipe is deleted (e.g. type has 01/02/03, delete 02 → a
+// count-based calc for the next new one gives 03 again, colliding with the
+// existing 03; max-based correctly gives 04).
 function suggestNextRecipeSeq(productTypeName, excludeId){
-  const count = recipes.filter(x => x.id !== excludeId && (x.productType || '') === productTypeName).length;
-  return String(count + 1).padStart(2, '0');
+  const maxSeq = recipes
+    .filter(x => x.id !== excludeId && (x.productType || '') === productTypeName)
+    .reduce((max, x) => Math.max(max, parseInt(x.recipeSeq, 10) || 0), 0);
+  return String(maxSeq + 1).padStart(2, '0');
 }
 
 function fullCode(r){
@@ -6741,7 +7290,9 @@ const LUCIDE_ICONS = {
   'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
   'flask-conical': '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /><path d="M6.453 15h11.094" /><path d="M8.5 2h7" />',
   'folder': '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />',
+  'git-branch': '<line x1="6" x2="6" y1="3" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" />',
   'globe': '<circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />',
+  'grip-vertical': '<circle cx="9" cy="5" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="19" r="1" />',
   'list': '<path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" />',
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
   'log-out': '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
@@ -6823,7 +7374,7 @@ function computeDashboardData(){
   const byCustomer = topGroups(recipes, r => r.customerName, 4);
   const bySalesRep = topGroups(recipes, r => r.salesRep, 4);
 
-  const allIngredientRows = recipes.flatMap(r => (r.parts || []).flatMap(p => p.ingredients || []));
+  const allIngredientRows = recipes.flatMap(r => allIngredientsInRecipe(r));
   const materialUsage = topGroups(allIngredientRows, ing => {
     if(ing.materialId){
       const m = ingredientMaster.find(x => x.id === ing.materialId);
@@ -7445,7 +7996,14 @@ function renderMain(){
           <div class="batch-stat-value" id="yieldAdjustedDisplay">—</div>
         </div>
       </div>
-      <div id="partsContainer"></div>
+      <div class="ingredient-tree">
+        <div class="tree-node tree-root-node">
+          <span class="tree-node-label">Formula per Portion</span>
+          <span class="tree-node-pct">100.00%</span>
+          <span class="tree-node-wt" id="treeRootWt">0.00 g</span>
+        </div>
+        <div id="partsContainer" class="tree-children"></div>
+      </div>
       <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
 
       <div class="overview-block">
@@ -7575,13 +8133,11 @@ function renderMain(){
 
   document.getElementById('btnScale').addEventListener('click', () => {
     const target = parseFloat(document.getElementById('f-scaleTo').value) || 0;
-    const currentTotal = r.parts.flatMap(p => p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const currentTotal = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     if(target <= 0){ alert('Please enter a target weight greater than 0'); return; }
     if(currentTotal <= 0){ alert('Please enter at least one ingredient weight before scaling the recipe'); return; }
     const factor = target / currentTotal;
-    r.parts.forEach(part => part.ingredients.forEach(ing => {
-      ing.weight = round2((parseFloat(ing.weight)||0) * factor);
-    }));
+    r.parts.forEach(part => scaleIngredientsInPart(part, factor));
     recomputeFromWeights(r);
     renderParts(r);
     scheduleSave();
@@ -7652,10 +8208,11 @@ function renderLockState(r){
 
   if(isUnlocked){
     banner.className = 'lock-banner unlocked';
-    banner.innerHTML = `${icon('unlock')} This recipe is unlocked for editing (will lock again when you switch recipes)`;
+    banner.innerHTML = `${icon('unlock')} This recipe is unlocked for editing <button class="btn btn-sm btn-primary lock-banner-action" id="btnSaveRecipe">${icon('save')} Save</button>`;
+    document.getElementById('btnSaveRecipe').addEventListener('click', saveNow);
   }else{
     banner.className = 'lock-banner locked';
-    banner.innerHTML = `${icon('lock')} This recipe is read-only <button class="btn btn-sm btn-primary" id="btnUnlockEdit">${icon('unlock')} Unlock to Edit</button>`;
+    banner.innerHTML = `${icon('lock')} This recipe is read-only <button class="btn btn-sm btn-primary lock-banner-action" id="btnUnlockEdit">${icon('unlock')} Unlock to Edit</button>`;
     document.getElementById('btnUnlockEdit').addEventListener('click', () => {
       requestAuthConfirm(
         'Confirm Identity to Edit',
@@ -7670,22 +8227,119 @@ function renderLockState(r){
   }
 }
 
-/* ---------- Ingredients (4 parts) ----------
-   Weight (g) is the single source of truth per ingredient.
-   Each ingredient's % is of its own PART (not the whole recipe), so every
-   part's own subtotal is mathematically guaranteed to sum to 100%. A part's
-   share of the whole recipe is shown separately, next to its name. */
+/* ---------- Ingredients (Parts, arbitrarily nestable via Sub-parts) ----------
+   Weight (g) is the single source of truth per ingredient — a Part never
+   stores its own weight, it's always the recursive sum of what's inside it.
+   Each ingredient's/Sub-part's % is of its own immediate parent, so every
+   Part's own direct children are mathematically guaranteed to sum to 100%
+   of that Part. A top-level Part's % is therefore "% of recipe"; a nested
+   Sub-part's % is "% of Part" (its immediate parent), exactly like an
+   ingredient's % already is. */
 function recomputeFromWeights(r){
-  const totalWeight = r.parts.flatMap(p => p.ingredients)
-    .reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-  r.batchWeight = round2(totalWeight);
-  r.parts.forEach(part => {
-    const partWeight = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-    part.ingredients.forEach(ing => {
-      ing.percent = partWeight > 0 ? round2((parseFloat(ing.weight)||0) / partWeight * 100) : 0;
-    });
+  // recomputePartPercents(part) assigns .percent to `part`'s own CHILDREN,
+  // not to `part` itself — for a nested Sub-part that assignment happens
+  // one level up, in its parent's own call. Top-level Parts have no such
+  // parent (the recipe root isn't a Part), so their own .percent has to be
+  // assigned explicitly here, the same way, against the recipe total.
+  const partTotals = (r.parts || []).map(part => recomputePartPercents(part));
+  const totalWeight = partTotals.reduce((s,w)=>s+w,0);
+  (r.parts || []).forEach((part, idx) => {
+    part.percent = totalWeight > 0 ? round2(partTotals[idx] / totalWeight * 100) : 0;
   });
+  r.batchWeight = round2(totalWeight);
   return totalWeight;
+}
+
+// Recursively totals one Part (its own ingredients' weights + every
+// Sub-part's own recursive total), then assigns each direct child (each
+// ingredient's .percent, each Sub-part's own .percent) its share of that
+// total — then recurses so every Sub-part does the same for its own
+// children. Returns the Part's own total weight.
+function recomputePartPercents(part){
+  const ingWeights = (part.ingredients || []).map(i => parseFloat(i.weight) || 0);
+  const subTotals = (part.parts || []).map(sub => recomputePartPercents(sub));
+  const total = ingWeights.reduce((s,w)=>s+w,0) + subTotals.reduce((s,w)=>s+w,0);
+  (part.ingredients || []).forEach((ing, idx) => {
+    ing.percent = total > 0 ? round2(ingWeights[idx] / total * 100) : 0;
+  });
+  (part.parts || []).forEach((sub, idx) => {
+    sub.percent = total > 0 ? round2(subTotals[idx] / total * 100) : 0;
+  });
+  return round2(total);
+}
+
+// A Part's own weight, recursively summing its direct ingredients plus
+// every Sub-part's own recursive total.
+function partTotalWeight(part){
+  const direct = (part.ingredients || []).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  const nested = (part.parts || []).reduce((s,sub)=>s+partTotalWeight(sub),0);
+  return direct + nested;
+}
+
+// Every ingredient under a Part, including ones nested inside its
+// Sub-parts — used anywhere that just needs "the full ingredient list"
+// (Compare Recipes, Print, Recipe Overview, Ingredient Library usage,
+// Trial totals) without needing to also show the nesting itself.
+function allIngredientsInPart(part){
+  return [...(part.ingredients || []), ...(part.parts || []).flatMap(allIngredientsInPart)];
+}
+function allIngredientsInRecipe(r){
+  return (r.parts || []).flatMap(allIngredientsInPart);
+}
+
+// Scales every ingredient under a Part (including ones nested inside its
+// Sub-parts) by the same factor, so weights change but every ratio between
+// them — and so every %-of-parent at every level — doesn't.
+function scaleIngredientsInPart(part, factor){
+  (part.ingredients || []).forEach(ing => { ing.weight = round2((parseFloat(ing.weight)||0) * factor); });
+  (part.parts || []).forEach(sub => scaleIngredientsInPart(sub, factor));
+}
+
+// "Everything else at this Part's own level" — siblingsCtx.ingredients is
+// the sibling ingredients array (null for a top-level Part, since the
+// recipe root holds no ingredients directly), siblingsCtx.parts is the
+// sibling Parts array `part` itself lives in (r.parts for top-level,
+// or parentPart.parts when nested). Used to back-solve a Part's weight
+// from a typed %, the same way an ingredient's own % field already does
+// one level down.
+function siblingsWeightExcluding(siblingsCtx, part){
+  const ingWeight = (siblingsCtx.ingredients || []).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  const partsWeight = (siblingsCtx.parts || []).filter(p => p !== part).reduce((s,p)=>s+partTotalWeight(p),0);
+  return ingWeight + partsWeight;
+}
+
+// Dragging a Part onto itself, or onto one of its own Sub-parts, would
+// nest it inside itself — an impossible/cyclic tree. Used to reject that
+// drop before it happens (see renderPartNode's drag-handle wiring).
+function isPartOrDescendant(candidate, part){
+  if(candidate === part) return true;
+  return (part.parts || []).some(sub => isPartOrDescendant(candidate, sub));
+}
+
+// Every Part, at any depth, as one flat list — used by Process Steps'
+// "Add Component" picker so a single flat <option> index can address a
+// Part or ingredient at any nesting depth instead of needing a multi-level
+// path. `label` is a breadcrumb ("Filling › Spicy Sauce") so a nested
+// Sub-part or its ingredients still read unambiguously in the dropdown.
+function collectPartsFlat(parts, prefix){
+  let out = [];
+  (parts || []).forEach((part, idx) => {
+    const label = prefix + (part.name || `Part ${idx+1}`);
+    out.push({ part, label });
+    out = out.concat(collectPartsFlat(part.parts, label + ' › '));
+  });
+  return out;
+}
+function collectIngredientsFlat(parts, prefix){
+  let out = [];
+  (parts || []).forEach((part, idx) => {
+    const label = prefix + (part.name || `Part ${idx+1}`);
+    (part.ingredients || []).filter(i => (i.name||'').trim() !== '').forEach(ing => {
+      out.push({ ing, label: `${label} › ${ing.name}` });
+    });
+    out = out.concat(collectIngredientsFlat(part.parts, label + ' › '));
+  });
+  return out;
 }
 
 function round2(n){ return Math.round(n * 100) / 100; }
@@ -7705,37 +8359,33 @@ function updateYieldDisplay(r){
   el.textContent = formatWeight((r.batchWeight||0) * yieldPct / 100);
 }
 
+// One entry per rendered Part (at ANY depth — top-level or nested inside
+// another Part), pushed by renderPartNode as it builds each block. Rebuilt
+// from scratch on every full renderParts(r) call. Using per-part closures
+// instead of a flat DOM requery-by-index is what makes live-updating an
+// arbitrarily deep tree tractable: each Part already knows exactly which
+// DOM nodes are its own (not a descendant Sub-part's), no re-matching needed.
+let partDisplayUpdaters = [];
+
 function refreshDisplays(r){
   const totalWeight = recomputeFromWeights(r);
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(totalWeight);
   updateYieldDisplay(r);
 
-  document.querySelectorAll('#partsContainer .part-block').forEach((block, pIdx) => {
-    const part = r.parts[pIdx];
-    if(!part) return;
-    const pctEls = block.querySelectorAll('.ing-pct-display');
-    part.ingredients.forEach((ing, idx) => {
-      if(pctEls[idx]) pctEls[idx].textContent = (ing.percent||0).toFixed(2) + '%';
-    });
-    const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
-    const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-    const partShareOfRecipePct = totalWeight > 0 ? (subWt / totalWeight * 100) : 0;
-    const subPctEl = block.querySelector('.part-subtotal-pct');
-    const subWtEl = block.querySelector('.part-subtotal-wt');
-    if(subPctEl) subPctEl.textContent = subPct.toFixed(2) + '%';
-    if(subWtEl) subWtEl.textContent = formatWeight(subWt);
-
-    const summaryEl = block.querySelector('.part-header-summary');
-    if(summaryEl){
-      const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
-      summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(2)}% of recipe`
-        : 'No ingredients yet';
-    }
-  });
+  partDisplayUpdaters.forEach(fn => fn());
 
   updateGrandTotal(r);
+  updateTreeRoot(r);
+}
+
+// The ingredient form IS the tree now (see renderParts/renderRows below) —
+// every Part is a branch under this root and every ingredient a leaf under
+// its Part, so the only thing the root itself still needs refreshed on
+// every edit is its own weight (it's always 100% of itself by definition).
+function updateTreeRoot(r){
+  const wtEl = document.getElementById('treeRootWt');
+  if(wtEl) wtEl.textContent = formatWeight(r.batchWeight || 0);
 }
 
 function renderParts(r){
@@ -7745,230 +8395,512 @@ function renderParts(r){
   if(batchEl) batchEl.textContent = formatWeight(r.batchWeight);
   updateYieldDisplay(r);
 
+  partDisplayUpdaters = [];
   const container = document.getElementById('partsContainer');
   container.innerHTML = '';
   if(r.parts.length === 0){
     container.innerHTML = '<div class="overview-empty">No parts yet — click "+ Add Part" below to add the first one</div>';
   }
-  r.parts.forEach((part, pIdx) => {
-    const block = document.createElement('div');
-    block.className = 'part-block';
-    block.innerHTML = `
-      <div class="part-header">
-        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
-        <input type="text" class="part-name" placeholder="Part ${pIdx+1} name">
-        <span class="part-header-summary"></span>
-        <button class="icon-btn" title="Delete this part">${icon('x')}</button>
-      </div>
-      <div class="part-body">
-        <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-no">#</th>
-              <th>Ingredient</th>
-              <th class="col-pct">% of Part (auto)</th>
-              <th class="col-wt">Weight (g)</th>
-              <th>Note</th>
-              <th class="col-del"></th>
-            </tr>
-          </thead>
-          <tbody></tbody>
-          <tfoot>
-            <tr>
-              <td></td>
-              <td class="part-subtotal-label"></td>
-              <td class="part-subtotal-pct"></td>
-              <td class="part-subtotal-wt"></td>
-              <td colspan="2"></td>
-            </tr>
-          </tfoot>
-        </table>
-        </div>
-        <button class="btn btn-sm add-row-btn" data-role="add-ing"></button>
-      </div>
-    `;
-
-    const nameField = block.querySelector('.part-name');
-    const subtotalLabelEl = block.querySelector('.part-subtotal-label');
-    const addIngBtn = block.querySelector('[data-role="add-ing"]');
-
-    function partLabel(){
-      return (part.name || '').trim() || `Part ${pIdx+1}`;
-    }
-    function updatePartLabels(){
-      subtotalLabelEl.textContent = `${partLabel()} Subtotal`;
-      addIngBtn.textContent = `+ Add Ingredient (${partLabel()})`;
-    }
-    updatePartLabels();
-
-    nameField.value = part.name || '';
-    nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); renderProcesses(r); scheduleSave(); });
-
-    const body = block.querySelector('tbody');
-    const subPctCell = block.querySelector('.part-subtotal-pct');
-    const subWtCell = block.querySelector('.part-subtotal-wt');
-    const summaryEl = block.querySelector('.part-header-summary');
-    const toggleBtn = block.querySelector('.part-toggle-btn');
-
-    function setCollapsed(collapsed){
-      block.classList.toggle('collapsed', collapsed);
-      toggleBtn.classList.toggle('open', !collapsed);
-      toggleBtn.innerHTML = icon(collapsed ? 'chevron-right' : 'chevron-down');
-    }
-
-    toggleBtn.addEventListener('click', () => {
-      setCollapsed(!block.classList.contains('collapsed'));
-    });
-
-    const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '');
-    setCollapsed(!hasContent);
-
-    function renderRows(){
-      body.innerHTML = '';
-      part.ingredients.forEach((ing, idx) => {
-        const tr = document.createElement('tr');
-        tr.innerHTML = `
-          <td class="col-no">${idx+1}</td>
-          <td class="ing-name-cell">
-            <div class="ing-name-row">
-              <input type="text" class="ing-name" list="materialDatalist" placeholder="Search the library or type a new ingredient name">
-            </div>
-            <div class="ing-hint"></div>
-          </td>
-          <td class="col-pct"><span class="ing-pct-display" title="Calculated automatically from weight"></span></td>
-          <td class="col-wt"><input type="number" class="ing-wt num-input" step="0.01" min="0"></td>
-          <td><input type="text" class="ing-note" placeholder=""></td>
-          <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
-        `;
-        const nameInput = tr.querySelector('.ing-name');
-        const hintEl = tr.querySelector('.ing-hint');
-        const pctDisplay = tr.querySelector('.ing-pct-display');
-        const wtInput = tr.querySelector('.ing-wt');
-        const noteInput = tr.querySelector('.ing-note');
-        const delBtn = tr.querySelector('.icon-btn');
-
-        nameInput.value = ing.name || '';
-        pctDisplay.textContent = (ing.percent||0).toFixed(2) + '%';
-        wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
-        noteInput.value = ing.note || '';
-
-        function syncMaterialLink(resetWeightIfUnlinked){
-          const matched = findMaterialByLabel(nameInput.value);
-          ing.materialId = matched ? matched.id : null;
-          wtInput.disabled = !matched;
-          nameInput.classList.remove('ing-linked', 'invalid');
-          if(matched){
-            nameInput.classList.add('ing-linked');
-            nameInput.title = materialTooltip(matched);
-            hintEl.textContent = matched.vendorCode ? `Code: ${matched.vendorCode}` : '';
-            hintEl.className = 'ing-hint ing-hint-code';
-          }else{
-            nameInput.title = '';
-            if(nameInput.value.trim()){
-              nameInput.classList.add('invalid');
-              hintEl.textContent = 'This ingredient is not in the library — open "Ingredient Library" above to add it before entering a weight';
-              hintEl.className = 'ing-hint hint-block';
-            }else{
-              hintEl.textContent = 'Select an ingredient from the library first before entering a weight';
-              hintEl.className = 'ing-hint';
-            }
-            if(resetWeightIfUnlinked && (parseFloat(ing.weight) || 0) !== 0){
-              ing.weight = 0;
-              wtInput.value = (0).toFixed(2);
-            }
-          }
-        }
-        syncMaterialLink(false);
-
-        nameInput.addEventListener('input', e => {
-          ing.name = e.target.value;
-          syncMaterialLink(true);
-          refreshDisplays(r);
-          renderProcesses(r); // keep the "Add Component" picker's ingredient list current
-          scheduleSave();
-        });
-        noteInput.addEventListener('input', e => { ing.note = e.target.value; scheduleSave(); });
-
-        wtInput.addEventListener('input', e => {
-          ing.weight = parseFloat(e.target.value) || 0;
-          refreshDisplays(r);
-          scheduleSave();
-        });
-        wtInput.addEventListener('blur', () => {
-          wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
-        });
-        // Select the whole number on focus so a click lets you type a new
-        // value straight away — Chrome otherwise collapses the selection on
-        // mouseup, so the first click's mouseup is suppressed once to let it stick.
-        let wtJustFocused = false;
-        wtInput.addEventListener('mousedown', () => { wtJustFocused = document.activeElement !== wtInput; });
-        wtInput.addEventListener('focus', () => wtInput.select());
-        wtInput.addEventListener('mouseup', e => {
-          if(wtJustFocused){ e.preventDefault(); wtJustFocused = false; }
-        });
-
-        delBtn.addEventListener('click', () => {
-          part.ingredients.splice(idx, 1);
-          if(part.ingredients.length === 0) part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
-          renderRows();
-          refreshDisplays(r);
-          renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
-          scheduleSave();
-        });
-
-        body.appendChild(tr);
-      });
-      updatePartSubtotal();
-    }
-
-    function updatePartSubtotal(){
-      const subPct = part.ingredients.reduce((s,i)=>s+(parseFloat(i.percent)||0),0);
-      const subWt = part.ingredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-      const recipeTotalWt = r.parts.flatMap(p=>p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-      const partShareOfRecipePct = recipeTotalWt > 0 ? (subWt / recipeTotalWt * 100) : 0;
-      subPctCell.textContent = subPct.toFixed(2) + '%';
-      subWtCell.textContent = formatWeight(subWt);
-      const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
-      summaryEl.textContent = namedCount
-        ? `${namedCount} ingredient${namedCount === 1 ? '' : 's'} · ${partShareOfRecipePct.toFixed(2)}% of recipe`
-        : 'No ingredients yet';
-    }
-
-    renderRows();
-
-    block.querySelector('[data-role="add-ing"]').addEventListener('click', () => {
-      if(hasUnresolvedIngredient(part)){
-        alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
-        return;
-      }
-      part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
-      renderRows();
-      refreshDisplays(r);
-      scheduleSave();
-    });
-
-    const deletePartBtn = block.querySelector('.part-header .icon-btn');
-    if(r.parts.length <= 1){
-      deletePartBtn.style.display = 'none';
-    } else {
-      deletePartBtn.addEventListener('click', () => {
-        if(!confirm(`Delete "${part.name || `Part ${pIdx+1}`}" and all its ingredients?`)) return;
-        r.parts.splice(pIdx, 1);
-        renderParts(r);
-        renderProcesses(r); // drop the deleted part from the "Add Component" picker
-        scheduleSave();
-      });
-    }
-
-    container.appendChild(block);
+  r.parts.forEach(part => {
+    renderPartNode(r, part, container, { ingredients: null, parts: r.parts });
   });
 
   updateGrandTotal(r);
+  updateTreeRoot(r);
+}
+
+// Renders one Part — and, recursively, every Sub-part nested inside it — as
+// a branch of the tree. The exact same function handles a top-level Part
+// (siblingsCtx = { ingredients: null, parts: r.parts }, since the recipe
+// root holds no ingredients of its own) and a Sub-part nested inside
+// another Part (siblingsCtx = { ingredients: parentPart.ingredients, parts:
+// parentPart.parts }) — the %/weight math only cares about "everything
+// else at my own level", not whether that level happens to be the recipe
+// root or another Part.
+function renderPartNode(r, part, container, siblingsCtx){
+  const isNested = siblingsCtx.ingredients !== null;
+
+  // A nested Sub-part's header uses the exact same column wrappers
+  // (.row-handle-col/.row-value-col) as an ingredient row so the two line
+  // up as one table — see the shared CSS above renderParts. A top-level
+  // Part has no sibling ingredient row to line up with (the recipe root
+  // only ever holds Parts), so it keeps its original, wider "section
+  // header" layout (verbose "% of recipe" label, fields grouped and
+  // right-aligned via margin-left:auto) unchanged.
+  const headerInnerHtml = isNested ? `
+      <div class="row-handle-col">
+        <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
+        <span class="drag-handle" draggable="true" title="Drag onto another Part's title to move this Part (and everything inside it) there">${icon('grip-vertical', 14)}</span>
+      </div>
+      <input type="text" class="part-name" placeholder="Part name">
+      <span class="part-ing-count"></span>
+      <div class="row-value-col">
+        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
+        <span class="ing-unit">%</span>
+      </div>
+      <div class="row-value-col row-value-wt">
+        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
+        <span class="ing-unit">g</span>
+      </div>
+      <button class="icon-btn" title="Delete this part">${icon('x')}</button>
+    ` : `
+      <span class="drag-handle" draggable="true" title="Drag onto another Part's title to move this Part (and everything inside it) there">${icon('grip-vertical', 14)}</span>
+      <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
+      <input type="text" class="part-name" placeholder="Part name">
+      <div class="part-header-fields">
+        <span class="part-ing-count"></span>
+        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
+        <span>% of recipe</span>
+        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
+        <span>g</span>
+      </div>
+      <button class="icon-btn" title="Delete this part">${icon('x')}</button>
+    `;
+
+  const block = document.createElement('div');
+  block.className = 'part-block tree-branch' + (isNested ? ' sub-part-row' : '');
+  block.innerHTML = `
+    <div class="part-header">${headerInnerHtml}</div>
+    <div class="part-body">
+      <div class="ing-rows tree-children"></div>
+      <div class="sub-parts tree-children"></div>
+      <div class="part-body-actions">
+        <button class="btn btn-sm add-row-btn" data-role="add-ing"></button>
+        <button class="btn btn-sm add-row-btn" data-role="add-subpart"></button>
+      </div>
+    </div>
+  `;
+
+  const nameField = block.querySelector('.part-name');
+  const addIngBtn = block.querySelector('[data-role="add-ing"]');
+  const addSubpartBtn = block.querySelector('[data-role="add-subpart"]');
+  const headerEl = block.querySelector('.part-header');
+  const dragHandle = headerEl.querySelector('.drag-handle');
+
+  // Drag SOURCE: picking this Part up. dataTransfer.setData is required for
+  // some browsers (Firefox) to allow the drop at all, even though the
+  // actual payload travels via the module-level `dragPayload` — a real
+  // DataTransfer can't hold live object references, only serializable data.
+  dragHandle.addEventListener('dragstart', e => {
+    dragPayload = { type: 'part', item: part, sourceArray: siblingsCtx.parts };
+    e.dataTransfer.effectAllowed = 'move';
+    e.dataTransfer.setData('text/plain', 'part');
+    block.classList.add('dragging');
+  });
+  dragHandle.addEventListener('dragend', () => {
+    block.classList.remove('dragging');
+    dragPayload = null;
+  });
+
+  // Drop TARGET: this Part's title bar is where either a dragged Part
+  // (becomes a Sub-part here) or a dragged ingredient (moves into this
+  // Part's own ingredient list) can be dropped.
+  headerEl.addEventListener('dragover', e => {
+    if(!dragPayload) return;
+    // Dropping a Part onto ITSELF or onto one of ITS OWN descendants would
+    // nest it inside itself — check whether the drop TARGET (this `part`)
+    // is the dragged Part or reachable by descending from it, not the
+    // other way around.
+    if(dragPayload.type === 'part' && isPartOrDescendant(part, dragPayload.item)) return;
+    if(dragPayload.type === 'ingredient' && dragPayload.sourcePart === part) return; // already here
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    headerEl.classList.add('drop-target');
+  });
+  headerEl.addEventListener('dragleave', () => {
+    headerEl.classList.remove('drop-target');
+  });
+  headerEl.addEventListener('drop', e => {
+    e.preventDefault();
+    headerEl.classList.remove('drop-target');
+    if(!dragPayload) return;
+    if(dragPayload.type === 'part'){
+      const draggedPart = dragPayload.item;
+      if(isPartOrDescendant(part, draggedPart)){ dragPayload = null; return; }
+      const idx = dragPayload.sourceArray.indexOf(draggedPart);
+      if(idx === -1){ dragPayload = null; return; }
+      dragPayload.sourceArray.splice(idx, 1);
+      part.parts.push(draggedPart);
+    } else if(dragPayload.type === 'ingredient'){
+      const draggedIng = dragPayload.item;
+      const sourcePart = dragPayload.sourcePart;
+      if(sourcePart === part){ dragPayload = null; return; }
+      const idx = sourcePart.ingredients.indexOf(draggedIng);
+      if(idx === -1){ dragPayload = null; return; }
+      sourcePart.ingredients.splice(idx, 1);
+      // Same safety net as deleting the last ingredient by hand — a Part
+      // never sits completely empty, always at least one blank row to type
+      // into, unless it still has Sub-parts of its own.
+      if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
+        sourcePart.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+      }
+      part.ingredients.push(draggedIng);
+    }
+    dragPayload = null;
+    renderParts(r);
+    renderProcesses(r); // the moved ingredient/Part changes which Part it's grouped under in the "Add Component" picker
+    scheduleSave();
+  });
+
+  function partLabel(){
+    return (part.name || '').trim() || 'this part';
+  }
+  function updatePartLabels(){
+    addIngBtn.textContent = `+ Add Ingredient (${partLabel()})`;
+    addSubpartBtn.textContent = `+ Add Sub-part (${partLabel()})`;
+  }
+  updatePartLabels();
+
+  nameField.value = part.name || '';
+  nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); renderProcesses(r); scheduleSave(); });
+
+  const body = block.querySelector('.ing-rows');
+  const subPartsContainer = block.querySelector('.sub-parts');
+  const countEl = block.querySelector('.part-ing-count');
+  const partPctInput = block.querySelector('.part-pct-display');
+  const partWtInput = block.querySelector('.part-wt-display');
+  const toggleBtn = block.querySelector('.part-toggle-btn');
+
+  // Scales everything currently inside this Part — its own ingredients AND
+  // every ingredient nested inside its Sub-parts — by the same factor, so
+  // weights change but every ratio between them (at every depth) doesn't.
+  // Silently a no-op when there's nothing to scale from (empty, or
+  // everything inside is still 0g): with no known ratio, there's no
+  // defensible way to distribute a new total.
+  function scalePartTo(targetWeight){
+    const currentWeight = partTotalWeight(part);
+    if(targetWeight < 0 || currentWeight <= 0) return;
+    const factor = targetWeight / currentWeight;
+    scaleIngredientsInPart(part, factor);
+  }
+
+  partWtInput.addEventListener('input', e => {
+    const target = parseFloat(e.target.value);
+    if(!isNaN(target)) scalePartTo(target);
+    refreshDisplays(r);
+    scheduleSave();
+  });
+  partWtInput.addEventListener('blur', () => {
+    partWtInput.value = partTotalWeight(part).toFixed(2);
+  });
+  let partWtJustFocused = false;
+  partWtInput.addEventListener('mousedown', () => { partWtJustFocused = document.activeElement !== partWtInput; });
+  partWtInput.addEventListener('focus', () => partWtInput.select());
+  partWtInput.addEventListener('mouseup', e => { if(partWtJustFocused){ e.preventDefault(); partWtJustFocused = false; } });
+
+  // Same back-solve as an ingredient's own % field (see ing-edit-row
+  // below), just at whatever level this Part itself lives at: holds every
+  // OTHER sibling (ingredient or Part) at this same level fixed, solves for
+  // this Part's total, then scales everything inside it to hit it.
+  partPctInput.addEventListener('input', e => {
+    const targetPct = parseFloat(e.target.value);
+    if(isNaN(targetPct) || targetPct < 0) return;
+    const othersWeight = siblingsWeightExcluding(siblingsCtx, part);
+    const f = targetPct / 100;
+    if(othersWeight > 0 && f < 1){
+      scalePartTo(f * othersWeight / (1 - f));
+    }
+    refreshDisplays(r);
+    scheduleSave();
+  });
+  partPctInput.addEventListener('blur', () => {
+    partPctInput.value = (part.percent || 0).toFixed(2);
+  });
+  let partPctJustFocused = false;
+  partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
+  partPctInput.addEventListener('focus', () => partPctInput.select());
+  partPctInput.addEventListener('mouseup', e => { if(partPctJustFocused){ e.preventDefault(); partPctJustFocused = false; } });
+
+  function setCollapsed(collapsed){
+    block.classList.toggle('collapsed', collapsed);
+    toggleBtn.classList.toggle('open', !collapsed);
+    toggleBtn.innerHTML = icon(collapsed ? 'chevron-right' : 'chevron-down');
+  }
+
+  toggleBtn.addEventListener('click', () => {
+    setCollapsed(!block.classList.contains('collapsed'));
+  });
+
+  const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '') || part.parts.length > 0;
+  setCollapsed(!hasContent);
+
+  function renderRows(){
+    body.innerHTML = '';
+    part.ingredients.forEach((ing, idx) => {
+      const branch = document.createElement('div');
+      branch.className = 'tree-branch';
+      branch.innerHTML = `
+        <div class="tree-node tree-ing-node ing-edit-row">
+          <div class="row-handle-col">
+            <span class="drag-handle" draggable="true" title="Drag onto a Part's title to move this ingredient there">${icon('grip-vertical', 14)}</span>
+          </div>
+          <div class="ing-name-wrap">
+            <input type="text" class="ing-name" placeholder="Search the library or type a new ingredient name" autocomplete="off">
+            <div class="ing-suggestions"></div>
+          </div>
+          <input type="text" class="ing-note" placeholder="Note">
+          <div class="row-value-col">
+            <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
+            <span class="ing-unit">%</span>
+          </div>
+          <div class="row-value-col row-value-wt">
+            <input type="number" class="ing-wt num-input" step="0.01" min="0">
+            <span class="ing-unit">g</span>
+          </div>
+          <button class="icon-btn" title="Delete">${icon('x')}</button>
+        </div>
+        <div class="ing-hint"></div>
+      `;
+      const ingDragHandle = branch.querySelector('.drag-handle');
+      const nameInput = branch.querySelector('.ing-name');
+      const suggestBox = branch.querySelector('.ing-suggestions');
+      const hintEl = branch.querySelector('.ing-hint');
+      const pctDisplay = branch.querySelector('.ing-pct-display');
+      const wtInput = branch.querySelector('.ing-wt');
+      const noteInput = branch.querySelector('.ing-note');
+      const delBtn = branch.querySelector('.icon-btn');
+
+      ingDragHandle.addEventListener('dragstart', e => {
+        dragPayload = { type: 'ingredient', item: ing, sourcePart: part };
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', 'ingredient');
+        branch.classList.add('dragging');
+      });
+      ingDragHandle.addEventListener('dragend', () => {
+        branch.classList.remove('dragging');
+        dragPayload = null;
+      });
+
+      nameInput.value = ing.name || '';
+      pctDisplay.value = (ing.percent||0).toFixed(2);
+      wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+      noteInput.value = ing.note || '';
+
+      function syncMaterialLink(resetWeightIfUnlinked){
+        const matched = findMaterialByLabel(nameInput.value);
+        ing.materialId = matched ? matched.id : null;
+        wtInput.disabled = !matched;
+        pctDisplay.disabled = !matched;
+        nameInput.classList.remove('ing-linked', 'invalid');
+        if(matched){
+          nameInput.classList.add('ing-linked');
+          nameInput.title = materialTooltip(matched);
+          hintEl.textContent = matched.vendorCode ? `Code: ${matched.vendorCode}` : '';
+          hintEl.className = 'ing-hint ing-hint-code';
+        }else{
+          nameInput.title = '';
+          if(nameInput.value.trim()){
+            nameInput.classList.add('invalid');
+            hintEl.textContent = 'This ingredient is not in the library — open "Ingredient Library" above to add it before entering a weight';
+            hintEl.className = 'ing-hint hint-block';
+          }else{
+            hintEl.textContent = 'Select an ingredient from the library first before entering a weight';
+            hintEl.className = 'ing-hint';
+          }
+          if(resetWeightIfUnlinked && (parseFloat(ing.weight) || 0) !== 0){
+            ing.weight = 0;
+            wtInput.value = (0).toFixed(2);
+            pctDisplay.value = (0).toFixed(2);
+          }
+        }
+      }
+      syncMaterialLink(false);
+
+      // Custom fuzzy-search dropdown — replaces the old native <datalist>,
+      // which only ever did a plain substring match and looked/behaved
+      // differently across browsers. Ranked matches (see
+      // fuzzyMaterialMatches) so close/similar names surface even with a
+      // typo or a partial word, not just an exact substring.
+      function renderSuggestions(){
+        if(document.activeElement !== nameInput){
+          suggestBox.innerHTML = '';
+          suggestBox.classList.remove('open');
+          return;
+        }
+        const matches = fuzzyMaterialMatches(nameInput.value, 8);
+        if(matches.length === 0){
+          suggestBox.innerHTML = '';
+          suggestBox.classList.remove('open');
+          return;
+        }
+        suggestBox.innerHTML = matches.map(m => `
+          <div class="ing-suggestion-item" data-id="${escapeHtml(m.id)}">
+            <span class="ing-suggestion-name">${escapeHtml(materialLabel(m))}</span>
+          </div>
+        `).join('');
+        suggestBox.classList.add('open');
+        suggestBox.querySelectorAll('.ing-suggestion-item').forEach(item => {
+          // mousedown (not click) fires before the input's blur, so the
+          // selection registers before renderSuggestions()'s own blur
+          // handler would otherwise have already wiped the list out.
+          item.addEventListener('mousedown', e => {
+            e.preventDefault();
+            const matched = ingredientMaster.find(x => x.id === item.dataset.id);
+            if(matched){
+              nameInput.value = materialLabel(matched);
+              nameInput.dispatchEvent(new Event('input', { bubbles: true }));
+            }
+            suggestBox.innerHTML = '';
+            suggestBox.classList.remove('open');
+          });
+        });
+      }
+
+      nameInput.addEventListener('input', e => {
+        ing.name = e.target.value;
+        syncMaterialLink(true);
+        refreshDisplays(r);
+        renderProcesses(r); // keep the "Add Component" picker's ingredient list current
+        scheduleSave();
+        renderSuggestions();
+      });
+      nameInput.addEventListener('focus', renderSuggestions);
+      nameInput.addEventListener('blur', () => {
+        suggestBox.innerHTML = '';
+        suggestBox.classList.remove('open');
+      });
+      noteInput.addEventListener('input', e => { ing.note = e.target.value; scheduleSave(); });
+
+      wtInput.addEventListener('input', e => {
+        ing.weight = parseFloat(e.target.value) || 0;
+        refreshDisplays(r);
+        scheduleSave();
+      });
+      wtInput.addEventListener('blur', () => {
+        wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+      });
+      // Select the whole number on focus so a click lets you type a new
+      // value straight away — Chrome otherwise collapses the selection on
+      // mouseup, so the first click's mouseup is suppressed once to let it stick.
+      let wtJustFocused = false;
+      wtInput.addEventListener('mousedown', () => { wtJustFocused = document.activeElement !== wtInput; });
+      wtInput.addEventListener('focus', () => wtInput.select());
+      wtInput.addEventListener('mouseup', e => {
+        if(wtJustFocused){ e.preventDefault(); wtJustFocused = false; }
+      });
+
+      // Typing a % back-solves this ingredient's weight, holding every
+      // other ingredient AND every Sub-part in the Part fixed: pct = w /
+      // (w + others), so w = pct * others / (1 - pct). others === 0 (the
+      // only thing in the Part) has no solution — it's already 100% at any
+      // weight — so that case is left alone and just snaps back on blur.
+      pctDisplay.addEventListener('input', e => {
+        const targetPct = parseFloat(e.target.value);
+        if(isNaN(targetPct) || targetPct < 0) return;
+        const othersIngWeight = part.ingredients.reduce((s,i,i2) => i2 === idx ? s : s+(parseFloat(i.weight)||0), 0);
+        const othersSubPartsWeight = (part.parts||[]).reduce((s,sub)=>s+partTotalWeight(sub),0);
+        const othersWeight = othersIngWeight + othersSubPartsWeight;
+        const f = targetPct / 100;
+        if(othersWeight > 0 && f < 1){
+          ing.weight = round2(f * othersWeight / (1 - f));
+          wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+        }
+        refreshDisplays(r);
+        scheduleSave();
+      });
+      pctDisplay.addEventListener('blur', () => {
+        pctDisplay.value = (ing.percent || 0).toFixed(2);
+      });
+      let pctJustFocused = false;
+      pctDisplay.addEventListener('mousedown', () => { pctJustFocused = document.activeElement !== pctDisplay; });
+      pctDisplay.addEventListener('focus', () => pctDisplay.select());
+      pctDisplay.addEventListener('mouseup', e => {
+        if(pctJustFocused){ e.preventDefault(); pctJustFocused = false; }
+      });
+
+      delBtn.addEventListener('click', () => {
+        part.ingredients.splice(idx, 1);
+        if(part.ingredients.length === 0 && part.parts.length === 0) part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+        renderRows();
+        refreshDisplays(r);
+        renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
+        scheduleSave();
+      });
+
+      body.appendChild(branch);
+    });
+    updatePartSubtotal();
+  }
+
+  function updatePartSubtotal(){
+    const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
+    const subCount = part.parts.length;
+    const label = [];
+    if(namedCount) label.push(`${namedCount} ingredient${namedCount === 1 ? '' : 's'}`);
+    if(subCount) label.push(`${subCount} sub-part${subCount === 1 ? '' : 's'}`);
+    countEl.textContent = label.length ? label.join(' · ') : 'Empty';
+    if(document.activeElement !== partPctInput) partPctInput.value = (part.percent || 0).toFixed(2);
+    if(document.activeElement !== partWtInput) partWtInput.value = partTotalWeight(part).toFixed(2);
+  }
+
+  renderRows();
+
+  function renderSubParts(){
+    subPartsContainer.innerHTML = '';
+    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }));
+  }
+  renderSubParts();
+
+  addIngBtn.addEventListener('click', () => {
+    if(hasUnresolvedIngredient(part)){
+      alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
+      return;
+    }
+    part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+    renderRows();
+    refreshDisplays(r);
+    scheduleSave();
+  });
+
+  addSubpartBtn.addEventListener('click', () => {
+    part.parts.push(blankPart(''));
+    renderParts(r);
+    renderProcesses(r); // add the new sub-part's ingredients to the "Add Component" picker
+    scheduleSave();
+  });
+
+  const deletePartBtn = block.querySelector('.part-header .icon-btn');
+  if(!isNested && siblingsCtx.parts.length <= 1){
+    // A recipe always needs at least one top-level Part to hold anything —
+    // Sub-parts nested inside a Part have no such floor, since that Part
+    // can always fall back to its own direct ingredients instead.
+    deletePartBtn.style.display = 'none';
+  } else {
+    deletePartBtn.addEventListener('click', () => {
+      if(!confirm(`Delete "${part.name || 'this part'}" and everything inside it?`)) return;
+      const idx = siblingsCtx.parts.indexOf(part);
+      if(idx !== -1) siblingsCtx.parts.splice(idx, 1);
+      renderParts(r);
+      renderProcesses(r); // drop the deleted part's ingredients from the "Add Component" picker
+      scheduleSave();
+    });
+  }
+
+  partDisplayUpdaters.push(() => {
+    updatePartSubtotal();
+    const pctEls = body.querySelectorAll('.ing-pct-display');
+    const wtEls = body.querySelectorAll('.ing-wt');
+    part.ingredients.forEach((ing, idx) => {
+      // Skip the field the user is actively typing into — reformatting it
+      // mid-keystroke (e.g. "30" -> "30.00" before they can type "30.5")
+      // would fight with their typing. It gets its own precise value on
+      // blur instead (see the pctDisplay/wtInput 'blur' handlers above).
+      // Weight also needs refreshing here (not just %): scaling this Part
+      // from its own header field, or a sibling ingredient's own % field,
+      // changes every ingredient's weight without ever touching its own
+      // <input> directly, so nothing else would ever push that new value in.
+      const pctEl = pctEls[idx];
+      if(pctEl && document.activeElement !== pctEl) pctEl.value = (ing.percent||0).toFixed(2);
+      const wtEl = wtEls[idx];
+      if(wtEl && document.activeElement !== wtEl) wtEl.value = (parseFloat(ing.weight)||0).toFixed(2);
+    });
+  });
+
+  container.appendChild(block);
 }
 
 function updateGrandTotal(r){
-  const allIngredients = r.parts.flatMap(p => p.ingredients);
+  const allIngredients = allIngredientsInRecipe(r);
   const totalWt = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
   // % is always weight / totalWeight, so the grand total is exactly 100% by
   // construction whenever there's any weight entered — no rounding drift.
@@ -8167,15 +9099,16 @@ function renderProcesses(r){
     const totalWtEl = block.querySelector('.process-comp-total-wt');
     const totalPctEl = block.querySelector('.process-comp-total-pct');
 
-    const partOptions = r.parts.map((part, pIdx2) => {
-      const wt = part.ingredients.reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
-      const label = part.name || `Part ${pIdx2+1}`;
-      return `<option value="part:${pIdx2}">Part: ${escapeHtml(label)}</option>`;
-    }).join('');
-    const ingOptions = r.parts.flatMap((part, pIdx2) => part.ingredients
-      .map((ing, iIdx) => ({ ing, pIdx2, iIdx }))
-      .filter(x => (x.ing.name||'').trim() !== '')
-    ).map(({ing, pIdx2, iIdx}) => `<option value="ing:${pIdx2}:${iIdx}">Ingredient: ${escapeHtml(ing.name)}</option>`).join('');
+    // Flat index into these two arrays (not a "partIdx.ingredientIdx" path)
+    // is what lets the dropdown address a Part or ingredient at ANY nesting
+    // depth — see collectPartsFlat/collectIngredientsFlat. Recomputed fresh
+    // on every render, and the "Add" handler below re-derives the exact
+    // same two arrays, so the flat index it reads back always lines up
+    // with what's currently in the dropdown.
+    const flatParts = collectPartsFlat(r.parts, '');
+    const flatIngredients = collectIngredientsFlat(r.parts, '');
+    const partOptions = flatParts.map((entry, idx) => `<option value="part:${idx}">Part: ${escapeHtml(entry.label)}</option>`).join('');
+    const ingOptions = flatIngredients.map((entry, idx) => `<option value="ing:${idx}">Ingredient: ${escapeHtml(entry.label)}</option>`).join('');
     compSelect.innerHTML = `
       <option value="">— Select a part or ingredient to add —</option>
       ${partOptions ? `<optgroup label="Parts">${partOptions}</optgroup>` : ''}
@@ -8252,18 +9185,18 @@ function renderProcesses(r){
     block.querySelector('[data-role="add-component"]').addEventListener('click', () => {
       const val = compSelect.value;
       if(!val) return;
-      const [kind, a, b] = val.split(':');
+      const [kind, a] = val.split(':');
       let name, weight;
       if(kind === 'part'){
-        const part = r.parts[+a];
-        if(!part) return;
-        name = part.name || `Part ${+a+1}`;
-        weight = part.ingredients.reduce((s,i) => s + (parseFloat(i.weight) || 0), 0);
+        const entry = flatParts[+a];
+        if(!entry) return;
+        name = entry.part.name || 'Untitled part';
+        weight = partTotalWeight(entry.part);
       } else {
-        const ing = r.parts[+a]?.ingredients[+b];
-        if(!ing) return;
-        name = ing.name;
-        weight = parseFloat(ing.weight) || 0;
+        const entry = flatIngredients[+a];
+        if(!entry) return;
+        name = entry.ing.name;
+        weight = parseFloat(entry.ing.weight) || 0;
       }
       proc.components.push({ name, weight: round2(weight), tolerance: 0, percent: 0 });
       compSelect.value = '';
@@ -8344,6 +9277,99 @@ function renderDescPhotos(r){
   if(input) input.style.display = r.descPhotos.length >= 3 ? 'none' : '';
 }
 
+// Shared by the print view and the Version Preview modal — a process list
+// (title + optional components table + numbered steps) rendered read-only,
+// fed from either the live recipe or a frozen version snapshot.
+function readOnlyProcessesHtml(processes){
+  const list = (processes || []).filter(p =>
+    (p.title||'').trim() !== '' ||
+    (p.steps||[]).some(s => (s||'').trim() !== '') ||
+    (p.components||[]).length > 0
+  );
+  if(list.length === 0) return '<div class="compare-missing">No processes yet</div>';
+  return list.map(p => {
+    const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+    const components = p.components || [];
+    return `
+      <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+      ${components.length ? `
+        <table class="compare-table" style="margin-bottom:10px;">
+          <thead><tr><th>#</th><th>Component</th><th>Weight (g)</th><th>Tolerance</th><th>Range</th><th>%</th></tr></thead>
+          <tbody>${components.map((c, cIdx) => {
+            const wt = parseFloat(c.weight) || 0;
+            const tol = parseFloat(c.tolerance) || 0;
+            return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
+          }).join('')}</tbody>
+          <tfoot><tr class="total-row">
+            <td></td><td>Total</td>
+            <td>${formatWeight(components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0))}</td>
+            <td></td><td></td>
+            <td>${components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0).toFixed(2)}%</td>
+          </tr></tfoot>
+        </table>
+      ` : ''}
+      ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+    `;
+  }).join('');
+}
+
+// Shared by the Version Preview modal — the same Parts -> Sub-parts ->
+// Ingredients tree as the live editable form (see renderParts/
+// renderPartNode), but plain label/%/weight text instead of inputs, since
+// a version snapshot is never edited in place. Recursive so nested
+// Sub-parts show up too, not just each top-level Part's direct ingredients.
+function readOnlyIngredientTreeHtml(parts, totalWeight){
+  const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
+  if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
+  return `
+    <div class="ingredient-tree">
+      <div class="tree-node tree-root-node">
+        <span class="tree-node-label">Formula per Portion</span>
+        <span class="tree-node-pct">100.00%</span>
+        <span class="tree-node-wt">${formatWeight(totalWeight)}</span>
+      </div>
+      <div class="tree-children">${namedParts.map(part => readOnlyPartBranchHtml(part, false, totalWeight)).join('')}</div>
+    </div>
+  `;
+}
+
+// One Part's branch (label/%/weight) plus, recursively, a branch for every
+// named ingredient AND every Sub-part nested inside it. `parentTotal` is
+// the immediate parent's own total weight (the recipe root's total for a
+// top-level Part, or the containing Part's total for a nested Sub-part) —
+// % is always computed fresh from the actual weights rather than trusting
+// a stored .percent, since older versions saved before Sub-parts existed
+// never had one on their Part objects. isNested only controls the
+// "% of ..." wording (matches the live editor: top-level Parts read
+// "% of recipe", nested Sub-parts read "% of Part").
+function readOnlyPartBranchHtml(part, isNested, parentTotal){
+  const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
+  const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+  const label = (part.name||'').trim() || 'Unnamed part';
+  const partWeight = partTotalWeight(part);
+  const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
+  const leavesHtml = namedIngredients.map(ing => `
+    <div class="tree-branch">
+      <div class="tree-node tree-ing-node">
+        <span class="tree-node-label">${escapeHtml(ing.name)}</span>
+        <span class="tree-node-pct">${(parseFloat(ing.percent)||0).toFixed(2)}% of part</span>
+        <span class="tree-node-wt">${formatWeight(parseFloat(ing.weight)||0)}</span>
+      </div>
+    </div>
+  `).join('');
+  const subPartsHtml = namedSubParts.map(sub => readOnlyPartBranchHtml(sub, true, partWeight)).join('');
+  return `
+    <div class="tree-branch">
+      <div class="tree-node tree-part-node">
+        <span class="tree-node-label">${escapeHtml(label)}</span>
+        <span class="tree-node-pct">${partPct.toFixed(2)}% of ${isNested ? 'Part' : 'recipe'}</span>
+        <span class="tree-node-wt">${formatWeight(partWeight)}</span>
+      </div>
+      <div class="tree-children">${leavesHtml}${subPartsHtml}</div>
+    </div>
+  `;
+}
+
 /* Read-only print layout for section 1 (info card) and section 3 (process
    steps as a plain numbered list) — reuses the same look as Compare Recipes
    instead of the on-screen editable form/step-badge styling. Filled in right
@@ -8351,7 +9377,7 @@ function renderDescPhotos(r){
 function renderPrintView(r){
   const infoEl = document.getElementById('printInfoCard');
   if(infoEl){
-    const totalWt = r.parts.flatMap(p => p.ingredients).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     infoEl.innerHTML = `
       <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
@@ -8365,37 +9391,7 @@ function renderPrintView(r){
   }
 
   const procEl = document.getElementById('printProcessesView');
-  if(procEl){
-    const processes = (r.processes || []).filter(p =>
-      (p.title||'').trim() !== '' ||
-      (p.steps||[]).some(s => (s||'').trim() !== '') ||
-      (p.components||[]).length > 0
-    );
-    procEl.innerHTML = processes.map(p => {
-      const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
-      const components = p.components || [];
-      return `
-        <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
-        ${components.length ? `
-          <table class="compare-table" style="margin-bottom:10px;">
-            <thead><tr><th>#</th><th>Component</th><th>Weight (g)</th><th>Tolerance</th><th>Range</th><th>%</th></tr></thead>
-            <tbody>${components.map((c, cIdx) => {
-              const wt = parseFloat(c.weight) || 0;
-              const tol = parseFloat(c.tolerance) || 0;
-              return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
-            }).join('')}</tbody>
-            <tfoot><tr class="total-row">
-              <td></td><td>Total</td>
-              <td>${formatWeight(components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0))}</td>
-              <td></td><td></td>
-              <td>${components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0).toFixed(2)}%</td>
-            </tr></tfoot>
-          </table>
-        ` : ''}
-        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
-      `;
-    }).join('') || '<div class="compare-missing">No processes yet</div>';
-  }
+  if(procEl) procEl.innerHTML = readOnlyProcessesHtml(r.processes);
 }
 
 /* ---------- Recipe actions ---------- */
@@ -8564,7 +9560,6 @@ function importFromFile(file){
         mainFeatureView = null;
       }
       batch.commit();
-      if(importedMaterials.length) renderMaterialDatalist();
       if(mainFeatureView === 'projects') renderProjectsList();
       if(mainFeatureView === 'trials') renderTrialsList();
       renderSidebar();
@@ -8642,6 +9637,7 @@ function applyStaticIcons(){
   setIcon('btnCloseMaterialDetail', 'x', 16);
   setIcon('btnCloseAuthConfirm', 'x', 16);
   setIcon('btnCloseVersionsModal', 'x', 16);
+  setIcon('btnCloseVersionPreviewModal', 'x', 16);
   setIcon('btnCloseProductLogModal', 'x', 16);
   prefixIcon('btnCompare', 'scale');
   prefixIcon('btnSaveVersion', 'save');
@@ -8673,11 +9669,23 @@ initAuthScreen();
 initAuthConfirmModal();
 initCompareView();
 initVersionsModal();
+initVersionPreviewModal();
 initRefListsView();
 initMaterialLibrary();
 initProjectsModal();
 initTrialsView();
 renderFooter();
+
+// Scrolling the mouse wheel over a focused number input silently changes
+// its value in Chrome/Edge — easy to trigger by accident just scrolling
+// the page past one. Blurring it on wheel lets the page scroll normally
+// and leaves the value untouched; only typing should ever change it.
+document.addEventListener('wheel', e => {
+  const el = document.activeElement;
+  if(el && el.tagName === 'INPUT' && el.type === 'number' && el === e.target){
+    el.blur();
+  }
+}, { passive: true });
 
 /* Firestore listeners only attach once someone is actually signed in — the
    security rules reject reads/writes from a signed-out client anyway. */
