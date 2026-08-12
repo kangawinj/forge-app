@@ -508,6 +508,22 @@
     margin-bottom:4px;
     font-weight:600;
   }
+  /* Shows which script the password field is currently receiving (Thai vs.
+     Latin) as the user types, since a masked password field gives no other
+     way to notice an accidental Thai/English keyboard-layout mismatch
+     before hitting "Incorrect password". Detected from the actual
+     characters typed (see authConfirmPassword's 'input' handler), not the
+     OS keyboard layout itself (browsers don't expose that). */
+  .kb-lang-badge{
+    font-size:11px;
+    font-weight:700;
+    padding:1px 7px;
+    border-radius:10px;
+    background:var(--primary-light);
+    color:var(--primary-dark);
+    text-transform:uppercase;
+    letter-spacing:.3px;
+  }
   input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], textarea{
     width:100%;
     padding:9px 10px;
@@ -2643,7 +2659,10 @@
           <input type="email" id="authConfirmEmail" autocomplete="username" readonly>
         </div>
         <div class="field">
-          <label>Password</label>
+          <label style="display:flex;align-items:center;justify-content:space-between;">
+            <span>Password</span>
+            <span class="kb-lang-badge" id="authConfirmKbLang"></span>
+          </label>
           <input type="password" id="authConfirmPassword" autocomplete="current-password">
         </div>
         <div class="auth-error" id="authConfirmError"></div>
@@ -3003,7 +3022,10 @@ const CHANGELOG = [
   { version: "3.0.149", date: "2026-08-12", note: "Swapped the order of a Sub-part's drag handle and expand/collapse chevron — drag handle now comes first, matching a top-level Part's own header" },
   { version: "3.0.150", date: "2026-08-12", note: "The grip handle on a Part or ingredient can now also reorder items up/down within the same list, not just move them into a different Part — drag it just above or below a neighboring row/header (a highlight line shows before or after) and drop to reorder; dragging onto the middle of a Part's title still moves it inside as a Sub-part like before" },
   { version: "3.0.151", date: "2026-08-12", note: "The recipe tree's total weight (top right, next to \"Formula per Portion\") is now editable — type a new total and every ingredient at every level scales to match proportionally, same as the existing \"Scale Recipe To\" field but directly where the total is already shown" },
-  { version: "3.0.152", date: "2026-08-12", note: "Swapped the order of a top-level Part's ingredient count and its %/weight fields — %/weight now comes right after the Part name, with the ingredient count after it, closer to the delete button" }
+  { version: "3.0.152", date: "2026-08-12", note: "Swapped the order of a top-level Part's ingredient count and its %/weight fields — %/weight now comes right after the Part name, with the ingredient count after it, closer to the delete button" },
+  { version: "3.0.153", date: "2026-08-12", note: "Moved the \"+ Add Part\" button inside the ingredient tree's own box, right after the Parts list — instead of sitting as a separate button below/outside it, matching how \"+ Add Ingredient\" / \"+ Add Sub-part\" already sit inside each Part's own box" },
+  { version: "3.0.154", date: "2026-08-12", note: "The \"Confirm Identity to Edit\" password prompt now shows a small TH/EN badge next to the Password label that updates as you type — since the field is masked, this is the only way to notice you're typing on the wrong keyboard language before getting \"Incorrect password\"" },
+  { version: "3.0.155", date: "2026-08-12", note: "That TH/EN badge now shows a \"?\" placeholder (with a tooltip explaining why) before you start typing, instead of sitting blank — browsers don't expose the keyboard's current language to a web page until an actual character is typed, so the badge still can't detect it before that first keystroke, but at least it no longer looks empty/broken while waiting" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3152,6 +3174,9 @@ function requestAuthConfirm(title, message, onSuccess, options = {}){
   document.getElementById('authConfirmMessage').textContent = message;
   document.getElementById('authConfirmForm').reset();
   document.getElementById('authConfirmError').textContent = '';
+  const kbLangBadge = document.getElementById('authConfirmKbLang');
+  kbLangBadge.textContent = '?';
+  kbLangBadge.title = 'Browsers can\'t read the keyboard language before you type — this updates to TH/EN the instant you type the first character';
   pendingAuthCallback = onSuccess;
   pendingRequiredEmail = options.requireEmail || null;
   pendingApproverAction = options.approverAction || null;
@@ -3174,6 +3199,21 @@ function initAuthConfirmModal(){
   document.getElementById('btnCloseAuthConfirm').addEventListener('click', closeAuthConfirm);
   document.getElementById('authConfirmModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'authConfirmModalOverlay') closeAuthConfirm();
+  });
+
+  // A password field's displayed value is masked, so there's no visual way
+  // to notice the keyboard is on the wrong language before submitting and
+  // getting "Incorrect password". e.data still carries the real character
+  // just typed even though the field shows dots, so a Thai character (Thai
+  // Unicode block) vs. a Latin letter is enough to flag which script is
+  // currently coming through. Backspaces/paste/etc. (e.data null or mixed)
+  // just leave the last-known badge as-is rather than guessing.
+  document.getElementById('authConfirmPassword').addEventListener('input', e => {
+    const ch = e.data;
+    if(!ch) return;
+    const badge = document.getElementById('authConfirmKbLang');
+    if(/[฀-๿]/.test(ch)){ badge.textContent = 'TH'; badge.title = ''; }
+    else if(/[A-Za-z]/.test(ch)){ badge.textContent = 'EN'; badge.title = ''; }
   });
   document.getElementById('authConfirmForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -8026,8 +8066,8 @@ function renderMain(){
           </span>
         </div>
         <div id="partsContainer" class="tree-children"></div>
+        <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
       </div>
-      <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
 
       <div class="overview-block">
         <div class="overview-title">Recipe Overview (all parts combined)</div>
