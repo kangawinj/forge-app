@@ -508,22 +508,31 @@
     margin-bottom:4px;
     font-weight:600;
   }
-  /* Shows which script the password field is currently receiving (Thai vs.
-     Latin) as the user types, since a masked password field gives no other
-     way to notice an accidental Thai/English keyboard-layout mismatch
-     before hitting "Incorrect password". Detected from the actual
-     characters typed (see authConfirmPassword's 'input' handler), not the
-     OS keyboard layout itself (browsers don't expose that). */
-  .kb-lang-badge{
-    font-size:11px;
-    font-weight:700;
-    padding:1px 7px;
-    border-radius:10px;
-    background:var(--primary-light);
-    color:var(--primary-dark);
-    text-transform:uppercase;
-    letter-spacing:.3px;
+  /* Lets a masked password field be revealed as plain text via the eye
+     button sitting inside it, so a typo (wrong keyboard language, stray
+     character) can be caught by reading the password back before
+     submitting, instead of only finding out from "Incorrect password". */
+  .password-input-wrap{
+    position:relative;
   }
+  .password-input-wrap input{
+    padding-right:38px;
+  }
+  .password-toggle-btn{
+    position:absolute;
+    right:4px;
+    top:50%;
+    transform:translateY(-50%);
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-dim);
+    padding:6px;
+    display:flex;
+    align-items:center;
+    border-radius:6px;
+  }
+  .password-toggle-btn:hover{background:var(--primary-light);color:var(--primary);}
   input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], textarea{
     width:100%;
     padding:9px 10px;
@@ -1042,6 +1051,73 @@
     width:15px;
     height:0;
     border-top:2px solid var(--border);
+  }
+  /* Compact read-only tree — Version Preview and Printing (see
+     readOnlyIngredientTreeHtml/readOnlyPartBranchRows). A genuine <table>
+     rather than the on-screen card layout, so % and g always land as two
+     tight neighboring columns and a deep recipe stays dense instead of
+     spreading across a full page of indented cards. Indentation (inline
+     padding-left, set per row from nesting depth) stands in for the
+     connector-line artwork the live editable tree draws. */
+  .ro-tree-table{
+    width:100%;
+    border-collapse:collapse;
+    font-size:12px;
+  }
+  .ro-tree-table th{
+    text-align:left;
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    color:var(--text-dim);
+    border-bottom:1px solid var(--border);
+    padding:3px 8px;
+  }
+  .ro-tree-table td{
+    padding:2px 8px;
+    border-bottom:1px solid var(--border);
+  }
+  .ro-tree-name{
+    white-space:normal;
+    word-break:break-word;
+  }
+  /* Box-drawing tree-connector prefix (see treeGuideHtml) — monospace so
+     the │/├─/└─ characters line up into continuous vertical lines across
+     rows regardless of the surrounding font, and not user-selectable
+     since it's decoration standing in for the on-screen tree's lines,
+     not actual content. */
+  .ro-tree-guide{
+    font-family:'Courier New', Courier, monospace;
+    color:var(--text-dim);
+    font-weight:400;
+    white-space:pre;
+    user-select:none;
+  }
+  .ro-tree-note{
+    color:var(--text-dim);
+    font-weight:400;
+    white-space:normal;
+    word-break:break-word;
+    max-width:160px;
+  }
+  .ro-tree-pct, .ro-tree-wt{
+    text-align:right;
+    white-space:nowrap;
+    width:64px;
+  }
+  th.ro-tree-name, th.ro-tree-note{padding-left:8px;}
+  .ro-tree-root td{
+    font-weight:800;
+    border-bottom:2px solid var(--border);
+  }
+  .ro-tree-part td{
+    font-weight:700;
+    color:var(--primary-dark);
+  }
+  .ro-tree-ing td{
+    color:var(--text);
+    font-weight:400;
   }
   /* An ingredient leaf is also the data-entry row for that ingredient —
      same inputs the old table had (name/%/weight/note/delete), just laid
@@ -1672,16 +1748,62 @@
     gap:8px;
     margin-bottom:10px;
   }
-  .process-comp-select{
+  /* Lets several Parts/ingredients be checked off before a single "+ Add"
+     adds them all at once, instead of a native <select> which only ever
+     lets you pick (and add) one at a time. */
+  .comp-multiselect{
+    position:relative;
     flex:1;
+  }
+  .comp-multiselect-toggle{
+    width:100%;
+    text-align:left;
     padding:8px 10px;
     border:1px solid var(--border);
     border-radius:var(--radius);
     font-family:inherit;
     font-size:13px;
     background:#fff;
-    color:var(--text);
+    color:var(--text-dim);
+    cursor:pointer;
   }
+  .comp-multiselect-toggle.has-selection{color:var(--text);font-weight:600;}
+  .comp-multiselect-panel{
+    display:none;
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    z-index:20;
+    margin-top:4px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 6px 16px rgba(0,0,0,.12);
+    max-height:260px;
+    overflow-y:auto;
+  }
+  .comp-multiselect-panel.open{display:block;}
+  .comp-multiselect-group-label{
+    padding:6px 12px;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    color:var(--text-dim);
+    background:var(--bg);
+  }
+  .comp-multiselect-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:7px 12px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .comp-multiselect-item:hover{background:var(--primary-light);}
+  .comp-multiselect-item input[type=checkbox]{flex-shrink:0;cursor:pointer;}
+  .comp-multiselect-empty{padding:10px 12px;font-size:13px;color:var(--text-dim);}
   .process-comp-table{width:100%;border-collapse:collapse;font-size:13px;}
   .process-comp-table input{padding:7px 8px;font-size:13px;}
   .col-tol{width:100px;}
@@ -2327,7 +2449,7 @@
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
-    .recipe-fields-edit, .processes-list{display:none !important;}
+    .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .print-only{display:block !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
@@ -2659,11 +2781,11 @@
           <input type="email" id="authConfirmEmail" autocomplete="username" readonly>
         </div>
         <div class="field">
-          <label style="display:flex;align-items:center;justify-content:space-between;">
-            <span>Password</span>
-            <span class="kb-lang-badge" id="authConfirmKbLang"></span>
-          </label>
-          <input type="password" id="authConfirmPassword" autocomplete="current-password">
+          <label>Password</label>
+          <div class="password-input-wrap">
+            <input type="password" id="authConfirmPassword" autocomplete="current-password">
+            <button type="button" class="password-toggle-btn" id="btnToggleAuthConfirmPassword" title="Show password"></button>
+          </div>
         </div>
         <div class="auth-error" id="authConfirmError"></div>
         <button type="submit" class="btn btn-primary btn-block">Confirm</button>
@@ -3025,7 +3147,14 @@ const CHANGELOG = [
   { version: "3.0.152", date: "2026-08-12", note: "Swapped the order of a top-level Part's ingredient count and its %/weight fields — %/weight now comes right after the Part name, with the ingredient count after it, closer to the delete button" },
   { version: "3.0.153", date: "2026-08-12", note: "Moved the \"+ Add Part\" button inside the ingredient tree's own box, right after the Parts list — instead of sitting as a separate button below/outside it, matching how \"+ Add Ingredient\" / \"+ Add Sub-part\" already sit inside each Part's own box" },
   { version: "3.0.154", date: "2026-08-12", note: "The \"Confirm Identity to Edit\" password prompt now shows a small TH/EN badge next to the Password label that updates as you type — since the field is masked, this is the only way to notice you're typing on the wrong keyboard language before getting \"Incorrect password\"" },
-  { version: "3.0.155", date: "2026-08-12", note: "That TH/EN badge now shows a \"?\" placeholder (with a tooltip explaining why) before you start typing, instead of sitting blank — browsers don't expose the keyboard's current language to a web page until an actual character is typed, so the badge still can't detect it before that first keystroke, but at least it no longer looks empty/broken while waiting" }
+  { version: "3.0.155", date: "2026-08-12", note: "That TH/EN badge now shows a \"?\" placeholder (with a tooltip explaining why) before you start typing, instead of sitting blank — browsers don't expose the keyboard's current language to a web page until an actual character is typed, so the badge still can't detect it before that first keystroke, but at least it no longer looks empty/broken while waiting" },
+  { version: "3.0.156", date: "2026-08-12", note: "Fixed the TH/EN badge not updating when switching keyboard language partway through typing the password — it was reading the typed character off the browser's input-event data, which isn't reliably filled in for password fields; it now reads straight from the field's own value instead, which always reflects what was actually typed" },
+  { version: "3.0.157", date: "2026-08-12", note: "Removed the TH/EN keyboard-language badge from the \"Confirm Identity to Edit\" password prompt and replaced it with an eye button inside the field — click it to reveal the password as plain text and read it back before submitting, instead of guessing from a language indicator" },
+  { version: "3.0.158", date: "2026-08-12", note: "Each Process's \"Select a part or ingredient to add\" is now a checklist you can tick multiple items in before clicking \"+ Add\" once to add them all as Components together, instead of only being able to pick and add one at a time" },
+  { version: "3.0.159", date: "2026-08-12", note: "Fixed Printing/PDF showing the live editable Ingredients tree (input boxes, +Add buttons, delete X's, and the connector lines running through them) instead of a clean read-only version — section 2 never had a print-only view like sections 1 and 3 already did, so it printed exactly as it looks on screen while editing. Printing now shows a plain label/%/weight tree, same style as Version History's preview" },
+  { version: "3.0.160", date: "2026-08-12", note: "The read-only Ingredients tree (Printing/PDF and Version Preview) is now a compact table — a Component / % / g header with % and g sitting right next to each other as two tight columns, and indentation standing in for the on-screen tree's connector lines — instead of the roomier card-style layout with \"% of Part\"/\"% of recipe\" repeated on every row" },
+  { version: "3.0.161", date: "2026-08-12", note: "Fixed each ingredient's Note never showing up when printing (or in Version Preview) — the read-only Ingredients tree never had a Note column at all, on-screen table or the new compact one, so a typed-in note silently disappeared the moment you left Edit mode. Added a Note column right after the name, same position as the live editable row" },
+  { version: "3.0.162", date: "2026-08-12", note: "The compact read-only Ingredients table (Printing/PDF and Version Preview) now draws proper tree connector lines (├─ └─ │) in front of each name instead of plain indentation, so the branching is still visible at a glance — a vertical line only continues past a branch if that branch actually has more items below it, so it never dangles past where a Part's contents really end" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3174,9 +3303,7 @@ function requestAuthConfirm(title, message, onSuccess, options = {}){
   document.getElementById('authConfirmMessage').textContent = message;
   document.getElementById('authConfirmForm').reset();
   document.getElementById('authConfirmError').textContent = '';
-  const kbLangBadge = document.getElementById('authConfirmKbLang');
-  kbLangBadge.textContent = '?';
-  kbLangBadge.title = 'Browsers can\'t read the keyboard language before you type — this updates to TH/EN the instant you type the first character';
+  setAuthConfirmPasswordVisible(false);
   pendingAuthCallback = onSuccess;
   pendingRequiredEmail = options.requireEmail || null;
   pendingApproverAction = options.approverAction || null;
@@ -3195,25 +3322,25 @@ function closeAuthConfirm(){
   pendingApproverAction = null;
 }
 
+// Toggles the password field between masked and plain text, so a typo
+// (wrong keyboard language, stray character) can be caught by reading it
+// back before submitting. Always reset to hidden when the modal opens
+// (see requestAuthConfirm) so a revealed password doesn't carry over to
+// the next time it's used.
+function setAuthConfirmPasswordVisible(visible){
+  document.getElementById('authConfirmPassword').type = visible ? 'text' : 'password';
+  const btn = document.getElementById('btnToggleAuthConfirmPassword');
+  btn.innerHTML = icon(visible ? 'eye-off' : 'eye', 16);
+  btn.title = visible ? 'Hide password' : 'Show password';
+}
+
 function initAuthConfirmModal(){
   document.getElementById('btnCloseAuthConfirm').addEventListener('click', closeAuthConfirm);
   document.getElementById('authConfirmModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'authConfirmModalOverlay') closeAuthConfirm();
   });
-
-  // A password field's displayed value is masked, so there's no visual way
-  // to notice the keyboard is on the wrong language before submitting and
-  // getting "Incorrect password". e.data still carries the real character
-  // just typed even though the field shows dots, so a Thai character (Thai
-  // Unicode block) vs. a Latin letter is enough to flag which script is
-  // currently coming through. Backspaces/paste/etc. (e.data null or mixed)
-  // just leave the last-known badge as-is rather than guessing.
-  document.getElementById('authConfirmPassword').addEventListener('input', e => {
-    const ch = e.data;
-    if(!ch) return;
-    const badge = document.getElementById('authConfirmKbLang');
-    if(/[฀-๿]/.test(ch)){ badge.textContent = 'TH'; badge.title = ''; }
-    else if(/[A-Za-z]/.test(ch)){ badge.textContent = 'EN'; badge.title = ''; }
+  document.getElementById('btnToggleAuthConfirmPassword').addEventListener('click', () => {
+    setAuthConfirmPasswordVisible(document.getElementById('authConfirmPassword').type === 'password');
   });
   document.getElementById('authConfirmForm').addEventListener('submit', e => {
     e.preventDefault();
@@ -7347,6 +7474,8 @@ const LUCIDE_ICONS = {
   'clock': '<circle cx="12" cy="12" r="10" /><path d="M12 6v6l4 2" />',
   'copy': '<rect width="14" height="14" x="8" y="8" rx="2" ry="2" /><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />',
   'download': '<path d="M12 15V3" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><path d="m7 10 5 5 5-5" />',
+  'eye': '<path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0" /><circle cx="12" cy="12" r="3" />',
+  'eye-off': '<path d="M10.733 5.076a10.744 10.744 0 0 1 11.205 6.575 1 1 0 0 1 0 .696 10.747 10.747 0 0 1-1.444 2.49" /><path d="M14.084 14.158a3 3 0 0 1-4.242-4.242" /><path d="M17.479 17.499a10.75 10.75 0 0 1-15.417-5.151 1 1 0 0 1 0-.696 10.75 10.75 0 0 1 4.446-5.143" /><path d="m2 2 20 20" />',
   'file-text': '<path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z" /><path d="M14 2v5a1 1 0 0 0 1 1h5" /><path d="M10 9H8" /><path d="M16 13H8" /><path d="M16 17H8" />',
   'flask-conical': '<path d="M14 2v6a2 2 0 0 0 .245.96l5.51 10.08A2 2 0 0 1 18 22H6a2 2 0 0 1-1.755-2.96l5.51-10.08A2 2 0 0 0 10 8V2" /><path d="M6.453 15h11.094" /><path d="M8.5 2h7" />',
   'folder': '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z" />',
@@ -8031,6 +8160,7 @@ function renderMain(){
 
     <div class="card">
       <div class="card-title">2. Ingredients, Percentage & Weight</div>
+      <div class="ingredients-edit-view">
       <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
       <div class="batch-summary">
         <div>
@@ -8068,6 +8198,8 @@ function renderMain(){
         <div id="partsContainer" class="tree-children"></div>
         <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
       </div>
+      </div>
+      <div id="printIngredientTree" class="print-only"></div>
 
       <div class="overview-block">
         <div class="overview-title">Recipe Overview (all parts combined)</div>
@@ -9166,7 +9298,10 @@ function renderProcesses(r){
       <div class="process-components">
         <div class="process-components-title">Components</div>
         <div class="process-comp-add-row">
-          <select class="process-comp-select"></select>
+          <div class="comp-multiselect">
+            <button type="button" class="comp-multiselect-toggle">— Select parts/ingredients to add —</button>
+            <div class="comp-multiselect-panel"></div>
+          </div>
           <button class="btn btn-sm" type="button" data-role="add-component">+ Add</button>
         </div>
         <div style="overflow-x:auto;">
@@ -9262,27 +9397,69 @@ function renderProcesses(r){
     //     it's always auto-computed from this table's own weights, so the
     //     components in a process always sum to 100%. ---
     if(!Array.isArray(proc.components)) proc.components = [];
-    const compSelect = block.querySelector('.process-comp-select');
+    const compToggle = block.querySelector('.comp-multiselect-toggle');
+    const compPanel = block.querySelector('.comp-multiselect-panel');
     const compBody = block.querySelector('.process-comp-table tbody');
     const compFoot = block.querySelector('.process-comp-table tfoot');
     const totalWtEl = block.querySelector('.process-comp-total-wt');
     const totalPctEl = block.querySelector('.process-comp-total-pct');
 
     // Flat index into these two arrays (not a "partIdx.ingredientIdx" path)
-    // is what lets the dropdown address a Part or ingredient at ANY nesting
-    // depth — see collectPartsFlat/collectIngredientsFlat. Recomputed fresh
-    // on every render, and the "Add" handler below re-derives the exact
-    // same two arrays, so the flat index it reads back always lines up
-    // with what's currently in the dropdown.
+    // is what lets the checklist address a Part or ingredient at ANY
+    // nesting depth — see collectPartsFlat/collectIngredientsFlat.
+    // Recomputed fresh on every render, and the "Add" handler below
+    // re-derives the exact same two arrays, so the flat index it reads
+    // back always lines up with what's currently checked.
     const flatParts = collectPartsFlat(r.parts, '');
     const flatIngredients = collectIngredientsFlat(r.parts, '');
-    const partOptions = flatParts.map((entry, idx) => `<option value="part:${idx}">Part: ${escapeHtml(entry.label)}</option>`).join('');
-    const ingOptions = flatIngredients.map((entry, idx) => `<option value="ing:${idx}">Ingredient: ${escapeHtml(entry.label)}</option>`).join('');
-    compSelect.innerHTML = `
-      <option value="">— Select a part or ingredient to add —</option>
-      ${partOptions ? `<optgroup label="Parts">${partOptions}</optgroup>` : ''}
-      ${ingOptions ? `<optgroup label="Ingredients">${ingOptions}</optgroup>` : ''}
-    `;
+
+    // Several items can be checked off before a single "+ Add" snapshots
+    // all of them at once — cleared after every Add (and whenever the
+    // process list re-renders) rather than persisted, since it's just a
+    // staging pick-list, not part of the recipe data itself.
+    const selectedKeys = new Set();
+
+    function updateToggleLabel(){
+      const n = selectedKeys.size;
+      compToggle.textContent = n === 0 ? '— Select parts/ingredients to add —' : `${n} selected`;
+      compToggle.classList.toggle('has-selection', n > 0);
+    }
+
+    function itemRow(value, label){
+      return `
+        <label class="comp-multiselect-item">
+          <input type="checkbox" value="${escapeHtml(value)}">
+          <span>${escapeHtml(label)}</span>
+        </label>
+      `;
+    }
+    const partItems = flatParts.map((entry, idx) => itemRow(`part:${idx}`, entry.label)).join('');
+    const ingItems = flatIngredients.map((entry, idx) => itemRow(`ing:${idx}`, entry.label)).join('');
+    compPanel.innerHTML = (partItems || ingItems) ? `
+      ${partItems ? `<div class="comp-multiselect-group-label">Parts</div>${partItems}` : ''}
+      ${ingItems ? `<div class="comp-multiselect-group-label">Ingredients</div>${ingItems}` : ''}
+    ` : '<div class="comp-multiselect-empty">Nothing to add yet</div>';
+
+    compPanel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = selectedKeys.has(cb.value);
+      cb.addEventListener('change', () => {
+        if(cb.checked) selectedKeys.add(cb.value); else selectedKeys.delete(cb.value);
+        updateToggleLabel();
+      });
+    });
+
+    compToggle.addEventListener('click', () => {
+      compPanel.classList.toggle('open');
+    });
+    // Closes the panel once focus moves somewhere outside this widget —
+    // a listener scoped to the widget itself (via focusout's bubbling +
+    // relatedTarget) rather than a document-level one, so it doesn't need
+    // manual cleanup and can't pile up across the repeated re-renders
+    // renderProcesses() goes through on every edit.
+    block.querySelector('.comp-multiselect').addEventListener('focusout', e => {
+      if(e.currentTarget.contains(e.relatedTarget)) return;
+      compPanel.classList.remove('open');
+    });
 
     function renderComponentRows(){
       compBody.innerHTML = '';
@@ -9352,23 +9529,27 @@ function renderProcesses(r){
     renderComponentRows();
 
     block.querySelector('[data-role="add-component"]').addEventListener('click', () => {
-      const val = compSelect.value;
-      if(!val) return;
-      const [kind, a] = val.split(':');
-      let name, weight;
-      if(kind === 'part'){
-        const entry = flatParts[+a];
-        if(!entry) return;
-        name = entry.part.name || 'Untitled part';
-        weight = partTotalWeight(entry.part);
-      } else {
-        const entry = flatIngredients[+a];
-        if(!entry) return;
-        name = entry.ing.name;
-        weight = parseFloat(entry.ing.weight) || 0;
-      }
-      proc.components.push({ name, weight: round2(weight), tolerance: 0, percent: 0 });
-      compSelect.value = '';
+      if(selectedKeys.size === 0) return;
+      selectedKeys.forEach(val => {
+        const [kind, a] = val.split(':');
+        let name, weight;
+        if(kind === 'part'){
+          const entry = flatParts[+a];
+          if(!entry) return;
+          name = entry.part.name || 'Untitled part';
+          weight = partTotalWeight(entry.part);
+        } else {
+          const entry = flatIngredients[+a];
+          if(!entry) return;
+          name = entry.ing.name;
+          weight = parseFloat(entry.ing.weight) || 0;
+        }
+        proc.components.push({ name, weight: round2(weight), tolerance: 0, percent: 0 });
+      });
+      selectedKeys.clear();
+      compPanel.querySelectorAll('input[type=checkbox]').forEach(cb => { cb.checked = false; });
+      updateToggleLabel();
+      compPanel.classList.remove('open');
       renderComponentRows();
       scheduleSave();
     });
@@ -9482,61 +9663,100 @@ function readOnlyProcessesHtml(processes){
   }).join('');
 }
 
-// Shared by the Version Preview modal — the same Parts -> Sub-parts ->
-// Ingredients tree as the live editable form (see renderParts/
-// renderPartNode), but plain label/%/weight text instead of inputs, since
-// a version snapshot is never edited in place. Recursive so nested
-// Sub-parts show up too, not just each top-level Part's direct ingredients.
+// Shared by the Version Preview modal and Printing — the same Parts ->
+// Sub-parts -> Ingredients hierarchy as the live editable form (see
+// renderParts/renderPartNode), but as a compact read-only table (name,
+// prefixed with box-drawing tree-connector characters, plus %/g as two
+// neighboring columns) instead of the on-screen card layout — dense enough
+// that a deep recipe still fits on a printed page or in the preview modal,
+// while still visually reading as a tree the way the on-screen elbow-line
+// artwork does. Recursive so nested Sub-parts show up too, not just each
+// top-level Part's direct ingredients.
 function readOnlyIngredientTreeHtml(parts, totalWeight){
   const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
   if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
+  const rootRow = `
+    <tr class="ro-tree-row ro-tree-root">
+      <td class="ro-tree-name">Formula per Portion</td>
+      <td class="ro-tree-note"></td>
+      <td class="ro-tree-pct">100.00%</td>
+      <td class="ro-tree-wt">${fmtNum(totalWeight)}</td>
+    </tr>
+  `;
+  const bodyRows = namedParts.map((part, idx) =>
+    readOnlyPartBranchRows(part, false, totalWeight, [], idx === namedParts.length - 1)
+  ).join('');
   return `
-    <div class="ingredient-tree">
-      <div class="tree-node tree-root-node">
-        <span class="tree-node-label">Formula per Portion</span>
-        <span class="tree-node-pct">100.00%</span>
-        <span class="tree-node-wt">${formatWeight(totalWeight)}</span>
-      </div>
-      <div class="tree-children">${namedParts.map(part => readOnlyPartBranchHtml(part, false, totalWeight)).join('')}</div>
-    </div>
+    <table class="ro-tree-table">
+      <thead><tr><th class="ro-tree-name">Component</th><th class="ro-tree-note">Note</th><th class="ro-tree-pct">%</th><th class="ro-tree-wt">g</th></tr></thead>
+      <tbody>${rootRow}${bodyRows}</tbody>
+    </table>
   `;
 }
 
-// One Part's branch (label/%/weight) plus, recursively, a branch for every
-// named ingredient AND every Sub-part nested inside it. `parentTotal` is
-// the immediate parent's own total weight (the recipe root's total for a
-// top-level Part, or the containing Part's total for a nested Sub-part) —
-// % is always computed fresh from the actual weights rather than trusting
-// a stored .percent, since older versions saved before Sub-parts existed
-// never had one on their Part objects. isNested only controls the
-// "% of ..." wording (matches the live editor: top-level Parts read
-// "% of recipe", nested Sub-parts read "% of Part").
-function readOnlyPartBranchHtml(part, isNested, parentTotal){
+// Plain number, no unit suffix — the table's own "g" column header carries
+// the unit once instead of repeating it on every row (see formatWeight,
+// which is used everywhere else that a weight stands alone).
+function fmtNum(n){
+  return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
+// Box-drawing tree connector for one row: one "│  "/"   " segment per
+// ancestor level (drawn only when that ancestor still has more siblings
+// below it, so the vertical line doesn't dangle past where a branch
+// actually ends), then this row's own "├─ " (more siblings follow) or
+// "└─ " (last child at this level) elbow.
+function treeGuideHtml(ancestorContinues, isLast){
+  const guide = ancestorContinues.map(cont => cont ? '│  ' : '   ').join('') + (isLast ? '└─ ' : '├─ ');
+  return `<span class="ro-tree-guide">${guide}</span>`;
+}
+
+// One Part's row (name/%/weight) plus, recursively, a row for every named
+// ingredient AND every Sub-part nested inside it, all as siblings in the
+// same table, ingredients first then Sub-parts (matching the on-screen
+// order) so "last child at this level" — and therefore whether this
+// branch's own connector lines keep running down past it — is computed
+// against that combined, correctly-ordered list. `ancestorContinues` is
+// one boolean per ancestor level, carried down and extended by each level
+// as it recurses; `isLast` says whether THIS node is the last among its
+// own siblings. `parentTotal` is the immediate parent's own total weight
+// (the recipe root's total for a top-level Part, or the containing Part's
+// total for a nested Sub-part) — % is always computed fresh from the
+// actual weights rather than trusting a stored .percent, since older
+// versions saved before Sub-parts existed never had one on their Part
+// objects.
+function readOnlyPartBranchRows(part, isNested, parentTotal, ancestorContinues, isLast){
   const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
   const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
   const label = (part.name||'').trim() || 'Unnamed part';
   const partWeight = partTotalWeight(part);
   const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
-  const leavesHtml = namedIngredients.map(ing => `
-    <div class="tree-branch">
-      <div class="tree-node tree-ing-node">
-        <span class="tree-node-label">${escapeHtml(ing.name)}</span>
-        <span class="tree-node-pct">${(parseFloat(ing.percent)||0).toFixed(2)}% of part</span>
-        <span class="tree-node-wt">${formatWeight(parseFloat(ing.weight)||0)}</span>
-      </div>
-    </div>
-  `).join('');
-  const subPartsHtml = namedSubParts.map(sub => readOnlyPartBranchHtml(sub, true, partWeight)).join('');
-  return `
-    <div class="tree-branch">
-      <div class="tree-node tree-part-node">
-        <span class="tree-node-label">${escapeHtml(label)}</span>
-        <span class="tree-node-pct">${partPct.toFixed(2)}% of ${isNested ? 'Part' : 'recipe'}</span>
-        <span class="tree-node-wt">${formatWeight(partWeight)}</span>
-      </div>
-      <div class="tree-children">${leavesHtml}${subPartsHtml}</div>
-    </div>
+  const partRow = `
+    <tr class="ro-tree-row ro-tree-part">
+      <td class="ro-tree-name">${treeGuideHtml(ancestorContinues, isLast)}${escapeHtml(label)}</td>
+      <td class="ro-tree-note"></td>
+      <td class="ro-tree-pct">${partPct.toFixed(2)}%</td>
+      <td class="ro-tree-wt">${fmtNum(partWeight)}</td>
+    </tr>
   `;
+  const childAncestorContinues = [...ancestorContinues, !isLast];
+  const childCount = namedIngredients.length + namedSubParts.length;
+  const ingRows = namedIngredients.map((ing, idx) => {
+    const childIsLast = idx === childCount - 1;
+    return `
+      <tr class="ro-tree-row ro-tree-ing">
+        <td class="ro-tree-name">${treeGuideHtml(childAncestorContinues, childIsLast)}${escapeHtml(ing.name)}</td>
+        <td class="ro-tree-note">${escapeHtml(ing.note || '')}</td>
+        <td class="ro-tree-pct">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
+        <td class="ro-tree-wt">${fmtNum(parseFloat(ing.weight)||0)}</td>
+      </tr>
+    `;
+  }).join('');
+  const subRows = namedSubParts.map((sub, idx) => {
+    const childIsLast = namedIngredients.length + idx === childCount - 1;
+    return readOnlyPartBranchRows(sub, true, partWeight, childAncestorContinues, childIsLast);
+  }).join('');
+  return partRow + ingRows + subRows;
 }
 
 /* Read-only print layout for section 1 (info card) and section 3 (process
@@ -9557,6 +9777,12 @@ function renderPrintView(r){
       ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
       ${descriptionListHtml(r)}
     `;
+  }
+
+  const treeEl = document.getElementById('printIngredientTree');
+  if(treeEl){
+    const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    treeEl.innerHTML = readOnlyIngredientTreeHtml(r.parts, totalWt);
   }
 
   const procEl = document.getElementById('printProcessesView');
