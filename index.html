@@ -2491,20 +2491,9 @@
     margin-bottom:10px;
   }
   /* Cancelled projects get a neutral grey ring — every other status (including
-     Completed) glows in its real status color, see projectPhotoStatusColor. */
-  .proj-gallery{
-    background:var(--panel);
-    border-radius:var(--radius);
-    box-shadow:var(--shadow);
-    padding:16px 20px;
-    margin-bottom:20px;
-  }
-  .proj-gallery-title{
-    font-size:13px;
-    font-weight:700;
-    color:var(--primary-dark);
-    margin-bottom:10px;
-  }
+     Completed) glows in its real status color, see projectPhotoStatusColor.
+     Each status's photo strip sits above that status's own bar inside
+     "Projects by Status" — see .dash-status-group below. */
   .proj-gallery-grid{
     display:flex;
     flex-wrap:wrap;
@@ -2539,8 +2528,12 @@
     text-overflow:ellipsis;
     max-width:100%;
   }
-  .dash-bar-item{margin-bottom:8px;}
+  .dash-bar-item{display:block;width:100%;margin-bottom:8px;background:none;border:none;padding:0;font:inherit;text-align:left;color:inherit;}
   .dash-bar-item:last-child{margin-bottom:0;}
+  .dash-bar-item-clickable{cursor:pointer;}
+  .dash-bar-item-clickable:hover .dash-bar-label-row span:first-child{color:var(--primary);text-decoration:underline;}
+  .dash-status-group{margin-bottom:6px;}
+  .dash-status-group:last-child{margin-bottom:0;}
   .dash-bar-label-row{
     display:flex;
     justify-content:space-between;
@@ -2593,6 +2586,50 @@
   .dash-activity-sub{font-size:11px;color:var(--text-dim);margin-top:2px;}
   .dash-activity-time{font-size:11px;color:var(--text-dim);white-space:nowrap;flex-shrink:0;}
   .dash-empty{font-size:12px;color:var(--text-dim);padding:6px 0;}
+
+  /* Project Timeline (Gantt chart) — a fixed, non-scrolling label column
+     next to a horizontally-scrollable timeline. Both columns share the same
+     per-row height (ROW_H in renderProjectGanttChart) so bars line up with
+     their labels; the chart only ever grows taller with more projects
+     (no vertical clipping), matching how the projects table below it also
+     just grows with the page instead of living in its own scroll box. */
+  .gantt-body{display:flex;gap:14px;}
+  .gantt-labels{flex-shrink:0;width:180px;}
+  .gantt-labels-header{height:22px;margin-bottom:6px;border-bottom:1px solid var(--border);}
+  .gantt-label-row{
+    display:flex;
+    align-items:center;
+    font-size:12px;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    cursor:pointer;
+    border-bottom:1px solid var(--border);
+  }
+  .gantt-label-row:hover{color:var(--primary);}
+  .gantt-scroll{flex:1;min-width:0;overflow-x:auto;}
+  .gantt-timeline{position:relative;}
+  .gantt-timeline-header{position:relative;height:22px;margin-bottom:6px;border-bottom:1px solid var(--border);}
+  .gantt-month-label{
+    position:absolute;
+    top:0;
+    padding-left:4px;
+    border-left:1px solid var(--border);
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .gantt-timeline-body{position:relative;}
+  .gantt-gridline{position:absolute;top:0;bottom:0;width:1px;background:var(--border);opacity:.6;}
+  .gantt-today-line{position:absolute;top:0;bottom:0;width:2px;background:var(--danger);z-index:1;}
+  .gantt-bar{
+    position:absolute;
+    height:20px;
+    border-radius:4px;
+    cursor:pointer;
+    z-index:2;
+  }
+  .gantt-bar:hover{filter:brightness(.9);}
 
   /* ---------- Home dashboard v2: greeting / search / stats / action list ---------- */
   .hd2-greeting{margin-bottom:16px;}
@@ -2664,8 +2701,23 @@
   .task-tracking-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
   .task-tracking-col-title{font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;}
   .task-tracking-col-title .dbl-count{color:var(--text-dim);font-weight:600;text-transform:none;letter-spacing:normal;}
-  .task-tracking-row{display:block;width:100%;text-align:left;background:none;border:none;padding:8px 0;cursor:pointer;}
+  .task-tracking-row{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:none;padding:8px 0;cursor:pointer;}
   .task-tracking-row + .task-tracking-row{border-top:1px solid var(--border);}
+  .task-tracking-thumb{
+    width:28px;
+    height:28px;
+    border-radius:6px;
+    object-fit:cover;
+    flex-shrink:0;
+    background:var(--bg);
+  }
+  .task-tracking-thumb-empty{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    color:var(--text-dim);
+  }
+  .task-tracking-body{min-width:0;flex:1;}
   .task-tracking-text{font-size:13px;font-weight:600;color:var(--text);}
   .task-tracking-meta{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);margin-top:2px;}
   @media (max-width:900px){
@@ -2850,7 +2902,7 @@
     .dash-projects-table{min-width:720px;}
     .card > div:has(> .search-box > #projectSearchInput){flex-wrap:wrap;gap:8px !important;}
     .search-box:has(> #projectSearchInput){flex:1 1 100% !important;width:100%;}
-    #projectStatusFilter{flex:1 1 100%;width:100%;max-width:none !important;}
+    #projectStatusFilter, #projectOwnerFilter, #projectFactoryRepFilter, #projectResponsibleFilter{flex:1 1 100%;width:100%;max-width:none !important;}
     .pipeline-funnel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
     .pipeline-step{min-width:0;padding:10px 8px;}
     .pipeline-chevron{display:none;}
@@ -3446,7 +3498,12 @@ const CHANGELOG = [
   { version: "3.0.180", date: "2026-08-17", note: "The Save/Duplicate/Cancel toolbar above a project's detail form is now right-aligned instead of flush left" },
   { version: "3.0.181", date: "2026-08-17", note: "Fixed the Flavor / Filling table's rows overlapping/stacking on top of each other — switched it to a fixed table layout with explicit column widths instead of letting the browser recalculate column sizing from every cell's content (inputs, multi-option selects), which is a much more predictable, deterministic way to lay out a row of form controls" },
   { version: "3.0.182", date: "2026-08-17", note: "Added a \"Units\" tab to Reference Lists — every unit dropdown that used to be a fixed list (Portion Weight, Inner/Outer Packing, MOQ, Flavor Per-unit, in both New Project and Edit) now types in from this same shared, editable list instead, so a unit that isn't offered yet can just be added once in Reference Lists instead of being stuck. Seeded automatically with the same units these fields already offered (g, kg, ml, L, oz, lb, pcs, pack, bag, box, sachet, pouch, tray, carton, case) so nothing changes until you add more" },
-  { version: "3.0.183", date: "2026-08-17", note: "Found the real cause of the Flavor / Filling table's header floating over the wrong row (and a row appearing to go missing in Preview) — the projects list's own sticky-header styling was leaking onto this nested table's header too, since it's just a descendant CSS selector that doesn't stop at table boundaries, pinning it to a fixed scroll position instead of letting it sit above row one. The v3.0.181 table-layout change stays (it's a genuine improvement), but this is the fix that actually resolves the floating/overlapping header" }
+  { version: "3.0.183", date: "2026-08-17", note: "Found the real cause of the Flavor / Filling table's header floating over the wrong row (and a row appearing to go missing in Preview) — the projects list's own sticky-header styling was leaking onto this nested table's header too, since it's just a descendant CSS selector that doesn't stop at table boundaries, pinning it to a fixed scroll position instead of letting it sit above row one. The v3.0.181 table-layout change stays (it's a genuine improvement), but this is the fix that actually resolves the floating/overlapping header" },
+  { version: "3.0.184", date: "2026-08-17", note: "Added a Project Timeline (Gantt chart) to the Projects dashboard — one horizontal bar per project running from its new Start Date to Target/End Date, colored by status, with month gridlines and a today marker. Projects now capture Start Date and Target/End Date (next to Request Date, in New Project, Edit, and the read-only project summary); a project only appears on the chart once both are filled in. Click a bar or its label to jump to that project below" },
+  { version: "3.0.185", date: "2026-08-17", note: "Task Tracking on the Home dashboard now shows each task's project photo as a small thumbnail in front of it (a plain folder icon when the project has no photo), matching the Active Projects table's use of project photos elsewhere" },
+  { version: "3.0.186", date: "2026-08-17", note: "Projects table now has 3 more filters next to Status — Owner, Factory Rep, and PD — so you can narrow the list down to only the projects a specific person handles (e.g. \"which projects is Bas the owner of\"). Each dropdown only lists names currently assigned to at least one project" },
+  { version: "3.0.187", date: "2026-08-17", note: "\"Projects by Status\" on the Projects dashboard is now clickable — click any status row (e.g. \"In Progress\") to filter the table below to just that status, same as picking it from the Status dropdown, and jump straight down to it" },
+  { version: "3.0.188", date: "2026-08-17", note: "Moved the Project Photos gallery — it no longer sits as its own strip above \"Projects by Status\"; each status's photos now show directly above that status's own bar inside the card instead, so the photos and the numbers they belong to stay together" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4394,6 +4451,8 @@ function blankProject(){
     image: "",
     status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
+    startDate: "",
+    targetEndDate: "",
     customerName: "",
     destinationCountry: "",
     ownerSalesRep: "",
@@ -4475,6 +4534,8 @@ function duplicateProject(p){
     name: (p.name || 'Untitled project').trim() + ' (Copy)',
     status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
+    startDate: "",
+    targetEndDate: "",
     monthlyUpdates: [],
     products: (p.products || []).map(prod => ({
       id: uid(),
@@ -4976,19 +5037,27 @@ function mountProjectsView(){
     <div class="main-header">
       <div class="section-title-display">${icon('folder', 24)} Projects</div>
     </div>
-    <div id="projectGallery"></div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
       <div id="newProjectPanel"></div>
       <div id="projectsDashboard"></div>
-      <div style="display:flex;gap:12px;margin-bottom:16px;">
-        <div class="search-box" style="margin:0;flex:1;position:relative;">
+      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+        <div class="search-box" style="margin:0;flex:1;min-width:200px;position:relative;">
           <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
           <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
         </div>
         <select class="proj-select" id="projectStatusFilter" style="max-width:200px;">
           <option value="all">All statuses</option>
           ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
+        </select>
+        <select class="proj-select" id="projectOwnerFilter" style="max-width:200px;">
+          <option value="all">All owners</option>
+        </select>
+        <select class="proj-select" id="projectFactoryRepFilter" style="max-width:200px;">
+          <option value="all">All factory reps</option>
+        </select>
+        <select class="proj-select" id="projectResponsibleFilter" style="max-width:200px;">
+          <option value="all">All PD</option>
         </select>
       </div>
       <div id="projectsList"></div>
@@ -5023,6 +5092,18 @@ function mountProjectsView(){
     projectStatusFilter = statusFilterEl.value;
     renderProjectsList();
   });
+  document.getElementById('projectOwnerFilter').addEventListener('change', e => {
+    projectOwnerFilter = e.target.value;
+    renderProjectsList();
+  });
+  document.getElementById('projectFactoryRepFilter').addEventListener('change', e => {
+    projectFactoryRepFilter = e.target.value;
+    renderProjectsList();
+  });
+  document.getElementById('projectResponsibleFilter').addEventListener('change', e => {
+    projectResponsibleFilter = e.target.value;
+    renderProjectsList();
+  });
 
   renderProjectsList();
 }
@@ -5035,6 +5116,9 @@ let editingProjectImage = ''; // staged photo as a data URL for whichever projec
 let newProjectOpen = false; // whether the "+ New Project" entry panel is showing, below the button
 let newProjectImage = ''; // staged photo as a data URL for the not-yet-saved new-project draft
 let projectStatusFilter = 'all';
+let projectOwnerFilter = 'all';
+let projectFactoryRepFilter = 'all';
+let projectResponsibleFilter = 'all';
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -5109,6 +5193,14 @@ function renderNewProjectPanel(){
         <div class="field" style="margin-bottom:0;">
           <label>Request Date</label>
           <input type="date" id="newProjRequestDate" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Start Date</label>
+          <input type="date" id="newProjStartDate">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Target / End Date</label>
+          <input type="date" id="newProjTargetEndDate">
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Customer Name</label>
@@ -5226,6 +5318,8 @@ function renderNewProjectPanel(){
     p.image = newProjectImage;
     p.status = document.getElementById('newProjStatus').value;
     p.requestDate = document.getElementById('newProjRequestDate').value;
+    p.startDate = document.getElementById('newProjStartDate').value;
+    p.targetEndDate = document.getElementById('newProjTargetEndDate').value;
     p.customerName = document.getElementById('newProjCustomer').value.trim();
     p.destinationCountry = document.getElementById('newProjDestination').value.trim();
     p.ownerSalesRep = document.getElementById('newProjOwner').value.trim();
@@ -5255,36 +5349,13 @@ function renderNewProjectPanel(){
   });
 }
 
-// A quick-glance photo strip under the page heading — every project that
-// has a photo, ringed in its status color (grey once Completed/Cancelled)
-// so it's obvious at a glance which are still open. Always reflects ALL
-// projects, same as the dashboard cards above the table (not the search
-// filter). Clicking a photo expands and scrolls to that project below.
-function renderProjectGallery(){
-  const gallery = document.getElementById('projectGallery');
-  if(!gallery) return;
-  const withPhotos = projects.filter(p => p.image).sort((a, b) => {
-    const diff = PROJECT_STATUSES.indexOf(a.status || PROJECT_STATUSES[0]) - PROJECT_STATUSES.indexOf(b.status || PROJECT_STATUSES[0]);
-    return diff !== 0 ? diff : (a.name || '').localeCompare(b.name || '');
-  });
-  if(withPhotos.length === 0){
-    gallery.innerHTML = '';
-    return;
-  }
-  gallery.innerHTML = `
-    <div class="proj-gallery">
-      <div class="proj-gallery-title">Project Photos</div>
-      <div class="proj-gallery-grid">
-        ${withPhotos.map(p => `
-          <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')} — ${escapeHtml(p.status || PROJECT_STATUSES[0])}">
-            <img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 8px ${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">
-            <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
-          </button>
-        `).join('')}
-      </div>
-    </div>
-  `;
-  gallery.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
+// Wires up a click handler shared by both kinds of clickable element inside
+// the "Projects by Status" card: a project's own photo (jump to + expand
+// that one project) and a status bar/row (filter the table to that status).
+// Called once after every dashboardContainer rebuild, same as the Gantt
+// chart's own click wiring right above it.
+function wireProjectsByStatusCardClicks(dashboardContainer){
+  dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.galleryProjectId;
       projectExpandedIds.add(id);
@@ -5292,13 +5363,128 @@ function renderProjectGallery(){
       document.querySelector(`tbody[data-project-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
     });
   });
+  dashboardContainer.querySelectorAll('[data-status-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      projectStatusFilter = btn.dataset.statusFilter;
+      const statusFilterEl = document.getElementById('projectStatusFilter');
+      if(statusFilterEl) statusFilterEl.value = projectStatusFilter;
+      renderProjectsList();
+      document.getElementById('projectsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
+
+// A horizontal timeline bar per project running from Start Date to Target/
+// End Date, colored by status (same palette as the photo gallery ring).
+// Always reflects ALL projects (not the search/status filter), same as the
+// rest of the dashboard summary above the table. Projects missing either
+// date are simply left off the chart — there's no meaningful bar to draw
+// for them, and forcing a fallback (e.g. Request Date as a stand-in) would
+// misrepresent a project that was never actually scheduled.
+function renderProjectGanttChart(){
+  const container = document.getElementById('projectGanttChart');
+  if(!container) return;
+  const withDates = projects
+    .filter(p => p.startDate && p.targetEndDate)
+    .sort((a, b) => a.startDate.localeCompare(b.startDate));
+  if(!withDates.length){
+    container.innerHTML = `
+      <div class="dash-card-title">Project Timeline</div>
+      <div class="dash-empty">No projects have both a Start Date and Target/End Date yet — add them in a project's details to see the Gantt chart here</div>
+    `;
+    return;
+  }
+
+  const DAY = 86400000;
+  const PX_PER_DAY = 8;
+  const ROW_H = 30;
+  const toTime = s => new Date(s + 'T00:00:00').getTime();
+  const minStart = Math.min(...withDates.map(p => toTime(p.startDate)));
+  const maxEnd = Math.max(...withDates.map(p => toTime(p.targetEndDate)));
+  // Pad both ends by a few days so the first/last bar isn't flush against
+  // the chart edge, and guard a tiny (or single-project, same-day) range
+  // from producing a near-zero-width timeline.
+  const rangeStart = minStart - 3 * DAY;
+  const rangeEnd = Math.max(maxEnd + 3 * DAY, rangeStart + 14 * DAY);
+  const totalDays = Math.ceil((rangeEnd - rangeStart) / DAY);
+  const timelineWidth = totalDays * PX_PER_DAY;
+  const xOf = t => Math.round((t - rangeStart) / DAY * PX_PER_DAY);
+
+  // Month tick marks across the padded range, snapped to the 1st of each
+  // month so labels land on a predictable, evenly-spaced grid.
+  const months = [];
+  const cursor = new Date(rangeStart);
+  cursor.setDate(1);
+  cursor.setHours(0, 0, 0, 0);
+  while(cursor.getTime() <= rangeEnd){
+    months.push(new Date(cursor.getTime()));
+    cursor.setMonth(cursor.getMonth() + 1);
+  }
+
+  const now = Date.now();
+  const showToday = now >= rangeStart && now <= rangeEnd;
+  const gridlinesHtml = months.map(m => `<div class="gantt-gridline" style="left:${xOf(m.getTime())}px"></div>`).join('')
+    + (showToday ? `<div class="gantt-today-line" style="left:${xOf(now)}px" title="Today"></div>` : '');
+  const monthLabelsHtml = months.map(m => `<div class="gantt-month-label" style="left:${xOf(m.getTime())}px">${escapeHtml(m.toLocaleDateString('en-US', { month: 'short', year: '2-digit' }))}</div>`).join('');
+
+  const barsHtml = withDates.map((p, i) => {
+    const left = xOf(toTime(p.startDate));
+    const width = Math.max(4, xOf(toTime(p.targetEndDate)) - left);
+    const color = projectPhotoStatusColor(p.status);
+    const name = p.name || 'Untitled project';
+    return `<div class="gantt-bar" data-gantt-project-id="${escapeHtml(p.id)}" style="top:${i * ROW_H + 5}px;left:${left}px;width:${width}px;background:${color};" title="${escapeHtml(name)} — ${escapeHtml(p.startDate)} → ${escapeHtml(p.targetEndDate)}"></div>`;
+  }).join('');
+  const labelsHtml = withDates.map(p => `<div class="gantt-label-row" data-gantt-project-id="${escapeHtml(p.id)}" style="height:${ROW_H}px;" title="${escapeHtml(p.name || 'Untitled project')}">${escapeHtml(p.name || 'Untitled project')}</div>`).join('');
+
+  container.innerHTML = `
+    <div class="dash-card-title">Project Timeline</div>
+    <div class="gantt-body">
+      <div class="gantt-labels">
+        <div class="gantt-labels-header"></div>
+        ${labelsHtml}
+      </div>
+      <div class="gantt-scroll">
+        <div class="gantt-timeline" style="width:${timelineWidth}px;">
+          <div class="gantt-timeline-header">${monthLabelsHtml}</div>
+          <div class="gantt-timeline-body" style="height:${withDates.length * ROW_H}px;">
+            ${gridlinesHtml}
+            ${barsHtml}
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  container.querySelectorAll('[data-gantt-project-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const id = el.dataset.ganttProjectId;
+      projectExpandedIds.add(id);
+      renderProjectsList();
+      document.querySelector(`tbody[data-project-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    });
+  });
+}
+
+// Rebuilds a person-filter <select>'s options from whichever names are
+// currently assigned to at least one project for the given field, keeping
+// the previously selected value if it's still valid (or falling back to
+// "all" otherwise). Returns the resolved value so the caller can write it
+// straight back to its module-level filter variable.
+function syncProjectFilterOptions(selectId, allLabel, fieldName, currentValue){
+  const el = document.getElementById(selectId);
+  if(!el) return currentValue;
+  const names = Array.from(new Set(projects.map(p => (p[fieldName] || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
+  const resolved = names.includes(currentValue) ? currentValue : 'all';
+  el.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>`
+    + names.map(n => `<option value="${escapeHtml(n)}" ${n === resolved ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
+  el.value = resolved;
+  return resolved;
 }
 
 function renderProjectsList(){
   const container = document.getElementById('projectsList');
   const dashboardContainer = document.getElementById('projectsDashboard');
   if(!container) return;
-  renderProjectGallery();
   if(projects.length === 0){
     if(dashboardContainer) dashboardContainer.innerHTML = '';
     container.innerHTML = '<div class="overview-empty">No projects yet — click "+ New Project" above to start one</div>';
@@ -5320,7 +5506,18 @@ function renderProjectsList(){
     return haystack.includes(searchQuery);
   };
   const matchesStatus = p => projectStatusFilter === 'all' || (p.status || PROJECT_STATUSES[0]) === projectStatusFilter;
-  const sorted = projects.filter(p => matchesSearch(p) && matchesStatus(p)).sort(compareProjects);
+  // Rebuild each person filter's option list from whoever's actually
+  // assigned to a project right now (not the Reference Lists master list —
+  // a filter offering names with zero matching projects would just be
+  // clutter). If the previously selected name no longer appears anywhere,
+  // fall back to "all" rather than silently showing a stuck, empty table.
+  projectOwnerFilter = syncProjectFilterOptions('projectOwnerFilter', 'All owners', 'ownerSalesRep', projectOwnerFilter);
+  projectFactoryRepFilter = syncProjectFilterOptions('projectFactoryRepFilter', 'All factory reps', 'factorySalesRep', projectFactoryRepFilter);
+  projectResponsibleFilter = syncProjectFilterOptions('projectResponsibleFilter', 'All PD', 'responsiblePerson', projectResponsibleFilter);
+  const matchesOwner = p => projectOwnerFilter === 'all' || (p.ownerSalesRep || '') === projectOwnerFilter;
+  const matchesFactoryRep = p => projectFactoryRepFilter === 'all' || (p.factorySalesRep || '') === projectFactoryRepFilter;
+  const matchesResponsible = p => projectResponsibleFilter === 'all' || (p.responsiblePerson || '') === projectResponsibleFilter;
+  const sorted = projects.filter(p => matchesSearch(p) && matchesStatus(p) && matchesOwner(p) && matchesFactoryRep(p) && matchesResponsible(p)).sort(compareProjects);
 
   // Dashboard summary always reflects ALL projects (not the search filter)
   // — searching narrows the table below, not the overview stats above it.
@@ -5353,12 +5550,15 @@ function renderProjectsList(){
           ${renderBarList(productsByStage)}
         </div>
       </div>
+      <div class="dash-card" style="margin-bottom:16px;" id="projectGanttChart"></div>
     `;
+    renderProjectGanttChart();
+    wireProjectsByStatusCardClicks(dashboardContainer);
   }
 
   if(sorted.length === 0){
     const q = document.getElementById('projectSearchInput').value.trim();
-    const label = q ? `No projects match "${escapeHtml(q)}"` : 'No projects match the selected status filter';
+    const label = q ? `No projects match "${escapeHtml(q)}"` : 'No projects match the selected filters';
     container.innerHTML = `<div class="overview-empty">${label}</div>`;
     return;
   }
@@ -5561,6 +5761,8 @@ function renderProjectsList(){
           ['Formula / Reference No.', p.formulaRefCode],
           ['Status', PROJECT_STATUS_LABELS[p.status] || p.status || PROJECT_STATUSES[0]],
           ['Request Date', p.requestDate],
+          ['Start Date', p.startDate],
+          ['Target / End Date', p.targetEndDate],
           ['Customer Name', p.customerName],
           ['Destination Country', p.destinationCountry],
           ['Project Owner', p.ownerSalesRep],
@@ -5642,6 +5844,14 @@ function renderProjectsList(){
                 <div class="field" style="margin-bottom:0;">
                   <label>Request Date</label>
                   <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Start Date</label>
+                  <input type="date" class="proj-start-date" ${ro} value="${escapeHtml(p.startDate || '')}">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Target / End Date</label>
+                  <input type="date" class="proj-target-end-date" ${ro} value="${escapeHtml(p.targetEndDate || '')}">
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Customer Name</label>
@@ -5871,6 +6081,8 @@ function renderProjectsList(){
         p.image = editingProjectImage;
         p.status = block.querySelector('.proj-status').value;
         p.requestDate = block.querySelector('.proj-request-date').value;
+        p.startDate = block.querySelector('.proj-start-date').value;
+        p.targetEndDate = block.querySelector('.proj-target-end-date').value;
         p.customerName = block.querySelector('.proj-customer').value.trim();
         p.destinationCountry = block.querySelector('.proj-destination').value.trim();
         p.ownerSalesRep = block.querySelector('.proj-owner').value.trim();
@@ -6658,6 +6870,8 @@ function attachProjectsListener(){
       if(!Array.isArray(p.products)) p.products = [];
       p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
       if(p.image === undefined) p.image = '';
+      if(p.startDate === undefined) p.startDate = '';
+      if(p.targetEndDate === undefined) p.targetEndDate = '';
     });
     projectsLoaded = true;
     if(mainFeatureView === 'projects') renderProjectsList();
@@ -8199,16 +8413,36 @@ function renderBarList(groups, altClass){
 // Same layout as renderBarList, but each bar is colored by its own status
 // (via PROJECT_STATUS_BAR) instead of one flat color for every bar — so
 // "Projects by Status" reads the same way the mini status bar under each
-// project's name in the table already does.
+// project's name in the table already does. Every status that has any
+// projects with a photo also gets that photo strip shown directly above
+// its own bar (formerly a single combined gallery above this whole card —
+// moved here so each status's photos sit with that status's own numbers).
+// Both the bar/row and each individual photo are clickable — see
+// wireProjectsByStatusCardClicks, wired once after this HTML is inserted
+// into the dashboard.
 function renderStatusBarList(groups){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
+    const photosForStatus = projects.filter(p => p.image && (p.status || PROJECT_STATUSES[0]) === g.label);
+    const photosHtml = photosForStatus.length ? `
+      <div class="proj-gallery-grid" style="margin-bottom:6px;">
+        ${photosForStatus.map(p => `
+          <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
+            <img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 8px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">
+            <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
+          </button>
+        `).join('')}
+      </div>
+    ` : '';
     return `
-      <div class="dash-bar-item">
-        <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
-        <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${color};"></div></div>
+      <div class="dash-status-group">
+        ${photosHtml}
+        <button type="button" class="dash-bar-item dash-bar-item-clickable" data-status-filter="${escapeHtml(g.label)}" title="Filter the projects table to ${escapeHtml(g.label)}">
+          <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
+          <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${color};"></div></div>
+        </button>
       </div>
     `;
   }).join('');
@@ -8251,7 +8485,7 @@ function computeTaskTracking(){
   projects.forEach(p => {
     (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
       if(monthlyUpdateStatus(mu) !== 'planned' || !mu.date) return;
-      const task = { projectId: p.id, projectName: p.name || 'Untitled project', text: mu.plan || 'Untitled task', date: mu.date };
+      const task = { projectId: p.id, projectName: p.name || 'Untitled project', projectImage: p.image || '', text: mu.plan || 'Untitled task', date: mu.date };
       if(mu.date < todayStr) overdue.push(task);
       else if(mu.date === todayStr) dueToday.push(task);
       else if(mu.date <= soonCutoffStr) dueSoon.push(task);
@@ -8320,8 +8554,13 @@ function renderDashboardHome(){
   const SEVERITY_DOT_COLOR = { high:'var(--danger)', medium:'var(--accent)', low:'var(--text-dim)' };
   const taskRowHtml = t => `
     <div class="task-tracking-row action-go-btn" data-item-type="project" data-item-id="${escapeHtml(t.projectId)}">
-      <div class="task-tracking-text">${escapeHtml(t.text)}</div>
-      <div class="task-tracking-meta">${icon('folder', 12)} ${escapeHtml(t.projectName)} · ${escapeHtml(formatDateLong(t.date))}</div>
+      ${t.projectImage
+        ? `<img class="task-tracking-thumb" src="${escapeHtml(t.projectImage)}" alt="">`
+        : `<span class="task-tracking-thumb task-tracking-thumb-empty">${icon('folder', 14)}</span>`}
+      <div class="task-tracking-body">
+        <div class="task-tracking-text">${escapeHtml(t.text)}</div>
+        <div class="task-tracking-meta">${icon('folder', 12)} ${escapeHtml(t.projectName)} · ${escapeHtml(formatDateLong(t.date))}</div>
+      </div>
     </div>
   `;
   const taskTrackingCols = [
