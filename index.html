@@ -985,6 +985,51 @@
     border-radius:var(--radius);
     overflow-x:auto;
   }
+  /* Section 3's two-column "Ingredient | Process" layout, matching the
+     user's own reference spreadsheet — the ingredient tree on the left,
+     a plain read-only preview of the Process List (see
+     renderSimpleProcessPreview) on the right. Editing the process itself
+     still happens in section 4; this column just mirrors it live. */
+  .components-process-grid{
+    display:grid;
+    grid-template-columns:1fr 1fr;
+    gap:20px;
+    align-items:start;
+  }
+  @media (max-width:900px){
+    .components-process-grid{grid-template-columns:1fr;}
+  }
+  .simple-process-col{
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .simple-process-col-title{
+    font-weight:700;
+    font-size:13px;
+    color:var(--primary-dark);
+    margin-bottom:10px;
+  }
+  .simple-process-block{margin-bottom:18px;}
+  .simple-process-block:last-child{margin-bottom:0;}
+  .simple-process-title{
+    font-weight:700;
+    font-size:13px;
+    color:var(--primary-dark);
+    margin-bottom:6px;
+  }
+  .simple-process-step{
+    font-size:13px;
+    color:var(--text);
+    padding:4px 0;
+  }
+  .simple-process-arrow{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:13px;
+    line-height:1;
+  }
   .tree-node{
     display:flex;
     align-items:baseline;
@@ -1106,6 +1151,17 @@
     white-space:nowrap;
     width:64px;
   }
+  /* Which Process Flowchart node (see readOnlyIngredientTreeHtml) an
+     ingredient links to, e.g. "→A" — omitted entirely when the recipe has
+     no flowchart nodes at all, so this column doesn't exist unless used. */
+  .ro-tree-nodecol{
+    text-align:center;
+    white-space:nowrap;
+    width:44px;
+    font-family:'Courier New', Courier, monospace;
+    color:var(--primary-dark);
+    font-weight:700;
+  }
   th.ro-tree-name, th.ro-tree-note{padding-left:8px;}
   .ro-tree-root td{
     font-weight:800;
@@ -1127,15 +1183,25 @@
   .ing-edit-row{
     align-items:center;
     flex-wrap:wrap;
+    gap:6px;
   }
+  /* Section 3's new two-column layout roughly halves how much width an
+     ingredient row actually gets, so these are deliberately tighter than
+     a plain single-column page would need — the goal is fitting Name/
+     Note/%/Weight on one line without wrapping, not maximum readability
+     in isolation. */
   .ing-edit-row .ing-name-wrap{
-    flex:2 1 160px;
-    min-width:120px;
+    flex:2 1 110px;
+    min-width:90px;
     position:relative;
   }
   .ing-edit-row .ing-note{
-    flex:1 1 120px;
-    min-width:100px;
+    flex:1 1 50px;
+    min-width:40px;
+  }
+  .ing-edit-row input[type=text], .ing-edit-row input[type=number]{
+    padding:6px 8px;
+    font-size:13px;
   }
   .ing-edit-row .icon-btn{
     flex:0 0 auto;
@@ -1155,13 +1221,13 @@
     gap:2px;
   }
   .row-value-col{
-    flex:0 0 90px;
+    flex:0 0 64px;
     display:flex;
     align-items:center;
     gap:2px;
   }
   .row-value-col.row-value-wt{
-    flex:0 0 108px;
+    flex:0 0 80px;
   }
   .row-value-col input{
     flex:1;
@@ -1287,6 +1353,23 @@
     color:var(--text-dim);
     cursor:not-allowed;
   }
+  /* Optional link from an ingredient row to a Process Flowchart node (see
+     the .ing-flow-link-wrap markup in renderRows). Hidden entirely until
+     the recipe has at least one flowchart node, so this is invisible for
+     the vast majority of recipes that never touch that feature. */
+  .ing-flow-link-wrap{flex:0 0 auto;display:flex;align-items:center;gap:1px;margin-left:2px;}
+  .ing-flow-link-wrap.hidden-if-empty{display:none;}
+  .ing-flow-link-arrow{color:var(--text-dim);font-size:12px;}
+  .ing-flow-link{
+    width:42px;
+    padding:4px 2px;
+    font-size:12px;
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:#fff;
+    color:var(--text);
+  }
+  .ing-flow-link:focus{border-color:var(--primary);}
   .material-lib-btn{margin-bottom:16px;}
 
   .modal-overlay{
@@ -1408,6 +1491,60 @@
     font-size:11px;
     color:var(--text-dim);
   }
+
+  /* A project's Flavor/Filling list (see blankFlavor) — each row is its
+     own flavor with its own Target/Actual Price, since a single project
+     (e.g. an assortment box) can price each flavor differently. Used both
+     read-only (plain table) and editable (same table, inputs in the
+     cells) — the editable version's cells get input[type] styling for
+     free from the global input rules. */
+  /* table-layout:fixed deliberately, rather than the browser's default
+     "auto" algorithm — auto layout recalculates every column's width from
+     the min-content of every cell (inputs, multi-option selects, etc.),
+     which is exactly the kind of per-browser/per-content-dependent sizing
+     that can produce unpredictable row-height and stacking glitches; fixed
+     layout takes its column widths once, from the header row, and never
+     revisits them, which is far more robust for a row of form controls. */
+  .flavor-table{width:100%;border-collapse:collapse;font-size:13px;margin-bottom:8px;table-layout:fixed;}
+  .flavor-table th{
+    text-align:left;
+    font-size:11px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.3px;
+    color:var(--text-dim);
+    border-bottom:1px solid var(--border);
+    padding:4px 8px 4px 0;
+  }
+  /* This table lives nested inside the projects list's own <table
+     class="proj-overview-table"> (via the expanded detail row), and that
+     outer table's ".proj-overview-table thead th" sticky-header rule is a
+     plain descendant selector — it doesn't stop at the nearest table
+     boundary, so it was also matching (and sticking/pinning) THIS table's
+     own header, which is exactly what made it appear to float over
+     whichever row happened to be scrolled to that fixed position instead
+     of sitting above row one. Needs 2 classes to reliably out-specificity
+     that rule's 1-class-2-elements selector regardless of source order. */
+  .flavor-table-scroll .flavor-table th{
+    position:static;
+    top:auto;
+    z-index:auto;
+    box-shadow:none;
+    background:transparent;
+  }
+  .flavor-table td{padding:3px 8px 3px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
+  .flavor-table td:first-child, .flavor-table th:first-child{padding-left:0;}
+  .flavor-table input, .flavor-table select{width:100%;}
+  /* The editable variant has 6 columns (read-only only ever has 3: Flavor/
+     Target/Actual, which just split the width evenly under fixed layout —
+     no override needed there) — explicit percentages so Currency/Per/
+     delete stay narrow instead of fixed-layout splitting all 6 equally. */
+  .flavor-table-edit th:nth-child(1){width:28%;}
+  .flavor-table-edit th:nth-child(2){width:16%;}
+  .flavor-table-edit th:nth-child(3){width:16%;}
+  .flavor-table-edit th:nth-child(4){width:14%;}
+  .flavor-table-edit th:nth-child(5){width:14%;}
+  .flavor-table-edit th:nth-child(6){width:28px;}
 
   .compare-pickers{
     display:grid;
@@ -1732,6 +1869,108 @@
   .process-header .process-title:focus{background:#fff;}
   .process-steps-list{margin-bottom:10px;}
 
+  /* Section 4's List/Flowchart switch — see setProcessViewMode. */
+  .view-mode-toggle{margin-left:auto;display:flex;gap:6px;}
+  .view-mode-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600;}
+  .process-view-hidden{display:none;}
+
+  /* Freeform Process Flowchart canvas (see renderProcessFlowchart) — the
+     first freeform/draggable-node UI in the app, so this whole block has
+     no prior sibling to match against. */
+  .flow-canvas-wrap{margin-bottom:10px;}
+  .flow-toolbar{display:flex;gap:8px;margin-bottom:10px;}
+  .flow-canvas-scroll{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    overflow:auto;
+    max-height:560px;
+    background:var(--bg);
+  }
+  .flow-canvas{position:relative;min-width:100%;min-height:400px;}
+  .flow-edges-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
+  .flow-edge-line{fill:none;stroke:var(--primary);stroke-width:2;}
+  .flow-edge-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer;}
+  .flow-edge-hit:hover + .flow-edge-line{stroke:var(--danger);}
+  .flow-ghost-edge{fill:none;stroke:var(--text-dim);stroke-width:2;stroke-dasharray:5 4;}
+
+  .flow-node{
+    position:absolute;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:10px;
+    box-shadow:var(--shadow);
+    font-size:12px;
+    user-select:none;
+  }
+  .flow-node.dragging{opacity:.7;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:5;}
+  .flow-node-strip{
+    display:flex;align-items:center;gap:4px;
+    padding:4px 6px;
+    border-bottom:1px solid var(--border);
+    background:var(--bg);
+    border-radius:10px 10px 0 0;
+    cursor:grab;
+    color:var(--text-dim);
+  }
+  .flow-node-strip:active{cursor:grabbing;}
+  .flow-node-label{
+    width:34px;flex:0 0 auto;
+    font-weight:700;color:var(--primary-dark);
+    border:1px solid transparent;background:transparent;
+    padding:2px 3px;border-radius:5px;font-size:12px;text-align:center;
+  }
+  .flow-node-label:hover{border-color:var(--border);}
+  .flow-node-label:focus{background:#fff;border-color:var(--primary);}
+  .flow-node-strip .icon-btn{margin-left:auto;flex-shrink:0;padding:2px;}
+  /* Optionally live-links this node to a Process from the List view — see
+     computeFlowNodeText. Sits between the strip and the text area. */
+  .flow-node-link{
+    display:block;width:100%;
+    border:none;border-bottom:1px solid var(--border);
+    background:var(--bg);color:var(--text-dim);
+    font-size:11px;padding:3px 8px;
+    border-radius:0;
+  }
+  .flow-node-text{
+    width:100%;border:none;background:transparent;resize:none;
+    font-family:inherit;font-size:12px;padding:6px 8px;
+    min-height:36px;overflow:hidden;display:block;
+  }
+  .flow-node-text:focus{outline:none;background:var(--primary-light);}
+  /* Linked nodes show their live-derived text read-only — edit the actual
+     Process in List view instead, since typing here would just be
+     overwritten on the next render. */
+  .flow-node-text:disabled{color:var(--text-dim);background:var(--bg);cursor:default;}
+  .flow-connector-dot{
+    position:absolute;width:10px;height:10px;border-radius:50%;
+    background:var(--primary);border:2px solid var(--panel);
+    opacity:.45;cursor:crosshair;
+  }
+  .flow-node:hover .flow-connector-dot{opacity:1;}
+  .flow-connector-dot.top{top:-5px;left:50%;transform:translateX(-50%);}
+  .flow-connector-dot.bottom{bottom:-5px;left:50%;transform:translateX(-50%);}
+  .flow-connector-dot.left{left:-5px;top:50%;transform:translateY(-50%);}
+  .flow-connector-dot.right{right:-5px;top:50%;transform:translateY(-50%);}
+
+  /* Read-only variant (Print/Version Preview) — same box look, no
+     interactive chrome (no strip/handle/dots/delete button). */
+  .ro-flow-node{
+    position:absolute;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:10px;
+    font-size:11px;
+    padding:6px 8px;
+  }
+  .ro-flow-node .flow-node-label{
+    width:auto;border:none;padding:0;text-align:left;
+    font-weight:700;color:var(--primary-dark);margin-bottom:2px;display:block;
+  }
+  .ro-flow-node .flow-node-text{
+    width:auto;padding:0;min-height:0;
+    white-space:pre-wrap;word-break:break-word;color:var(--text);
+  }
+
   .process-components{
     margin-bottom:16px;
     padding-bottom:14px;
@@ -1954,13 +2193,26 @@
   .reflist-flag-fallback{font-weight:700;color:var(--text-dim);letter-spacing:.02em;}
 
   /* ---------- Projects modal ---------- */
+  /* Save/Duplicate/Cancel, moved from the summary row's cramped
+     right-hand cell to their own row right above the detail form itself
+     — the actions that apply to everything below now sit above it. */
+  .proj-edit-toolbar{display:flex;justify-content:flex-end;gap:8px;margin-bottom:14px;}
   .project-header-grid{
     display:grid;
     grid-template-columns:repeat(4,1fr);
     gap:10px;
     margin-bottom:14px;
   }
+  /* Grid items default to min-width:auto, which refuses to shrink a track
+     below its content's own intrinsic width — a wide child (the Flavor
+     table, now 6 columns of inputs/selects) would otherwise force this
+     whole grid, and everything containing it, wider than the card's
+     background instead of just scrolling internally (see
+     .flavor-table-scroll below, which is what actually catches the
+     overflow once the track itself can shrink to fit). */
+  .project-header-grid > .field{min-width:0;}
   .project-header-grid input{font-weight:600;}
+  .flavor-table-scroll{overflow-x:auto;}
   /* Read-only project view (not currently being edited) — photo left,
      everything else as a plain label/value list on the right, reusing the
      same .material-detail-list dt/dd styling the Ingredient Library detail
@@ -2015,7 +2267,20 @@
      single row too wasn't realistic at normal widths any more. */
   .proj-monthly-add{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;}
   .proj-monthly-add > input[type=date]{width:130px;flex:0 0 auto;}
-  .proj-monthly-add textarea{width:220px;flex:0 0 auto;min-height:44px;}
+  .proj-monthly-add textarea{width:100%;min-height:44px;}
+  /* Wraps each Plan/Action Taken/Next Action field so its translate
+     button (see wireMuTranslateButton) can sit in the corner without
+     disturbing the textarea's own layout — takes over the width/flex
+     sizing the bare textarea used to have directly. */
+  .mu-field-with-translate{position:relative;width:220px;flex:0 0 auto;}
+  .mu-translate-btn{
+    position:absolute;top:4px;right:4px;
+    display:flex;align-items:center;justify-content:center;
+    background:var(--panel);border:1px solid var(--border);border-radius:6px;
+    padding:3px;cursor:pointer;color:var(--text-dim);
+  }
+  .mu-translate-btn:hover{background:var(--primary-light);color:var(--primary);}
+  .mu-translate-btn.loading{opacity:.5;pointer-events:none;}
   .proj-monthly-add .btn{flex:0 0 auto;white-space:nowrap;align-self:center;}
   .mu-autocreate-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);flex:0 0 auto;align-self:center;white-space:nowrap;}
   .mu-autocreate-label input[type=checkbox]{width:auto;}
@@ -2450,11 +2715,16 @@
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
+    .flow-canvas-wrap, .view-mode-toggle{display:none !important;}
     .print-only{display:block !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
     body{background:#fff;}
+    /* The read-only flowchart's on-screen scroll box has a fixed
+       max-height/overflow for the browser viewport — on paper it should
+       just lay out at full size instead of being clipped. */
+    #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
 
     /* The recipe title always prints as "Name  CODE" on one line. At the
        on-screen 54px/25px sizing this doesn't reliably fit within a
@@ -2755,6 +3025,7 @@
 <datalist id="responsiblePersonDatalist"></datalist>
 <datalist id="factoryDatalist"></datalist>
 <datalist id="productTypeDatalist"></datalist>
+<datalist id="unitsDatalist"></datalist>
 <datalist id="worldCountriesDatalist"></datalist>
 
 <div class="modal-overlay" id="materialDetailModalOverlay">
@@ -3154,7 +3425,28 @@ const CHANGELOG = [
   { version: "3.0.159", date: "2026-08-12", note: "Fixed Printing/PDF showing the live editable Ingredients tree (input boxes, +Add buttons, delete X's, and the connector lines running through them) instead of a clean read-only version — section 2 never had a print-only view like sections 1 and 3 already did, so it printed exactly as it looks on screen while editing. Printing now shows a plain label/%/weight tree, same style as Version History's preview" },
   { version: "3.0.160", date: "2026-08-12", note: "The read-only Ingredients tree (Printing/PDF and Version Preview) is now a compact table — a Component / % / g header with % and g sitting right next to each other as two tight columns, and indentation standing in for the on-screen tree's connector lines — instead of the roomier card-style layout with \"% of Part\"/\"% of recipe\" repeated on every row" },
   { version: "3.0.161", date: "2026-08-12", note: "Fixed each ingredient's Note never showing up when printing (or in Version Preview) — the read-only Ingredients tree never had a Note column at all, on-screen table or the new compact one, so a typed-in note silently disappeared the moment you left Edit mode. Added a Note column right after the name, same position as the live editable row" },
-  { version: "3.0.162", date: "2026-08-12", note: "The compact read-only Ingredients table (Printing/PDF and Version Preview) now draws proper tree connector lines (├─ └─ │) in front of each name instead of plain indentation, so the branching is still visible at a glance — a vertical line only continues past a branch if that branch actually has more items below it, so it never dangles past where a Part's contents really end" }
+  { version: "3.0.162", date: "2026-08-12", note: "The compact read-only Ingredients table (Printing/PDF and Version Preview) now draws proper tree connector lines (├─ └─ │) in front of each name instead of plain indentation, so the branching is still visible at a glance — a vertical line only continues past a branch if that branch actually has more items below it, so it never dangles past where a Part's contents really end" },
+  { version: "3.0.163", date: "2026-08-12", note: "Recipe Overview (all parts combined) is now its own section 2, moved out from the bottom of the Ingredients tree card to right after Product Details — Ingredients, Percentage & Weight is now section 3, and Process Steps is now section 4" },
+  { version: "3.0.164", date: "2026-08-12", note: "Renamed section 3 from \"Ingredients, Percentage & Weight\" to \"Components and Process\"" },
+  { version: "3.0.165", date: "2026-08-12", note: "Added a Flowchart view to Process Steps (toggle next to the section 4 title, alongside the existing numbered-steps List view) — a freeform canvas where you can add labeled step nodes (A, B, C...), drag them anywhere, and draw arrows between them to show a main flow with side branches merging in. Each ingredient can now optionally link to one of these nodes (a small \"→A\" dropdown at the end of its row, only shown once the recipe has at least one flowchart node) — that link shows up both there and as a new Node column in the printed/Version Preview Ingredients table. The flowchart itself also prints/previews as a static read-only diagram matching whichever view is currently selected" },
+  { version: "3.0.166", date: "2026-08-12", note: "A Flowchart node can now be linked directly to a Process from the List view (a \"Link\" dropdown on the node) — its text then stays live-synced to that Process's title and steps instead of being typed separately, so editing the List always shows up in the Flowchart automatically. Deleting a linked Process detaches the node instead of losing its content — it freezes as an ordinary free-typed node with whatever text was last shown" },
+  { version: "3.0.167", date: "2026-08-12", note: "\"+ Add Process\" now creates just the process heading, with no automatic blank step underneath — click \"+ Add Step\" when you're ready to add one. Deleting a Process's last remaining step also no longer re-adds an empty one; a Process with just a title (no steps yet) is now a valid, normal state instead of always needing at least one" },
+  { version: "3.0.168", date: "2026-08-12", note: "Section 3 (\"Components and Process\") is now a two-column layout, matching the classic Ingredient/Process spreadsheet format — the ingredient tree on the left, and a simple live preview of the Process List (title, then each step stacked with a ↓ arrow between them) on the right. Read-only — editing still happens in section 4's List or Flowchart view, this just mirrors it as you work on ingredients" },
+  { version: "3.0.169", date: "2026-08-12", note: "Fixed ingredient rows wrapping onto two lines in section 3's new narrower half-width ingredient column — Name/Note/%/Weight now fit on one line by tightening the row's column widths, gaps, and input padding instead of the wider spacing tuned for the old full-width layout" },
+  { version: "3.0.170", date: "2026-08-17", note: "Projects now capture Flavor / Filling (e.g. \"Red bean paste\") — a new field between Factory and Portion Weight in New Project, Edit, and the read-only project summary" },
+  { version: "3.0.171", date: "2026-08-17", note: "Added a Translate button to each Plan / Action Taken / Next Action field in Activities Updates (both adding a new entry and editing an existing one) — click it to auto-detect Thai or English and append the translation as a new line, using a free translation service (no account or API key needed)" },
+  { version: "3.0.172", date: "2026-08-17", note: "Projects now capture Target Price, Actual Price (both ฿), and MOQ (quantity + unit) — new fields between Outer Packing and Requirements / Certifications in New Project, Edit, and the read-only project summary" },
+  { version: "3.0.173", date: "2026-08-17", note: "Flavor / Filling is now a list instead of one free-text field — add as many flavors as a project needs, each with its own Target Price and Actual Price (e.g. a mochi assortment can price Red bean, Matcha, and Sweet Potato separately). Replaces the single project-wide Target/Actual Price fields, which moved out of New Project (flavors are added after creating the project, same as Products) and now live in this same list in Edit and the read-only summary" },
+  { version: "3.0.174", date: "2026-08-17", note: "Renamed the Reference Lists tab \"Sales Reps\" to \"Project Owner\"" },
+  { version: "3.0.175", date: "2026-08-17", note: "Each Flavor / Filling's Target/Actual Price now has its own selectable Currency (THB/JPY/USD/CNY/EUR) and Per-unit basis (pcs/kg/pack/carton/case/box) instead of always being ฿ — shown as e.g. \"150 JPY / pcs\" in the read-only summary" },
+  { version: "3.0.176", date: "2026-08-17", note: "Added \"pcs\" as a selectable unit for Portion Weight (and Inner Packing's own weight field, which shares the same unit list) — a portion isn't always best measured by weight; e.g. a 3-piece dessert set can now be entered as \"3 pcs\" instead of only g/kg/ml/L/oz/lb" },
+  { version: "3.0.177", date: "2026-08-17", note: "Moved a project's Save/Duplicate/Cancel buttons out of the cramped summary row and into their own toolbar right above the detail form itself, once you're editing it" },
+  { version: "3.0.178", date: "2026-08-17", note: "Fixed the Flavor / Filling table (and the fields around it) pushing past the edge of the project's edit panel instead of staying within it — the table now scrolls horizontally within its own boundary if it doesn't fit, instead of forcing the whole form wider" },
+  { version: "3.0.179", date: "2026-08-17", note: "Portion Weight now has a \"per unit\" selector too (e.g. \"20 g / pcs\"), matching Inner/Outer Packing's own value-per-container style, instead of only being a bare weight. Also added Formula / Reference No. — a new field next to Project Name in New Project, Edit, and the read-only project summary" },
+  { version: "3.0.180", date: "2026-08-17", note: "The Save/Duplicate/Cancel toolbar above a project's detail form is now right-aligned instead of flush left" },
+  { version: "3.0.181", date: "2026-08-17", note: "Fixed the Flavor / Filling table's rows overlapping/stacking on top of each other — switched it to a fixed table layout with explicit column widths instead of letting the browser recalculate column sizing from every cell's content (inputs, multi-option selects), which is a much more predictable, deterministic way to lay out a row of form controls" },
+  { version: "3.0.182", date: "2026-08-17", note: "Added a \"Units\" tab to Reference Lists — every unit dropdown that used to be a fixed list (Portion Weight, Inner/Outer Packing, MOQ, Flavor Per-unit, in both New Project and Edit) now types in from this same shared, editable list instead, so a unit that isn't offered yet can just be added once in Reference Lists instead of being stuck. Seeded automatically with the same units these fields already offered (g, kg, ml, L, oz, lb, pcs, pack, bag, box, sachet, pouch, tray, carton, case) so nothing changes until you add more" },
+  { version: "3.0.183", date: "2026-08-17", note: "Found the real cause of the Flavor / Filling table's header floating over the wrong row (and a row appearing to go missing in Preview) — the projects list's own sticky-header styling was leaking onto this nested table's header too, since it's just a descendant CSS selector that doesn't stop at table boundaries, pinning it to a fixed scroll position instead of letting it sit above row one. The v3.0.181 table-layout change stays (it's a genuine improvement), but this is the fix that actually resolves the floating/overlapping header" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3412,6 +3704,8 @@ function snapshotRecipeCore(r){
     batchWeight: r.batchWeight,
     parts: JSON.parse(JSON.stringify(r.parts)),
     processes: JSON.parse(JSON.stringify(r.processes)),
+    processFlowchart: r.processFlowchart ? JSON.parse(JSON.stringify(r.processFlowchart)) : { nodes: [], edges: [] },
+    processViewMode: r.processViewMode || 'list',
     yieldPct: r.yieldPct
   };
 }
@@ -3495,6 +3789,9 @@ function openVersionPreview(r, v){
   const snap = v.snapshot || {};
   const totalWt = allIngredientsInRecipe(snap).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
 
+  const snapFlowchart = snap.processFlowchart || { nodes: [], edges: [] };
+  const isFlowMode = snap.processViewMode === 'flowchart' && snapFlowchart.nodes.length > 0;
+
   document.getElementById('versionPreviewTitle').textContent = v.label || 'Untitled version';
   document.getElementById('versionPreviewContent').innerHTML = `
     <div class="reflist-item-meta" style="margin-bottom:12px;">Saved ${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
@@ -3506,11 +3803,14 @@ function openVersionPreview(r, v){
       ${descriptionListHtml(snap)}
     </div>
     <div class="overview-title" style="margin-top:16px;">Ingredients</div>
-    ${readOnlyIngredientTreeHtml(snap.parts, totalWt)}
+    ${readOnlyIngredientTreeHtml(snap.parts, totalWt, snapFlowchart.nodes)}
     <div class="overview-title" style="margin-top:16px;">Process Steps</div>
-    <div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes)}</div>
+    ${isFlowMode ? '<div id="versionPreviewFlowchart"></div>' : `<div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes)}</div>`}
   `;
   document.getElementById('versionPreviewModalOverlay').classList.add('open');
+  if(isFlowMode){
+    renderReadOnlyProcessFlowchart(document.getElementById('versionPreviewFlowchart'), snapFlowchart, snap.processes);
+  }
 }
 
 function closeVersionPreview(){
@@ -3561,11 +3861,12 @@ function mountRefListsView(){
     <div class="card">
       <div class="reflist-tabs">
         <button class="reflist-tab-btn active" data-key="customers">Customers</button>
-        <button class="reflist-tab-btn" data-key="salesReps">Sales Reps</button>
+        <button class="reflist-tab-btn" data-key="salesReps">Project Owner</button>
         <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
         <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
         <button class="reflist-tab-btn" data-key="factories">Factories</button>
         <button class="reflist-tab-btn" data-key="productTypes">Product Types</button>
+        <button class="reflist-tab-btn" data-key="units">Units</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
       </div>
       <div class="reflist-add-row" id="refListAddRow">
@@ -3591,6 +3892,7 @@ function mountRefListsView(){
     if(isDestinationsTab) newInput.setAttribute('list', 'worldCountriesDatalist');
     else newInput.removeAttribute('list');
     if(refListActiveTab === 'productTypes') newInput.placeholder = 'e.g. Sauce';
+    else if(refListActiveTab === 'units') newInput.placeholder = 'e.g. kg, pcs, carton...';
     else newInput.placeholder = isDestinationsTab ? 'Search world countries...' : 'Add a new entry...';
   };
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
@@ -3809,14 +4111,13 @@ function initRefListsView(){
    the log stays the single source of truth for "what happened when"). ---------- */
 const PROJECT_STAGES = ['Requested','Formulating','Sampling','Customer Review','Approved','In Production','On Hold','Cancelled'];
 
-// Packaging spec units — Portion Weight / Inner Packing / Outer Packing.
-// WEIGHT_UNIT_OPTIONS covers the portion weight and the inner packing's own
-// net-weight; PACK_UNIT_OPTIONS is the inner container word ("30 g / pack")
-// and doubles as the count unit on the outer line ("24 pack / carton");
-// OUTER_UNIT_OPTIONS is the outer container itself.
-const WEIGHT_UNIT_OPTIONS = ['g','kg','ml','L','oz','lb'];
-const PACK_UNIT_OPTIONS = ['pack','bag','box','sachet','pouch','tray'];
-const OUTER_UNIT_OPTIONS = ['carton','case','box'];
+// Flavor pricing (see blankFlavor) — 3-letter codes rather than symbols,
+// since ¥ alone is ambiguous between JPY and CNY. Unlike the physical
+// packaging/weight/MOQ units above (now the user-editable Units reference
+// list — see metaLists.units / unitsDatalist), currency is a closed,
+// small set that doesn't make sense to let grow arbitrarily, so it stays
+// a plain <select>.
+const CURRENCY_OPTIONS = ['THB','JPY','USD','CNY','EUR'];
 
 // Overall project lifecycle status (distinct from PROJECT_STAGES, which
 // tracks each individual product's stage within a project).
@@ -3990,6 +4291,58 @@ const TASK_STATUS_META = {
   nodate: { icon: '–', label: () => 'No Due Date' }
 };
 
+// Guesses which way to translate an Activities Updates field: Thai
+// detected anywhere in it (same Thai Unicode block test as the password
+// prompt's keyboard-language badge) translates to English, anything else
+// translates to Thai — covers the common case of drafting mostly in
+// English with no Thai typed yet too.
+function guessTranslateTargetLang(text){
+  return /[฀-๿]/.test(text) ? 'en' : 'th';
+}
+
+// Free, keyless machine translation via the same public endpoint
+// translate.google.com's own web page calls (client=gtx) — no API key or
+// signup needed, unlike the official paid Google Cloud Translation API.
+// This is an unofficial, undocumented use of that endpoint (there's no
+// terms-of-service-sanctioned "no key needed" tier of Google Translate),
+// so it could be rate-limited or blocked without notice; if that ever
+// happens, this is the one function to swap for a paid API call — nothing
+// else needs to change, see wireMuTranslateButton below.
+async function translateText(text, targetLang){
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Translation service unavailable');
+  const data = await res.json();
+  // Response shape: [[[translatedChunk, originalChunk, ...], ...], ...] —
+  // one translated chunk per sentence/segment; stitched back into one string.
+  return data[0].map(chunk => chunk[0]).join('');
+}
+
+// Appends the translation as a new line rather than replacing the
+// original — an Activities Updates entry then reads bilingually instead
+// of losing whatever was typed first. Shared by both the "Add Update"
+// panel and the "Edit entry" popup, since both use the exact same
+// .mu-field-with-translate + .mu-translate-btn markup pair.
+function wireMuTranslateButton(wrapEl){
+  const textarea = wrapEl.querySelector('textarea');
+  const btn = wrapEl.querySelector('.mu-translate-btn');
+  if(!textarea || !btn) return;
+  btn.addEventListener('click', async () => {
+    const original = textarea.value.trim();
+    if(!original) return;
+    btn.classList.add('loading');
+    try{
+      const translated = await translateText(original, guessTranslateTargetLang(original));
+      textarea.value = original + '\n' + translated;
+    }catch(err){
+      console.error('Forge: translation failed', err);
+      alert('Translation failed — the free translation service may be temporarily unavailable. Please try again in a moment.');
+    }finally{
+      btn.classList.remove('loading');
+    }
+  });
+}
+
 // If "Create as Plan automatically" was checked and there's a Next Action
 // with a due date, chains a new Planned entry whose Plan is that Next
 // Action text — the follow-up shows up ready to log once it's actually
@@ -4037,6 +4390,7 @@ function blankProject(){
   return {
     id: uid(),
     name: "",
+    formulaRefCode: "",
     image: "",
     status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
@@ -4046,15 +4400,19 @@ function blankProject(){
     factorySalesRep: "",
     responsiblePerson: "",
     factoryName: "",
+    flavors: [],
     requirements: "",
     portionWeightQty: "",
     portionWeightUnit: "g",
+    portionPerUnit: "pcs",
     innerPackQty: "",
     innerPackWeightUnit: "g",
     innerPackUnit: "pack",
     outerPackQty: "",
     outerPackUnit: "pack",
     outerPackContainerUnit: "carton",
+    moqQty: "",
+    moqUnit: "pcs",
     products: [],
     monthlyUpdates: [],
     createdBy: currentUser?.email || '',
@@ -4062,6 +4420,16 @@ function blankProject(){
     updatedBy: currentUser?.email || '',
     updatedAt: Date.now()
   };
+}
+
+// A project can have several flavors/fillings (e.g. a mochi assortment),
+// each with its own Target/Actual Price — pricing that used to be one
+// project-wide pair of fields now lives per flavor instead. Currency and
+// per-unit basis are shared by both prices on the same flavor (they're
+// only meaningful compared against each other in the same terms), not
+// tracked separately per price.
+function blankFlavor(){
+  return { id: uid(), name: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg" };
 }
 
 function blankProduct(recipeId){
@@ -4080,13 +4448,16 @@ function blankProduct(recipeId){
 // in yet, same convention as every other optional field in the read-only
 // summary (see readOnlyDetailRows).
 function formatPortionWeight(p){
-  return p.portionWeightQty ? `${p.portionWeightQty} ${p.portionWeightUnit || 'g'}` : '-';
+  return p.portionWeightQty ? `${p.portionWeightQty} ${p.portionWeightUnit || 'g'} / ${p.portionPerUnit || 'pcs'}` : '-';
 }
 function formatInnerPacking(p){
   return p.innerPackQty ? `${p.innerPackQty} ${p.innerPackWeightUnit || 'g'} / ${p.innerPackUnit || 'pack'}` : '-';
 }
 function formatOuterPacking(p){
   return p.outerPackQty ? `${p.outerPackQty} ${p.outerPackUnit || 'pack'} / ${p.outerPackContainerUnit || 'carton'}` : '-';
+}
+function formatProjectMoq(p){
+  return p.moqQty ? `${p.moqQty} ${p.moqUnit || 'pcs'}` : '-';
 }
 
 // Copies the template-like fields (name, photo, customer/destination/owner,
@@ -4718,6 +5089,10 @@ function renderNewProjectPanel(){
           <input type="text" id="newProjName" placeholder="e.g. Sunrise Foods Q3 Launch">
         </div>
         <div class="field" style="margin-bottom:0;">
+          <label>Formula / Reference No.</label>
+          <input type="text" id="newProjFormulaRef" placeholder="e.g. JPN01-25">
+        </div>
+        <div class="field" style="margin-bottom:0;">
           <label>Photo (optional)</label>
           <input type="file" id="newProjImageInput" accept="image/*">
           <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
@@ -4762,26 +5137,35 @@ function renderNewProjectPanel(){
         <div class="field" style="margin-bottom:0;">
           <label>Portion Weight</label>
           <div class="combo-row">
-            <input type="number" id="newProjPortionQty" placeholder="e.g. 30" step="any" min="0">
-            <select class="proj-select" id="newProjPortionUnit">${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
+            <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
+            <span>/</span>
+            <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Inner Packing</label>
           <div class="combo-row">
             <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
-            <select class="proj-select" id="newProjInnerWeightUnit">${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
             <span>/</span>
-            <select class="proj-select" id="newProjInnerPackUnit">${PACK_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
           </div>
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Outer Packing</label>
           <div class="combo-row">
             <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
-            <select class="proj-select" id="newProjOuterPackUnit">${PACK_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
             <span>/</span>
-            <select class="proj-select" id="newProjOuterContainerUnit">${OUTER_UNIT_OPTIONS.map(u => `<option value="${u}">${u}</option>`).join('')}</select>
+            <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>MOQ</label>
+          <div class="combo-row">
+            <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
+            <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
           </div>
         </div>
         <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
@@ -4838,6 +5222,7 @@ function renderNewProjectPanel(){
   document.getElementById('btnSaveNewProject').addEventListener('click', () => {
     const p = blankProject();
     p.name = document.getElementById('newProjName').value.trim();
+    p.formulaRefCode = document.getElementById('newProjFormulaRef').value.trim();
     p.image = newProjectImage;
     p.status = document.getElementById('newProjStatus').value;
     p.requestDate = document.getElementById('newProjRequestDate').value;
@@ -4848,13 +5233,16 @@ function renderNewProjectPanel(){
     p.responsiblePerson = document.getElementById('newProjResponsible').value.trim();
     p.factoryName = document.getElementById('newProjFactory').value.trim();
     p.portionWeightQty = document.getElementById('newProjPortionQty').value.trim();
-    p.portionWeightUnit = document.getElementById('newProjPortionUnit').value;
+    p.portionWeightUnit = document.getElementById('newProjPortionUnit').value.trim();
+    p.portionPerUnit = document.getElementById('newProjPortionPerUnit').value.trim();
     p.innerPackQty = document.getElementById('newProjInnerQty').value.trim();
-    p.innerPackWeightUnit = document.getElementById('newProjInnerWeightUnit').value;
-    p.innerPackUnit = document.getElementById('newProjInnerPackUnit').value;
+    p.innerPackWeightUnit = document.getElementById('newProjInnerWeightUnit').value.trim();
+    p.innerPackUnit = document.getElementById('newProjInnerPackUnit').value.trim();
     p.outerPackQty = document.getElementById('newProjOuterQty').value.trim();
-    p.outerPackUnit = document.getElementById('newProjOuterPackUnit').value;
-    p.outerPackContainerUnit = document.getElementById('newProjOuterContainerUnit').value;
+    p.outerPackUnit = document.getElementById('newProjOuterPackUnit').value.trim();
+    p.outerPackContainerUnit = document.getElementById('newProjOuterContainerUnit').value.trim();
+    p.moqQty = document.getElementById('newProjMoqQty').value.trim();
+    p.moqUnit = document.getElementById('newProjMoqUnit').value.trim();
     p.requirements = document.getElementById('newProjRequirements').value.trim();
     projects.push(p);
     saveProjectToCloud(p);
@@ -5073,9 +5461,18 @@ function renderProjectsList(){
                     <div class="mu-entry-body">
                       <div class="proj-monthly-add">
                         <input type="date" class="proj-mu-edit-date" value="${escapeHtml(mu.date || '')}">
-                        <textarea class="proj-mu-edit-plan" placeholder="Plan">${escapeHtml(mu.plan || '')}</textarea>
-                        <textarea class="proj-mu-edit-action" placeholder="Action Taken">${escapeHtml(mu.actionTaken || '')}</textarea>
-                        <textarea class="proj-mu-edit-nextaction" placeholder="Next Action">${escapeHtml(mu.nextAction || '')}</textarea>
+                        <div class="mu-field-with-translate">
+                          <textarea class="proj-mu-edit-plan" placeholder="Plan">${escapeHtml(mu.plan || '')}</textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                        <div class="mu-field-with-translate">
+                          <textarea class="proj-mu-edit-action" placeholder="Action Taken">${escapeHtml(mu.actionTaken || '')}</textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                        <div class="mu-field-with-translate">
+                          <textarea class="proj-mu-edit-nextaction" placeholder="Next Action">${escapeHtml(mu.nextAction || '')}</textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
                         <input type="date" class="proj-mu-edit-nextaction-due" value="${escapeHtml(mu.nextActionDue || '')}" title="Next Action due date">
                         <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-edit-autocreate" ${mu.autoCreatePlan ? 'checked' : ''}> Create as Plan automatically</label>
                         <button class="btn btn-sm btn-primary" data-role="save-monthly-update-edit">${icon('save')} Save</button>
@@ -5142,7 +5539,7 @@ function renderProjectsList(){
             <td>${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
-                ? `<button class="btn btn-primary btn-sm" data-role="save-project">${icon('save')} Save</button><button class="btn btn-sm proj-action-duplicate" data-role="duplicate-project">${icon('copy')} Duplicate</button><button class="btn btn-sm proj-action-cancel" data-role="cancel-project">${icon('undo-2')} Cancel</button>`
+                ? ''
                 : `<button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
             </td>
           </tr>
@@ -5152,7 +5549,16 @@ function renderProjectsList(){
         // right (same dt/dd styling as the Ingredient Library's detail
         // view) — replaces the disabled-input grid so a project you're just
         // looking at (not editing) reads like a document, not a form.
-        const readOnlyDetailRows = [
+        const detailRowsHtml = rows => rows.map(([label, value]) => `
+          <dt>${escapeHtml(label)}</dt>
+          <dd>${escapeHtml(value || '-')}</dd>
+        `).join('');
+        // Split around the Flavor/Filling table (below) so it lands exactly
+        // where it visually used to sit as a single field — right after
+        // Factory, before Portion Weight — even though it's no longer part
+        // of the flat label/value list itself.
+        const readOnlyDetailRowsBefore = detailRowsHtml([
+          ['Formula / Reference No.', p.formulaRefCode],
           ['Status', PROJECT_STATUS_LABELS[p.status] || p.status || PROJECT_STATUSES[0]],
           ['Request Date', p.requestDate],
           ['Customer Name', p.customerName],
@@ -5160,14 +5566,30 @@ function renderProjectsList(){
           ['Project Owner', p.ownerSalesRep],
           ['Factory Sales Rep', p.factorySalesRep],
           ['Responsible Person (PD)', p.responsiblePerson],
-          ['Factory', p.factoryName],
+          ['Factory', p.factoryName]
+        ]);
+        const readOnlyDetailRowsAfter = detailRowsHtml([
           ['Portion Weight', p.portionWeightQty ? formatPortionWeight(p) : ''],
           ['Inner Packing', p.innerPackQty ? formatInnerPacking(p) : ''],
-          ['Outer Packing', p.outerPackQty ? formatOuterPacking(p) : '']
-        ].map(([label, value]) => `
-          <dt>${escapeHtml(label)}</dt>
-          <dd>${escapeHtml(value || '-')}</dd>
-        `).join('');
+          ['Outer Packing', p.outerPackQty ? formatOuterPacking(p) : ''],
+          ['MOQ', p.moqQty ? formatProjectMoq(p) : '']
+        ]);
+        const flavors = p.flavors || [];
+        const formatFlavorPrice = (f, price) => price ? `${escapeHtml(price)} ${escapeHtml(f.priceCurrency || 'THB')} / ${escapeHtml(f.priceUnit || 'kg')}` : '-';
+        const readOnlyFlavorsHtml = flavors.length ? `
+          <div class="flavor-table-scroll">
+          <table class="flavor-table">
+            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th></tr></thead>
+            <tbody>${flavors.map(f => `
+              <tr>
+                <td>${escapeHtml(f.name || 'Untitled flavor')}</td>
+                <td>${formatFlavorPrice(f, f.targetPrice)}</td>
+                <td>${formatFlavorPrice(f, f.actualPrice)}</td>
+              </tr>
+            `).join('')}</tbody>
+          </table>
+          </div>
+        ` : '<div class="overview-empty">No flavors yet</div>';
         const readOnlyDetailView = `
           <div class="project-detail-view">
             <div class="project-detail-photo">
@@ -5175,7 +5597,10 @@ function renderProjectsList(){
             </div>
             <div class="project-detail-info">
               <div class="project-detail-title">${escapeHtml(p.name || 'Untitled project')}</div>
-              <dl class="material-detail-list">${readOnlyDetailRows}</dl>
+              <dl class="material-detail-list">${readOnlyDetailRowsBefore}</dl>
+              <div class="material-detail-notes-label">Flavor / Filling</div>
+              ${readOnlyFlavorsHtml}
+              <dl class="material-detail-list" style="margin-top:10px;">${readOnlyDetailRowsAfter}</dl>
               <div class="material-detail-notes-label">Requirements / Certifications</div>
               <div class="material-detail-notes">${escapeHtml(p.requirements || '-')}</div>
             </div>
@@ -5186,10 +5611,19 @@ function renderProjectsList(){
           <tr class="proj-detail-row">
             <td colspan="14">
               ${isEditing ? `
+              <div class="proj-edit-toolbar">
+                <button class="btn btn-primary btn-sm" data-role="save-project">${icon('save')} Save</button>
+                <button class="btn btn-sm proj-action-duplicate" data-role="duplicate-project">${icon('copy')} Duplicate</button>
+                <button class="btn btn-sm proj-action-cancel" data-role="cancel-project">${icon('undo-2')} Cancel</button>
+              </div>
               <div class="project-header-grid">
                 <div class="field" style="margin-bottom:0;">
                   <label>Project Name</label>
                   <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>Formula / Reference No.</label>
+                  <input type="text" class="proj-formula-ref" ${ro} value="${escapeHtml(p.formulaRefCode || '')}" placeholder="e.g. JPN01-25">
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Photo (optional)</label>
@@ -5233,29 +5667,57 @@ function renderProjectsList(){
                   <label>Factory</label>
                   <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                 </div>
+                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
+                  <label>Flavor / Filling</label>
+                  <div class="flavor-table-scroll">
+                  <table class="flavor-table flavor-table-edit">
+                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                    <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
+                      <tr data-flavor-id="${escapeHtml(f.id)}">
+                        <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                        <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+                        <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+                        <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+                        <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                        <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
+                      </tr>
+                    `).join('')}</tbody>
+                  </table>
+                  </div>
+                  ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
+                </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Portion Weight</label>
                   <div class="combo-row">
-                    <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 30" step="any" min="0">
-                    <select class="proj-select proj-portion-unit" ${isEditing ? '' : 'disabled'}>${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.portionWeightUnit || 'g') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 20" step="any" min="0">
+                    <input type="text" class="proj-portion-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionWeightUnit || 'g')}" placeholder="unit">
+                    <span>/</span>
+                    <input type="text" class="proj-portion-per-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionPerUnit || 'pcs')}" placeholder="per">
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Inner Packing</label>
                   <div class="combo-row">
                     <input type="number" class="proj-inner-qty" ${ro} value="${escapeHtml(p.innerPackQty || '')}" placeholder="e.g. 30" step="any" min="0">
-                    <select class="proj-select proj-inner-weight-unit" ${isEditing ? '' : 'disabled'}>${WEIGHT_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.innerPackWeightUnit || 'g') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <input type="text" class="proj-inner-weight-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackWeightUnit || 'g')}" placeholder="unit">
                     <span>/</span>
-                    <select class="proj-select proj-inner-pack-unit" ${isEditing ? '' : 'disabled'}>${PACK_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.innerPackUnit || 'pack') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <input type="text" class="proj-inner-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackUnit || 'pack')}" placeholder="pack unit">
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Outer Packing</label>
                   <div class="combo-row">
                     <input type="number" class="proj-outer-qty" ${ro} value="${escapeHtml(p.outerPackQty || '')}" placeholder="e.g. 24" step="any" min="0">
-                    <select class="proj-select proj-outer-pack-unit" ${isEditing ? '' : 'disabled'}>${PACK_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.outerPackUnit || 'pack') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <input type="text" class="proj-outer-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackUnit || 'pack')}" placeholder="pack unit">
                     <span>/</span>
-                    <select class="proj-select proj-outer-container-unit" ${isEditing ? '' : 'disabled'}>${OUTER_UNIT_OPTIONS.map(u => `<option value="${u}" ${u === (p.outerPackContainerUnit || 'carton') ? 'selected' : ''}>${u}</option>`).join('')}</select>
+                    <input type="text" class="proj-outer-container-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackContainerUnit || 'carton')}" placeholder="container">
+                  </div>
+                </div>
+                <div class="field" style="margin-bottom:0;">
+                  <label>MOQ</label>
+                  <div class="combo-row">
+                    <input type="number" class="proj-moq-qty" ${ro} value="${escapeHtml(p.moqQty || '')}" placeholder="e.g. 500" step="any" min="0">
+                    <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || 'pcs')}" placeholder="unit">
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
@@ -5289,9 +5751,18 @@ function renderProjectsList(){
                 ${isEditing ? (monthlyUpdateAddOpen ? `
                   <div class="proj-monthly-add">
                     <input type="date" class="proj-mu-date" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
-                    <textarea class="proj-mu-plan" placeholder="Plan"></textarea>
-                    <textarea class="proj-mu-action" placeholder="Action Taken"></textarea>
-                    <textarea class="proj-mu-nextaction" placeholder="Next Action"></textarea>
+                    <div class="mu-field-with-translate">
+                      <textarea class="proj-mu-plan" placeholder="Plan"></textarea>
+                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    </div>
+                    <div class="mu-field-with-translate">
+                      <textarea class="proj-mu-action" placeholder="Action Taken"></textarea>
+                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    </div>
+                    <div class="mu-field-with-translate">
+                      <textarea class="proj-mu-nextaction" placeholder="Next Action"></textarea>
+                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    </div>
                     <input type="date" class="proj-mu-nextaction-due" title="Next Action due date">
                     <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-autocreate"> Create as Plan automatically</label>
                     <button class="btn btn-sm btn-primary" data-role="add-monthly-update">${icon('save')} Save</button>
@@ -5396,6 +5867,7 @@ function renderProjectsList(){
 
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
         p.name = block.querySelector('.proj-name').value.trim();
+        p.formulaRefCode = block.querySelector('.proj-formula-ref').value.trim();
         p.image = editingProjectImage;
         p.status = block.querySelector('.proj-status').value;
         p.requestDate = block.querySelector('.proj-request-date').value;
@@ -5406,13 +5878,16 @@ function renderProjectsList(){
         p.responsiblePerson = block.querySelector('.proj-responsible').value.trim();
         p.factoryName = block.querySelector('.proj-factory').value.trim();
         p.portionWeightQty = block.querySelector('.proj-portion-qty').value.trim();
-        p.portionWeightUnit = block.querySelector('.proj-portion-unit').value;
+        p.portionWeightUnit = block.querySelector('.proj-portion-unit').value.trim();
+        p.portionPerUnit = block.querySelector('.proj-portion-per-unit').value.trim();
         p.innerPackQty = block.querySelector('.proj-inner-qty').value.trim();
-        p.innerPackWeightUnit = block.querySelector('.proj-inner-weight-unit').value;
-        p.innerPackUnit = block.querySelector('.proj-inner-pack-unit').value;
+        p.innerPackWeightUnit = block.querySelector('.proj-inner-weight-unit').value.trim();
+        p.innerPackUnit = block.querySelector('.proj-inner-pack-unit').value.trim();
         p.outerPackQty = block.querySelector('.proj-outer-qty').value.trim();
-        p.outerPackUnit = block.querySelector('.proj-outer-pack-unit').value;
-        p.outerPackContainerUnit = block.querySelector('.proj-outer-container-unit').value;
+        p.outerPackUnit = block.querySelector('.proj-outer-pack-unit').value.trim();
+        p.outerPackContainerUnit = block.querySelector('.proj-outer-container-unit').value.trim();
+        p.moqQty = block.querySelector('.proj-moq-qty').value.trim();
+        p.moqUnit = block.querySelector('.proj-moq-unit').value.trim();
         p.requirements = block.querySelector('.proj-requirements').value.trim();
         // Also picks up a Monthly Update draft — otherwise clicking Save
         // (top-right, for the header fields) while text sits in the
@@ -5451,6 +5926,10 @@ function renderProjectsList(){
         monthlyUpdateAddOpen = false;
         renderProjectsList();
       });
+      // Whichever of the Add-Update panel or an Edit-entry popup is
+      // currently open (only one at a time), wire up its Plan/Action
+      // Taken/Next Action translate buttons.
+      block.querySelectorAll('.mu-field-with-translate').forEach(wireMuTranslateButton);
       block.querySelector('[data-role="add-monthly-update"]')?.addEventListener('click', () => {
         if(!captureMonthlyUpdateDraft(p, block)){
           alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
@@ -5550,6 +6029,30 @@ function renderProjectsList(){
           const recipeId = addSelect.value;
           if(!recipeId) return;
           p.products.push(blankProduct(recipeId));
+          scheduleProjectSave(p);
+          renderProjectsList();
+        });
+      }
+
+      if(isEditing){
+        block.querySelectorAll('.proj-flavors-tbody tr[data-flavor-id]').forEach(row => {
+          const flavorId = row.dataset.flavorId;
+          const flavor = (p.flavors || []).find(x => x.id === flavorId);
+          if(!flavor) return;
+          row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; scheduleProjectSave(p); });
+          row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
+            p.flavors = p.flavors.filter(x => x.id !== flavorId);
+            scheduleProjectSave(p);
+            renderProjectsList();
+          });
+        });
+        block.querySelector('[data-role="add-flavor"]')?.addEventListener('click', () => {
+          if(!Array.isArray(p.flavors)) p.flavors = [];
+          p.flavors.push(blankFlavor());
           scheduleProjectSave(p);
           renderProjectsList();
         });
@@ -6200,8 +6703,14 @@ function attachLoginEventsListener(){
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [], productTypes: [] };
-const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Sales Reps', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories', productTypes: 'Product Types' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [], productTypes: [], units: [] };
+const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Project Owner', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories', productTypes: 'Product Types', units: 'Units' };
+// Seeded into metaLists.units the first time it's ever missing from the
+// saved doc (see attachMetaListsListener) — the exact same values every
+// Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
+// to, so existing recipes/projects keep showing the same units after the
+// switch to a user-editable list instead of losing them.
+const DEFAULT_UNIT_SEED = ['g','kg','ml','L','oz','lb','pcs','pack','bag','box','sachet','pouch','tray','carton','case'];
 
 // The trial-code abbreviation (see the Trial Code Format tab) is always the
 // first 3 letters of the product type name, uppercased — never typed by
@@ -6226,14 +6735,24 @@ function metaItemName(entry){
 function attachMetaListsListener(){
   unsubscribeMetaLists = onSnapshot(metaListsDoc, snap => {
     const data = snap.data() || {};
+    // "units" is a field the saved doc never had before — undefined (not
+    // just an empty array, which would mean the user deliberately cleared
+    // it) means this is the very first load since the switch to an
+    // editable list, so seed it with the same values every unit dropdown
+    // used to be hardcoded to and persist that seed immediately.
+    const needsUnitSeed = data.units === undefined;
     metaLists = {
       customers: (Array.isArray(data.customers) ? data.customers : []).map(metaItem),
       destinationCountries: (Array.isArray(data.destinationCountries) ? data.destinationCountries : []).map(metaItem),
       salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem),
       responsiblePersons: (Array.isArray(data.responsiblePersons) ? data.responsiblePersons : []).map(metaItem),
       factories: (Array.isArray(data.factories) ? data.factories : []).map(metaItem),
-      productTypes: (Array.isArray(data.productTypes) ? data.productTypes : []).map(metaItem)
+      productTypes: (Array.isArray(data.productTypes) ? data.productTypes : []).map(metaItem),
+      units: needsUnitSeed
+        ? DEFAULT_UNIT_SEED.map(name => ({ id: uid(), name, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null }))
+        : (Array.isArray(data.units) ? data.units : []).map(metaItem)
     };
+    if(needsUnitSeed) setDoc(metaListsDoc, metaLists);
     renderMetaDatalists();
     if(mainFeatureView === 'refLists') renderRefListItems();
   }, err => {
@@ -6278,7 +6797,7 @@ function removeMetaListItem(key, id){
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', factories: 'factoryDatalist', productTypes: 'productTypeDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', factories: 'factoryDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -6852,7 +7371,9 @@ function blankRecipe(){
     descPhotos: [],
     batchWeight: 1000,
     parts: [],
-    processes: [ { title: "", steps: [""], components: [] } ],
+    processes: [ { id: uid(), title: "", steps: [], components: [] } ],
+    processFlowchart: { nodes: [], edges: [] },
+    processViewMode: 'list',
     yieldPct: '',
     versions: [],
     createdBy: currentUser?.email || '',
@@ -6878,6 +7399,7 @@ function migrateRecipe(r){
     if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
       p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
     }
+    p.ingredients.forEach(ing => { if(ing.flowNodeId === undefined) ing.flowNodeId = null; });
     const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
     if(oldPartName) p.name = `Part ${oldPartName[1]}`;
     if(!Array.isArray(p.parts)) p.parts = [];
@@ -6887,18 +7409,30 @@ function migrateRecipe(r){
 
   if(!Array.isArray(r.processes)){
     const oldSteps = Array.isArray(r.steps) ? r.steps.filter(s => (s||'').trim() !== '') : [];
-    r.processes = [ { title: "", steps: oldSteps.length ? oldSteps : [""] } ];
+    r.processes = [ { id: uid(), title: "", steps: oldSteps } ];
     delete r.steps;
   }
   if(r.processes.length === 0){
-    r.processes.push({ title: "", steps: [""], components: [] });
+    r.processes.push({ id: uid(), title: "", steps: [], components: [] });
   }
   r.processes.forEach(p => {
-    if(!Array.isArray(p.steps) || p.steps.length === 0){
-      p.steps = [""];
-    }
+    // Backfilled so Process Flowchart nodes can live-link to a specific
+    // Process by a stable id — an array index would break the moment
+    // Processes get reordered or one before it is deleted.
+    if(!p.id) p.id = uid();
+    // A Process is valid with just a title and no steps yet — no longer
+    // force a blank placeholder step just to have something to render.
+    if(!Array.isArray(p.steps)) p.steps = [];
     if(!Array.isArray(p.components)) p.components = [];
   });
+
+  if(!r.processFlowchart || typeof r.processFlowchart !== 'object'){
+    r.processFlowchart = { nodes: [], edges: [] };
+  }
+  if(!Array.isArray(r.processFlowchart.nodes)) r.processFlowchart.nodes = [];
+  if(!Array.isArray(r.processFlowchart.edges)) r.processFlowchart.edges = [];
+  // Normalizes any missing/garbage value to 'list' too, not just undefined.
+  if(r.processViewMode !== 'flowchart') r.processViewMode = 'list';
 
   // Description used to be a single free-text field — upgrade it to a list
   // of separate points (characteristics, selling points, etc.).
@@ -7486,8 +8020,10 @@ const LUCIDE_ICONS = {
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
   'log-out': '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
   'menu': '<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />',
+  'move': '<path d="M12 2v20" /><path d="m15 19-3 3-3-3" /><path d="m19 9 3 3-3 3" /><path d="M2 12h20" /><path d="m5 9-3 3 3 3" /><path d="m9 5 3-3 3 3" />',
   'party-popper': '<path d="M5.8 11.3 2 22l10.7-3.79" /><path d="M4 3h.01" /><path d="M22 8h.01" /><path d="M15 2h.01" /><path d="M22 20h.01" /><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" /><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" /><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" /><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />',
   'pencil': '<path d="M21.174 6.812a1 1 0 0 0-3.986-3.987L3.842 16.174a2 2 0 0 0-.5.83l-1.321 4.352a.5.5 0 0 0 .623.622l4.353-1.32a2 2 0 0 0 .83-.497z" /><path d="m15 5 4 4" />',
+  'plus': '<path d="M5 12h14" /><path d="M12 5v14" />',
   'printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
   'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
   'save': '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
@@ -8159,7 +8695,35 @@ function renderMain(){
     </div>
 
     <div class="card">
-      <div class="card-title">2. Ingredients, Percentage & Weight</div>
+      <div class="card-title">2. Recipe Overview (all parts combined)</div>
+      <div class="overview-block">
+        <div style="overflow-x:auto;">
+        <table>
+          <thead>
+            <tr>
+              <th class="col-no">#</th>
+              <th>Ingredient</th>
+              <th class="col-pct">% of Recipe</th>
+              <th class="col-wt">Total Weight (g)</th>
+            </tr>
+          </thead>
+          <tbody id="overviewBody"></tbody>
+          <tfoot>
+            <tr>
+              <td></td>
+              <td>Total</td>
+              <td class="col-pct" id="grandTotalPct"></td>
+              <td class="col-wt" id="grandTotalWt"></td>
+            </tr>
+          </tfoot>
+        </table>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Components and Process</div>
+      <div class="components-process-grid">
       <div class="ingredients-edit-view">
       <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
       <div class="batch-summary">
@@ -8199,39 +8763,41 @@ function renderMain(){
         <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
       </div>
       </div>
-      <div id="printIngredientTree" class="print-only"></div>
-
-      <div class="overview-block">
-        <div class="overview-title">Recipe Overview (all parts combined)</div>
-        <div style="overflow-x:auto;">
-        <table>
-          <thead>
-            <tr>
-              <th class="col-no">#</th>
-              <th>Ingredient</th>
-              <th class="col-pct">% of Recipe</th>
-              <th class="col-wt">Total Weight (g)</th>
-            </tr>
-          </thead>
-          <tbody id="overviewBody"></tbody>
-          <tfoot>
-            <tr>
-              <td></td>
-              <td>Total</td>
-              <td class="col-pct" id="grandTotalPct"></td>
-              <td class="col-wt" id="grandTotalWt"></td>
-            </tr>
-          </tfoot>
-        </table>
-        </div>
+      <div class="simple-process-col">
+        <div class="simple-process-col-title">Process</div>
+        <div id="simpleProcessPreview"></div>
       </div>
+      </div>
+      <div id="printIngredientTree" class="print-only"></div>
     </div>
 
     <div class="card">
-      <div class="card-title">3. Process Steps</div>
-      <div class="processes-list" id="processesList"></div>
-      <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
+      <div class="card-title">
+        4. Process Steps
+        <div class="view-mode-toggle" id="processViewToggle">
+          <button type="button" class="btn btn-sm view-mode-btn" data-mode="list">${icon('list', 14)} List</button>
+          <button type="button" class="btn btn-sm view-mode-btn" data-mode="flowchart">${icon('git-branch', 14)} Flowchart</button>
+        </div>
+      </div>
+      <div id="processesListWrap">
+        <div class="processes-list" id="processesList"></div>
+        <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
+      </div>
+
+      <div class="flow-canvas-wrap process-view-hidden" id="flowchartCanvasWrap">
+        <div class="flow-toolbar">
+          <button type="button" class="btn btn-sm" id="btnAddFlowNode">${icon('plus', 14)} Add Node</button>
+        </div>
+        <div class="flow-canvas-scroll" id="flowchartCanvasScroll">
+          <div class="flow-canvas" id="flowchartCanvas">
+            <svg class="flow-edges-svg" id="flowEdgesSvg"></svg>
+            <div class="flow-nodes-layer" id="flowNodesLayer"></div>
+          </div>
+        </div>
+      </div>
+
       <div id="printProcessesView" class="print-only compare-steps-col"></div>
+      <div id="printProcessFlowchart" class="print-only"></div>
     </div>
     </div>
 
@@ -8374,6 +8940,15 @@ function renderMain(){
 
   renderParts(r);
   renderProcesses(r);
+  refreshProcessViewMode(r);
+  document.getElementById('processViewToggle').addEventListener('click', e => {
+    const btn = e.target.closest('.view-mode-btn');
+    if(btn) setProcessViewMode(r, btn.dataset.mode);
+  });
+  document.getElementById('btnAddFlowNode').addEventListener('click', () => addFlowNode(r));
+  document.getElementById('flowEdgesSvg').addEventListener('click', e => {
+    if(e.target.classList.contains('flow-edge-hit')) deleteFlowEdge(r, e.target.dataset.edgeId);
+  });
 
   document.getElementById('btnAddPart').addEventListener('click', () => {
     r.parts.push(blankPart(`Part ${r.parts.length+1}`));
@@ -8383,7 +8958,7 @@ function renderMain(){
   });
 
   document.getElementById('btnAddProcess').addEventListener('click', () => {
-    r.processes.push({ title: '', steps: [''], components: [] });
+    r.processes.push({ id: uid(), title: '', steps: [], components: [] });
     renderProcesses(r);
     scheduleSave();
   });
@@ -8902,6 +9477,10 @@ function renderPartNode(r, part, container, siblingsCtx){
             <span class="ing-unit">g</span>
           </div>
           <button class="icon-btn" title="Delete">${icon('x')}</button>
+          <div class="ing-flow-link-wrap">
+            <span class="ing-flow-link-arrow">→</span>
+            <select class="ing-flow-link" title="Link this ingredient to a Process Flowchart node"></select>
+          </div>
         </div>
         <div class="ing-hint"></div>
       `;
@@ -8913,6 +9492,23 @@ function renderPartNode(r, part, container, siblingsCtx){
       const wtInput = branch.querySelector('.ing-wt');
       const noteInput = branch.querySelector('.ing-note');
       const delBtn = branch.querySelector('.icon-btn');
+
+      // Optional link to a Process Flowchart node (see the Process
+      // Flowchart section) — e.g. "this ingredient goes into step B".
+      // Hidden entirely (not just left blank) until the recipe actually
+      // has at least one flowchart node, so recipes that never touch that
+      // feature see zero visual change to this row.
+      const flowLinkWrap = branch.querySelector('.ing-flow-link-wrap');
+      const flowLinkSelect = branch.querySelector('.ing-flow-link');
+      const flowNodes = (r.processFlowchart && r.processFlowchart.nodes) || [];
+      flowLinkWrap.classList.toggle('hidden-if-empty', flowNodes.length === 0);
+      flowLinkSelect.innerHTML = `<option value="">—</option>` +
+        flowNodes.map(n => `<option value="${escapeHtml(n.id)}">${escapeHtml(n.label || '?')}</option>`).join('');
+      flowLinkSelect.value = ing.flowNodeId || '';
+      flowLinkSelect.addEventListener('change', e => {
+        ing.flowNodeId = e.target.value || null;
+        scheduleSave();
+      });
 
       ingDragHandle.addEventListener('dragstart', e => {
         dragPayload = { type: 'ingredient', item: ing, sourcePart: part };
@@ -9374,7 +9970,6 @@ function renderProcesses(r){
         });
         delBtn.addEventListener('click', () => {
           proc.steps.splice(idx,1);
-          if(proc.steps.length === 0) proc.steps.push('');
           renderStepRows(); scheduleSave();
         });
 
@@ -9568,14 +10163,410 @@ function renderProcesses(r){
       scheduleSave();
     });
     deleteProcessBtn.addEventListener('click', () => {
+      const deletedProc = r.processes[pIdx];
       r.processes.splice(pIdx, 1);
-      if(r.processes.length === 0) r.processes.push({ title: '', steps: [''], components: [] });
+      if(r.processes.length === 0) r.processes.push({ id: uid(), title: '', steps: [], components: [] });
+      // Any Process Flowchart node currently live-linked to this Process
+      // (see computeFlowNodeText) gets detached rather than losing its
+      // content silently — its last-shown text is frozen as an ordinary
+      // free-typed node instead.
+      (r.processFlowchart.nodes || []).forEach(node => {
+        if(node.linkedProcessId === deletedProc.id){
+          node.text = computeFlowNodeText({ linkedProcessId: deletedProc.id, text: node.text }, [deletedProc]);
+          node.linkedProcessId = null;
+        }
+      });
       renderProcesses(r);
       scheduleSave();
     });
 
     list.appendChild(block);
   });
+
+  renderSimpleProcessPreview(r);
+}
+
+// A plain, non-editable "title, then each step stacked with a ↓ arrow
+// between them" preview — the simple two-column Ingredient|Process layout
+// the user's own reference spreadsheet uses, shown live in section 3 next
+// to the ingredient tree. Read-only: the actual editing still happens in
+// section 4's List view (or the Flowchart view) — this just mirrors
+// whatever's there right now, refreshed on every renderProcesses(r) call
+// so it never goes stale. No connector arrows between separate Process
+// entries, only between a Process's own consecutive steps, matching the
+// reference layout's visually distinct titled groups.
+function renderSimpleProcessPreview(r){
+  const el = document.getElementById('simpleProcessPreview');
+  if(!el) return;
+  const list = (r.processes || []).filter(p =>
+    (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== '')
+  );
+  if(list.length === 0){
+    el.innerHTML = '<div class="overview-empty">No process steps yet</div>';
+    return;
+  }
+  el.innerHTML = list.map(p => {
+    const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+    return `
+      <div class="simple-process-block">
+        <div class="simple-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+        ${steps.map((s, idx) => `
+          ${idx > 0 ? '<div class="simple-process-arrow">↓</div>' : ''}
+          <div class="simple-process-step">${escapeHtml(s)}</div>
+        `).join('')}
+      </div>
+    `;
+  }).join('');
+}
+
+/* ---------- Process Flowchart (freeform alternative to the numbered Steps
+   list — one shared canvas per recipe, not per Process entry) ----------
+   The first freeform/draggable-node/connector-line UI in this app; there's
+   no existing precedent to extend, so the drag and edge-drawing mechanics
+   below are built from scratch. Everything else (data shape, save-on-edit,
+   full-rebuild render style) follows the same conventions as the rest of
+   the file. */
+
+const DEFAULT_FLOW_NODE_W = 170;
+
+// Module-level "what's currently being manipulated" state, same discipline
+// as dragPayload above: always reset to null on every exit path (success
+// or cancel) of its gesture, never left dangling.
+let flowNodeDrag = null; // { r, node, el, startClientX, startClientY, startX, startY }
+let flowEdgeDraw = null; // { r, fromNode, fromEl, currentClientX, currentClientY }
+
+// Spreadsheet-style column labels (A, B, ... Z, AA, AB, ...) — picks the
+// first one not already used by an existing node, so a deleted node's
+// letter can be reused by the next Add, and existing labels are never
+// renumbered out from under an ingredient that already links to them.
+function excelColumnLabel(i){
+  let n = i + 1, label = '';
+  while(n > 0){
+    const rem = (n - 1) % 26;
+    label = String.fromCharCode(65 + rem) + label;
+    n = Math.floor((n - 1) / 26);
+  }
+  return label;
+}
+function nextFlowNodeLabel(nodes){
+  const used = new Set((nodes || []).map(n => (n.label || '').trim().toUpperCase()).filter(Boolean));
+  for(let i = 0; i < 18278; i++){ // A..Z, AA..ZZ, AAA..ZZZ — far more than any real recipe needs
+    const label = excelColumnLabel(i);
+    if(!used.has(label)) return label;
+  }
+  return 'X' + (nodes.length + 1); // astronomically unlikely fallback
+}
+
+function blankFlowNode(label, x, y){
+  return { id: uid(), x: Math.round(x), y: Math.round(y), w: DEFAULT_FLOW_NODE_W, label, text: '', linkedProcessId: null };
+}
+
+// A node's displayed text is either its own free-typed .text, or — when
+// linked to a Process (see the node's "Link" dropdown) — live-derived
+// fresh from that Process's current title + steps every time this is
+// called, so editing the List always shows up the next time the
+// Flowchart is rendered without any separate push-sync step. Falls back
+// to whatever .text was last set if the linked Process no longer exists
+// (shouldn't normally happen — Process deletion detaches the link and
+// freezes the text instead — but never crash on a dangling reference).
+function computeFlowNodeText(node, processes){
+  if(!node.linkedProcessId) return node.text || '';
+  const proc = (processes || []).find(p => p.id === node.linkedProcessId);
+  if(!proc) return node.text || '';
+  const steps = (proc.steps || []).filter(s => (s||'').trim() !== '');
+  return [proc.title || 'Untitled process', ...steps].join('\n');
+}
+
+function addFlowNode(r){
+  const scrollEl = document.getElementById('flowchartCanvasScroll');
+  let x = 40, y = 40;
+  if(scrollEl){
+    // Drops the new node inside whatever part of the canvas is currently
+    // scrolled into view, cascading slightly on repeated clicks so new
+    // nodes don't stack exactly on top of each other.
+    const count = r.processFlowchart.nodes.length;
+    x = scrollEl.scrollLeft + 40 + (count % 5) * 24;
+    y = scrollEl.scrollTop + 40 + (count % 5) * 24;
+  }
+  r.processFlowchart.nodes.push(blankFlowNode(nextFlowNodeLabel(r.processFlowchart.nodes), x, y));
+  renderProcessFlowchart(r);
+  renderParts(r); // refreshes every ingredient row's link-selector options
+  scheduleSave();
+}
+
+// Recursive (mirrors migratePart's own recursion) so a node deleted while
+// linked from an ingredient nested inside a Sub-part still gets cleared.
+function clearFlowLinksToNode(parts, nodeId){
+  (parts || []).forEach(part => {
+    (part.ingredients || []).forEach(ing => {
+      if(ing.flowNodeId === nodeId) ing.flowNodeId = null;
+    });
+    clearFlowLinksToNode(part.parts, nodeId);
+  });
+}
+
+function deleteFlowNode(r, nodeId){
+  const idx = r.processFlowchart.nodes.findIndex(n => n.id === nodeId);
+  if(idx === -1) return;
+  r.processFlowchart.nodes.splice(idx, 1);
+  r.processFlowchart.edges = r.processFlowchart.edges.filter(e => e.from !== nodeId && e.to !== nodeId);
+  clearFlowLinksToNode(r.parts, nodeId);
+  renderProcessFlowchart(r);
+  renderParts(r);
+  scheduleSave();
+}
+
+function addFlowEdge(r, fromId, toId){
+  if(!fromId || !toId || fromId === toId) return;
+  const exists = r.processFlowchart.edges.some(e => e.from === fromId && e.to === toId);
+  if(exists) return;
+  r.processFlowchart.edges.push({ id: uid(), from: fromId, to: toId });
+}
+
+function deleteFlowEdge(r, edgeId){
+  const idx = r.processFlowchart.edges.findIndex(e => e.id === edgeId);
+  if(idx === -1) return;
+  r.processFlowchart.edges.splice(idx, 1);
+  redrawFlowEdges(r);
+  scheduleSave();
+}
+
+// Every node div is position:absolute inside #flowchartCanvas (itself
+// position:relative), so offsetLeft/offsetTop are ALREADY canvas-local
+// coordinates — no viewport/scroll conversion needed for node-to-node
+// geometry, only for the one case that needs a real pointer position (the
+// live ghost-edge preview line, handled separately in redrawFlowEdges).
+function rectOf(el){
+  return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
+}
+
+// Where a straight line from a rect's center to `target` crosses that
+// rect's own border — used to clip an edge so it visually starts/ends at
+// a node's edge instead of its center.
+function clipToRectEdge(rect, target){
+  const cx = rect.x + rect.w/2, cy = rect.y + rect.h/2;
+  const dx = target.x - cx, dy = target.y - cy;
+  if(dx === 0 && dy === 0) return { x: cx, y: cy };
+  const scale = Math.min((rect.w/2) / Math.abs(dx || 1e-6), (rect.h/2) / Math.abs(dy || 1e-6));
+  return { x: cx + dx*scale, y: cy + dy*scale };
+}
+
+const FLOW_ARROWHEAD_DEFS = `<defs><marker id="flowArrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--primary)"></path></marker></defs>`;
+
+// Recomputes every edge's SVG path from the CURRENT rendered node
+// positions (so a dragged node's edges always follow it, with no separate
+// "commit" step) — cheap enough to just redo all of them on every move
+// rather than tracking which edges touch the node being dragged. Pass
+// `ghost` (the in-progress flowEdgeDraw state) while a new edge is being
+// drawn, to also show a dashed preview line following the pointer.
+function redrawFlowEdges(r, ghost){
+  const svg = document.getElementById('flowEdgesSvg');
+  const layer = document.getElementById('flowNodesLayer');
+  if(!svg || !layer) return;
+  let html = FLOW_ARROWHEAD_DEFS;
+  (r.processFlowchart.edges || []).forEach(edge => {
+    const fromEl = layer.querySelector(`[data-node-id="${edge.from}"]`);
+    const toEl = layer.querySelector(`[data-node-id="${edge.to}"]`);
+    if(!fromEl || !toEl) return; // defensive: a dangling edge shouldn't be possible, but never crash on one
+    const fromRect = rectOf(fromEl), toRect = rectOf(toEl);
+    const fromCenter = { x: fromRect.x + fromRect.w/2, y: fromRect.y + fromRect.h/2 };
+    const toCenter = { x: toRect.x + toRect.w/2, y: toRect.y + toRect.h/2 };
+    const start = clipToRectEdge(fromRect, toCenter);
+    const end = clipToRectEdge(toRect, fromCenter);
+    // Two overlapping paths per edge: a wide invisible one first (an easy
+    // click target, via CSS pointer-events:stroke) then the thin visible
+    // line on top — a CSS ":hover + selector" rule alone highlights the
+    // visible line on hover, no JS hover wiring needed.
+    html += `<path class="flow-edge-hit" data-edge-id="${edge.id}" d="M${start.x},${start.y} L${end.x},${end.y}"></path>`;
+    html += `<path class="flow-edge-line" d="M${start.x},${start.y} L${end.x},${end.y}" marker-end="url(#flowArrowhead)"></path>`;
+  });
+  if(ghost){
+    const scrollEl = document.getElementById('flowchartCanvasScroll');
+    const scrollRect = scrollEl.getBoundingClientRect();
+    const endX = ghost.currentClientX - scrollRect.left + scrollEl.scrollLeft;
+    const endY = ghost.currentClientY - scrollRect.top + scrollEl.scrollTop;
+    const start = clipToRectEdge(rectOf(ghost.fromEl), { x: endX, y: endY });
+    html += `<path class="flow-ghost-edge" d="M${start.x},${start.y} L${endX},${endY}"></path>`;
+  }
+  svg.innerHTML = html;
+}
+
+// Grows the canvas surface to fit every node + margin. Coordinates never
+// go negative (see onFlowPointerMove) so growth is always one-directional
+// (right/down) — the surface only re-tightens back down on the next full
+// renderProcessFlowchart() rebuild, not instantly as a node is dragged
+// back toward the origin.
+function resizeFlowCanvasToFitNodes(){
+  const canvas = document.getElementById('flowchartCanvas');
+  const scrollEl = document.getElementById('flowchartCanvasScroll');
+  if(!canvas || !scrollEl) return;
+  let maxRight = 0, maxBottom = 0;
+  canvas.querySelectorAll('.flow-node').forEach(el => {
+    maxRight = Math.max(maxRight, el.offsetLeft + el.offsetWidth);
+    maxBottom = Math.max(maxBottom, el.offsetTop + el.offsetHeight);
+  });
+  canvas.style.width = Math.max(maxRight + 200, scrollEl.clientWidth) + 'px';
+  canvas.style.height = Math.max(maxBottom + 200, 400) + 'px';
+}
+
+// Full rebuild of the nodes layer + edges — deliberately lazy: bails out
+// unless Flowchart view is genuinely visible right now. offsetWidth/
+// offsetHeight all read 0 on elements inside a display:none ancestor, so
+// building this eagerly while List view is active would silently draw
+// every node collapsed at 0x0. refreshProcessViewMode always flips
+// visibility BEFORE calling this, so by the time it runs the container is
+// real and measurable.
+function renderProcessFlowchart(r){
+  const layer = document.getElementById('flowNodesLayer');
+  if(!layer || r.processViewMode !== 'flowchart') return;
+
+  layer.innerHTML = '';
+  (r.processFlowchart.nodes || []).forEach(node => {
+    const el = document.createElement('div');
+    el.className = 'flow-node';
+    el.dataset.nodeId = node.id;
+    el.style.left = node.x + 'px';
+    el.style.top = node.y + 'px';
+    el.style.width = (node.w || DEFAULT_FLOW_NODE_W) + 'px';
+    el.innerHTML = `
+      <div class="flow-connector-dot top"></div>
+      <div class="flow-connector-dot right"></div>
+      <div class="flow-connector-dot bottom"></div>
+      <div class="flow-connector-dot left"></div>
+      <div class="flow-node-strip">
+        ${icon('move', 12)}
+        <input type="text" class="flow-node-label" maxlength="6">
+        <button type="button" class="icon-btn" title="Delete this node">${icon('x')}</button>
+      </div>
+      <select class="flow-node-link" title="Link this node to a Process from the List view — its text then stays in sync with that Process's title/steps"></select>
+      <textarea class="flow-node-text" rows="1" placeholder="Step / group name..."></textarea>
+    `;
+    // Appended before any scrollHeight-dependent measurement below — a
+    // detached element (not yet in the document) can't report real layout.
+    layer.appendChild(el);
+
+    const labelInput = el.querySelector('.flow-node-label');
+    labelInput.value = node.label || '';
+    labelInput.addEventListener('input', e => {
+      node.label = e.target.value;
+      renderParts(r); // keeps every ingredient row's link-selector option text in sync
+      scheduleSave();
+    });
+
+    const textArea = el.querySelector('.flow-node-text');
+    function autoGrowFlowTextarea(){
+      textArea.style.height = 'auto';
+      textArea.style.height = textArea.scrollHeight + 'px';
+    }
+    // Reflects the node's current linked/unlinked state: linked shows the
+    // live-derived text read-only (edit the actual Process in List view
+    // instead — editing it here would just be silently overwritten the
+    // next render), unlinked is a normal free-typed field.
+    function refreshTextAreaFromLinkState(){
+      textArea.value = computeFlowNodeText(node, r.processes);
+      textArea.disabled = !!node.linkedProcessId;
+      autoGrowFlowTextarea();
+    }
+    refreshTextAreaFromLinkState();
+    textArea.addEventListener('input', e => {
+      node.text = e.target.value;
+      autoGrowFlowTextarea();
+      resizeFlowCanvasToFitNodes();
+      redrawFlowEdges(r);
+      scheduleSave();
+    });
+
+    const linkSelect = el.querySelector('.flow-node-link');
+    linkSelect.innerHTML = `<option value="">— Free text —</option>` +
+      (r.processes || []).map(p => `<option value="${escapeHtml(p.id)}">${escapeHtml(p.title || 'Untitled process')}</option>`).join('');
+    linkSelect.value = node.linkedProcessId || '';
+    linkSelect.addEventListener('change', e => {
+      node.linkedProcessId = e.target.value || null;
+      refreshTextAreaFromLinkState();
+      resizeFlowCanvasToFitNodes();
+      redrawFlowEdges(r);
+      scheduleSave();
+    });
+
+    el.querySelector('.flow-node-strip').addEventListener('pointerdown', e => {
+      if(e.target.closest('.flow-node-label, .icon-btn')) return;
+      startFlowNodeDrag(r, node, el, e);
+    });
+    el.querySelectorAll('.flow-connector-dot').forEach(dot => {
+      dot.addEventListener('pointerdown', e => {
+        e.stopPropagation(); // don't also start a node-drag from the same pointerdown
+        startFlowEdgeDraw(r, node, el, e);
+      });
+    });
+    el.querySelector('.icon-btn').addEventListener('click', () => deleteFlowNode(r, node.id));
+  });
+
+  resizeFlowCanvasToFitNodes();
+  redrawFlowEdges(r);
+}
+
+function startFlowNodeDrag(r, node, el, e){
+  flowNodeDrag = { r, node, el, startClientX: e.clientX, startClientY: e.clientY, startX: node.x, startY: node.y };
+  el.classList.add('dragging');
+}
+
+function startFlowEdgeDraw(r, node, el, e){
+  flowEdgeDraw = { r, fromNode: node, fromEl: el, currentClientX: e.clientX, currentClientY: e.clientY };
+}
+
+function onFlowPointerMove(e){
+  if(flowNodeDrag){
+    const d = flowNodeDrag;
+    d.node.x = Math.max(0, Math.round(d.startX + (e.clientX - d.startClientX)));
+    d.node.y = Math.max(0, Math.round(d.startY + (e.clientY - d.startClientY)));
+    d.el.style.left = d.node.x + 'px';
+    d.el.style.top = d.node.y + 'px';
+    resizeFlowCanvasToFitNodes();
+    redrawFlowEdges(d.r);
+  } else if(flowEdgeDraw){
+    flowEdgeDraw.currentClientX = e.clientX;
+    flowEdgeDraw.currentClientY = e.clientY;
+    redrawFlowEdges(flowEdgeDraw.r, flowEdgeDraw);
+  }
+}
+function onFlowPointerUp(e){
+  if(flowNodeDrag){
+    flowNodeDrag.el.classList.remove('dragging');
+    flowNodeDrag = null;
+    scheduleSave();
+  } else if(flowEdgeDraw){
+    const { r, fromNode } = flowEdgeDraw;
+    const targetEl = document.elementFromPoint(e.clientX, e.clientY)?.closest('.flow-node');
+    flowEdgeDraw = null; // cleared before branching, so it can never leak on an early return
+    const toId = targetEl?.dataset.nodeId;
+    if(toId && toId !== fromNode.id) addFlowEdge(r, fromNode.id, toId);
+    redrawFlowEdges(r);
+    scheduleSave();
+  }
+}
+document.addEventListener('pointermove', onFlowPointerMove);
+document.addEventListener('pointerup', onFlowPointerUp);
+
+function setProcessViewMode(r, mode){
+  r.processViewMode = mode;
+  refreshProcessViewMode(r);
+  scheduleSave();
+}
+
+function refreshProcessViewMode(r){
+  const listWrap = document.getElementById('processesListWrap');
+  const flowWrap = document.getElementById('flowchartCanvasWrap');
+  const toggleWrap = document.getElementById('processViewToggle');
+  if(!listWrap || !flowWrap) return;
+  const isFlow = r.processViewMode === 'flowchart';
+  listWrap.classList.toggle('process-view-hidden', isFlow);
+  flowWrap.classList.toggle('process-view-hidden', !isFlow);
+  if(toggleWrap){
+    toggleWrap.querySelectorAll('.view-mode-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.mode === r.processViewMode);
+    });
+  }
+  if(isFlow) renderProcessFlowchart(r); // container is now genuinely visible — safe to measure/build
 }
 
 /* ---------- Description points (Description / Concept, as a bullet list) ---------- */
@@ -9663,6 +10654,84 @@ function readOnlyProcessesHtml(processes){
   }).join('');
 }
 
+// Static, non-interactive mirror of the live Process Flowchart canvas (see
+// renderProcessFlowchart) for Printing and Version Preview — reuses the
+// exact stored node x/y/w so the read-only view matches what was actually
+// designed, just without drag handles/connector dots/delete buttons.
+// containerEl-scoped rather than a fixed global id, since Print and
+// Version Preview can both hold their own copy in the document at once.
+function readOnlyProcessFlowchartHtml(flowchart, processes){
+  const nodes = (flowchart && flowchart.nodes) || [];
+  if(nodes.length === 0) return '<div class="compare-missing">No flowchart yet</div>';
+  const nodesHtml = nodes.map(n => `
+    <div class="ro-flow-node" data-node-id="${escapeHtml(n.id)}" style="left:${n.x}px;top:${n.y}px;width:${n.w || DEFAULT_FLOW_NODE_W}px;">
+      <div class="flow-node-label">${escapeHtml(n.label || '')}</div>
+      <div class="flow-node-text">${escapeHtml(computeFlowNodeText(n, processes))}</div>
+    </div>
+  `).join('');
+  return `
+    <div class="flow-canvas-scroll">
+      <div class="flow-canvas ro-flow-canvas">
+        <svg class="flow-edges-svg"></svg>
+        <div class="flow-nodes-layer">${nodesHtml}</div>
+      </div>
+    </div>
+  `;
+}
+
+// Measures the just-rendered static nodes (only valid once containerEl is
+// actually laid out — see withTemporaryVisibility) and draws the edges +
+// sizes the canvas to fit, mirroring redrawFlowEdges/resizeFlowCanvasToFitNodes
+// but read-only (no hit-stroke, no click handler, no ghost line).
+function finalizeReadOnlyFlowchartEdges(containerEl, flowchart){
+  const svg = containerEl.querySelector('.flow-edges-svg');
+  const canvas = containerEl.querySelector('.ro-flow-canvas');
+  if(!svg || !canvas) return;
+  let maxRight = 0, maxBottom = 0;
+  canvas.querySelectorAll('.ro-flow-node').forEach(el => {
+    maxRight = Math.max(maxRight, el.offsetLeft + el.offsetWidth);
+    maxBottom = Math.max(maxBottom, el.offsetTop + el.offsetHeight);
+  });
+  canvas.style.width = (maxRight + 40) + 'px';
+  canvas.style.height = (maxBottom + 40) + 'px';
+
+  let html = FLOW_ARROWHEAD_DEFS;
+  ((flowchart && flowchart.edges) || []).forEach(edge => {
+    const fromEl = canvas.querySelector(`[data-node-id="${edge.from}"]`);
+    const toEl = canvas.querySelector(`[data-node-id="${edge.to}"]`);
+    if(!fromEl || !toEl) return;
+    const fromRect = rectOf(fromEl), toRect = rectOf(toEl);
+    const fromCenter = { x: fromRect.x + fromRect.w/2, y: fromRect.y + fromRect.h/2 };
+    const toCenter = { x: toRect.x + toRect.w/2, y: toRect.y + toRect.h/2 };
+    const start = clipToRectEdge(fromRect, toCenter);
+    const end = clipToRectEdge(toRect, fromCenter);
+    html += `<path class="flow-edge-line" d="M${start.x},${start.y} L${end.x},${end.y}" marker-end="url(#flowArrowhead)"></path>`;
+  });
+  svg.innerHTML = html;
+}
+
+function renderReadOnlyProcessFlowchart(containerEl, flowchart, processes){
+  containerEl.innerHTML = readOnlyProcessFlowchartHtml(flowchart, processes);
+  if(((flowchart && flowchart.nodes) || []).length > 0){
+    finalizeReadOnlyFlowchartEdges(containerEl, flowchart);
+  }
+}
+
+// offsetHeight/offsetWidth all read 0 on elements inside a display:none
+// ancestor — #printProcessFlowchart is display:none on-screen by default
+// (only shown via the print media query at real print time), so measuring
+// it immediately after setting its innerHTML would draw every edge
+// collapsed to a point. This temporarily forces it genuinely laid out but
+// off-viewport, runs the measure-and-draw step, then restores it — letting
+// the normal .print-only CSS (and the print media query's own !important)
+// keep governing its visibility for both screen and actual print output.
+function withTemporaryVisibility(el, fn){
+  const prevCss = el.style.cssText;
+  el.style.cssText = 'display:block !important;position:absolute;left:-9999px;top:-9999px;visibility:visible;';
+  fn();
+  el.style.cssText = prevCss;
+}
+
 // Shared by the Version Preview modal and Printing — the same Parts ->
 // Sub-parts -> Ingredients hierarchy as the live editable form (see
 // renderParts/renderPartNode), but as a compact read-only table (name,
@@ -9672,23 +10741,30 @@ function readOnlyProcessesHtml(processes){
 // while still visually reading as a tree the way the on-screen elbow-line
 // artwork does. Recursive so nested Sub-parts show up too, not just each
 // top-level Part's direct ingredients.
-function readOnlyIngredientTreeHtml(parts, totalWeight){
+function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
   const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
   if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
+  // The whole Node column is omitted entirely (not just left blank) unless
+  // the recipe actually has flowchart nodes, so recipes that never touch
+  // that feature get byte-identical print/preview output to before it
+  // existed.
+  const nodeLabelById = new Map((flowNodes || []).map(n => [n.id, n.label || '?']));
+  const showNodeCol = nodeLabelById.size > 0;
   const rootRow = `
     <tr class="ro-tree-row ro-tree-root">
       <td class="ro-tree-name">Formula per Portion</td>
       <td class="ro-tree-note"></td>
       <td class="ro-tree-pct">100.00%</td>
       <td class="ro-tree-wt">${fmtNum(totalWeight)}</td>
+      ${showNodeCol ? '<td class="ro-tree-nodecol"></td>' : ''}
     </tr>
   `;
   const bodyRows = namedParts.map((part, idx) =>
-    readOnlyPartBranchRows(part, false, totalWeight, [], idx === namedParts.length - 1)
+    readOnlyPartBranchRows(part, false, totalWeight, [], idx === namedParts.length - 1, nodeLabelById)
   ).join('');
   return `
     <table class="ro-tree-table">
-      <thead><tr><th class="ro-tree-name">Component</th><th class="ro-tree-note">Note</th><th class="ro-tree-pct">%</th><th class="ro-tree-wt">g</th></tr></thead>
+      <thead><tr><th class="ro-tree-name">Component</th><th class="ro-tree-note">Note</th><th class="ro-tree-pct">%</th><th class="ro-tree-wt">g</th>${showNodeCol ? '<th class="ro-tree-nodecol">Node</th>' : ''}</tr></thead>
       <tbody>${rootRow}${bodyRows}</tbody>
     </table>
   `;
@@ -9725,36 +10801,40 @@ function treeGuideHtml(ancestorContinues, isLast){
 // actual weights rather than trusting a stored .percent, since older
 // versions saved before Sub-parts existed never had one on their Part
 // objects.
-function readOnlyPartBranchRows(part, isNested, parentTotal, ancestorContinues, isLast){
+function readOnlyPartBranchRows(part, isNested, parentTotal, ancestorContinues, isLast, nodeLabelById){
   const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
   const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
   const label = (part.name||'').trim() || 'Unnamed part';
   const partWeight = partTotalWeight(part);
   const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
+  const showNodeCol = nodeLabelById && nodeLabelById.size > 0;
   const partRow = `
     <tr class="ro-tree-row ro-tree-part">
       <td class="ro-tree-name">${treeGuideHtml(ancestorContinues, isLast)}${escapeHtml(label)}</td>
       <td class="ro-tree-note"></td>
       <td class="ro-tree-pct">${partPct.toFixed(2)}%</td>
       <td class="ro-tree-wt">${fmtNum(partWeight)}</td>
+      ${showNodeCol ? '<td class="ro-tree-nodecol"></td>' : ''}
     </tr>
   `;
   const childAncestorContinues = [...ancestorContinues, !isLast];
   const childCount = namedIngredients.length + namedSubParts.length;
   const ingRows = namedIngredients.map((ing, idx) => {
     const childIsLast = idx === childCount - 1;
+    const nodeLabel = showNodeCol && ing.flowNodeId ? nodeLabelById.get(ing.flowNodeId) : null;
     return `
       <tr class="ro-tree-row ro-tree-ing">
         <td class="ro-tree-name">${treeGuideHtml(childAncestorContinues, childIsLast)}${escapeHtml(ing.name)}</td>
         <td class="ro-tree-note">${escapeHtml(ing.note || '')}</td>
         <td class="ro-tree-pct">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
         <td class="ro-tree-wt">${fmtNum(parseFloat(ing.weight)||0)}</td>
+        ${showNodeCol ? `<td class="ro-tree-nodecol">${nodeLabel ? '→' + escapeHtml(nodeLabel) : ''}</td>` : ''}
       </tr>
     `;
   }).join('');
   const subRows = namedSubParts.map((sub, idx) => {
     const childIsLast = namedIngredients.length + idx === childCount - 1;
-    return readOnlyPartBranchRows(sub, true, partWeight, childAncestorContinues, childIsLast);
+    return readOnlyPartBranchRows(sub, true, partWeight, childAncestorContinues, childIsLast, nodeLabelById);
   }).join('');
   return partRow + ingRows + subRows;
 }
@@ -9782,11 +10862,23 @@ function renderPrintView(r){
   const treeEl = document.getElementById('printIngredientTree');
   if(treeEl){
     const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-    treeEl.innerHTML = readOnlyIngredientTreeHtml(r.parts, totalWt);
+    treeEl.innerHTML = readOnlyIngredientTreeHtml(r.parts, totalWt, r.processFlowchart.nodes);
   }
 
+  // Mutually exclusive with the flowchart print view below, matching
+  // whichever mode is currently selected on-screen (see processViewMode).
+  const isFlowMode = r.processViewMode === 'flowchart' && r.processFlowchart.nodes.length > 0;
   const procEl = document.getElementById('printProcessesView');
-  if(procEl) procEl.innerHTML = readOnlyProcessesHtml(r.processes);
+  if(procEl) procEl.innerHTML = isFlowMode ? '' : readOnlyProcessesHtml(r.processes);
+
+  const flowEl = document.getElementById('printProcessFlowchart');
+  if(flowEl){
+    if(isFlowMode){
+      withTemporaryVisibility(flowEl, () => renderReadOnlyProcessFlowchart(flowEl, r.processFlowchart, r.processes));
+    } else {
+      flowEl.innerHTML = '';
+    }
+  }
 }
 
 /* ---------- Recipe actions ---------- */
