@@ -905,9 +905,64 @@
     background:var(--panel);
     box-shadow:-4px 0 6px -4px rgba(0,0,0,.15);
   }
-  .proj-th-sortable{cursor:pointer;user-select:none;}
-  .proj-th-sortable:hover{color:var(--primary);}
-  .proj-th-sortable.active{color:var(--primary-dark);font-weight:700;}
+  .proj-th-sortable{position:relative;}
+  .proj-th-label{cursor:pointer;user-select:none;}
+  .proj-th-label:hover{color:var(--primary);}
+  .proj-th-sortable.active .proj-th-label{color:var(--primary-dark);font-weight:700;}
+  /* Excel-style per-column filter — the "▾" trigger sits right after the
+     sortable label (a separate click target, so sorting and filtering don't
+     fight over the same click) and opens .proj-col-filter-menu, an absolute
+     popover anchored to the <th> itself (which is `position:relative` above,
+     and already a positioned element via its own `position:sticky` for the
+     header row — either one works as the popover's containing block). */
+  .proj-th-filter-btn{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    background:none;
+    border:none;
+    padding:2px;
+    margin-left:2px;
+    border-radius:4px;
+    color:var(--text-dim);
+    cursor:pointer;
+    vertical-align:middle;
+  }
+  .proj-th-filter-btn:hover{background:var(--bg);color:var(--primary);}
+  .proj-th-filter-btn.active{color:var(--primary);}
+  .proj-col-filter-menu{
+    display:none;
+    position:absolute;
+    top:100%;
+    left:0;
+    margin-top:4px;
+    min-width:180px;
+    max-height:280px;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:8px;
+    z-index:30;
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:normal;
+    white-space:normal;
+  }
+  .proj-col-filter-menu.open{display:block;}
+  .proj-col-filter-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:5px 6px;
+    border-radius:6px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .proj-col-filter-item:hover{background:var(--bg);}
+  .proj-col-filter-selectall{border-bottom:1px solid var(--border);margin-bottom:4px;padding-bottom:8px;}
+  .proj-col-filter-values{max-height:200px;overflow-y:auto;}
   /* Plain .btn (white fill, faint border) was nearly invisible sitting in
      a white table row — a light tint gives Duplicate/Cancel enough
      presence to read as buttons without competing with Save's solid fill. */
@@ -2250,6 +2305,37 @@
     background:#fff;
     color:var(--text);
   }
+  /* Projects table "Columns" picker — same floating-popover pattern as the
+     Home dashboard's "+ Create" menu (.hd2-create-menu), just with
+     checkboxes instead of action buttons. Opened/closed and click-outside
+     handling live in mountProjectsView / the document-level click listener. */
+  .col-toggle-wrap{position:relative;flex-shrink:0;}
+  .col-toggle-menu{
+    display:none;
+    position:absolute;
+    top:calc(100% + 6px);
+    right:0;
+    min-width:200px;
+    max-height:320px;
+    overflow-y:auto;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:var(--shadow);
+    padding:8px;
+    z-index:20;
+  }
+  .col-toggle-menu.open{display:block;}
+  .col-toggle-item{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    padding:6px 8px;
+    border-radius:6px;
+    font-size:13px;
+    cursor:pointer;
+  }
+  .col-toggle-item:hover{background:var(--bg);}
   .project-add-row{display:flex;gap:8px;margin-bottom:12px;}
   .project-add-row select{flex:1;}
   .project-log-entry{padding:10px 0;border-bottom:1px solid var(--border);}
@@ -2902,7 +2988,8 @@
     .dash-projects-table{min-width:720px;}
     .card > div:has(> .search-box > #projectSearchInput){flex-wrap:wrap;gap:8px !important;}
     .search-box:has(> #projectSearchInput){flex:1 1 100% !important;width:100%;}
-    #projectStatusFilter, #projectOwnerFilter, #projectFactoryRepFilter, #projectResponsibleFilter{flex:1 1 100%;width:100%;max-width:none !important;}
+    .col-toggle-wrap{flex:1 1 100%;}
+    .col-toggle-wrap > .btn{width:100%;justify-content:center;}
     .pipeline-funnel{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;}
     .pipeline-step{min-width:0;padding:10px 8px;}
     .pipeline-chevron{display:none;}
@@ -3503,7 +3590,9 @@ const CHANGELOG = [
   { version: "3.0.185", date: "2026-08-17", note: "Task Tracking on the Home dashboard now shows each task's project photo as a small thumbnail in front of it (a plain folder icon when the project has no photo), matching the Active Projects table's use of project photos elsewhere" },
   { version: "3.0.186", date: "2026-08-17", note: "Projects table now has 3 more filters next to Status — Owner, Factory Rep, and PD — so you can narrow the list down to only the projects a specific person handles (e.g. \"which projects is Bas the owner of\"). Each dropdown only lists names currently assigned to at least one project" },
   { version: "3.0.187", date: "2026-08-17", note: "\"Projects by Status\" on the Projects dashboard is now clickable — click any status row (e.g. \"In Progress\") to filter the table below to just that status, same as picking it from the Status dropdown, and jump straight down to it" },
-  { version: "3.0.188", date: "2026-08-17", note: "Moved the Project Photos gallery — it no longer sits as its own strip above \"Projects by Status\"; each status's photos now show directly above that status's own bar inside the card instead, so the photos and the numbers they belong to stay together" }
+  { version: "3.0.188", date: "2026-08-17", note: "Moved the Project Photos gallery — it no longer sits as its own strip above \"Projects by Status\"; each status's photos now show directly above that status's own bar inside the card instead, so the photos and the numbers they belong to stay together" },
+  { version: "3.0.189", date: "2026-08-17", note: "Added a \"Columns\" picker to the Projects table — click it to show/hide Photo, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Reqs, or Products, so you can focus on just what you need. Your choice is remembered on this device for next time" },
+  { version: "3.0.190", date: "2026-08-17", note: "Replaced the Status/Owner/Factory Rep/PD dropdowns above the Projects table with Excel-style filters right on each sortable column header — click the ▾ next to a column name (Project, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, or Products) to check/uncheck exactly which values to show, instead of picking one value at a time" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -5046,19 +5135,17 @@ function mountProjectsView(){
           <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
           <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
         </div>
-        <select class="proj-select" id="projectStatusFilter" style="max-width:200px;">
-          <option value="all">All statuses</option>
-          ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(s)}</option>`).join('')}
-        </select>
-        <select class="proj-select" id="projectOwnerFilter" style="max-width:200px;">
-          <option value="all">All owners</option>
-        </select>
-        <select class="proj-select" id="projectFactoryRepFilter" style="max-width:200px;">
-          <option value="all">All factory reps</option>
-        </select>
-        <select class="proj-select" id="projectResponsibleFilter" style="max-width:200px;">
-          <option value="all">All PD</option>
-        </select>
+        <div class="col-toggle-wrap">
+          <button type="button" class="btn btn-sm" id="btnProjectColumns">${icon('sliders-horizontal', 14)} Columns</button>
+          <div class="col-toggle-menu" id="projectColumnsMenu">
+            ${PROJECT_TOGGLE_COLUMNS.map(c => `
+              <label class="col-toggle-item">
+                <input type="checkbox" data-col-key="${escapeHtml(c.key)}" ${projectHiddenColumns.has(c.key) ? '' : 'checked'}>
+                ${escapeHtml(c.label)}
+              </label>
+            `).join('')}
+          </div>
+        </div>
       </div>
       <div id="projectsList"></div>
     </div>
@@ -5086,23 +5173,21 @@ function mountProjectsView(){
     projectSearchInputEl.focus();
     renderProjectsList();
   });
-  const statusFilterEl = document.getElementById('projectStatusFilter');
-  statusFilterEl.value = projectStatusFilter;
-  statusFilterEl.addEventListener('change', () => {
-    projectStatusFilter = statusFilterEl.value;
-    renderProjectsList();
+  const columnsMenu = document.getElementById('projectColumnsMenu');
+  document.getElementById('btnProjectColumns').addEventListener('click', e => {
+    e.stopPropagation();
+    columnsMenu.classList.toggle('open');
   });
-  document.getElementById('projectOwnerFilter').addEventListener('change', e => {
-    projectOwnerFilter = e.target.value;
-    renderProjectsList();
-  });
-  document.getElementById('projectFactoryRepFilter').addEventListener('change', e => {
-    projectFactoryRepFilter = e.target.value;
-    renderProjectsList();
-  });
-  document.getElementById('projectResponsibleFilter').addEventListener('change', e => {
-    projectResponsibleFilter = e.target.value;
-    renderProjectsList();
+  columnsMenu.addEventListener('click', e => e.stopPropagation());
+  columnsMenu.querySelectorAll('[data-col-key]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const key = cb.dataset.colKey;
+      if(cb.checked) projectHiddenColumns.delete(key);
+      else projectHiddenColumns.add(key);
+      localStorage.setItem(PROJECT_HIDDEN_COLUMNS_KEY, JSON.stringify(Array.from(projectHiddenColumns)));
+      applyProjectColumnVisibility();
+      activeProjScrollbarProxySync?.();
+    });
   });
 
   renderProjectsList();
@@ -5115,10 +5200,20 @@ let projectExpandedIds = new Set();
 let editingProjectImage = ''; // staged photo as a data URL for whichever project is being edited
 let newProjectOpen = false; // whether the "+ New Project" entry panel is showing, below the button
 let newProjectImage = ''; // staged photo as a data URL for the not-yet-saved new-project draft
-let projectStatusFilter = 'all';
-let projectOwnerFilter = 'all';
-let projectFactoryRepFilter = 'all';
-let projectResponsibleFilter = 'all';
+// Excel-style per-column value filters for the projects table — see the "▾"
+// button sortableProjectHeader() adds to every sortable column. Keyed by
+// the same field key as PROJECT_SORT_ACCESSORS/PROJECT_FILTER_ACCESSORS; a
+// missing key means that column isn't filtered (shows every value). Holding
+// a Set of the specific raw values still checked, not a single value, is
+// what makes this multi-select rather than the old single-choice dropdowns
+// it replaced.
+let projectColumnFilters = {};
+// Which single column's filter popover is currently open, if any — kept in
+// module state (not just a DOM class) because renderProjectsList() rebuilds
+// the whole table on every filter click, and without this the popover would
+// visibly close after every single checkbox click instead of staying open
+// while you check off several values in a row.
+let openProjectFilterMenuKey = null;
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -5149,10 +5244,115 @@ function compareProjects(a, b){
   const cmp = (typeof av === 'number' && typeof bv === 'number') ? av - bv : String(av).localeCompare(String(bv));
   return projectSortDir === 'asc' ? cmp : -cmp;
 }
+
+// Same fields as PROJECT_SORT_ACCESSORS, but the *raw* display value (not
+// lowercased, numbers turned into strings) — this is what actually shows up
+// as a checkbox label in a column's filter popover and what a project's
+// value is compared against, so it needs to read the same as the cell
+// itself rather than the folded-for-sorting version.
+const PROJECT_FILTER_ACCESSORS = {
+  name: p => p.name || '',
+  status: p => p.status || PROJECT_STATUSES[0],
+  requestDate: p => p.requestDate || '',
+  customerName: p => p.customerName || '',
+  destinationCountry: p => p.destinationCountry || '',
+  ownerSalesRep: p => p.ownerSalesRep || '',
+  factorySalesRep: p => p.factorySalesRep || '',
+  responsiblePerson: p => p.responsiblePerson || '',
+  factoryName: p => p.factoryName || '',
+  productCount: p => String(p.products.length)
+};
+
+// The checkbox-list popover for one column's "▾" filter button — every
+// distinct value currently in use across ALL projects (not narrowed by any
+// other active filter; each column's list is independent, simpler than
+// Excel's cross-narrowing behavior and avoids a recursive-filtering class
+// of bugs for what's a fairly small table). A blank/missing value gets its
+// own "(Blank)" entry rather than being silently dropped from the list.
+function projectColumnFilterMenuHtml(key){
+  const accessor = PROJECT_FILTER_ACCESSORS[key];
+  const allValues = Array.from(new Set(projects.map(accessor))).sort((a, b) => {
+    return key === 'productCount' ? Number(a) - Number(b) : a.localeCompare(b);
+  });
+  const activeFilter = projectColumnFilters[key];
+  const isChecked = v => !activeFilter || activeFilter.has(v);
+  const allChecked = !activeFilter;
+  return `
+    <div class="proj-col-filter-menu" data-filter-menu="${key}">
+      <label class="proj-col-filter-item proj-col-filter-selectall">
+        <input type="checkbox" class="filter-select-all" ${allChecked ? 'checked' : ''}>
+        <b>(Select All)</b>
+      </label>
+      <div class="proj-col-filter-values">
+        ${allValues.map(v => `
+          <label class="proj-col-filter-item">
+            <input type="checkbox" class="filter-value-cb" value="${escapeHtml(v)}" ${isChecked(v) ? 'checked' : ''}>
+            ${v === '' ? '<i>(Blank)</i>' : escapeHtml(v)}
+          </label>
+        `).join('')}
+      </div>
+      ${activeFilter ? `<button type="button" class="btn btn-sm proj-col-filter-clear" data-clear-filter="${key}" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
+    </div>
+  `;
+}
 function sortableProjectHeader(label, key){
   const active = projectSortKey === key;
   const arrow = active ? icon(projectSortDir === 'asc' ? 'chevron-up' : 'chevron-down', 12) : '';
-  return `<th class="proj-th-sortable${active ? ' active' : ''}" data-sort-key="${key}">${escapeHtml(label)} ${arrow}</th>`;
+  const hasFilter = !!projectColumnFilters[key];
+  return `
+    <th class="proj-th-sortable${active ? ' active' : ''}" data-col="${key}">
+      <span class="proj-th-label" data-sort-key="${key}">${escapeHtml(label)} ${arrow}</span>
+      <button type="button" class="proj-th-filter-btn${hasFilter ? ' active' : ''}" data-filter-trigger="${key}" title="Filter ${escapeHtml(label)}">${icon('chevron-down', 12)}</button>
+      ${projectColumnFilterMenuHtml(key)}
+    </th>
+  `;
+}
+
+// Which projects-table columns can be hidden via the "Columns" picker —
+// Project (name), the expand arrow, and the Edit/Delete actions column are
+// left out on purpose: hiding the row's own identity or its only actions
+// would make the table useless rather than just less cluttered.
+// PROJECT_TABLE_TOTAL_COLUMNS is every <th>/<td> the summary row actually
+// has (including those 3 non-toggleable ones) — used to size the expanded
+// detail row's colspan (see projectDetailColspan below) so it always spans
+// exactly however many columns are currently visible.
+const PROJECT_TOGGLE_COLUMNS = [
+  { key: 'photo', label: 'Photo' },
+  { key: 'status', label: 'Status' },
+  { key: 'requestDate', label: 'Requested' },
+  { key: 'customerName', label: 'Customer' },
+  { key: 'destinationCountry', label: 'Destination' },
+  { key: 'ownerSalesRep', label: 'Owner' },
+  { key: 'factorySalesRep', label: 'Factory Rep' },
+  { key: 'responsiblePerson', label: 'PD' },
+  { key: 'factoryName', label: 'Factory' },
+  { key: 'requirements', label: 'Reqs' },
+  { key: 'productCount', label: 'Products' }
+];
+const PROJECT_TABLE_TOTAL_COLUMNS = 14;
+const PROJECT_HIDDEN_COLUMNS_KEY = 'forgeProjectHiddenColumns';
+let projectHiddenColumns = new Set();
+try{
+  const saved = JSON.parse(localStorage.getItem(PROJECT_HIDDEN_COLUMNS_KEY) || '[]');
+  if(Array.isArray(saved)) projectHiddenColumns = new Set(saved);
+}catch(e){ /* ignore corrupt/old localStorage value, just start with nothing hidden */ }
+function projectDetailColspan(){
+  return PROJECT_TABLE_TOTAL_COLUMNS - projectHiddenColumns.size;
+}
+// Applies the current hidden-column set to whatever the projects table's
+// DOM looks like right now — every [data-col] header/cell gets display:none
+// if its key is hidden, and every expanded detail row's colspan is kept in
+// sync so it still spans exactly the visible columns (not the full 14).
+// Called after every full table rebuild and after each individual toggle,
+// so it never needs a full renderProjectsList() just to show/hide a column.
+function applyProjectColumnVisibility(){
+  document.querySelectorAll('.proj-overview-table [data-col]').forEach(el => {
+    el.style.display = projectHiddenColumns.has(el.dataset.col) ? 'none' : '';
+  });
+  const colspan = projectDetailColspan();
+  document.querySelectorAll('.proj-overview-table .proj-detail-row > td[colspan]').forEach(td => {
+    td.colSpan = colspan;
+  });
 }
 
 // The "+ New Project" entry form — shown inline right below the button and
@@ -5365,9 +5565,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
   });
   dashboardContainer.querySelectorAll('[data-status-filter]').forEach(btn => {
     btn.addEventListener('click', () => {
-      projectStatusFilter = btn.dataset.statusFilter;
-      const statusFilterEl = document.getElementById('projectStatusFilter');
-      if(statusFilterEl) statusFilterEl.value = projectStatusFilter;
+      projectColumnFilters = { ...projectColumnFilters, status: new Set([btn.dataset.statusFilter]) };
       renderProjectsList();
       document.getElementById('projectsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
@@ -5465,22 +5663,6 @@ function renderProjectGanttChart(){
   });
 }
 
-// Rebuilds a person-filter <select>'s options from whichever names are
-// currently assigned to at least one project for the given field, keeping
-// the previously selected value if it's still valid (or falling back to
-// "all" otherwise). Returns the resolved value so the caller can write it
-// straight back to its module-level filter variable.
-function syncProjectFilterOptions(selectId, allLabel, fieldName, currentValue){
-  const el = document.getElementById(selectId);
-  if(!el) return currentValue;
-  const names = Array.from(new Set(projects.map(p => (p[fieldName] || '').trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
-  const resolved = names.includes(currentValue) ? currentValue : 'all';
-  el.innerHTML = `<option value="all">${escapeHtml(allLabel)}</option>`
-    + names.map(n => `<option value="${escapeHtml(n)}" ${n === resolved ? 'selected' : ''}>${escapeHtml(n)}</option>`).join('');
-  el.value = resolved;
-  return resolved;
-}
-
 function renderProjectsList(){
   const container = document.getElementById('projectsList');
   const dashboardContainer = document.getElementById('projectsDashboard');
@@ -5505,19 +5687,16 @@ function renderProjectsList(){
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(searchQuery);
   };
-  const matchesStatus = p => projectStatusFilter === 'all' || (p.status || PROJECT_STATUSES[0]) === projectStatusFilter;
-  // Rebuild each person filter's option list from whoever's actually
-  // assigned to a project right now (not the Reference Lists master list —
-  // a filter offering names with zero matching projects would just be
-  // clutter). If the previously selected name no longer appears anywhere,
-  // fall back to "all" rather than silently showing a stuck, empty table.
-  projectOwnerFilter = syncProjectFilterOptions('projectOwnerFilter', 'All owners', 'ownerSalesRep', projectOwnerFilter);
-  projectFactoryRepFilter = syncProjectFilterOptions('projectFactoryRepFilter', 'All factory reps', 'factorySalesRep', projectFactoryRepFilter);
-  projectResponsibleFilter = syncProjectFilterOptions('projectResponsibleFilter', 'All PD', 'responsiblePerson', projectResponsibleFilter);
-  const matchesOwner = p => projectOwnerFilter === 'all' || (p.ownerSalesRep || '') === projectOwnerFilter;
-  const matchesFactoryRep = p => projectFactoryRepFilter === 'all' || (p.factorySalesRep || '') === projectFactoryRepFilter;
-  const matchesResponsible = p => projectResponsibleFilter === 'all' || (p.responsiblePerson || '') === projectResponsibleFilter;
-  const sorted = projects.filter(p => matchesSearch(p) && matchesStatus(p) && matchesOwner(p) && matchesFactoryRep(p) && matchesResponsible(p)).sort(compareProjects);
+  // Excel-style per-column value filters (see the "▾" button on every
+  // sortable header) — a column only shows up here once at least one of
+  // its values has been unchecked; an absent key means "show everything"
+  // for that column, same idea as the old "All statuses"-style dropdowns
+  // this replaced.
+  const matchesColumnFilters = p => Object.entries(projectColumnFilters).every(([key, allowed]) => {
+    const accessor = PROJECT_FILTER_ACCESSORS[key];
+    return accessor ? allowed.has(accessor(p)) : true;
+  });
+  const sorted = projects.filter(p => matchesSearch(p) && matchesColumnFilters(p)).sort(compareProjects);
 
   // Dashboard summary always reflects ALL projects (not the search filter)
   // — searching narrows the table below, not the overview stats above it.
@@ -5575,7 +5754,7 @@ function renderProjectsList(){
       <thead>
         <tr>
           <th></th>
-          <th>Photo</th>
+          <th data-col="photo">Photo</th>
           ${sortableProjectHeader('Project', 'name')}
           ${sortableProjectHeader('Status', 'status')}
           ${sortableProjectHeader('Requested', 'requestDate')}
@@ -5585,7 +5764,7 @@ function renderProjectsList(){
           ${sortableProjectHeader('Factory Rep', 'factorySalesRep')}
           ${sortableProjectHeader('PD', 'responsiblePerson')}
           ${sortableProjectHeader('Factory', 'factoryName')}
-          <th>Reqs</th>
+          <th data-col="requirements">Reqs</th>
           ${sortableProjectHeader('Products', 'productCount')}
           <th class="proj-actions-cell"></th>
         </tr>
@@ -5725,18 +5904,18 @@ function renderProjectsList(){
         const summaryRow = `
           <tr class="proj-row">
             <td><button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">${icon('chevron-right')}</button></td>
-            <td>${p.image ? `<img src="${escapeHtml(p.image)}" class="material-thumb" alt="${escapeHtml(p.name || 'Project photo')}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
+            <td data-col="photo">${p.image ? `<img src="${escapeHtml(p.image)}" class="material-thumb" alt="${escapeHtml(p.name || 'Project photo')}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
             <td><b>${escapeHtml(p.name || 'Untitled project')}</b>${projectStatusBarHtml(p.status)}</td>
-            <td>${escapeHtml(p.status || PROJECT_STATUSES[0])}</td>
-            <td>${missingCell(p.requestDate)}</td>
-            <td>${missingCell(p.customerName)}</td>
-            <td>${missingCell(p.destinationCountry)}</td>
-            <td>${missingCell(p.ownerSalesRep)}</td>
-            <td>${missingCell(p.factorySalesRep)}</td>
-            <td>${missingCell(p.responsiblePerson)}</td>
-            <td>${missingCell(p.factoryName)}</td>
-            <td>${p.requirements ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
-            <td>${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
+            <td data-col="status">${escapeHtml(p.status || PROJECT_STATUSES[0])}</td>
+            <td data-col="requestDate">${missingCell(p.requestDate)}</td>
+            <td data-col="customerName">${missingCell(p.customerName)}</td>
+            <td data-col="destinationCountry">${missingCell(p.destinationCountry)}</td>
+            <td data-col="ownerSalesRep">${missingCell(p.ownerSalesRep)}</td>
+            <td data-col="factorySalesRep">${missingCell(p.factorySalesRep)}</td>
+            <td data-col="responsiblePerson">${missingCell(p.responsiblePerson)}</td>
+            <td data-col="factoryName">${missingCell(p.factoryName)}</td>
+            <td data-col="requirements">${p.requirements ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
                 ? ''
@@ -5811,7 +5990,7 @@ function renderProjectsList(){
 
         const detailRow = isExpanded ? `
           <tr class="proj-detail-row">
-            <td colspan="14">
+            <td colspan="${projectDetailColspan()}">
               ${isEditing ? `
               <div class="proj-edit-toolbar">
                 <button class="btn btn-primary btn-sm" data-role="save-project">${icon('save')} Save</button>
@@ -5990,6 +6169,7 @@ function renderProjectsList(){
     </div>
     <div class="proj-scrollbar-proxy" id="projScrollbarProxy"><div id="projScrollbarProxyInner"></div></div>
   `;
+  applyProjectColumnVisibility();
 
   // The table scrolls sideways within the page now (no bounded vertical
   // box), which means its own horizontal scrollbar sits at the bottom of
@@ -6014,9 +6194,9 @@ function renderProjectsList(){
   tableScroll.addEventListener('scroll', () => { scrollbarProxy.scrollLeft = tableScroll.scrollLeft; });
   scrollbarProxy.addEventListener('scroll', () => { tableScroll.scrollLeft = scrollbarProxy.scrollLeft; });
 
-  container.querySelectorAll('.proj-th-sortable').forEach(th => {
-    th.addEventListener('click', () => {
-      const key = th.dataset.sortKey;
+  container.querySelectorAll('.proj-th-label').forEach(labelEl => {
+    labelEl.addEventListener('click', () => {
+      const key = labelEl.dataset.sortKey;
       if(projectSortKey === key){
         projectSortDir = projectSortDir === 'asc' ? 'desc' : 'asc';
       }else{
@@ -6026,6 +6206,53 @@ function renderProjectsList(){
       renderProjectsList();
     });
   });
+
+  // Excel-style per-column filter popovers — the "▾" button next to each
+  // sortable header's label. Opening/closing is a pure DOM class toggle (no
+  // re-render needed just to show/hide the popover); checking or
+  // unchecking a value actually changes projectColumnFilters, which does
+  // need a full renderProjectsList() to re-filter the rows — and since that
+  // rebuilds the whole table, openProjectFilterMenuKey is what makes the
+  // same popover reappear open afterward instead of the click silently
+  // closing it.
+  container.querySelectorAll('[data-filter-trigger]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const key = btn.dataset.filterTrigger;
+      openProjectFilterMenuKey = openProjectFilterMenuKey === key ? null : key;
+      container.querySelectorAll('[data-filter-menu]').forEach(m => {
+        m.classList.toggle('open', m.dataset.filterMenu === openProjectFilterMenuKey);
+      });
+    });
+  });
+  container.querySelectorAll('[data-filter-menu]').forEach(menu => {
+    menu.addEventListener('click', e => e.stopPropagation());
+    const key = menu.dataset.filterMenu;
+    const accessor = PROJECT_FILTER_ACCESSORS[key];
+    const allValues = Array.from(new Set(projects.map(accessor)));
+    const selectAllCb = menu.querySelector('.filter-select-all');
+    selectAllCb.addEventListener('change', () => {
+      if(selectAllCb.checked) delete projectColumnFilters[key];
+      else projectColumnFilters[key] = new Set();
+      renderProjectsList();
+    });
+    menu.querySelectorAll('.filter-value-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const current = new Set(projectColumnFilters[key] || allValues);
+        if(cb.checked) current.add(cb.value); else current.delete(cb.value);
+        if(current.size === allValues.length) delete projectColumnFilters[key];
+        else projectColumnFilters[key] = current;
+        renderProjectsList();
+      });
+    });
+    menu.querySelector('[data-clear-filter]')?.addEventListener('click', () => {
+      delete projectColumnFilters[key];
+      renderProjectsList();
+    });
+  });
+  if(openProjectFilterMenuKey){
+    container.querySelector(`[data-filter-menu="${CSS.escape(openProjectFilterMenuKey)}"]`)?.classList.add('open');
+  }
 
   container.querySelectorAll('tbody[data-project-id]').forEach(block => {
     const id = block.dataset.projectId;
@@ -8241,6 +8468,7 @@ const LUCIDE_ICONS = {
   'printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
   'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
   'save': '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+  'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" />',
   'scale': '<path d="M12 3v18" /><path d="m19 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" /><path d="m5 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M7 21h10" />',
   'trash-2': '<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
   'undo-2': '<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
@@ -8747,7 +8975,7 @@ function wireDashboardHome(){
     el.addEventListener('click', () => {
       const action = el.dataset.statAction;
       if(action === 'filter-in-progress' || action === 'filter-in-review'){
-        projectStatusFilter = action === 'filter-in-progress' ? 'In Progress' : 'In Review';
+        projectColumnFilters = { status: new Set([action === 'filter-in-progress' ? 'In Progress' : 'In Review']) };
         mainFeatureView = 'projects';
         renderMain();
         renderSidebar();
@@ -11340,6 +11568,11 @@ document.addEventListener('click', () => {
   document.getElementById('navbarAccount').classList.remove('open');
   document.getElementById('navbarNotifications').classList.remove('open');
   document.getElementById('hdCreateMenu')?.classList.remove('open');
+  document.getElementById('projectColumnsMenu')?.classList.remove('open');
+  if(openProjectFilterMenuKey){
+    openProjectFilterMenuKey = null;
+    document.querySelectorAll('[data-filter-menu].open').forEach(m => m.classList.remove('open'));
+  }
 });
 
 window.addEventListener('resize', () => { activeProjScrollbarProxySync?.(); });
