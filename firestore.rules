@@ -66,5 +66,13 @@ service cloud.firestore {
       allow update: if request.auth != null && isAdmin();
       allow delete: if false;
     }
+    // My Profile — display name + photo, one doc per account. Readable by
+    // any signed-in team member (so a future feature could show a
+    // colleague's nice name/photo instead of just their email), writable
+    // only by the account it belongs to.
+    match /userProfiles/{uid} {
+      allow read: if isAllowedUser();
+      allow write: if request.auth != null && request.auth.uid == uid;
+    }
   }
 }

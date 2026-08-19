@@ -157,7 +157,9 @@
     font-weight:700;
     display:flex;align-items:center;justify-content:center;
     flex-shrink:0;
+    overflow:hidden;
   }
+  .navbar-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
   .navbar-account-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
   .navbar-account-chevron{font-size:10px;color:var(--text-dim);transition:transform .15s;}
   .navbar-account.open .navbar-account-chevron{transform:rotate(180deg);}
@@ -3208,15 +3210,18 @@
       </div>
     </div>
     <div class="navbar-account" id="navbarAccount">
-      <div class="navbar-avatar" id="navbarAvatar"></div>
+      <div class="navbar-avatar" id="navbarAvatar">
+        <img id="navbarAvatarImg" alt="" style="display:none;">
+        <span id="navbarAvatarInitials"></span>
+      </div>
       <span class="navbar-account-name" id="navbarAccountName"></span>
       <span class="navbar-account-chevron">▾</span>
       <div class="navbar-account-menu" id="navbarAccountMenu">
         <div class="navbar-account-email" id="navbarAccountEmail"></div>
+        <button class="navbar-account-menu-item" id="btnOpenMyProfile">My Profile</button>
+        <button class="navbar-account-menu-item" id="btnOpenSecurity">Security</button>
+        <button class="navbar-account-menu-item" id="btnOpenDataManagement">Data Management</button>
         <button class="navbar-account-menu-item" id="btnOpenUserAdmin" style="display:none;">Manage Users</button>
-        <button class="navbar-account-menu-item" id="btnExportAll">Export All (JSON)</button>
-        <button class="navbar-account-menu-item" id="btnImport">Import (JSON)</button>
-        <input type="file" id="importFile" class="hidden-file" accept="application/json">
         <button class="navbar-account-menu-item" id="btnLogoutFromApp">Log Out</button>
       </div>
     </div>
@@ -3420,6 +3425,81 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="myProfileModalOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">My Profile</div>
+      <button class="icon-btn" id="btnCloseMyProfile" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Photo (optional)</label>
+        <input type="file" id="myProfileImageInput" accept="image/*">
+        <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+          <img id="myProfileImagePreview" src="" alt="" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:50%;border:1px solid var(--border);">
+          <button type="button" class="btn btn-sm" id="myProfileImageRemove" style="display:none;">Remove photo</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Display Name</label>
+        <input type="text" id="myProfileNameInput" placeholder="e.g. Kangawin">
+      </div>
+      <div class="auth-error" id="myProfileError"></div>
+      <div class="auth-success" id="myProfileSuccess"></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-primary btn-sm" id="btnSaveMyProfile">Save</button>
+        <button class="btn btn-sm" id="btnCancelMyProfile">Cancel</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="securityModalOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Security</div>
+      <button class="icon-btn" id="btnCloseSecurity" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:0;">Change your password. You'll need your current password to confirm it's really you.</p>
+      <form id="changePasswordForm">
+        <div class="field">
+          <label>Current Password</label>
+          <input type="password" id="securityCurrentPassword" autocomplete="current-password">
+        </div>
+        <div class="field">
+          <label>New Password (at least 6 characters)</label>
+          <input type="password" id="securityNewPassword" autocomplete="new-password">
+        </div>
+        <div class="field">
+          <label>Confirm New Password</label>
+          <input type="password" id="securityNewPassword2" autocomplete="new-password">
+        </div>
+        <div class="auth-error" id="securityError"></div>
+        <div class="auth-success" id="securitySuccess"></div>
+        <button type="submit" class="btn btn-primary btn-block">Change Password</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="dataManagementModalOverlay">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-header">
+      <div class="modal-title">Data Management</div>
+      <button class="icon-btn" id="btnCloseDataManagement" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:0;">Export a JSON backup of every recipe, ingredient, project, and trial in Forge, or restore/merge from a previous backup.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button class="btn" id="btnExportAll">Export All (JSON)</button>
+        <button class="btn" id="btnImport">Import (JSON)</button>
+        <input type="file" id="importFile" class="hidden-file" accept="application/json">
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -3429,7 +3509,8 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut,
-  EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail
+  EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail,
+  updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
@@ -3462,6 +3543,12 @@ const loginEventsCol = collection(db, "loginEvents");
 // admin has approved that sign-up to actually use the app — see
 // firestore.rules for the matching server-side enforcement (isApproved()).
 const userApprovalsCol = collection(db, "userApprovals");
+// One doc per account (keyed by uid) holding My Profile's display name +
+// photo — separate from Firebase Auth's own displayName/photoURL fields
+// since a resized photo as a data URI can exceed what Auth's profile
+// fields accept, same reason every other photo in this app (Projects,
+// Trials, etc.) lives in a Firestore doc rather than Auth/Storage.
+const userProfilesCol = collection(db, "userProfiles");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -3746,7 +3833,8 @@ const CHANGELOG = [
   { version: "3.0.198", date: "2026-08-17", note: "Company Directory entries can now have a photo/logo — upload one when adding a new company, or add/change/remove it from Edit on an existing one. Shown as a small circle next to the company's name and country flag" },
   { version: "3.0.199", date: "2026-08-17", note: "Contact Directory's Country / Location now auto-fills from the selected Company / Organization's own country on file (same auto-fill Projects already does for Customer -> Destination) — it's just a starting value, not locked, so it can still be hand-edited afterward if a contact's own location differs" },
   { version: "3.0.200", date: "2026-08-17", note: "Added account management: new sign-ups now wait for kangawin@th-umios.com to approve them (a \"Manage Users\" panel lists pending requests plus everyone's status) before they can sign in, and \"Forgot password?\" on the login screen (or \"Send Reset Email\" from the admin panel) emails a reset link so a locked-out member can set a new password themselves — this app talks to Firebase straight from the browser with no backend, so an admin can't set someone's password directly, only trigger that email" },
-  { version: "3.0.201", date: "2026-08-17", note: "Company Directory: a company's photo now takes priority over its country flag in the leading circle (previously both showed at once) — the flag only steps back in as a fallback for a company that has no photo yet. Also fixed uploaded PNGs with a transparent background turning black once resized — they get a white background instead now, same as everywhere else in Forge a photo gets resized (Projects, Trials, Ingredients, Recipes)" }
+  { version: "3.0.201", date: "2026-08-17", note: "Company Directory: a company's photo now takes priority over its country flag in the leading circle (previously both showed at once) — the flag only steps back in as a fallback for a company that has no photo yet. Also fixed uploaded PNGs with a transparent background turning black once resized — they get a white background instead now, same as everywhere else in Forge a photo gets resized (Projects, Trials, Ingredients, Recipes)" },
+  { version: "3.0.202", date: "2026-08-17", note: "Reorganized the account menu: Export All (JSON) / Import (JSON) moved out into a new \"Data Management\" page (they're whole-system data actions, not personal account ones). Added \"My Profile\" (set a display name + photo, shown in the navbar instead of your email's initials) and \"Security\" (change your own password — self-service, no admin needed) — \"Manage Users\" stays admin-only, still last before Log Out" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3785,6 +3873,12 @@ let unsubscribeMyApproval = null;
 // requests and every account's status.
 let unsubscribeUserApprovalsAdmin = null;
 let userApprovalsAdminList = [];
+// This account's own My Profile doc — kept live so the navbar name/avatar
+// (and the My Profile modal, if open) always reflect the latest saved
+// value without needing a manual refresh.
+let myProfile = { displayName: '', photoImage: '' };
+let unsubscribeMyProfile = null;
+let editingProfileImage = ''; // staged photo for the My Profile modal, same pattern as newProjectImage
 
 function authErrorMessage(err){
   const map = {
@@ -3814,8 +3908,17 @@ function renderApp(){
   document.getElementById('appRoot').style.display = appView === 'app' ? 'grid' : 'none';
   document.getElementById('topNavbar').style.display = appView === 'app' ? 'flex' : 'none';
   const { name, initials } = accountDisplayFromEmail(currentUser?.email);
-  document.getElementById('navbarAvatar').textContent = initials;
-  document.getElementById('navbarAccountName').textContent = name;
+  document.getElementById('navbarAvatarInitials').textContent = initials;
+  const avatarImg = document.getElementById('navbarAvatarImg');
+  if(myProfile.photoImage){
+    avatarImg.src = myProfile.photoImage;
+    avatarImg.style.display = 'block';
+    document.getElementById('navbarAvatarInitials').style.display = 'none';
+  }else{
+    avatarImg.style.display = 'none';
+    document.getElementById('navbarAvatarInitials').style.display = '';
+  }
+  document.getElementById('navbarAccountName').textContent = myProfile.displayName || name;
   document.getElementById('navbarAccountEmail').textContent = currentUser ? currentUser.email : '';
   const isAdminUser = currentUser?.email === ADMIN_EMAIL;
   document.getElementById('btnOpenUserAdmin').style.display = isAdminUser ? '' : 'none';
@@ -5753,6 +5856,144 @@ function initUserAdminPanel(){
   });
   document.getElementById('userAdminModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'userAdminModalOverlay') document.getElementById('userAdminModalOverlay').classList.remove('open');
+  });
+}
+
+/* ---------- My Profile ---------- */
+function initMyProfileModal(){
+  const nameInput = document.getElementById('myProfileNameInput');
+  const imageInput = document.getElementById('myProfileImageInput');
+  const imagePreview = document.getElementById('myProfileImagePreview');
+  const imageRemoveBtn = document.getElementById('myProfileImageRemove');
+  const errEl = document.getElementById('myProfileError');
+  const successEl = document.getElementById('myProfileSuccess');
+
+  function openMyProfileModal(){
+    document.getElementById('navbarAccount').classList.remove('open');
+    nameInput.value = myProfile.displayName || '';
+    editingProfileImage = myProfile.photoImage || '';
+    if(editingProfileImage){
+      imagePreview.src = editingProfileImage;
+      imagePreview.style.display = '';
+      imageRemoveBtn.style.display = '';
+    }else{
+      imagePreview.src = '';
+      imagePreview.style.display = 'none';
+      imageRemoveBtn.style.display = 'none';
+    }
+    imageInput.value = '';
+    errEl.textContent = '';
+    successEl.textContent = '';
+    document.getElementById('myProfileModalOverlay').classList.add('open');
+  }
+  function closeMyProfileModal(){
+    document.getElementById('myProfileModalOverlay').classList.remove('open');
+  }
+
+  document.getElementById('btnOpenMyProfile').addEventListener('click', openMyProfileModal);
+  document.getElementById('btnCloseMyProfile').addEventListener('click', closeMyProfileModal);
+  document.getElementById('btnCancelMyProfile').addEventListener('click', closeMyProfileModal);
+  document.getElementById('myProfileModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'myProfileModalOverlay') closeMyProfileModal();
+  });
+
+  imageInput.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      editingProfileImage = await resizeImageFile(file, 300);
+      imagePreview.src = editingProfileImage;
+      imagePreview.style.display = '';
+      imageRemoveBtn.style.display = '';
+    }catch(err){
+      errEl.textContent = err.message || 'Could not read that image file';
+    }
+  });
+  imageRemoveBtn.addEventListener('click', () => {
+    editingProfileImage = '';
+    imageInput.value = '';
+    imagePreview.src = '';
+    imagePreview.style.display = 'none';
+    imageRemoveBtn.style.display = 'none';
+  });
+
+  document.getElementById('btnSaveMyProfile').addEventListener('click', () => {
+    errEl.textContent = '';
+    setDoc(doc(userProfilesCol, currentUser.uid), {
+      displayName: nameInput.value.trim(),
+      photoImage: editingProfileImage,
+      updatedAt: Date.now()
+    }, { merge: true })
+      .then(() => {
+        successEl.textContent = 'Saved!';
+        setTimeout(closeMyProfileModal, 800);
+      })
+      .catch(err => { errEl.textContent = 'Failed to save: ' + err.message; });
+  });
+}
+
+/* ---------- Security (self-service Change Password) ---------- */
+function initSecurityModal(){
+  const form = document.getElementById('changePasswordForm');
+  const errEl = document.getElementById('securityError');
+  const successEl = document.getElementById('securitySuccess');
+
+  function openSecurityModal(){
+    document.getElementById('navbarAccount').classList.remove('open');
+    form.reset();
+    errEl.textContent = '';
+    successEl.textContent = '';
+    document.getElementById('securityModalOverlay').classList.add('open');
+  }
+  function closeSecurityModal(){
+    document.getElementById('securityModalOverlay').classList.remove('open');
+  }
+
+  document.getElementById('btnOpenSecurity').addEventListener('click', openSecurityModal);
+  document.getElementById('btnCloseSecurity').addEventListener('click', closeSecurityModal);
+  document.getElementById('securityModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'securityModalOverlay') closeSecurityModal();
+  });
+
+  form.addEventListener('submit', e => {
+    e.preventDefault();
+    errEl.textContent = '';
+    successEl.textContent = '';
+    const currentPassword = document.getElementById('securityCurrentPassword').value;
+    const newPassword = document.getElementById('securityNewPassword').value;
+    const newPassword2 = document.getElementById('securityNewPassword2').value;
+    if(newPassword.length < 6){
+      errEl.textContent = 'New password must be at least 6 characters';
+      return;
+    }
+    if(newPassword !== newPassword2){
+      errEl.textContent = 'New passwords do not match';
+      return;
+    }
+    reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(currentUser.email, currentPassword))
+      .then(() => updatePassword(currentUser, newPassword))
+      .then(() => {
+        successEl.textContent = 'Password changed!';
+        form.reset();
+      })
+      .catch(err => { errEl.textContent = authErrorMessage(err); });
+  });
+}
+
+/* ---------- Data Management (Export/Import, moved out of the account
+   dropdown itself — see the request that split this out) ---------- */
+function initDataManagementModal(){
+  function openDataManagementModal(){
+    document.getElementById('navbarAccount').classList.remove('open');
+    document.getElementById('dataManagementModalOverlay').classList.add('open');
+  }
+  function closeDataManagementModal(){
+    document.getElementById('dataManagementModalOverlay').classList.remove('open');
+  }
+  document.getElementById('btnOpenDataManagement').addEventListener('click', openDataManagementModal);
+  document.getElementById('btnCloseDataManagement').addEventListener('click', closeDataManagementModal);
+  document.getElementById('dataManagementModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'dataManagementModalOverlay') closeDataManagementModal();
   });
 }
 
@@ -9011,6 +9252,8 @@ const LUCIDE_ICONS = {
   'undo-2': '<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
   'unlock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />',
   'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
+  'user': '<path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" />',
+  'database': '<ellipse cx="12" cy="5" rx="9" ry="3" /><path d="M3 5V19A9 3 0 0 0 21 19V5" /><path d="M3 12A9 3 0 0 0 21 12" />',
   'upload': '<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />',
   'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />'
 };
@@ -12138,6 +12381,9 @@ function applyStaticIcons(){
   setIcon('btnCloseProductLogModal', 'x', 16);
   prefixIcon('btnCompare', 'scale');
   prefixIcon('btnOpenUserAdmin', 'users');
+  prefixIcon('btnOpenMyProfile', 'user');
+  prefixIcon('btnOpenSecurity', 'lock');
+  prefixIcon('btnOpenDataManagement', 'database');
   prefixIcon('btnSaveVersion', 'save');
   prefixIcon('btnExportAll', 'download');
   prefixIcon('btnImport', 'upload');
@@ -12174,6 +12420,9 @@ initProjectsModal();
 initTrialsView();
 initUnsavedChangesGuard();
 initUserAdminPanel();
+initMyProfileModal();
+initSecurityModal();
+initDataManagementModal();
 renderFooter();
 
 // Scrolling the mouse wheel over a focused number input silently changes
@@ -12194,6 +12443,16 @@ document.addEventListener('wheel', e => {
 // approved/exempt, never speculatively, since Firestore rules would just
 // reject those reads for a still-pending account anyway (better to not
 // even try than to surface a shower of permission-denied errors).
+function attachMyProfileListener(){
+  unsubscribeMyProfile = onSnapshot(doc(userProfilesCol, currentUser.uid), snap => {
+    const data = snap.data();
+    myProfile = { displayName: data?.displayName || '', photoImage: data?.photoImage || '' };
+    renderApp();
+  }, err => {
+    console.error('Forge: profile listener error', err);
+  });
+}
+
 function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
@@ -12201,6 +12460,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeProjects) attachProjectsListener();
   if(!unsubscribeTrials) attachTrialsListener();
   if(!unsubscribeLoginEvents) attachLoginEventsListener();
+  if(!unsubscribeMyProfile) attachMyProfileListener();
   if(appView === 'auth' || appView === 'pending') goToApp();
 }
 
@@ -12251,6 +12511,8 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeTrials){ unsubscribeTrials(); unsubscribeTrials = null; }
     if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
     if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); unsubscribeUserApprovalsAdmin = null; }
+    if(unsubscribeMyProfile){ unsubscribeMyProfile(); unsubscribeMyProfile = null; }
+    myProfile = { displayName: '', photoImage: '' };
     recipesLoaded = false;
     materialsLoaded = false;
     projectsLoaded = false;
