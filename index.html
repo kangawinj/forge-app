@@ -533,7 +533,7 @@
     border-radius:6px;
   }
   .password-toggle-btn:hover{background:var(--primary-light);color:var(--primary);}
-  input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], textarea{
+  input[type=text], input[type=number], input[type=date], input[type=email], input[type=password], input[type=tel], textarea{
     width:100%;
     padding:9px 10px;
     border:1px solid var(--border);
@@ -1590,16 +1590,18 @@
   .flavor-table td{padding:3px 8px 3px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
   .flavor-table td:first-child, .flavor-table th:first-child{padding-left:0;}
   .flavor-table input, .flavor-table select{width:100%;}
-  /* The editable variant has 6 columns (read-only only ever has 3: Flavor/
-     Target/Actual, which just split the width evenly under fixed layout —
-     no override needed there) — explicit percentages so Currency/Per/
-     delete stay narrow instead of fixed-layout splitting all 6 equally. */
-  .flavor-table-edit th:nth-child(1){width:28%;}
-  .flavor-table-edit th:nth-child(2){width:16%;}
-  .flavor-table-edit th:nth-child(3){width:16%;}
-  .flavor-table-edit th:nth-child(4){width:14%;}
-  .flavor-table-edit th:nth-child(5){width:14%;}
-  .flavor-table-edit th:nth-child(6){width:28px;}
+  /* The editable variant has 8 columns (read-only has 5: Flavor/Target/
+     Actual/Formula/Note, which just split the width evenly under fixed
+     layout — no override needed there) — explicit percentages so Currency/
+     Per/delete stay narrow instead of fixed-layout splitting all 8 equally. */
+  .flavor-table-edit th:nth-child(1){width:20%;}
+  .flavor-table-edit th:nth-child(2){width:10%;}
+  .flavor-table-edit th:nth-child(3){width:10%;}
+  .flavor-table-edit th:nth-child(4){width:15%;}
+  .flavor-table-edit th:nth-child(5){width:15%;}
+  .flavor-table-edit th:nth-child(6){width:10%;}
+  .flavor-table-edit th:nth-child(7){width:10%;}
+  .flavor-table-edit th:nth-child(8){width:30px;}
 
   .compare-pickers{
     display:grid;
@@ -1874,6 +1876,20 @@
     min-height:16px;
     margin:6px 0 10px;
   }
+  .auth-link-btn{
+    display:block;
+    width:100%;
+    text-align:center;
+    background:none;
+    border:none;
+    color:var(--primary);
+    font-size:12px;
+    font-family:inherit;
+    cursor:pointer;
+    margin-top:10px;
+    padding:4px;
+  }
+  .auth-link-btn:hover{text-decoration:underline;}
 
 
   .steps-list, .process-steps-list{
@@ -2163,7 +2179,7 @@
     font-family:inherit;
   }
   .reflist-tab-btn.active{background:var(--primary);color:#fff;}
-  .reflist-add-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;}
+  .reflist-add-row{display:flex;align-items:center;gap:8px;margin-bottom:16px;flex-wrap:wrap;}
   .reflist-add-row input{flex:1;}
   /* Product type codes are always computed, never typed — this preview (and
      the matching badge on each row below) is the only place the code shows,
@@ -2216,6 +2232,42 @@
   input.reflist-item-location-input:hover, input.reflist-item-country-input:hover{border-color:var(--border);}
   input.reflist-item-location-input:focus, input.reflist-item-country-input:focus{background:#fff;color:var(--text);}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
+  /* ---------- Manage Users (admin panel) ---------- */
+  .user-admin-section-title{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;}
+  .user-admin-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-bottom:8px;
+  }
+  .user-admin-row-main{min-width:0;}
+  .user-admin-row-email{font-weight:600;font-size:13px;}
+  .user-admin-row-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
+  .user-admin-row-actions{display:flex;gap:6px;flex-shrink:0;}
+  .user-admin-status{font-weight:700;}
+  .user-admin-status-pending{color:var(--accent);}
+  .user-admin-status-approved{color:var(--ok);}
+  .user-admin-status-rejected{color:var(--danger);}
+  /* Contact Directory (salesReps) — the one Reference List with enough
+     fields (Contact Type, Company, Country, Job Title, Department, Email,
+     Phone) that cramming them into the shared single-line add-row/edit-row
+     pattern the other tabs use wasn't workable. Same grid markup/class is
+     reused for both the "+ Add" form above the list and each row's own
+     edit state below. */
+  .reflist-contact-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:8px;
+    margin-bottom:16px;
+  }
+  .reflist-item .reflist-contact-grid{margin:6px 0 0;}
+  .reflist-contact-summary{font-size:12px;color:var(--text-dim);margin-top:3px;padding:0 6px;}
+  .reflist-contact-summary-empty{font-style:italic;}
   .reflist-code-guide{padding:6px 6px 0;}
   .reflist-code-guide-example{
     font-family:monospace;
@@ -2246,6 +2298,29 @@
   }
   .reflist-flag-img{width:100%;height:100%;object-fit:cover;display:block;}
   .reflist-flag-fallback{font-weight:700;color:var(--text-dim);letter-spacing:.02em;}
+  /* Company Directory's optional logo — a leading circle like the flag
+     badge above (both can show together: logo first, then the country
+     flag), plus a small upload/remove control shown inside
+     .reflist-item-main only while that row is being edited. */
+  .reflist-company-logo{
+    flex-shrink:0;
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    overflow:hidden;
+    border:1px solid var(--border);
+  }
+  .reflist-company-logo img{width:100%;height:100%;object-fit:cover;display:block;}
+  .reflist-company-logo-edit{display:flex;align-items:center;gap:8px;margin-top:4px;}
+  .reflist-company-logo-edit-preview{
+    width:32px;
+    height:32px;
+    border-radius:50%;
+    object-fit:cover;
+    border:1px solid var(--border);
+    flex-shrink:0;
+  }
+  .reflist-company-logo-input{max-width:200px;}
 
   /* ---------- Projects modal ---------- */
   /* Save/Duplicate/Cancel, moved from the summary row's cramped
@@ -3073,7 +3148,9 @@
         <input type="password" id="login-password" autocomplete="current-password">
       </div>
       <div class="auth-error" id="loginError"></div>
+      <div class="auth-success" id="loginResetSent"></div>
       <button type="submit" class="btn btn-primary btn-block">Log In</button>
+      <button type="button" class="auth-link-btn" id="btnForgotPassword">Forgot password?</button>
     </form>
 
     <form class="auth-form" id="registerForm">
@@ -3091,7 +3168,17 @@
       </div>
       <div class="auth-error" id="registerError"></div>
       <button type="submit" class="btn btn-primary btn-block">Sign Up</button>
+      <p style="text-align:center;font-size:11px;color:var(--text-dim);margin:10px 0 0;">A team admin needs to approve your account before you can sign in.</p>
     </form>
+  </div>
+</div>
+
+<div class="fullpage-screen" id="pendingScreen">
+  <div class="auth-card">
+    <img class="auth-logo" src="Forge_Logo_Navy_Orange_Vector_Large.svg?v=2" alt="Forge logo">
+    <div class="auth-title">Forge</div>
+    <div id="pendingScreenBody"></div>
+    <button class="btn btn-block" id="btnPendingLogout" style="margin-top:16px;">Log Out</button>
   </div>
 </div>
 
@@ -3126,6 +3213,7 @@
       <span class="navbar-account-chevron">▾</span>
       <div class="navbar-account-menu" id="navbarAccountMenu">
         <div class="navbar-account-email" id="navbarAccountEmail"></div>
+        <button class="navbar-account-menu-item" id="btnOpenUserAdmin" style="display:none;">Manage Users</button>
         <button class="navbar-account-menu-item" id="btnExportAll">Export All (JSON)</button>
         <button class="navbar-account-menu-item" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
@@ -3166,6 +3254,12 @@
 <datalist id="productTypeDatalist"></datalist>
 <datalist id="unitsDatalist"></datalist>
 <datalist id="worldCountriesDatalist"></datalist>
+<datalist id="contactTypeDatalist">
+  <option value="Internal">
+  <option value="Customer">
+  <option value="Supplier">
+  <option value="Partner">
+</datalist>
 
 <div class="modal-overlay" id="materialDetailModalOverlay">
   <div class="modal" style="max-width:480px;">
@@ -3311,6 +3405,21 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="userAdminModalOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title">Manage Users</div>
+      <button class="icon-btn" id="btnCloseUserAdmin" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="user-admin-section-title">Pending Approval</div>
+      <div id="userAdminPendingList"></div>
+      <div class="user-admin-section-title" style="margin-top:20px;">All Users</div>
+      <div id="userAdminAllList"></div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -3320,7 +3429,7 @@ import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut,
-  EmailAuthProvider, reauthenticateWithCredential
+  EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
@@ -3349,6 +3458,10 @@ const trialsCol = collection(db, "trials");
 // by that same user (see the Firestore rule: create is allowed only when the
 // event's own email matches the signed-in requester's).
 const loginEventsCol = collection(db, "loginEvents");
+// One doc per Firebase Auth account (keyed by uid), tracking whether an
+// admin has approved that sign-up to actually use the app — see
+// firestore.rules for the matching server-side enforcement (isApproved()).
+const userApprovalsCol = collection(db, "userApprovals");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -3376,6 +3489,19 @@ const ALLOWED_EMAIL_DOMAIN = "th-umios.com";
    disturbs the main logged-in user's session. Enforced again in Firestore
    security rules server-side (only this email may perform a delete). */
 const DELETE_APPROVER_EMAIL = "kangawin@th-umios.com";
+
+// Same person as DELETE_APPROVER_EMAIL — separate constant because this one
+// gates a broader "admin" role (approving new sign-ups, sending a member a
+// password-reset email), not just deletions. Keep in sync manually with
+// isAdmin() in firestore.rules if this ever changes.
+const ADMIN_EMAIL = "kangawin@th-umios.com";
+// New sign-ups (and the admin/test accounts, who are exempt from needing
+// approval at all — see isApprovalExempt) go through this: their
+// userApprovals doc must say 'approved' before they get real app access.
+// Enforced again in firestore.rules server-side (isApproved()).
+function isApprovalExempt(email){
+  return email === ADMIN_EMAIL || email === 'forge-setup-test@example.com';
+}
 
 function showCloudError(message){
   const el = document.getElementById('cloudErrorBanner');
@@ -3610,7 +3736,17 @@ const CHANGELOG = [
   { version: "3.0.188", date: "2026-08-17", note: "Moved the Project Photos gallery — it no longer sits as its own strip above \"Projects by Status\"; each status's photos now show directly above that status's own bar inside the card instead, so the photos and the numbers they belong to stay together" },
   { version: "3.0.189", date: "2026-08-17", note: "Added a \"Columns\" picker to the Projects table — click it to show/hide Photo, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Reqs, or Products, so you can focus on just what you need. Your choice is remembered on this device for next time" },
   { version: "3.0.190", date: "2026-08-17", note: "Replaced the Status/Owner/Factory Rep/PD dropdowns above the Projects table with Excel-style filters right on each sortable column header — click the ▾ next to a column name (Project, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, or Products) to check/uncheck exactly which values to show, instead of picking one value at a time" },
-  { version: "3.0.191", date: "2026-08-17", note: "If you're editing a project's details (or filling in \"+ New Project\") and haven't clicked Save yet, navigating away — a navbar tab, the logo, a recipe in the sidebar, \"+ New Recipe\", or closing/refreshing the tab — now asks first: Save, Discard, or Cancel and stay, instead of silently losing what you typed" }
+  { version: "3.0.191", date: "2026-08-17", note: "If you're editing a project's details (or filling in \"+ New Project\") and haven't clicked Save yet, navigating away — a navbar tab, the logo, a recipe in the sidebar, \"+ New Recipe\", or closing/refreshing the tab — now asks first: Save, Discard, or Cancel and stay, instead of silently losing what you typed" },
+  { version: "3.0.192", date: "2026-08-17", note: "\"Projects by Status\" on the Projects dashboard now spans the full width of the screen instead of sharing a row with \"Products by stage\" — its photo strips had made it far taller than that card, so squeezing them side by side just left \"Products by stage\" with a big empty gap stretched to match. \"Products by stage\" now sits in its own full-width row right below it" },
+  { version: "3.0.193", date: "2026-08-17", note: "Renamed the Reference Lists tab \"Project Owner\" to \"Contact Directory\" — the same shared list of names is also used for Factory Sales Rep, so \"Project Owner\" was a bit misleading as the list's own name. The Project Owner field itself (on projects and Trial Results) is unchanged, still called Project Owner" },
+  { version: "3.0.194", date: "2026-08-17", note: "Contact Directory now stores real contact records, not just a name — Contact Type, Company/Organization, Country/Location, Job Title, Department, Email, and Phone Number, on top of Full Name and the usual Added/Edited by tracking. The list itself stays compact: each row shows Name — Position — Company — Contact Type — Email/Phone, with the full set of fields editable from Edit" },
+  { version: "3.0.195", date: "2026-08-17", note: "Moved Formula / Reference No. off the project's header fields and down into the Flavor / Filling table as its own column, since each flavor is really its own recipe with its own code — a project with several flavors no longer has to share one Formula No. between them. Also added a Note column to the same table" },
+  { version: "3.0.196", date: "2026-08-17", note: "Renamed the Reference Lists tab \"Customers\" to \"Company Directory\"" },
+  { version: "3.0.197", date: "2026-08-17", note: "Contact Directory's Company / Organization field now suggests from Company Directory as you type, instead of being free-typed — same shared-list pattern used everywhere else in Forge, so a contact's company matches a real, curated entry instead of drifting into typos/duplicates" },
+  { version: "3.0.198", date: "2026-08-17", note: "Company Directory entries can now have a photo/logo — upload one when adding a new company, or add/change/remove it from Edit on an existing one. Shown as a small circle next to the company's name and country flag" },
+  { version: "3.0.199", date: "2026-08-17", note: "Contact Directory's Country / Location now auto-fills from the selected Company / Organization's own country on file (same auto-fill Projects already does for Customer -> Destination) — it's just a starting value, not locked, so it can still be hand-edited afterward if a contact's own location differs" },
+  { version: "3.0.200", date: "2026-08-17", note: "Added account management: new sign-ups now wait for kangawin@th-umios.com to approve them (a \"Manage Users\" panel lists pending requests plus everyone's status) before they can sign in, and \"Forgot password?\" on the login screen (or \"Send Reset Email\" from the admin panel) emails a reset link so a locked-out member can set a new password themselves — this app talks to Firebase straight from the browser with no backend, so an admin can't set someone's password directly, only trigger that email" },
+  { version: "3.0.201", date: "2026-08-17", note: "Company Directory: a company's photo now takes priority over its country flag in the leading circle (previously both showed at once) — the flag only steps back in as a fallback for a company that has no photo yet. Also fixed uploaded PNGs with a transparent background turning black once resized — they get a white background instead now, same as everywhere else in Forge a photo gets resized (Projects, Trials, Ingredients, Recipes)" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3634,9 +3770,21 @@ function renderFooter(){
    Every teammate signs in with their own email/password, managed by Firebase
    — real per-user accounts shared across every device, not per-browser. */
 let currentUser = null; // Firebase User, set by onAuthStateChanged
-let appView = 'auth'; // 'auth' | 'home' | 'app'
+let appView = 'auth'; // 'auth' | 'pending' | 'app'
 let unlockedRecipeId = null;
 let pendingAuthCallback = null;
+// This account's own live approval status — null (not yet loaded) |
+// 'pending' | 'approved' | 'rejected' | 'exempt' (admin/test account,
+// see isApprovalExempt). Kept live via onSnapshot so an admin approving
+// someone while they still have the "waiting" screen open unlocks it
+// immediately, no re-login needed.
+let myApprovalStatus = null;
+let unsubscribeMyApproval = null;
+// Only the admin ever attaches this — see renderUserAdminPanel — a live
+// listener over every userApprovals doc so the panel can list pending
+// requests and every account's status.
+let unsubscribeUserApprovalsAdmin = null;
+let userApprovalsAdminList = [];
 
 function authErrorMessage(err){
   const map = {
@@ -3662,12 +3810,15 @@ function accountDisplayFromEmail(email){
 
 function renderApp(){
   document.getElementById('authScreen').classList.toggle('active', appView === 'auth');
+  document.getElementById('pendingScreen').classList.toggle('active', appView === 'pending');
   document.getElementById('appRoot').style.display = appView === 'app' ? 'grid' : 'none';
   document.getElementById('topNavbar').style.display = appView === 'app' ? 'flex' : 'none';
   const { name, initials } = accountDisplayFromEmail(currentUser?.email);
   document.getElementById('navbarAvatar').textContent = initials;
   document.getElementById('navbarAccountName').textContent = name;
   document.getElementById('navbarAccountEmail').textContent = currentUser ? currentUser.email : '';
+  const isAdminUser = currentUser?.email === ADMIN_EMAIL;
+  document.getElementById('btnOpenUserAdmin').style.display = isAdminUser ? '' : 'none';
 }
 
 function goToAuth(){
@@ -3682,6 +3833,27 @@ function goToApp(){
   renderApp();
   renderSidebar();
   renderMain();
+}
+
+function renderPendingScreen(){
+  const body = document.getElementById('pendingScreenBody');
+  if(!body) return;
+  if(myApprovalStatus === 'rejected'){
+    body.innerHTML = `
+      <div class="auth-sub" style="margin-bottom:0;">
+        Your sign-up for <b>${escapeHtml(currentUser?.email || '')}</b> was not approved.
+        Contact ${escapeHtml(ADMIN_EMAIL)} if you think this is a mistake.
+      </div>
+    `;
+  }else{
+    body.innerHTML = `
+      <div class="auth-sub" style="margin-bottom:0;">
+        Thanks for signing up! Your account (<b>${escapeHtml(currentUser?.email || '')}</b>)
+        is waiting for a team admin to approve it before you can sign in.
+        This page will update on its own once that happens.
+      </div>
+    `;
+  }
 }
 
 function initAuthScreen(){
@@ -3709,8 +3881,24 @@ function initAuthScreen(){
     const password = document.getElementById('login-password').value;
     const errEl = document.getElementById('loginError');
     errEl.textContent = '';
+    document.getElementById('loginResetSent').textContent = '';
     signInWithEmailAndPassword(auth, email, password)
       .then(cred => logLoginEvent(cred.user.email))
+      .catch(err => { errEl.textContent = authErrorMessage(err); });
+  });
+
+  document.getElementById('btnForgotPassword').addEventListener('click', () => {
+    const errEl = document.getElementById('loginError');
+    const successEl = document.getElementById('loginResetSent');
+    errEl.textContent = '';
+    successEl.textContent = '';
+    const email = document.getElementById('login-username').value.trim();
+    if(!email){
+      errEl.textContent = 'Enter your email above first, then click "Forgot password?"';
+      return;
+    }
+    sendPasswordResetEmail(auth, email)
+      .then(() => { successEl.textContent = `Password reset email sent to ${email} — check your inbox.`; })
       .catch(err => { errEl.textContent = authErrorMessage(err); });
   });
 
@@ -3736,9 +3924,26 @@ function initAuthScreen(){
     }
     errEl.textContent = '';
     createUserWithEmailAndPassword(auth, email, password)
-      .then(cred => logLoginEvent(cred.user.email))
+      .then(cred => {
+        logLoginEvent(cred.user.email);
+        // Always created as 'pending' — Firestore rules only ever allow a
+        // brand-new account to create its OWN doc with that status (never
+        // 'approved', that'd be self-approval). Admin/test accounts still
+        // get a doc for consistency in the admin panel's user list, but
+        // isApprovalExempt() bypasses the pending-gate for them regardless
+        // of what this doc says, both here client-side and in the rules.
+        return setDoc(doc(userApprovalsCol, cred.user.uid), {
+          email: cred.user.email,
+          status: 'pending',
+          requestedAt: Date.now(),
+          decidedBy: '',
+          decidedAt: null
+        });
+      })
       .catch(err => { errEl.textContent = authErrorMessage(err); });
   });
+
+  document.getElementById('btnPendingLogout').addEventListener('click', goToAuth);
 }
 
 function logLoginEvent(email){
@@ -4013,6 +4218,14 @@ function initVersionsModal(){
 /* ---------- Reference Lists modal (Customers / Sales Reps / Destination Countries) ---------- */
 let refListActiveTab = 'customers';
 let refListEditingId = null;
+// Company Directory's optional logo/photo — staged as a data URL, same
+// staging-until-saved pattern as newProjectImage/editingProjectImage on the
+// Projects side. refListNewCustomerImage holds the not-yet-added draft's
+// photo; refListEditingCustomerImage holds whichever existing entry is
+// currently being edited (there's only ever one, since refListEditingId
+// already enforces single-row editing).
+let refListNewCustomerImage = '';
+let refListEditingCustomerImage = null;
 
 function mountRefListsView(){
   const main = document.getElementById('mainArea');
@@ -4024,8 +4237,8 @@ function mountRefListsView(){
     </div>
     <div class="card">
       <div class="reflist-tabs">
-        <button class="reflist-tab-btn active" data-key="customers">Customers</button>
-        <button class="reflist-tab-btn" data-key="salesReps">Project Owner</button>
+        <button class="reflist-tab-btn active" data-key="customers">Company Directory</button>
+        <button class="reflist-tab-btn" data-key="salesReps">Contact Directory</button>
         <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
         <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
         <button class="reflist-tab-btn" data-key="factories">Factories</button>
@@ -4037,8 +4250,20 @@ function mountRefListsView(){
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
         <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
         <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
+        <input type="file" id="refListNewImageInput" accept="image/*" style="display:none;max-width:160px;">
+        <img id="refListNewImagePreview" src="" alt="" style="display:none;width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid var(--border);">
+        <button type="button" class="btn btn-sm" id="refListNewImageRemove" style="display:none;">Remove</button>
         <span class="reflist-code-preview" id="refListCodePreview" style="display:none;">Code: <b id="refListCodePreviewValue">—</b></span>
         <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>
+      </div>
+      <div class="reflist-contact-grid" id="refListContactFields" style="display:none;">
+        <input type="text" id="contactNewType" list="contactTypeDatalist" placeholder="Contact Type (e.g. Internal, Customer)">
+        <input type="text" id="contactNewCompany" list="customerDatalist" placeholder="Company / Organization">
+        <input type="text" id="contactNewCountry" list="destinationDatalist" placeholder="Country / Location">
+        <input type="text" id="contactNewJobTitle" placeholder="Job Title / Position">
+        <input type="text" id="contactNewDepartment" placeholder="Department">
+        <input type="email" id="contactNewEmail" placeholder="Email">
+        <input type="tel" id="contactNewPhone" placeholder="Phone Number">
       </div>
       <div id="refListItems"></div>
     </div>
@@ -4050,13 +4275,19 @@ function mountRefListsView(){
     document.getElementById('refListAddRow').style.display = refListActiveTab === 'codeGuide' ? 'none' : '';
     document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
+    const isCustomersTab = refListActiveTab === 'customers';
+    document.getElementById('refListNewImageInput').style.display = isCustomersTab ? '' : 'none';
+    document.getElementById('refListNewImagePreview').style.display = (isCustomersTab && refListNewCustomerImage) ? '' : 'none';
+    document.getElementById('refListNewImageRemove').style.display = (isCustomersTab && refListNewCustomerImage) ? '' : 'none';
     document.getElementById('refListCodePreview').style.display = refListActiveTab === 'productTypes' ? '' : 'none';
+    document.getElementById('refListContactFields').style.display = refListActiveTab === 'salesReps' ? '' : 'none';
     const isDestinationsTab = refListActiveTab === 'destinationCountries';
     const newInput = document.getElementById('refListNewInput');
     if(isDestinationsTab) newInput.setAttribute('list', 'worldCountriesDatalist');
     else newInput.removeAttribute('list');
     if(refListActiveTab === 'productTypes') newInput.placeholder = 'e.g. Sauce';
     else if(refListActiveTab === 'units') newInput.placeholder = 'e.g. kg, pcs, carton...';
+    else if(refListActiveTab === 'salesReps') newInput.placeholder = 'Full Name';
     else newInput.placeholder = isDestinationsTab ? 'Search world countries...' : 'Add a new entry...';
   };
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
@@ -4084,7 +4315,7 @@ function mountRefListsView(){
         alert(`"${country}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
         return;
       }
-      extra = { country };
+      extra = { country, image: refListNewCustomerImage };
     }else if(refListActiveTab === 'productTypes'){
       const code = productTypeCode(input.value);
       if(metaLists.productTypes.some(item => (item.code || '') === code)){
@@ -4092,15 +4323,60 @@ function mountRefListsView(){
         return;
       }
       extra = { code };
+    }else if(refListActiveTab === 'salesReps'){
+      extra = {
+        contactType: document.getElementById('contactNewType').value.trim(),
+        company: document.getElementById('contactNewCompany').value.trim(),
+        country: document.getElementById('contactNewCountry').value.trim(),
+        jobTitle: document.getElementById('contactNewJobTitle').value.trim(),
+        department: document.getElementById('contactNewDepartment').value.trim(),
+        email: document.getElementById('contactNewEmail').value.trim(),
+        phone: document.getElementById('contactNewPhone').value.trim()
+      };
     }
     addMetaListValue(refListActiveTab, input.value, extra);
     input.value = '';
     locationInput.value = '';
     countryInput.value = '';
+    refListNewCustomerImage = '';
+    document.getElementById('refListNewImageInput').value = '';
+    document.getElementById('refListNewImagePreview').src = '';
+    document.getElementById('refListNewImagePreview').style.display = 'none';
+    document.getElementById('refListNewImageRemove').style.display = 'none';
     document.getElementById('refListCodePreviewValue').textContent = '—';
+    document.querySelectorAll('#refListContactFields input').forEach(el => { el.value = ''; });
     renderRefListItems();
   };
   document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
+  document.getElementById('refListNewImageInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    try{
+      refListNewCustomerImage = await resizeImageFile(file, 200);
+      document.getElementById('refListNewImagePreview').src = refListNewCustomerImage;
+      document.getElementById('refListNewImagePreview').style.display = '';
+      document.getElementById('refListNewImageRemove').style.display = '';
+    }catch(err){
+      alert(err.message || 'Could not read that image file');
+    }
+  });
+  document.getElementById('refListNewImageRemove').addEventListener('click', () => {
+    refListNewCustomerImage = '';
+    document.getElementById('refListNewImageInput').value = '';
+    document.getElementById('refListNewImagePreview').src = '';
+    document.getElementById('refListNewImagePreview').style.display = 'none';
+    document.getElementById('refListNewImageRemove').style.display = 'none';
+  });
+  // Same company-country auto-fill Projects already does for Customer ->
+  // Destination (see .proj-customer 'change' below) — just sets the value,
+  // doesn't lock the field, so it's still free to hand-edit afterward if
+  // the contact's own location differs from the company's on file.
+  document.getElementById('contactNewCompany').addEventListener('change', e => {
+    const match = metaLists.customers.find(c => metaItemName(c) === e.target.value.trim());
+    if(match && match.country){
+      document.getElementById('contactNewCountry').value = match.country;
+    }
+  });
   document.getElementById('refListNewInput').addEventListener('input', e => {
     if(refListActiveTab === 'productTypes'){
       document.getElementById('refListCodePreviewValue').textContent = productTypeCode(e.target.value) || '—';
@@ -4114,6 +4390,11 @@ function mountRefListsView(){
   });
   document.getElementById('refListNewCountryInput').addEventListener('keydown', e => {
     if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+  });
+  document.querySelectorAll('#refListContactFields input').forEach(el => {
+    el.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
+    });
   });
 
   renderRefListItems();
@@ -4145,6 +4426,12 @@ function renderTrialCodeGuide(container){
   `;
 }
 
+// The Contact Directory's fields beyond Full Name (which just reuses the
+// shared "name" field every other list already has) — one place to list
+// them so the add form, the edit grid, and the "did anything actually
+// change" check in saveEdit all stay in sync with each other.
+const CONTACT_EXTRA_FIELDS = ['contactType', 'company', 'country', 'jobTitle', 'department', 'email', 'phone'];
+
 function renderRefListItems(){
   const container = document.getElementById('refListItems');
   if(!container) return;
@@ -4156,6 +4443,7 @@ function renderRefListItems(){
   const isDestinations = refListActiveTab === 'destinationCountries';
   const isCustomers = refListActiveTab === 'customers';
   const isProductTypes = refListActiveTab === 'productTypes';
+  const isContacts = refListActiveTab === 'salesReps';
   const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
@@ -4166,14 +4454,60 @@ function renderRefListItems(){
     const activity = [];
     if(item.createdBy) activity.push(`Added by ${escapeHtml(item.createdBy)}${item.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(item.createdAt)) : ''}`);
     if(item.updatedBy && item.updatedAt !== item.createdAt) activity.push(`Edited by ${escapeHtml(item.updatedBy)}${item.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(item.updatedAt)) : ''}`);
+    // Compact summary line: Position — Company — Contact Type — Email/Phone
+    // (email preferred, phone as a fallback) — Country and Department are
+    // still there, just not worth cluttering this one-line summary with;
+    // both are editable in the full grid below once you click Edit.
+    const contactSummaryHtml = isContacts && !isEditing
+      ? `<div class="reflist-contact-summary">${
+          [item.jobTitle, item.company, item.contactType, (item.email || item.phone)].filter(Boolean).map(escapeHtml).join(' &nbsp;·&nbsp; ')
+          || '<span class="reflist-contact-summary-empty">No additional details yet — click Edit to add</span>'
+        }</div>`
+      : '';
+    const contactEditGridHtml = isContacts && isEditing ? `
+      <div class="reflist-contact-grid">
+        <input type="text" class="reflist-contact-type-input" list="contactTypeDatalist" placeholder="Contact Type (e.g. Internal, Customer)" value="${escapeHtml(item.contactType || '')}">
+        <input type="text" class="reflist-contact-company-input" list="customerDatalist" placeholder="Company / Organization" value="${escapeHtml(item.company || '')}">
+        <input type="text" class="reflist-contact-country-input" list="destinationDatalist" placeholder="Country / Location" value="${escapeHtml(item.country || '')}">
+        <input type="text" class="reflist-contact-jobtitle-input" placeholder="Job Title / Position" value="${escapeHtml(item.jobTitle || '')}">
+        <input type="text" class="reflist-contact-department-input" placeholder="Department" value="${escapeHtml(item.department || '')}">
+        <input type="email" class="reflist-contact-email-input" placeholder="Email" value="${escapeHtml(item.email || '')}">
+        <input type="tel" class="reflist-contact-phone-input" placeholder="Phone Number" value="${escapeHtml(item.phone || '')}">
+      </div>
+    ` : '';
+    // Company Directory's optional logo — a plain preview circle when not
+    // editing, or a small upload/remove control (reading from
+    // refListEditingCustomerImage, staged the same way editingProjectImage
+    // is on the Projects side) when this row is the one being edited.
+    const companyLogoImg = isEditing ? refListEditingCustomerImage : item.image;
+    const companyLogoHtml = isCustomers && !isEditing && item.image
+      ? `<span class="reflist-company-logo"><img src="${escapeHtml(item.image)}" alt=""></span>`
+      : '';
+    const companyLogoEditHtml = isCustomers && isEditing ? `
+      <div class="reflist-company-logo-edit">
+        ${companyLogoImg ? `<img class="reflist-company-logo-edit-preview" src="${escapeHtml(companyLogoImg)}" alt="">` : ''}
+        <input type="file" class="reflist-company-logo-input" accept="image/*">
+        ${companyLogoImg ? `<button type="button" class="btn btn-sm reflist-company-logo-remove">Remove photo</button>` : ''}
+      </div>
+    ` : '';
+    // Company Directory's leading circle is the photo when there is one —
+    // the country flag only steps in as a fallback for a company that
+    // doesn't have a photo yet, rather than both showing side by side.
+    const companyFlagHtml = isCustomers && item.country && !(!isEditing && item.image)
+      ? countryFlagBadgeHtml(item.country)
+      : '';
     return `
     <div class="reflist-item" data-id="${escapeHtml(item.id)}">
+      ${companyLogoHtml}
       ${isDestinations ? countryFlagBadgeHtml(item.name) : ''}
-      ${isCustomers && item.country ? countryFlagBadgeHtml(item.country) : ''}
+      ${companyFlagHtml}
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
         ${isFactories ? `<input type="text" class="reflist-item-location-input" placeholder="Location" value="${escapeHtml(item.location || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
+        ${companyLogoEditHtml}
+        ${contactSummaryHtml}
+        ${contactEditGridHtml}
         ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
       </div>
       ${isProductTypes ? `<span class="reflist-code-badge" data-code-badge>${escapeHtml(item.code || productTypeCode(item.name))}</span>` : ''}
@@ -4198,9 +4532,41 @@ function renderRefListItems(){
     }, { once: true });
   });
 
+  container.querySelectorAll('.reflist-company-logo-input').forEach(inp => {
+    inp.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      if(!file) return;
+      try{
+        refListEditingCustomerImage = await resizeImageFile(file, 200);
+        renderRefListItems();
+      }catch(err){
+        alert(err.message || 'Could not read that image file');
+      }
+    });
+  });
+  container.querySelectorAll('.reflist-company-logo-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      refListEditingCustomerImage = '';
+      renderRefListItems();
+    });
+  });
+
+  // Same company-country auto-fill as the "+ Add" form above — see
+  // contactNewCompany's own 'change' listener in mountRefListsView.
+  container.querySelectorAll('.reflist-contact-company-input').forEach(inp => {
+    inp.addEventListener('change', e => {
+      const match = metaLists.customers.find(c => metaItemName(c) === e.target.value.trim());
+      if(match && match.country){
+        inp.closest('.reflist-item').querySelector('.reflist-contact-country-input').value = match.country;
+      }
+    });
+  });
+
   container.querySelectorAll('[data-role="edit"]').forEach(btn => {
     btn.addEventListener('click', () => {
       refListEditingId = btn.closest('.reflist-item').dataset.id;
+      const editingItem = metaLists[refListActiveTab].find(x => x.id === refListEditingId);
+      refListEditingCustomerImage = editingItem ? (editingItem.image || '') : '';
       renderRefListItems();
       const inp = container.querySelector(`.reflist-item[data-id="${CSS.escape(refListEditingId)}"] .reflist-item-name-input`);
       if(inp){ inp.focus(); inp.select(); }
@@ -4212,6 +4578,15 @@ function renderRefListItems(){
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
     const newLocation = isFactories ? row.querySelector('.reflist-item-location-input').value.trim() : undefined;
     const newCountry = isCustomers ? row.querySelector('.reflist-item-country-input').value.trim() : undefined;
+    const newContact = isContacts ? {
+      contactType: row.querySelector('.reflist-contact-type-input').value.trim(),
+      company: row.querySelector('.reflist-contact-company-input').value.trim(),
+      country: row.querySelector('.reflist-contact-country-input').value.trim(),
+      jobTitle: row.querySelector('.reflist-contact-jobtitle-input').value.trim(),
+      department: row.querySelector('.reflist-contact-department-input').value.trim(),
+      email: row.querySelector('.reflist-contact-email-input').value.trim(),
+      phone: row.querySelector('.reflist-contact-phone-input').value.trim()
+    } : undefined;
     if(isCustomers && newCountry && !metaLists.destinationCountries.some(x => metaItemName(x) === newCountry)){
       alert(`"${newCountry}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
       return; // stay in edit mode so the country can be fixed
@@ -4221,27 +4596,30 @@ function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isFactories ? { location: newLocation } : (isCustomers ? { country: newCountry } : (isProductTypes ? { code: newCode } : {}));
-    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')) && (!isCustomers || newCountry === (item.country || '')))){
-      refListEditingId = null; renderRefListItems(); return;
+    const extra = isFactories ? { location: newLocation } : (isCustomers ? { country: newCountry, image: refListEditingCustomerImage } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {})));
+    const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
+    const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
+    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')) && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged)){
+      refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
       alert(`"${newVal}" is already in this list.`);
       return; // stay in edit mode so the name can be fixed
     }
     refListEditingId = null;
+    refListEditingCustomerImage = null;
     renderRefListItems();
   };
   container.querySelectorAll('[data-role="save"]').forEach(btn => {
     btn.addEventListener('click', () => saveEdit(btn.closest('.reflist-item')));
   });
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
-    btn.addEventListener('click', () => { refListEditingId = null; renderRefListItems(); });
+    btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); });
   });
-  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input, .reflist-item-country-input').forEach(inp => {
+  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input, .reflist-item-country-input, .reflist-contact-type-input, .reflist-contact-company-input, .reflist-contact-country-input, .reflist-contact-jobtitle-input, .reflist-contact-department-input, .reflist-contact-email-input, .reflist-contact-phone-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
-      else if(e.key === 'Escape'){ refListEditingId = null; renderRefListItems(); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); }
     });
   });
   container.querySelectorAll('[data-role="delete"]').forEach(btn => {
@@ -4554,7 +4932,6 @@ function blankProject(){
   return {
     id: uid(),
     name: "",
-    formulaRefCode: "",
     image: "",
     status: PROJECT_STATUSES[0],
     requestDate: new Date().toISOString().slice(0,10),
@@ -4589,13 +4966,14 @@ function blankProject(){
 }
 
 // A project can have several flavors/fillings (e.g. a mochi assortment),
-// each with its own Target/Actual Price — pricing that used to be one
-// project-wide pair of fields now lives per flavor instead. Currency and
-// per-unit basis are shared by both prices on the same flavor (they're
-// only meaningful compared against each other in the same terms), not
-// tracked separately per price.
+// each with its own Target/Actual Price, Formula/Reference No., and Note —
+// pricing (and, as of Formula/Reference No., the recipe code too) used to
+// be one project-wide field and now lives per flavor instead, since each
+// flavor is really its own recipe. Currency and per-unit basis are shared
+// by both prices on the same flavor (they're only meaningful compared
+// against each other in the same terms), not tracked separately per price.
 function blankFlavor(){
-  return { id: uid(), name: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg" };
+  return { id: uid(), name: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
 }
 
 function blankProduct(recipeId){
@@ -5291,6 +5669,93 @@ function initUnsavedChangesGuard(){
   });
 }
 
+/* ---------- Manage Users (admin-only) ----------
+   Visible only to ADMIN_EMAIL (see renderApp's btnOpenUserAdmin toggle).
+   Lists every userApprovals doc — pending requests up top with Approve/
+   Reject, then everyone underneath with their current status and a "Send
+   Reset Email" action (the closest thing to an admin-driven password reset
+   this client-only app can do — see ADMIN_EMAIL's own comment). */
+const USER_ADMIN_STATUS_LABEL = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
+function userAdminRowHtml(item, isPendingSection){
+  const statusLabel = USER_ADMIN_STATUS_LABEL[item.status] || item.status;
+  return `
+    <div class="user-admin-row">
+      <div class="user-admin-row-main">
+        <div class="user-admin-row-email">${escapeHtml(item.email || '(no email)')}</div>
+        <div class="user-admin-row-meta">
+          ${isPendingSection
+            ? `Requested ${escapeHtml(formatActivityDateTime(item.requestedAt) || '')}`
+            : `<span class="user-admin-status user-admin-status-${escapeHtml(item.status || 'pending')}">${escapeHtml(statusLabel)}</span>${item.decidedBy ? ` &nbsp;·&nbsp; by ${escapeHtml(item.decidedBy)}` : ''}`}
+        </div>
+      </div>
+      <div class="user-admin-row-actions">
+        ${item.status !== 'approved' ? `<button class="btn btn-sm btn-primary" data-role="approve" data-uid="${escapeHtml(item.id)}">Approve</button>` : ''}
+        ${item.status !== 'rejected' ? `<button class="btn btn-sm btn-danger" data-role="reject" data-uid="${escapeHtml(item.id)}">Reject</button>` : ''}
+        <button class="btn btn-sm" data-role="reset-email" data-email="${escapeHtml(item.email || '')}">Send Reset Email</button>
+      </div>
+    </div>
+  `;
+}
+function renderUserAdminLists(){
+  const pendingList = document.getElementById('userAdminPendingList');
+  const allList = document.getElementById('userAdminAllList');
+  if(!pendingList || !allList) return;
+  const sorted = [...userApprovalsAdminList].sort((a, b) => (a.email || '').localeCompare(b.email || ''));
+  const pending = sorted.filter(u => u.status === 'pending');
+  pendingList.innerHTML = pending.length
+    ? pending.map(u => userAdminRowHtml(u, true)).join('')
+    : '<div class="overview-empty">Nothing pending</div>';
+  allList.innerHTML = sorted.length
+    ? sorted.map(u => userAdminRowHtml(u, false)).join('')
+    : '<div class="overview-empty">No sign-ups yet</div>';
+  document.querySelectorAll('#userAdminModalOverlay [data-role="approve"]').forEach(btn => {
+    btn.addEventListener('click', () => decideUserApproval(btn.dataset.uid, 'approved'));
+  });
+  document.querySelectorAll('#userAdminModalOverlay [data-role="reject"]').forEach(btn => {
+    btn.addEventListener('click', () => decideUserApproval(btn.dataset.uid, 'rejected'));
+  });
+  document.querySelectorAll('#userAdminModalOverlay [data-role="reset-email"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const email = btn.dataset.email;
+      if(!email) return;
+      const originalLabel = btn.textContent;
+      btn.disabled = true;
+      sendPasswordResetEmail(auth, email)
+        .then(() => { btn.textContent = 'Sent!'; setTimeout(() => { btn.textContent = originalLabel; btn.disabled = false; }, 2500); })
+        .catch(err => { alert(authErrorMessage(err)); btn.textContent = originalLabel; btn.disabled = false; });
+    });
+  });
+}
+function decideUserApproval(uidToDecide, status){
+  if(!uidToDecide) return;
+  setDoc(doc(userApprovalsCol, uidToDecide), {
+    status,
+    decidedBy: currentUser?.email || '',
+    decidedAt: Date.now()
+  }, { merge: true }).catch(err => alert('Failed to update: ' + err.message));
+}
+function initUserAdminPanel(){
+  document.getElementById('btnOpenUserAdmin').addEventListener('click', () => {
+    document.getElementById('navbarAccount').classList.remove('open');
+    document.getElementById('userAdminModalOverlay').classList.add('open');
+    if(!unsubscribeUserApprovalsAdmin){
+      unsubscribeUserApprovalsAdmin = onSnapshot(userApprovalsCol, snapshot => {
+        userApprovalsAdminList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        renderUserAdminLists();
+      }, err => {
+        console.error('Forge: user admin listener error', err);
+        showCloudError('Failed to load user list: ' + err.message);
+      });
+    }
+  });
+  document.getElementById('btnCloseUserAdmin').addEventListener('click', () => {
+    document.getElementById('userAdminModalOverlay').classList.remove('open');
+  });
+  document.getElementById('userAdminModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'userAdminModalOverlay') document.getElementById('userAdminModalOverlay').classList.remove('open');
+  });
+}
+
 // Accessor per sortable column — keeps the header-click handler and the
 // comparator working off the same single source of truth for "what does
 // this column's value mean," text columns lowercased so sorting isn't
@@ -5443,10 +5908,6 @@ function renderNewProjectPanel(){
           <input type="text" id="newProjName" placeholder="e.g. Sunrise Foods Q3 Launch">
         </div>
         <div class="field" style="margin-bottom:0;">
-          <label>Formula / Reference No.</label>
-          <input type="text" id="newProjFormulaRef" placeholder="e.g. JPN01-25">
-        </div>
-        <div class="field" style="margin-bottom:0;">
           <label>Photo (optional)</label>
           <input type="file" id="newProjImageInput" accept="image/*">
           <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
@@ -5584,7 +6045,6 @@ function renderNewProjectPanel(){
   document.getElementById('btnSaveNewProject').addEventListener('click', () => {
     const p = blankProject();
     p.name = document.getElementById('newProjName').value.trim();
-    p.formulaRefCode = document.getElementById('newProjFormulaRef').value.trim();
     p.image = newProjectImage;
     p.status = document.getElementById('newProjStatus').value;
     p.requestDate = document.getElementById('newProjRequestDate').value;
@@ -5789,15 +6249,13 @@ function renderProjectsList(){
           <div class="dash-metric-value">${allProductsGlobal.length}</div>
         </div>
       </div>
-      <div class="dash-row" style="margin-bottom:16px;">
-        <div class="dash-card">
-          <div class="dash-card-title">Projects by Status</div>
-          ${renderStatusBarList(projectsByStatus)}
-        </div>
-        <div class="dash-card">
-          <div class="dash-card-title">Products by stage</div>
-          ${renderBarList(productsByStage)}
-        </div>
+      <div class="dash-card" style="margin-bottom:16px;">
+        <div class="dash-card-title">Projects by Status</div>
+        ${renderStatusBarList(projectsByStatus)}
+      </div>
+      <div class="dash-card" style="margin-bottom:16px;">
+        <div class="dash-card-title">Products by stage</div>
+        ${renderBarList(productsByStage)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;" id="projectGanttChart"></div>
     `;
@@ -6007,7 +6465,6 @@ function renderProjectsList(){
         // Factory, before Portion Weight — even though it's no longer part
         // of the flat label/value list itself.
         const readOnlyDetailRowsBefore = detailRowsHtml([
-          ['Formula / Reference No.', p.formulaRefCode],
           ['Status', PROJECT_STATUS_LABELS[p.status] || p.status || PROJECT_STATUSES[0]],
           ['Request Date', p.requestDate],
           ['Start Date', p.startDate],
@@ -6030,12 +6487,14 @@ function renderProjectsList(){
         const readOnlyFlavorsHtml = flavors.length ? `
           <div class="flavor-table-scroll">
           <table class="flavor-table">
-            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th></tr></thead>
+            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
             <tbody>${flavors.map(f => `
               <tr>
                 <td>${escapeHtml(f.name || 'Untitled flavor')}</td>
                 <td>${formatFlavorPrice(f, f.targetPrice)}</td>
                 <td>${formatFlavorPrice(f, f.actualPrice)}</td>
+                <td>${escapeHtml(f.formulaRefCode || '-')}</td>
+                <td>${escapeHtml(f.note || '-')}</td>
               </tr>
             `).join('')}</tbody>
           </table>
@@ -6071,10 +6530,6 @@ function renderProjectsList(){
                 <div class="field" style="margin-bottom:0;">
                   <label>Project Name</label>
                   <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Formula / Reference No.</label>
-                  <input type="text" class="proj-formula-ref" ${ro} value="${escapeHtml(p.formulaRefCode || '')}" placeholder="e.g. JPN01-25">
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Photo (optional)</label>
@@ -6130,12 +6585,14 @@ function renderProjectsList(){
                   <label>Flavor / Filling</label>
                   <div class="flavor-table-scroll">
                   <table class="flavor-table flavor-table-edit">
-                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
                     <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
                       <tr data-flavor-id="${escapeHtml(f.id)}">
                         <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
                         <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                         <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+                        <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                        <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                         <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
                         <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
                         <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
@@ -6374,7 +6831,6 @@ function renderProjectsList(){
 
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
         p.name = block.querySelector('.proj-name').value.trim();
-        p.formulaRefCode = block.querySelector('.proj-formula-ref').value.trim();
         p.image = editingProjectImage;
         p.status = block.querySelector('.proj-status').value;
         p.requestDate = block.querySelector('.proj-request-date').value;
@@ -6551,6 +7007,8 @@ function renderProjectsList(){
           row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; scheduleProjectSave(p); });
           row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
@@ -7215,7 +7673,7 @@ function attachLoginEventsListener(){
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
 let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [], productTypes: [], units: [] };
-const META_LIST_LABELS = { customers: 'Customers', salesReps: 'Project Owner', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories', productTypes: 'Product Types', units: 'Units' };
+const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories', productTypes: 'Product Types', units: 'Units' };
 // Seeded into metaLists.units the first time it's ever missing from the
 // saved doc (see attachMetaListsListener) — the exact same values every
 // Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
@@ -7771,7 +8229,16 @@ function resizeImageFile(file, maxDim){
         const canvas = document.createElement('canvas');
         canvas.width = w;
         canvas.height = h;
-        canvas.getContext('2d').drawImage(img, 0, 0, w, h);
+        const ctx = canvas.getContext('2d');
+        // JPEG has no alpha channel — without this, a transparent PNG's
+        // see-through areas default to black once flattened, instead of
+        // just disappearing like they do everywhere else the PNG is used.
+        // White reads as "no background" for the vast majority of logos/
+        // photos this app resizes (product shots, company logos), so it's
+        // a safer default than leaving the canvas's own transparent-black.
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL('image/jpeg', 0.7));
       };
       img.src = reader.result;
@@ -8543,6 +9010,7 @@ const LUCIDE_ICONS = {
   'trash-2': '<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',
   'undo-2': '<path d="M9 14 4 9l5-5" /><path d="M4 9h10.5a5.5 5.5 0 0 1 5.5 5.5a5.5 5.5 0 0 1-5.5 5.5H11" />',
   'unlock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 9.9-1" />',
+  'users': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />',
   'upload': '<path d="M12 3v12" /><path d="m17 8-5-5-5 5" /><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />',
   'x': '<path d="M18 6 6 18" /><path d="m6 6 12 12" />'
 };
@@ -11669,6 +12137,7 @@ function applyStaticIcons(){
   setIcon('btnCloseVersionPreviewModal', 'x', 16);
   setIcon('btnCloseProductLogModal', 'x', 16);
   prefixIcon('btnCompare', 'scale');
+  prefixIcon('btnOpenUserAdmin', 'users');
   prefixIcon('btnSaveVersion', 'save');
   prefixIcon('btnExportAll', 'download');
   prefixIcon('btnImport', 'upload');
@@ -11704,6 +12173,7 @@ initMaterialLibrary();
 initProjectsModal();
 initTrialsView();
 initUnsavedChangesGuard();
+initUserAdminPanel();
 renderFooter();
 
 // Scrolling the mouse wheel over a focused number input silently changes
@@ -11719,28 +12189,68 @@ document.addEventListener('wheel', e => {
 
 /* Firestore listeners only attach once someone is actually signed in — the
    security rules reject reads/writes from a signed-out client anyway. */
+// Attaches the recipes/materials/etc listeners and shows the real app —
+// only ever called once approval status has actually resolved to
+// approved/exempt, never speculatively, since Firestore rules would just
+// reject those reads for a still-pending account anyway (better to not
+// even try than to surface a shower of permission-denied errors).
+function unlockAppAfterApproval(){
+  if(!unsubscribeRecipes) attachRecipesListener();
+  if(!unsubscribeMaterials) attachMaterialsListener();
+  if(!unsubscribeMetaLists) attachMetaListsListener();
+  if(!unsubscribeProjects) attachProjectsListener();
+  if(!unsubscribeTrials) attachTrialsListener();
+  if(!unsubscribeLoginEvents) attachLoginEventsListener();
+  if(appView === 'auth' || appView === 'pending') goToApp();
+}
+
 onAuthStateChanged(auth, user => {
   if(user){
     currentUser = user;
-    if(!unsubscribeRecipes) attachRecipesListener();
-    if(!unsubscribeMaterials) attachMaterialsListener();
-    if(!unsubscribeMetaLists) attachMetaListsListener();
-    if(!unsubscribeProjects) attachProjectsListener();
-    if(!unsubscribeTrials) attachTrialsListener();
-    if(!unsubscribeLoginEvents) attachLoginEventsListener();
-    if(appView === 'auth') goToApp();
     document.getElementById('loginForm').reset();
     document.getElementById('registerForm').reset();
     document.getElementById('loginError').textContent = '';
     document.getElementById('registerError').textContent = '';
+    if(isApprovalExempt(user.email)){
+      myApprovalStatus = 'exempt';
+      unlockAppAfterApproval();
+    }else if(!unsubscribeMyApproval){
+      unsubscribeMyApproval = onSnapshot(doc(userApprovalsCol, user.uid), snap => {
+        if(!snap.exists()){
+          // Self-heals accounts that existed before this feature shipped —
+          // they never went through the registration flow that creates
+          // this doc, so without this they'd have no record at all for the
+          // admin to even see, let alone approve. The write below triggers
+          // another snapshot right after with the 'pending' doc now in
+          // place; the fallback just below covers this exact tick too.
+          setDoc(doc(userApprovalsCol, user.uid), {
+            email: user.email, status: 'pending', requestedAt: Date.now(), decidedBy: '', decidedAt: null
+          }).catch(err => console.error('Forge: failed to create approval record', err));
+        }
+        const data = snap.data();
+        myApprovalStatus = data ? data.status : 'pending';
+        if(myApprovalStatus === 'approved'){
+          unlockAppAfterApproval();
+        }else{
+          appView = 'pending';
+          renderPendingScreen();
+        }
+        renderApp();
+      }, err => {
+        console.error('Forge: approval status listener error', err);
+      });
+    }
   }else{
     currentUser = null;
+    myApprovalStatus = null;
+    if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
     if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
     if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
     if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
     if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
     if(unsubscribeTrials){ unsubscribeTrials(); unsubscribeTrials = null; }
     if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
+    if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); unsubscribeUserApprovalsAdmin = null; }
     recipesLoaded = false;
     materialsLoaded = false;
     projectsLoaded = false;

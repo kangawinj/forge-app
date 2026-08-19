@@ -1,59 +1,70 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
+    // ---------- Shared helpers ----------
+    function isOrgEmail() {
+      return request.auth.token.email.matches('.*@th-umios[.]com$')
+        || request.auth.token.email == 'forge-setup-test@example.com';
+    }
+    // The one account that can delete recipes/materials, approve new
+    // sign-ups, and reset a member's password — same person as
+    // DELETE_APPROVER_EMAIL in index.html, kept in sync manually since
+    // rules and app code can't share a constant.
+    function isAdmin() {
+      return request.auth.token.email == 'kangawin@th-umios.com';
+    }
+    // A signed-up account only gets real data access once its own
+    // userApprovals doc says so — admin and the test account bypass this
+    // (the admin in particular must never be able to lock themselves out
+    // by being unapproved).
+    function isApproved() {
+      return exists(/databases/$(database)/documents/userApprovals/$(request.auth.uid))
+        && get(/databases/$(database)/documents/userApprovals/$(request.auth.uid)).data.status == 'approved';
+    }
+    function isAllowedUser() {
+      return request.auth != null && isOrgEmail()
+        && (isAdmin() || request.auth.token.email == 'forge-setup-test@example.com' || isApproved());
+    }
+
     match /recipes/{recipeId} {
-      allow read, create, update: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
-      allow delete: if request.auth != null
-        && request.auth.token.email == 'kangawin@th-umios.com';
+      allow read, create, update: if isAllowedUser();
+      allow delete: if request.auth != null && isAdmin();
     }
     match /ingredientMaster/{materialId} {
-      allow read, write: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
+      allow read, write: if isAllowedUser();
     }
     match /metaLists/{docId} {
-      allow read, write: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
+      allow read, write: if isAllowedUser();
     }
     match /projects/{projectId} {
-      allow read, write: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
+      allow read, write: if isAllowedUser();
     }
     match /trials/{trialId} {
-      allow read, write: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
+      allow read, write: if isAllowedUser();
     }
     // Append-only sign-in audit log: any team member can read the whole
     // log (shown via the notification bell), but a client can only ever
     // create an event for its own account — never someone else's — and
     // can never update or delete an entry once written.
     match /loginEvents/{eventId} {
-      allow read: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        );
-      allow create: if request.auth != null
-        && (
-          request.auth.token.email.matches('.*@th-umios[.]com$')
-          || request.auth.token.email == 'forge-setup-test@example.com'
-        )
+      allow read: if isAllowedUser();
+      allow create: if request.auth != null && isOrgEmail()
         && request.resource.data.email == request.auth.token.email;
+    }
+    // One doc per Firebase Auth account (keyed by uid), tracking whether an
+    // admin has approved them to actually use the app yet. A brand-new
+    // account can create its own doc (pending only — never approved,
+    // that'd be self-approval) so the sign-up flow can record the request;
+    // after that only the admin can move it to approved/rejected. Every
+    // account can read its own doc (to know whether it's still waiting),
+    // and the admin can read all of them (to see who's pending).
+    match /userApprovals/{uid} {
+      allow read: if request.auth != null && (request.auth.uid == uid || isAdmin());
+      allow create: if request.auth != null && request.auth.uid == uid
+        && request.resource.data.status == 'pending'
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if request.auth != null && isAdmin();
+      allow delete: if false;
     }
   }
 }
