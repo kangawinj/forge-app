@@ -2221,7 +2221,7 @@
   }
   input.reflist-item-name-input:hover{border-color:var(--border);}
   input.reflist-item-name-input:focus{background:#fff;}
-  input.reflist-item-location-input, input.reflist-item-country-input{
+  input.reflist-item-country-input{
     display:block;
     font-size:12px;
     color:var(--text-dim);
@@ -2231,8 +2231,8 @@
     margin:2px -6px 0;
     width:calc(100% + 12px);
   }
-  input.reflist-item-location-input:hover, input.reflist-item-country-input:hover{border-color:var(--border);}
-  input.reflist-item-location-input:focus, input.reflist-item-country-input:focus{background:#fff;color:var(--text);}
+  input.reflist-item-country-input:hover{border-color:var(--border);}
+  input.reflist-item-country-input:focus{background:#fff;color:var(--text);}
   .reflist-item-meta{font-size:11px;color:var(--text-dim);margin-top:4px;padding:0 6px;}
   /* ---------- Manage Users (admin panel) ---------- */
   .user-admin-section-title{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.03em;margin-bottom:8px;}
@@ -3205,7 +3205,7 @@
       <button class="navbar-icon-btn" id="btnNavbarNotifications" title="Notifications">🔔</button>
       <span class="navbar-notif-badge" id="navbarNotifBadge" style="display:none;"></span>
       <div class="navbar-notif-menu" id="navbarNotifMenu">
-        <div class="navbar-notif-title">Recent Sign-ins</div>
+        <div class="navbar-notif-title">Notifications</div>
         <div id="navbarNotifList"></div>
       </div>
     </div>
@@ -3255,7 +3255,6 @@
 <datalist id="destinationDatalist"></datalist>
 <datalist id="salesRepDatalist"></datalist>
 <datalist id="responsiblePersonDatalist"></datalist>
-<datalist id="factoryDatalist"></datalist>
 <datalist id="productTypeDatalist"></datalist>
 <datalist id="unitsDatalist"></datalist>
 <datalist id="worldCountriesDatalist"></datalist>
@@ -3539,6 +3538,14 @@ const trialsCol = collection(db, "trials");
 // by that same user (see the Firestore rule: create is allowed only when the
 // event's own email matches the signed-in requester's).
 const loginEventsCol = collection(db, "loginEvents");
+// Append-only audit log of adds/edits/deletes across Recipes, Projects,
+// Trials, and Ingredients — merged with loginEvents in the notification
+// bell (see renderNotificationsBell) so it reads as one combined feed:
+// who signed in, and who added/edited/deleted what. An "edit" is logged
+// once per Save/lock action, not per autosave tick — recipes/projects
+// autosave on nearly every keystroke, so logging that directly would bury
+// the feed in noise instead of surfacing anything useful.
+const activityEventsCol = collection(db, "activityEvents");
 // One doc per Firebase Auth account (keyed by uid), tracking whether an
 // admin has approved that sign-up to actually use the app — see
 // firestore.rules for the matching server-side enforcement (isApproved()).
@@ -3834,7 +3841,9 @@ const CHANGELOG = [
   { version: "3.0.199", date: "2026-08-17", note: "Contact Directory's Country / Location now auto-fills from the selected Company / Organization's own country on file (same auto-fill Projects already does for Customer -> Destination) — it's just a starting value, not locked, so it can still be hand-edited afterward if a contact's own location differs" },
   { version: "3.0.200", date: "2026-08-17", note: "Added account management: new sign-ups now wait for kangawin@th-umios.com to approve them (a \"Manage Users\" panel lists pending requests plus everyone's status) before they can sign in, and \"Forgot password?\" on the login screen (or \"Send Reset Email\" from the admin panel) emails a reset link so a locked-out member can set a new password themselves — this app talks to Firebase straight from the browser with no backend, so an admin can't set someone's password directly, only trigger that email" },
   { version: "3.0.201", date: "2026-08-17", note: "Company Directory: a company's photo now takes priority over its country flag in the leading circle (previously both showed at once) — the flag only steps back in as a fallback for a company that has no photo yet. Also fixed uploaded PNGs with a transparent background turning black once resized — they get a white background instead now, same as everywhere else in Forge a photo gets resized (Projects, Trials, Ingredients, Recipes)" },
-  { version: "3.0.202", date: "2026-08-17", note: "Reorganized the account menu: Export All (JSON) / Import (JSON) moved out into a new \"Data Management\" page (they're whole-system data actions, not personal account ones). Added \"My Profile\" (set a display name + photo, shown in the navbar instead of your email's initials) and \"Security\" (change your own password — self-service, no admin needed) — \"Manage Users\" stays admin-only, still last before Log Out" }
+  { version: "3.0.202", date: "2026-08-17", note: "Reorganized the account menu: Export All (JSON) / Import (JSON) moved out into a new \"Data Management\" page (they're whole-system data actions, not personal account ones). Added \"My Profile\" (set a display name + photo, shown in the navbar instead of your email's initials) and \"Security\" (change your own password — self-service, no admin needed) — \"Manage Users\" stays admin-only, still last before Log Out" },
+  { version: "3.0.203", date: "2026-08-17", note: "Removed the \"Factories\" Reference List — a project's Factory field now suggests from Company Directory instead, same list Contact Directory's Company/Organization field already uses. Existing Factories entries aren't lost (still in the database, just no longer shown here); add them into Company Directory if you'd like them back as suggestions" },
+  { version: "3.0.204", date: "2026-08-17", note: "The bell icon is now \"Notifications\", not just sign-ins — it shows who added, edited, or deleted a Recipe, Project, Trial, or Ingredient, merged into the same feed as sign-ins. An edit only counts once per Save (not per autosave tick while typing), so the feed stays readable instead of filling up with every keystroke" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4344,14 +4353,12 @@ function mountRefListsView(){
         <button class="reflist-tab-btn" data-key="salesReps">Contact Directory</button>
         <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
         <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
-        <button class="reflist-tab-btn" data-key="factories">Factories</button>
         <button class="reflist-tab-btn" data-key="productTypes">Product Types</button>
         <button class="reflist-tab-btn" data-key="units">Units</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
       </div>
       <div class="reflist-add-row" id="refListAddRow">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
-        <input type="text" id="refListNewLocationInput" placeholder="Location" style="display:none;max-width:180px;">
         <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
         <input type="file" id="refListNewImageInput" accept="image/*" style="display:none;max-width:160px;">
         <img id="refListNewImagePreview" src="" alt="" style="display:none;width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid var(--border);">
@@ -4376,7 +4383,6 @@ function mountRefListsView(){
     // Trial Code Format is a static reference page, not an editable list —
     // there's nothing to add, so the whole add-row hides for that tab.
     document.getElementById('refListAddRow').style.display = refListActiveTab === 'codeGuide' ? 'none' : '';
-    document.getElementById('refListNewLocationInput').style.display = refListActiveTab === 'factories' ? '' : 'none';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     const isCustomersTab = refListActiveTab === 'customers';
     document.getElementById('refListNewImageInput').style.display = isCustomersTab ? '' : 'none';
@@ -4407,12 +4413,9 @@ function mountRefListsView(){
   updateAddRowFields();
   const addNewEntry = () => {
     const input = document.getElementById('refListNewInput');
-    const locationInput = document.getElementById('refListNewLocationInput');
     const countryInput = document.getElementById('refListNewCountryInput');
     let extra = {};
-    if(refListActiveTab === 'factories'){
-      extra = { location: locationInput.value.trim() };
-    }else if(refListActiveTab === 'customers'){
+    if(refListActiveTab === 'customers'){
       const country = countryInput.value.trim();
       if(country && !metaLists.destinationCountries.some(item => metaItemName(item) === country)){
         alert(`"${country}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
@@ -4439,7 +4442,6 @@ function mountRefListsView(){
     }
     addMetaListValue(refListActiveTab, input.value, extra);
     input.value = '';
-    locationInput.value = '';
     countryInput.value = '';
     refListNewCustomerImage = '';
     document.getElementById('refListNewImageInput').value = '';
@@ -4486,9 +4488,6 @@ function mountRefListsView(){
     }
   });
   document.getElementById('refListNewInput').addEventListener('keydown', e => {
-    if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
-  });
-  document.getElementById('refListNewLocationInput').addEventListener('keydown', e => {
     if(e.key === 'Enter'){ e.preventDefault(); addNewEntry(); }
   });
   document.getElementById('refListNewCountryInput').addEventListener('keydown', e => {
@@ -4542,7 +4541,6 @@ function renderRefListItems(){
     renderTrialCodeGuide(container);
     return;
   }
-  const isFactories = refListActiveTab === 'factories';
   const isDestinations = refListActiveTab === 'destinationCountries';
   const isCustomers = refListActiveTab === 'customers';
   const isProductTypes = refListActiveTab === 'productTypes';
@@ -4606,7 +4604,6 @@ function renderRefListItems(){
       ${companyFlagHtml}
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
-        ${isFactories ? `<input type="text" class="reflist-item-location-input" placeholder="Location" value="${escapeHtml(item.location || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
         ${companyLogoEditHtml}
         ${contactSummaryHtml}
@@ -4679,7 +4676,6 @@ function renderRefListItems(){
     const id = row.dataset.id;
     const item = metaLists[refListActiveTab].find(x => x.id === id);
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
-    const newLocation = isFactories ? row.querySelector('.reflist-item-location-input').value.trim() : undefined;
     const newCountry = isCustomers ? row.querySelector('.reflist-item-country-input').value.trim() : undefined;
     const newContact = isContacts ? {
       contactType: row.querySelector('.reflist-contact-type-input').value.trim(),
@@ -4699,10 +4695,10 @@ function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isFactories ? { location: newLocation } : (isCustomers ? { country: newCountry, image: refListEditingCustomerImage } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {})));
+    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {}));
     const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
     const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
-    if(!newVal || (newVal === item.name && (!isFactories || newLocation === (item.location || '')) && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged)){
+    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged)){
       refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
@@ -4719,7 +4715,7 @@ function renderRefListItems(){
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
     btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); });
   });
-  container.querySelectorAll('.reflist-item-name-input, .reflist-item-location-input, .reflist-item-country-input, .reflist-contact-type-input, .reflist-contact-company-input, .reflist-contact-country-input, .reflist-contact-jobtitle-input, .reflist-contact-department-input, .reflist-contact-email-input, .reflist-contact-phone-input').forEach(inp => {
+  container.querySelectorAll('.reflist-item-name-input, .reflist-item-country-input, .reflist-contact-type-input, .reflist-contact-company-input, .reflist-contact-country-input, .reflist-contact-jobtitle-input, .reflist-contact-department-input, .reflist-contact-email-input, .reflist-contact-phone-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
       else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); }
@@ -5166,6 +5162,12 @@ let trialEditingId = null;
 
 const TRIAL_MAX_PRODUCTS = 4;
 
+// A trial has no name of its own — it's a comparison of recipes — so its
+// label is just whichever recipes it's comparing, joined together.
+function trialLabel(t){
+  return (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial';
+}
+
 function blankTrial(){
   return {
     id: uid(),
@@ -5252,6 +5254,7 @@ function mountTrialsView(){
     const t = blankTrial();
     trials.push(t);
     saveTrialToCloud(t);
+    logActivityEvent('created', 'trial', trialLabel(t));
     trialEditingId = t.id;
     trialExpandedIds.add(t.id);
     renderTrialsList();
@@ -5476,6 +5479,7 @@ function renderTrialsList(){
     if(isEditing){
       block.querySelector('[data-role="save-trial"]').addEventListener('click', () => {
         trialEditingId = null;
+        logActivityEvent('updated', 'trial', trialLabel(t));
         renderTrialsList();
       });
     }else{
@@ -5502,8 +5506,10 @@ function renderTrialsList(){
         'Confirm Identity to Delete',
         'Enter your password to delete this trial result.',
         () => {
+          const deletedLabel = trialLabel(t);
           trials = trials.filter(x => x.id !== t.id);
           deleteTrialFromCloud(t.id);
+          logActivityEvent('deleted', 'trial', deletedLabel);
           renderTrialsList();
         }
       );
@@ -6196,7 +6202,7 @@ function renderNewProjectPanel(){
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Factory</label>
-          <input type="text" id="newProjFactory" list="factoryDatalist" placeholder="e.g. Rayong Plant 2">
+          <input type="text" id="newProjFactory" list="customerDatalist" placeholder="e.g. Rayong Plant 2">
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Portion Weight</label>
@@ -6311,6 +6317,7 @@ function renderNewProjectPanel(){
     p.requirements = document.getElementById('newProjRequirements').value.trim();
     projects.push(p);
     saveProjectToCloud(p);
+    logActivityEvent('created', 'project', p.name || 'Untitled project');
     newProjectOpen = false;
     newProjectImage = '';
     projectEditingId = p.id;
@@ -6820,7 +6827,7 @@ function renderProjectsList(){
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Factory</label>
-                  <input type="text" class="proj-factory" list="factoryDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
+                  <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
                   <label>Flavor / Filling</label>
@@ -7106,12 +7113,14 @@ function renderProjectsList(){
         monthlyUpdateAddOpen = false;
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
+        logActivityEvent('updated', 'project', p.name || 'Untitled project');
         renderProjectsList();
       });
       block.querySelector('[data-role="duplicate-project"]').addEventListener('click', () => {
         const copy = duplicateProject(p);
         projects.push(copy);
         saveProjectToCloud(copy);
+        logActivityEvent('created', 'project', copy.name || 'Untitled project');
         projectEditingId = copy.id;
         projectExpandedIds.add(copy.id);
         renderProjectsList();
@@ -7286,6 +7295,7 @@ function renderProjectsList(){
         () => {
           projects = projects.filter(x => x.id !== p.id);
           deleteProjectFromCloud(p.id);
+          logActivityEvent('deleted', 'project', p.name || 'Untitled project');
           renderProjectsList();
         }
       );
@@ -7824,12 +7834,14 @@ let unsubscribeMetaLists = null;
 let unsubscribeProjects = null;
 let unsubscribeTrials = null;
 let unsubscribeLoginEvents = null;
+let unsubscribeActivityEvents = null;
 let recipesLoaded = false;
 let materialsLoaded = false;
 let projectsLoaded = false;
 let trialsLoaded = false;
 let trialsMigrated = false;
 let loginEvents = [];
+let activityEvents = [];
 
 function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -7909,12 +7921,34 @@ function attachLoginEventsListener(){
   });
 }
 
+// Most-recent-50 add/edit/delete events, newest first — same bounded-query
+// shape as attachLoginEventsListener, merged with it in the notification
+// bell. Fire-and-forget: a failed write here should never block the actual
+// save/delete it's describing, so callers don't await this.
+function logActivityEvent(type, entityType, entityName){
+  return setDoc(doc(activityEventsCol, uid()), {
+    type, entityType,
+    entityName: entityName || 'Untitled',
+    by: currentUser?.email || '',
+    at: Date.now()
+  }).catch(err => console.error('Forge: failed to log activity event', err));
+}
+function attachActivityEventsListener(){
+  const q = query(activityEventsCol, orderBy('at', 'desc'), limit(50));
+  unsubscribeActivityEvents = onSnapshot(q, snapshot => {
+    activityEvents = snapshot.docs.map(d => d.data());
+    renderNotificationsBell();
+  }, err => {
+    console.error('Forge: activity events listener error', err);
+  });
+}
+
 /* ---------- Reference Lists: Customers / Sales Reps / Destination Countries ---------- */
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [], productTypes: [], units: [] };
-const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', factories: 'Factories', productTypes: 'Product Types', units: 'Units' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [] };
+const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units' };
 // Seeded into metaLists.units the first time it's ever missing from the
 // saved doc (see attachMetaListsListener) — the exact same values every
 // Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
@@ -7956,7 +7990,6 @@ function attachMetaListsListener(){
       destinationCountries: (Array.isArray(data.destinationCountries) ? data.destinationCountries : []).map(metaItem),
       salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem),
       responsiblePersons: (Array.isArray(data.responsiblePersons) ? data.responsiblePersons : []).map(metaItem),
-      factories: (Array.isArray(data.factories) ? data.factories : []).map(metaItem),
       productTypes: (Array.isArray(data.productTypes) ? data.productTypes : []).map(metaItem),
       units: needsUnitSeed
         ? DEFAULT_UNIT_SEED.map(name => ({ id: uid(), name, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null }))
@@ -8007,7 +8040,7 @@ function removeMetaListItem(key, id){
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', factories: 'factoryDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -8259,6 +8292,7 @@ function renderMaterialTable(){
         {
           requireEmail: DELETE_APPROVER_EMAIL,
           approverAction: () => deleteDoc(doc(approverMaterialsCol, id))
+            .then(() => logActivityEvent('deleted', 'material', materialLabel(m)))
         }
       );
     });
@@ -8407,6 +8441,7 @@ function mountMaterialsView(){
       updatedBy: currentUser?.email || '',
       updatedAt: Date.now()
     });
+    logActivityEvent(existing ? 'updated' : 'created', 'material', materialLabel({ nameEn, nameTh }));
     cancelEditMaterial();
   });
 
@@ -8780,6 +8815,7 @@ function saveNow(){
   cancelVersionCheckpoint(r);
   pushVersionCheckpoint(r, 'Saved');
   performSave(r);
+  logActivityEvent('updated', 'recipe', r.name || 'Untitled recipe');
   if(versionsModalRecipe === r) renderVersionsList(r);
   unlockedRecipeId = null;
   renderMain();
@@ -8868,6 +8904,7 @@ function createNewRecipe(){
   unlockedRecipeId = r.id;
   mainFeatureView = null;
   saveRecipeToCloud(r);
+  logActivityEvent('created', 'recipe', r.name || 'Untitled recipe');
   renderSidebar();
   renderMain();
 }
@@ -9163,20 +9200,33 @@ function formatTimeOnly(ts){
 // just a lightweight badge count, not something that needs to sync across
 // devices.
 const LOGIN_EVENTS_LAST_SEEN_KEY = 'forgeLastSeenLoginEventAt';
+const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Trial', material: 'Ingredient' };
+const ACTIVITY_VERB_LABELS = { created: 'added', updated: 'edited', deleted: 'deleted' };
+// Merges the sign-in log with the add/edit/delete activity log into one
+// feed, newest first — this is the only place the two collections meet;
+// everywhere else (attachLoginEventsListener/attachActivityEventsListener)
+// they're loaded and stored completely separately.
 function renderNotificationsBell(){
   const list = document.getElementById('navbarNotifList');
   const badge = document.getElementById('navbarNotifBadge');
   if(!list || !badge) return;
-  list.innerHTML = loginEvents.length
-    ? loginEvents.map(ev => `
+  const merged = [
+    ...loginEvents.map(ev => ({ at: ev.timestamp, line: `${ev.email || 'Unknown'} signed in` })),
+    ...activityEvents.map(ev => ({
+      at: ev.at,
+      line: `${ev.by || 'Unknown'} ${ACTIVITY_VERB_LABELS[ev.type] || ev.type} ${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}"`
+    }))
+  ].sort((a, b) => b.at - a.at).slice(0, 50);
+  list.innerHTML = merged.length
+    ? merged.map(item => `
         <div class="navbar-notif-item">
-          <div class="ni-email">${escapeHtml(ev.email || 'Unknown')}</div>
-          <div class="ni-time">${escapeHtml(formatActivityDateTime(ev.timestamp) || '')}</div>
+          <div class="ni-email">${escapeHtml(item.line)}</div>
+          <div class="ni-time">${escapeHtml(formatActivityDateTime(item.at) || '')}</div>
         </div>
       `).join('')
-    : '<div class="navbar-notif-empty">No sign-ins recorded yet</div>';
+    : '<div class="navbar-notif-empty">No activity recorded yet</div>';
   const lastSeen = Number(localStorage.getItem(LOGIN_EVENTS_LAST_SEEN_KEY) || 0);
-  const unreadCount = loginEvents.filter(ev => ev.timestamp > lastSeen).length;
+  const unreadCount = merged.filter(item => item.at > lastSeen).length;
   badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
   badge.style.display = unreadCount > 0 ? 'flex' : 'none';
 }
@@ -10223,6 +10273,7 @@ function renderMain(){
       {
         requireEmail: DELETE_APPROVER_EMAIL,
         approverAction: () => deleteDoc(doc(approverRecipesCol, deletingId))
+          .then(() => logActivityEvent('deleted', 'recipe', r.name || 'Untitled recipe'))
       }
     );
   });
@@ -12160,6 +12211,7 @@ function duplicateCurrent(){
   currentId = copy.id;
   unlockedRecipeId = copy.id;
   saveRecipeToCloud(copy);
+  logActivityEvent('created', 'recipe', copy.name || 'Untitled recipe');
   renderSidebar();
   renderMain();
 }
@@ -12460,6 +12512,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeProjects) attachProjectsListener();
   if(!unsubscribeTrials) attachTrialsListener();
   if(!unsubscribeLoginEvents) attachLoginEventsListener();
+  if(!unsubscribeActivityEvents) attachActivityEventsListener();
   if(!unsubscribeMyProfile) attachMyProfileListener();
   if(appView === 'auth' || appView === 'pending') goToApp();
 }
@@ -12510,9 +12563,11 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
     if(unsubscribeTrials){ unsubscribeTrials(); unsubscribeTrials = null; }
     if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
+    if(unsubscribeActivityEvents){ unsubscribeActivityEvents(); unsubscribeActivityEvents = null; }
     if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); unsubscribeUserApprovalsAdmin = null; }
     if(unsubscribeMyProfile){ unsubscribeMyProfile(); unsubscribeMyProfile = null; }
     myProfile = { displayName: '', photoImage: '' };
+    activityEvents = [];
     recipesLoaded = false;
     materialsLoaded = false;
     projectsLoaded = false;
@@ -12523,7 +12578,7 @@ onAuthStateChanged(auth, user => {
     projects = [];
     trials = [];
     loginEvents = [];
-    metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], factories: [] };
+    metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [] };
     currentId = null;
     unlockedRecipeId = null;
     appView = 'auth';

@@ -74,5 +74,16 @@ service cloud.firestore {
       allow read: if isAllowedUser();
       allow write: if request.auth != null && request.auth.uid == uid;
     }
+    // Append-only add/edit/delete activity log (Recipes, Projects, Trials,
+    // Ingredients) — merged with loginEvents in the notification bell.
+    // Every logActivityEvent() call site only runs from inside an action
+    // an approved user just took, so this can require isAllowedUser() for
+    // create (stricter than loginEvents' isOrgEmail(), which has to allow
+    // a still-pending account to log its own very first sign-in).
+    match /activityEvents/{eventId} {
+      allow read: if isAllowedUser();
+      allow create: if isAllowedUser() && request.resource.data.by == request.auth.token.email;
+      allow update, delete: if false;
+    }
   }
 }
