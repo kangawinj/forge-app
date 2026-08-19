@@ -3561,7 +3561,7 @@
       <button class="icon-btn" id="btnCloseMuEditModal" title="Close">✕</button>
     </div>
     <div class="modal-body">
-      <div class="mu-plan-box">
+      <div class="mu-plan-box" data-mu-box="plan">
         <div class="mu-plan-box-title">Plan</div>
         <div class="field">
           <label>When</label>
@@ -3594,7 +3594,7 @@
           </div>
         </div>
       </div>
-      <div class="mu-plan-box">
+      <div class="mu-plan-box" data-mu-box="action">
         <div class="mu-plan-box-title">Action Taken</div>
         <div class="field">
           <label>Action Taken</label>
@@ -3608,7 +3608,7 @@
           <input type="date" id="muEditModalCompletedDate" title="Defaults to today once Action Taken is filled in, edit if it was actually finished on a different day">
         </div>
       </div>
-      <div class="mu-plan-box">
+      <div class="mu-plan-box" data-mu-box="nextaction">
         <div class="mu-plan-box-title">Next Action</div>
         <div class="field">
           <label>When</label>
@@ -4194,7 +4194,8 @@ const CHANGELOG = [
   { version: "3.0.236", date: "2026-08-19", note: "Fixed the combined Plan summary line (Task Tracking, Calendar) putting What after Where — a long company name in Where was pushing What off the end entirely once truncated. What now comes first" },
   { version: "3.0.237", date: "2026-08-19", note: "PLAN card detail: dropped the \"Who:\" label (just shows the name), and \"Where:\" is now \"@\" — matches how the field already reads in the combined summary line elsewhere" },
   { version: "3.0.238", date: "2026-08-19", note: "PLAN card detail: How now sits on its own line below @ Where, instead of sharing the same line separated by a dot" },
-  { version: "3.0.239", date: "2026-08-19", note: "Next Action now has the same 5 fields and layout as Plan — When (date + time), Who (from Contact Directory), What, Where (from Company Directory or typed, with the location picker), and How — in the Update Activity popup and both inline Add/Edit forms, plus the same detail-line styling on the NEXT ACTION card" }
+  { version: "3.0.239", date: "2026-08-19", note: "Next Action now has the same 5 fields and layout as Plan — When (date + time), Who (from Contact Directory), What, Where (from Company Directory or typed, with the location picker), and How — in the Update Activity popup and both inline Add/Edit forms, plus the same detail-line styling on the NEXT ACTION card" },
+  { version: "3.0.240", date: "2026-08-19", note: "Clicking the PLAN / ACTION TAKEN / NEXT ACTION card on an Activities Update now scrolls the Update Activity popup straight to that section, instead of always opening at the top" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -7414,7 +7415,7 @@ function renderProjectsList(){
                     <div class="mu-entry-by">${mu.createdBy ? escapeHtml(mu.createdBy) : ''}</div>
                   </div>
                   <div class="mu-card-grid"${mu.nextAction ? '' : ' style="grid-template-columns:repeat(2,1fr);"'}>
-                    <div class="mu-card mu-card-clickable" title="Click to update">
+                    <div class="mu-card mu-card-clickable" data-section="plan" title="Click to update">
                       <div class="mu-card-title">${icon('file-text', 14)} PLAN${source ? ' <span class="mu-badge">AUTO-CREATED</span>' : ''}${status === 'planned' ? ' <span class="mu-status-pill">PLANNED</span>' : ''}</div>
                       ${(mu.time || mu.planWho) ? `<div class="mu-plan-detail-line">${mu.time ? `<b>When:</b> ${escapeHtml(mu.time)}` : ''}${mu.time && mu.planWho ? ' &nbsp;·&nbsp; ' : ''}${mu.planWho ? escapeHtml(mu.planWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
@@ -7422,12 +7423,12 @@ function renderProjectsList(){
                       ${mu.planHow ? `<div class="mu-plan-detail-line"><b>How:</b> ${escapeHtml(mu.planHow)}</div>` : ''}
                       ${source ? `<div class="mu-source-link">${icon('undo-2', 12)} From Next action · ${escapeHtml(formatDateLong(source.date))}${source.createdAt ? ', ' + escapeHtml(formatTimeOnly(source.createdAt)) : ''}</div>` : ''}
                     </div>
-                    <div class="mu-card mu-card-clickable" title="Click to update">
+                    <div class="mu-card mu-card-clickable" data-section="action" title="Click to update">
                       <div class="mu-card-title">${icon('check', 14)} ACTION TAKEN</div>
                       <div class="mu-card-text">${mu.actionTaken ? escapeHtml(mu.actionTaken) : '<span class="mu-empty">Not yet taken action</span>'}</div>
                     </div>
                     ${mu.nextAction ? `
-                    <div class="mu-card mu-card-clickable" title="Click to update">
+                    <div class="mu-card mu-card-clickable" data-section="nextaction" title="Click to update">
                       <div class="mu-card-title">${icon('clock', 14)} NEXT ACTION${mu.nextActionDue ? `<span class="mu-due-inline${nextActionSuperseded ? ' mu-due-superseded' : ''}">Due ${escapeHtml(formatDateLong(mu.nextActionDue))}</span>` : ''}</div>
                       ${(mu.nextActionTime || mu.nextActionWho) ? `<div class="mu-plan-detail-line">${mu.nextActionTime ? `<b>When:</b> ${escapeHtml(mu.nextActionTime)}` : ''}${mu.nextActionTime && mu.nextActionWho ? ' &nbsp;·&nbsp; ' : ''}${mu.nextActionWho ? escapeHtml(mu.nextActionWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${escapeHtml(mu.nextAction)}</div>
@@ -8186,7 +8187,7 @@ function renderProjectsList(){
       block.querySelectorAll('.mu-status-badge, .mu-card-clickable').forEach(el => {
         el.addEventListener('click', () => {
           const updateId = el.closest('[data-update-id]')?.dataset.updateId;
-          if(updateId) openMuEditModal(p.id, updateId);
+          if(updateId) openMuEditModal(p.id, updateId, el.dataset.section || null);
         });
       });
       block.querySelectorAll('[data-role="open-mu-recipe"]').forEach(btn => {
@@ -8281,7 +8282,7 @@ function getMuEditModalTarget(){
   const mu = (p.monthlyUpdates || []).find(x => x.id === muEditModalContext.updateId);
   return mu ? { p, mu } : null;
 }
-function openMuEditModal(projectId, updateId){
+function openMuEditModal(projectId, updateId, section){
   muEditModalContext = { projectId, updateId };
   const target = getMuEditModalTarget();
   if(!target) return;
@@ -8311,6 +8312,14 @@ function openMuEditModal(projectId, updateId){
   redrawMuEditModalAttachments();
   muEditSnapshotBefore = snapshotMainFields(mu, MU_DIFF_FIELDS);
   document.getElementById('muEditModalOverlay').classList.add('open');
+  // Jump straight to the box the user actually clicked (Plan / Action
+  // Taken / Next Action) instead of always landing at the top — the
+  // modal can otherwise be a long scroll past sections they don't need.
+  if(section){
+    requestAnimationFrame(() => {
+      document.querySelector(`#muEditModalOverlay [data-mu-box="${section}"]`)?.scrollIntoView({ block: 'start' });
+    });
+  }
 }
 function redrawMuEditModalAttachments(){
   const chipList = document.getElementById('muEditModalAttachChips');
