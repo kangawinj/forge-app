@@ -2682,6 +2682,16 @@
     border-width:3px;
     border-style:solid;
   }
+  /* A project with no photo yet still gets a circle in the strip (same size/
+     status-colored border as a real photo) so it isn't just left out. */
+  .proj-gallery-thumb-empty{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:var(--bg);
+    color:var(--text-dim);
+    box-sizing:border-box;
+  }
   .proj-gallery-name{
     font-size:11px;
     color:var(--text-dim);
@@ -3499,6 +3509,11 @@
   </div>
 </div>
 
+<!-- SheetJS (xlsx) — pinned version, loaded as a plain global (not an ES
+     module) so exportRecipeToExcel() can call the XLSX global directly.
+     Only used when someone actually clicks "Export Excel", but loaded
+     up front here so it's ready well before any click is possible. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -3843,7 +3858,10 @@ const CHANGELOG = [
   { version: "3.0.201", date: "2026-08-17", note: "Company Directory: a company's photo now takes priority over its country flag in the leading circle (previously both showed at once) — the flag only steps back in as a fallback for a company that has no photo yet. Also fixed uploaded PNGs with a transparent background turning black once resized — they get a white background instead now, same as everywhere else in Forge a photo gets resized (Projects, Trials, Ingredients, Recipes)" },
   { version: "3.0.202", date: "2026-08-17", note: "Reorganized the account menu: Export All (JSON) / Import (JSON) moved out into a new \"Data Management\" page (they're whole-system data actions, not personal account ones). Added \"My Profile\" (set a display name + photo, shown in the navbar instead of your email's initials) and \"Security\" (change your own password — self-service, no admin needed) — \"Manage Users\" stays admin-only, still last before Log Out" },
   { version: "3.0.203", date: "2026-08-17", note: "Removed the \"Factories\" Reference List — a project's Factory field now suggests from Company Directory instead, same list Contact Directory's Company/Organization field already uses. Existing Factories entries aren't lost (still in the database, just no longer shown here); add them into Company Directory if you'd like them back as suggestions" },
-  { version: "3.0.204", date: "2026-08-17", note: "The bell icon is now \"Notifications\", not just sign-ins — it shows who added, edited, or deleted a Recipe, Project, Trial, or Ingredient, merged into the same feed as sign-ins. An edit only counts once per Save (not per autosave tick while typing), so the feed stays readable instead of filling up with every keystroke" }
+  { version: "3.0.204", date: "2026-08-17", note: "The bell icon is now \"Notifications\", not just sign-ins — it shows who added, edited, or deleted a Recipe, Project, Trial, or Ingredient, merged into the same feed as sign-ins. An edit only counts once per Save (not per autosave tick while typing), so the feed stays readable instead of filling up with every keystroke" },
+  { version: "3.0.205", date: "2026-08-17", note: "Added an \"Export Excel\" button to a recipe's toolbar (next to Print / PDF) — downloads a 3-sheet .xlsx workbook: Overview (product/project details), Ingredients (every Part and Sub-part's ingredients with %, weight, and note), and Process (each process's steps in order)" },
+  { version: "3.0.206", date: "2026-08-17", note: "Reordered each Notifications line so the item's name leads and who did it follows — e.g. \"Project \\\"Takoyaki & Yakisoba\\\" edited by kangawin@th-umios.com\" instead of starting with the email" },
+  { version: "3.0.207", date: "2026-08-17", note: "\"Projects by Status\" now shows every project in each status, not just the ones with a photo uploaded — a project without one gets a plain placeholder circle instead of being left out of the strip" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -9214,7 +9232,7 @@ function renderNotificationsBell(){
     ...loginEvents.map(ev => ({ at: ev.timestamp, line: `${ev.email || 'Unknown'} signed in` })),
     ...activityEvents.map(ev => ({
       at: ev.at,
-      line: `${ev.by || 'Unknown'} ${ACTIVITY_VERB_LABELS[ev.type] || ev.type} ${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}"`
+      line: `${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}" ${ACTIVITY_VERB_LABELS[ev.type] || ev.type} by ${ev.by || 'Unknown'}`
     }))
   ].sort((a, b) => b.at - a.at).slice(0, 50);
   list.innerHTML = merged.length
@@ -9472,10 +9490,13 @@ function renderBarList(groups, altClass){
 // Same layout as renderBarList, but each bar is colored by its own status
 // (via PROJECT_STATUS_BAR) instead of one flat color for every bar — so
 // "Projects by Status" reads the same way the mini status bar under each
-// project's name in the table already does. Every status that has any
-// projects with a photo also gets that photo strip shown directly above
+// project's name in the table already does. Every status with at least one
+// project gets a strip of every one of its projects shown directly above
 // its own bar (formerly a single combined gallery above this whole card —
-// moved here so each status's photos sit with that status's own numbers).
+// moved here so each status's projects sit with that status's own numbers)
+// — a project with no photo yet still gets a plain placeholder circle
+// rather than being left out of the strip entirely, so the strip's own
+// count always matches the status's real project count.
 // Both the bar/row and each individual photo are clickable — see
 // wireProjectsByStatusCardClicks, wired once after this HTML is inserted
 // into the dashboard.
@@ -9484,12 +9505,14 @@ function renderStatusBarList(groups){
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const photosForStatus = projects.filter(p => p.image && (p.status || PROJECT_STATUSES[0]) === g.label);
-    const photosHtml = photosForStatus.length ? `
+    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label);
+    const photosHtml = projectsForStatus.length ? `
       <div class="proj-gallery-grid" style="margin-bottom:6px;">
-        ${photosForStatus.map(p => `
+        ${projectsForStatus.map(p => `
           <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
-            <img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 8px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">
+            ${p.image
+              ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 8px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+              : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
             <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
           </button>
         `).join('')}
@@ -9939,6 +9962,7 @@ function renderMain(){
         <button class="btn" id="btnVersions">${icon('clock')} Versions</button>
         <button class="btn" id="btnDuplicate">${icon('copy')} Duplicate</button>
         <button class="btn" id="btnPrint">${icon('printer')} Print / PDF</button>
+        <button class="btn" id="btnExportExcel">${icon('download')} Export Excel</button>
       </div>
     </div>
 
@@ -10294,6 +10318,8 @@ function renderMain(){
     window.print();
   });
 
+  document.getElementById('btnExportExcel').addEventListener('click', () => exportRecipeToExcel(r));
+
   renderLockState(r);
 }
 
@@ -10381,6 +10407,79 @@ function allIngredientsInPart(part){
 }
 function allIngredientsInRecipe(r){
   return (r.parts || []).flatMap(allIngredientsInPart);
+}
+
+// Same idea as allIngredientsInPart, but keeps each ingredient's Part path
+// (e.g. "Part 1 > Sauce Sub-part") instead of flattening it away — the
+// export sheet needs to show which Part/Sub-part an ingredient belongs to,
+// which allIngredientsInPart's callers never needed.
+function flattenPartForExcel(part, pathPrefix){
+  const path = pathPrefix ? `${pathPrefix} > ${part.name || 'Untitled part'}` : (part.name || 'Untitled part');
+  const rows = (part.ingredients || []).map(ing => ({
+    part: path,
+    name: ing.name || '',
+    percent: ing.percent === '' || ing.percent == null ? '' : Number(ing.percent),
+    weight: ing.weight === '' || ing.weight == null ? '' : Number(ing.weight),
+    note: ing.note || ''
+  }));
+  return [...rows, ...(part.parts || []).flatMap(sub => flattenPartForExcel(sub, path))];
+}
+// Top-level entry point — r.parts has no shared parent of its own, so each
+// top-level Part starts its own path fresh rather than being wrapped in a
+// fake parent (which would wrongly prepend "Untitled part" to every row).
+function flattenRecipePartsForExcel(parts){
+  return (parts || []).flatMap(part => flattenPartForExcel(part, ''));
+}
+
+// Exports the current recipe as a 3-sheet .xlsx workbook (Overview,
+// Ingredients, Process) via SheetJS (loaded as a plain global — see the
+// <script> tag right before the main module script). Excel/XLSX rather
+// than CSV specifically because a real workbook keeps Thai characters
+// correct without a manual BOM/encoding workaround and can hold more than
+// one sheet.
+function exportRecipeToExcel(r){
+  if(typeof XLSX === 'undefined'){
+    alert('Could not load the Excel export library — check your internet connection and try again.');
+    return;
+  }
+  const link = findProjectForRecipe(r.id);
+  const overviewRows = [
+    ['Product Name', r.name || 'Untitled recipe'],
+    ['Recipe Code', fullCode(r) || '-'],
+    ['Date', r.date || '-'],
+    ['Product Type', r.productType || '-'],
+    ['Batch Weight (g)', r.batchWeight || ''],
+    ['Yield %', r.yieldPct || ''],
+    ['Project', link ? (link.project.name || 'Untitled project') : '-'],
+    ['Customer', link ? (link.project.customerName || '-') : '-'],
+    ['Destination', link ? (link.project.destinationCountry || '-') : '-'],
+    ['Stage', link ? (link.product.stage || '-') : '-'],
+    ['Created By', r.createdBy || '-'],
+    ['Created At', formatActivityDateTime(r.createdAt) || '-'],
+    ['Last Edited By', r.updatedBy || '-'],
+    ['Last Edited At', formatActivityDateTime(r.updatedAt) || '-'],
+    [],
+    ['Description / Concept'],
+    ...(r.description || []).map(pt => [pt])
+  ];
+  const ingredientRows = flattenRecipePartsForExcel(r.parts)
+    .map(row => ({ Part: row.part, Ingredient: row.name, '%': row.percent, 'Weight (g)': row.weight, Note: row.note }));
+  const processRows = (r.processes || []).flatMap((proc, pIdx) =>
+    (proc.steps && proc.steps.length ? proc.steps : ['']).map((step, sIdx) => ({
+      'Process #': pIdx + 1,
+      'Process Name': proc.title || `Process ${pIdx + 1}`,
+      'Step #': sIdx + 1,
+      'Step': step || ''
+    }))
+  );
+
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ingredientRows), 'Ingredients');
+  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processRows), 'Process');
+
+  const filenameBase = [r.name || 'Untitled recipe', fullCode(r)].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '-');
+  XLSX.writeFile(wb, `${filenameBase}.xlsx`);
 }
 
 // Scales every ingredient under a Part (including ones nested inside its
