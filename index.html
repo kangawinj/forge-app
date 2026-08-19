@@ -2286,6 +2286,14 @@
   .reflist-item .reflist-contact-grid{margin:6px 0 0;}
   .reflist-contact-summary{font-size:12px;color:var(--text-dim);margin-top:3px;padding:0 6px;}
   .reflist-contact-summary-empty{font-style:italic;}
+  /* Company Directory's optional Locations (Office/Kitchen/Factory 1/...) —
+     the editable add/remove list reuses trialStringListHtml's own
+     .trial-string-list-row styling as-is; these only style the label above
+     it and the read-only chip row shown once saved. */
+  .reflist-locations-edit{margin-top:8px;padding:0 6px;}
+  .reflist-locations-label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.02em;margin-bottom:4px;}
+  .reflist-company-locations{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;padding:0 6px;}
+  .reflist-location-chip{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:2px 9px;font-size:11px;color:var(--text-dim);}
   .reflist-code-guide{padding:6px 6px 0;}
   .reflist-code-guide-example{
     font-family:monospace;
@@ -2440,18 +2448,34 @@
   /* Fixed widths (not flex:1) on purpose — this form sits inside a colspan
      cell of a very wide, horizontally-scrolling table, so anything that
      grows to "fill available width" ends up matching the table's full
-     content width (1000px+) instead of the visible viewport. Wraps onto
-     more than one line now that there are 3 text fields + 2 dates + a
-     checkbox + 2 buttons — fitting Plan/Action Taken/Next Action on a
-     single row too wasn't realistic at normal widths any more. */
-  .proj-monthly-add{display:flex;flex-wrap:wrap;align-items:flex-start;gap:8px;}
-  .proj-monthly-add > input[type=date]{width:130px;flex:0 0 auto;}
+     content width (1000px+) instead of the visible viewport. Stacked as a
+     column of full-width boxed sections (mirrors the "Update Activity"
+     popup's layout) rather than a wrapping row of bare inputs — Plan /
+     Action Taken / Next Action each read as their own labeled group. */
+  .proj-monthly-add{display:flex;flex-direction:column;gap:12px;}
   .proj-monthly-add textarea{width:100%;min-height:44px;}
   /* Wraps each Plan/Action Taken/Next Action field so its translate
      button (see wireMuTranslateButton) can sit in the corner without
      disturbing the textarea's own layout — takes over the width/flex
      sizing the bare textarea used to have directly. */
   .mu-field-with-translate{position:relative;width:220px;flex:0 0 auto;}
+  /* "When" is a date + time input pair shown as one visual group under a
+     single label, instead of mu.date's own format changing to a combined
+     datetime-local value — see migrateMonthlyUpdate's comment on why: too
+     much of the app (Task Tracking, Calendar, getTaskStatus) relies on
+     mu.date staying a plain "YYYY-MM-DD" string. */
+  .mu-when-group{display:flex;gap:4px;flex:0 0 auto;}
+  .mu-when-group input{width:auto;}
+  /* Who/What/Where/How supporting lines on a saved PLAN card — small and
+     dim so the main "What" text (.mu-card-text) still reads as the primary
+     content, these are just context around it. */
+  .mu-plan-detail-line{font-size:11px;color:var(--text-dim);margin:2px 0;}
+  .mu-plan-detail-line b{color:var(--text-dim);}
+  /* Groups When/Who/What/Where/How into one visibly bordered section in the
+     "Update Activity" popup, separate from Action Taken/Next Action below
+     it — otherwise all 5 just read as more of the same flat field list. */
+  .mu-plan-box{border:1px solid var(--border);border-radius:var(--radius);padding:14px 14px 0;margin-bottom:16px;background:var(--bg);}
+  .mu-plan-box-title{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.03em;margin-bottom:12px;}
   .mu-translate-btn{
     position:absolute;top:4px;right:4px;
     display:flex;align-items:center;justify-content:center;
@@ -2461,7 +2485,7 @@
   .mu-translate-btn:hover{background:var(--primary-light);color:var(--primary);}
   .mu-translate-btn.loading{opacity:.5;pointer-events:none;}
   .proj-monthly-add .btn{flex:0 0 auto;white-space:nowrap;align-self:center;}
-  .mu-autocreate-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);flex:0 0 auto;align-self:center;white-space:nowrap;}
+  .mu-autocreate-label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--text-dim);align-self:flex-start;white-space:nowrap;}
   .mu-autocreate-label input[type=checkbox]{width:auto;}
   .project-log-by{font-size:11px;color:var(--text-dim);margin-top:4px;}
   /* Activities Updates timeline — a vertical connecting line (::before)
@@ -2616,6 +2640,30 @@
     line-height:1;
     padding:0;
   }
+  /* Trial Results report fields — header info grid, Test Participants /
+     Cooking Method numbered lists, and each product card's Before/After
+     frying photo pair + the Accepted/Not accepted result coloring. */
+  /* Project Name + Customer get their own full-width row (2fr:1fr — the
+     project picker needs more room than the short, derived Customer
+     field), Sample Prepared By + Test Date share a second row below —
+     replaces the old 4-up auto-fit grid that squeezed all four together. */
+  .trial-header-row{display:grid;grid-template-columns:2fr 1fr;gap:12px;}
+  .trial-header-row + .trial-header-row{margin-top:12px;}
+  @media (max-width:700px){
+    .trial-header-row{grid-template-columns:1fr;}
+  }
+  .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
+  .trial-string-list-row input{flex:1;}
+  .trial-photo-pair{display:flex;gap:12px;margin-top:10px;}
+  .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;}
+  .trial-photo-slot-label{font-size:11px;color:var(--text-dim);font-weight:600;}
+  .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
+  .trial-photo-slot input[type="file"]{width:100px;font-size:11px;}
+  .trial-result-accepted{background:color-mix(in srgb, var(--ok) 12%, transparent);}
+  .trial-result-accepted b{color:var(--ok);}
+  .trial-result-not-accepted{background:color-mix(in srgb, var(--danger) 10%, transparent);}
+  .trial-result-not-accepted b{color:var(--danger);}
 
   .empty-state{
     text-align:center;
@@ -2918,6 +2966,77 @@
   .task-tracking-col-title .dbl-count{color:var(--text-dim);font-weight:600;text-transform:none;letter-spacing:normal;}
   .task-tracking-row{display:flex;align-items:flex-start;gap:8px;width:100%;text-align:left;background:none;border:none;padding:8px 0;cursor:pointer;}
   .task-tracking-row + .task-tracking-row{border-top:1px solid var(--border);}
+  /* Groups same-date rows under one heading instead of repeating the date
+     on every row (see taskColumnItemsHtml) — no border-top needed right
+     under a heading since it already reads as its own section start. */
+  .task-tracking-date-heading{font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.03em;margin-top:12px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+  .task-tracking-date-heading:first-child{margin-top:0;}
+  .task-tracking-overdue-days{color:var(--danger);font-weight:700;}
+  .task-tracking-completed-heading{display:flex;align-items:center;gap:5px;font-size:11px;font-weight:700;color:var(--ok);text-transform:uppercase;letter-spacing:.03em;margin-top:14px;padding-bottom:4px;border-bottom:1px solid var(--border);}
+  /* Activities Calendar — a Month-view grid on the Home dashboard, same
+     data Task Tracking reads (Activities Updates due dates) laid out like
+     a normal calendar app instead of grouped by urgency. Event colors
+     reuse the exact same palette as the Activities Updates card's own
+     status accent (see .mu-status-* above) so the two stay visually
+     consistent with each other. */
+  .cal-header-bar{display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px;}
+  .cal-nav{display:flex;align-items:center;gap:6px;}
+  .cal-month-label{font-size:14px;font-weight:700;color:var(--primary-dark);min-width:140px;text-align:center;}
+  .cal-dow-row{display:grid;grid-template-columns:repeat(7,1fr);border-bottom:2px solid var(--border);}
+  .cal-dow{font-size:11px;font-weight:700;text-transform:uppercase;color:var(--text-dim);padding:4px 6px;text-align:left;}
+  .cal-grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));border-left:1px solid var(--border);border-top:1px solid var(--border);max-width:100%;}
+  /* min-width:0 overrides the browser default of "shrink no further than
+     my content" that grid/flex items get automatically — without it, one
+     long event line forces its whole column (and the entire 7-column grid)
+     wider than the card, which is exactly what pushed the calendar past
+     the edge of the screen instead of the text truncating in place. */
+  .cal-cell{border-right:1px solid var(--border);border-bottom:1px solid var(--border);min-height:84px;padding:4px 5px;display:flex;flex-direction:column;gap:3px;min-width:0;}
+  .cal-cell-outmonth{background:var(--bg);}
+  .cal-cell-outmonth .cal-cell-date{color:var(--text-dim);}
+  .cal-cell-today{background:var(--accent-light);}
+  .cal-cell-date{font-size:12px;font-weight:600;color:var(--text);}
+  .cal-cell-events{display:flex;flex-direction:column;gap:2px;min-width:0;}
+  .cal-event-wrap{position:relative;min-width:0;}
+  .cal-event{display:block;width:100%;text-align:left;border:none;border-radius:4px;padding:2px 5px;font-size:11px;line-height:1.3;color:#fff;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .cal-event-overdue{background:#dc2626;}
+  .cal-event-today{background:#f59e0b;}
+  .cal-event-upcoming{background:#2563eb;}
+  .cal-event-nodate{background:#64748b;}
+  .cal-event-completed{background:var(--ok);}
+  /* Full detail on hover instead of the plain native title tooltip — a
+     small styled card anchored to the event chip. Pure CSS (:hover), no JS
+     needed. Centered above the chip (not clipped by .cal-cell, which has
+     no overflow:hidden of its own — only the chip's own text truncates). */
+  .cal-event-tooltip{
+    display:none;
+    position:absolute;
+    z-index:50;
+    left:50%;
+    bottom:100%;
+    transform:translateX(-50%);
+    margin-bottom:6px;
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 4px 14px rgba(0,0,0,.18);
+    padding:8px 10px;
+    font-size:12px;
+    line-height:1.4;
+    color:var(--text);
+    white-space:normal;
+    width:max-content;
+    max-width:240px;
+    pointer-events:none;
+  }
+  .cal-event-wrap:hover .cal-event-tooltip{display:block;}
+  @media (max-width:900px){
+    .cal-cell{min-height:60px;}
+    .cal-dow{font-size:9px;}
+    /* No hover on touch devices — tapping the chip already navigates, so
+       a tooltip that can only be dismissed by tapping elsewhere would just
+       get in the way. */
+    .cal-event-tooltip{display:none !important;}
+  }
   .task-tracking-thumb{
     width:28px;
     height:28px;
@@ -2934,6 +3053,14 @@
   }
   .task-tracking-body{min-width:0;flex:1;}
   .task-tracking-text{font-size:13px;font-weight:600;color:var(--text);}
+  /* Completed Today rows only (see planText in computeTaskTracking) —
+     shows what was asked for and what actually got done as two lines
+     instead of just the end result on its own, which read fine for a
+     still-open task but left "done" entries with no context. */
+  .task-tracking-plan-line{font-size:12px;color:var(--text-dim);}
+  .task-tracking-done-line{font-size:13px;font-weight:600;color:var(--text);margin-top:2px;}
+  .task-tracking-line-label{font-weight:700;color:var(--text-dim);}
+  .task-tracking-done-line .task-tracking-line-label{color:var(--ok);}
   .task-tracking-meta{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);margin-top:2px;}
   @media (max-width:900px){
     .task-tracking-grid{grid-template-columns:1fr;}
@@ -3061,7 +3188,7 @@
     #btnAddTrial{display:none !important;}
     #trialsList > .part-block:not(.printing-only){display:none !important;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
-    [data-role="print-trial"], .project-add-row, .trial-photo-input{display:none !important;}
+    [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
   }
 
   @media (max-width:1024px){
@@ -3247,7 +3374,7 @@
   <div class="navbar-tabs">
     <button class="nav-tab" id="btnOpenProjects">Projects</button>
     <button class="nav-tab" id="btnRecipesTab">Recipes</button>
-    <button class="nav-tab" id="btnOpenTrials">Trials</button>
+    <button class="nav-tab" id="btnOpenTrials">Test Results</button>
     <button class="nav-tab" id="btnOpenMaterialLibSidebar">Ingredients</button>
     <button class="nav-tab" id="btnOpenRefLists">Reference Lists</button>
   </div>
@@ -3309,6 +3436,7 @@
 <datalist id="responsiblePersonDatalist"></datalist>
 <datalist id="productTypeDatalist"></datalist>
 <datalist id="unitsDatalist"></datalist>
+<datalist id="cookingMethodDatalist"></datalist>
 <datalist id="worldCountriesDatalist"></datalist>
 <datalist id="contactTypeDatalist">
   <option value="Internal">
@@ -3433,25 +3561,85 @@
       <button class="icon-btn" id="btnCloseMuEditModal" title="Close">✕</button>
     </div>
     <div class="modal-body">
-      <div class="field">
-        <label>Date</label>
-        <input type="date" id="muEditModalDate">
+      <div class="mu-plan-box">
+        <div class="mu-plan-box-title">Plan</div>
+        <div class="field">
+          <label>When</label>
+          <div class="mu-when-group">
+            <input type="date" id="muEditModalDate">
+            <input type="time" id="muEditModalTime">
+          </div>
+        </div>
+        <div class="field">
+          <label>Who</label>
+          <input type="text" id="muEditModalWho" list="salesRepDatalist" placeholder="e.g. Yano-san">
+        </div>
+        <div class="field">
+          <label>What</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="muEditModalPlan" placeholder="What"></textarea>
+            <button type="button" class="mu-translate-btn" id="btnMuEditModalTranslatePlan" title="Translate (Thai ⇄ English)"></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Where</label>
+          <input type="text" id="muEditModalWhere" list="customerDatalist" placeholder="e.g. UMIOS Office">
+          <select class="proj-select" id="muEditModalWhereLocation" style="display:none;margin-top:6px;"></select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>How</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="muEditModalHow" placeholder="How"></textarea>
+            <button type="button" class="mu-translate-btn" id="btnMuEditModalTranslateHow" title="Translate (Thai ⇄ English)"></button>
+          </div>
+        </div>
       </div>
-      <div class="field">
-        <label>Plan</label>
-        <textarea id="muEditModalPlan" placeholder="Plan"></textarea>
+      <div class="mu-plan-box">
+        <div class="mu-plan-box-title">Action Taken</div>
+        <div class="field">
+          <label>Action Taken</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="muEditModalAction" placeholder="Action Taken"></textarea>
+            <button type="button" class="mu-translate-btn" id="btnMuEditModalTranslateAction" title="Translate (Thai ⇄ English)"></button>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Completed Date (optional)</label>
+          <input type="date" id="muEditModalCompletedDate" title="Defaults to today once Action Taken is filled in, edit if it was actually finished on a different day">
+        </div>
       </div>
-      <div class="field">
-        <label>Action Taken</label>
-        <textarea id="muEditModalAction" placeholder="Action Taken"></textarea>
-      </div>
-      <div class="field">
-        <label>Next Action</label>
-        <textarea id="muEditModalNextAction" placeholder="Next Action"></textarea>
-      </div>
-      <div class="field">
-        <label>Next Action Due Date</label>
-        <input type="date" id="muEditModalNextActionDue">
+      <div class="mu-plan-box">
+        <div class="mu-plan-box-title">Next Action</div>
+        <div class="field">
+          <label>When</label>
+          <div class="mu-when-group">
+            <input type="date" id="muEditModalNextActionDue">
+            <input type="time" id="muEditModalNextActionTime">
+          </div>
+        </div>
+        <div class="field">
+          <label>Who</label>
+          <input type="text" id="muEditModalNextActionWho" list="salesRepDatalist" placeholder="e.g. Yano-san">
+        </div>
+        <div class="field">
+          <label>What</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="muEditModalNextAction" placeholder="What"></textarea>
+            <button type="button" class="mu-translate-btn" id="btnMuEditModalTranslateNextAction" title="Translate (Thai ⇄ English)"></button>
+          </div>
+        </div>
+        <div class="field">
+          <label>Where</label>
+          <input type="text" id="muEditModalNextActionWhere" list="customerDatalist" placeholder="e.g. UMIOS Office">
+          <select class="proj-select" id="muEditModalNextActionWhereLocation" style="display:none;margin-top:6px;"></select>
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>How</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="muEditModalNextActionHow" placeholder="How"></textarea>
+            <button type="button" class="mu-translate-btn" id="btnMuEditModalTranslateNextActionHow" title="Translate (Thai ⇄ English)"></button>
+          </div>
+        </div>
       </div>
       <div class="field">
         <label>Linked Recipe (optional)</label>
@@ -3707,7 +3895,7 @@ function isApprovalExempt(email){
 // nav for each person's role, not as a hard security boundary.
 const MODULE_PERMISSIONS = [
   { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
-  { key: 'trials', label: 'Trials', navBtnId: 'btnOpenTrials' },
+  { key: 'trials', label: 'Test Results', navBtnId: 'btnOpenTrials' },
   { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
   { key: 'refLists', label: 'Reference Lists', navBtnId: 'btnOpenRefLists' }
 ];
@@ -3982,7 +4170,31 @@ const CHANGELOG = [
   { version: "3.0.212", date: "2026-08-19", note: "An Activities Updates entry with no Next Action recorded no longer shows an empty \"Add after recording Action taken\" placeholder card — the card is left out entirely, and PLAN / ACTION TAKEN share the row instead" },
   { version: "3.0.213", date: "2026-08-19", note: "Clicking an Activities Updates attachment now opens a Preview popup instead of downloading it straight away — photos and PDFs show inline, other file types show a Download button, and Prev/Next cycles through every attachment on that entry" },
   { version: "3.0.214", date: "2026-08-19", note: "A project's summary now has an \"Attachments\" section (below Requirements / Certifications) listing every file attached across all of its Activities Updates in one place, newest first — no need to open each update to find one. Only shown once the project has at least one attachment" },
-  { version: "3.0.215", date: "2026-08-19", note: "Manage Users: the admin can now turn Projects / Trials / Ingredients / Reference Lists on or off per person — a member without access to a module simply doesn't see its tab in the navbar. Only kangawin@th-umios.com (the one admin) can set this, same as everything else in Manage Users. Recipes itself always stays on for every approved member — it's the app's core function" }
+  { version: "3.0.215", date: "2026-08-19", note: "Manage Users: the admin can now turn Projects / Trials / Ingredients / Reference Lists on or off per person — a member without access to a module simply doesn't see its tab in the navbar. Only kangawin@th-umios.com (the one admin) can set this, same as everything else in Manage Users. Recipes itself always stays on for every approved member — it's the app's core function" },
+  { version: "3.0.216", date: "2026-08-19", note: "Clicking a Task Tracking item on the Home dashboard now jumps straight to that project's Activities Updates section instead of landing at the top of the project" },
+  { version: "3.0.217", date: "2026-08-19", note: "Added the Translate button to the \"Update Activity\" popup's Plan / Action Taken / Next Action fields — it already existed in the inline Add/Edit forms, just missing from this popup" },
+  { version: "3.0.218", date: "2026-08-19", note: "Task Tracking on the Home dashboard now groups items under a date heading (e.g. \"21 Aug 2026\") instead of repeating the same date on every row — each item's line now just shows the project it belongs to" },
+  { version: "3.0.219", date: "2026-08-19", note: "Overdue date headings in Task Tracking now show how many days overdue in parentheses, e.g. \"11 Aug 2026 (-8 Days)\" — at a glance instead of having to work it out from today's date" },
+  { version: "3.0.220", date: "2026-08-19", note: "Fixed Activities Updates never showing up in Notifications — adding or editing an entry (from \"+ Add Update\", the inline Edit form, or the \"Update Activity\" popup) now logs a notification too, same before/after diff view as everything else, instead of only the project's own header fields being tracked" },
+  { version: "3.0.221", date: "2026-08-19", note: "Task Tracking's Due Today column now always shows today's date, even with nothing due, and a new \"Completed Today\" list right below it surfaces anything due today that's already been logged (Action Taken filled in) — previously logged entries never showed up on this dashboard at all" },
+  { version: "3.0.222", date: "2026-08-19", note: "Activities Updates entries now have a \"Completed Date\" — auto-filled with today the first time Action Taken is filled in, but editable, so logging an update today for something actually finished yesterday can say so. \"Completed Today\" on the Home dashboard now goes by this date instead of the entry's own due date" },
+  { version: "3.0.223", date: "2026-08-19", note: "Trial Results reworked to match a formal product test report: new Product Name / Customer / Sample Prepared By / Test Participants / Test Date / Cooking Method fields, Before/After frying photos per product (instead of 3 shared photos per trial), a fixed Sensory Evaluation table (Appearance Exterior/Interior, Odor, Taste, Texture, Test Result — colored green/red for Accepted/Not accepted) replacing the old freeform criteria list, and a new Improvement Guidelines table" },
+  { version: "3.0.224", date: "2026-08-19", note: "Renamed \"Trials\" / \"Trial Results\" to \"Test Results\" everywhere it's shown — the navbar tab, page title, buttons, empty states, confirm dialogs, notifications, and the Manage Users module-access list" },
+  { version: "3.0.225", date: "2026-08-19", note: "Added an Activities Calendar to the Home dashboard — a Month view (Today / ‹ › navigation) showing every Activities Update on its due date across all projects, colored the same way the update's own card already is (red overdue, amber due today, blue upcoming, green completed). Click an entry to jump straight to that project's Activities Updates" },
+  { version: "3.0.226", date: "2026-08-19", note: "Fixed \"Trial evaluation score, last 6 months\" on the Home dashboard going stale for any Test Result created after the v3.0.223 report rework — it read the old free-text \"8/9\"-style score, which the new fixed Accepted/Not accepted field never fills in. Now shows Test acceptance rate instead (% Accepted), still falling back to the old score for trials from before that change" },
+  { version: "3.0.227", date: "2026-08-19", note: "Test Results: \"Product Name\" is now a dropdown of Projects instead of free-typed text, and \"Customer\" is filled in automatically from the picked project instead of being typed separately" },
+  { version: "3.0.228", date: "2026-08-19", note: "Fixed the Activities Calendar pushing past the edge of the screen when an entry's text was long — it now truncates to fit its day cell, and hovering over it shows the full project name and text in a small popup instead" },
+  { version: "3.0.229", date: "2026-08-19", note: "Completed Today (Home dashboard's Task Tracking) now shows Plan and Done as two lines — what was asked for, then what actually got done — instead of just the end result on its own with no context for what it was answering" },
+  { version: "3.0.230", date: "2026-08-19", note: "Activities Updates' Plan is now 5 fields instead of one — When (date + time), Who (from Contact Directory), What, Where (from Company Directory or typed), and How — in the Update Activity popup and both inline Add/Edit forms. Task Tracking and the Calendar now show a combined \"time · who · @ where · what\" line instead of just the old plan text" },
+  { version: "3.0.231", date: "2026-08-19", note: "Test Results header reworked: \"Product Name\" is now \"Project Name\", it and Customer now span the full width of their own row instead of sharing a cramped 4-up row; Sample Prepared By and Test Date moved to a second row below. Sample Prepared By and each Test Participant now suggest from Contact Directory instead of being free-typed. Added a new \"Cooking Method\" Reference List tab, and Test Results' Cooking Method steps now suggest from it" },
+  { version: "3.0.232", date: "2026-08-19", note: "Company Directory entries can now list Locations (e.g. Office, Kitchen, Factory 1, Factory 2) — add/remove as many as needed from Edit, shown as small tags on the company's card" },
+  { version: "3.0.233", date: "2026-08-19", note: "The \"Update Activity\" popup now groups When/Who/What/Where/How inside one bordered \"Plan\" box, instead of reading as more of the same flat list as Action Taken/Next Action below it" },
+  { version: "3.0.234", date: "2026-08-19", note: "Action Taken + Completed Date, and Next Action + Next Action Due Date, now each get their own bordered box too, matching the Plan box above them, instead of sitting as plain unboxed fields" },
+  { version: "3.0.235", date: "2026-08-19", note: "Activities Updates' Where field now follows up with a location picker when the typed/picked company has Locations on file (see Company Directory's Locations) — choosing one appends it in parentheses, e.g. \"UMIOS ASIA OCEANIA CO., LTD. (Kitchen)\"" },
+  { version: "3.0.236", date: "2026-08-19", note: "Fixed the combined Plan summary line (Task Tracking, Calendar) putting What after Where — a long company name in Where was pushing What off the end entirely once truncated. What now comes first" },
+  { version: "3.0.237", date: "2026-08-19", note: "PLAN card detail: dropped the \"Who:\" label (just shows the name), and \"Where:\" is now \"@\" — matches how the field already reads in the combined summary line elsewhere" },
+  { version: "3.0.238", date: "2026-08-19", note: "PLAN card detail: How now sits on its own line below @ Where, instead of sharing the same line separated by a dot" },
+  { version: "3.0.239", date: "2026-08-19", note: "Next Action now has the same 5 fields and layout as Plan — When (date + time), Who (from Contact Directory), What, Where (from Company Directory or typed, with the location picker), and How — in the Update Activity popup and both inline Add/Edit forms, plus the same detail-line styling on the NEXT ACTION card" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4481,6 +4693,12 @@ let refListEditingId = null;
 // already enforces single-row editing).
 let refListNewCustomerImage = '';
 let refListEditingCustomerImage = null;
+// Staged like refListEditingCustomerImage — a Company Directory entry's
+// Locations (Office/Kitchen/Factory 1/...) are edited as a live add/remove
+// list, so a full renderRefListItems() mid-edit (adding/removing one row)
+// needs somewhere to hold the in-progress array instead of re-reading it
+// fresh from item.locations, which would just show the last-saved state.
+let refListEditingLocations = [];
 
 function mountRefListsView(){
   const main = document.getElementById('mainArea');
@@ -4498,6 +4716,7 @@ function mountRefListsView(){
         <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
         <button class="reflist-tab-btn" data-key="productTypes">Product Types</button>
         <button class="reflist-tab-btn" data-key="units">Units</button>
+        <button class="reflist-tab-btn" data-key="cookingMethods">Cooking Method</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
       </div>
       <div class="reflist-add-row" id="refListAddRow">
@@ -4540,6 +4759,7 @@ function mountRefListsView(){
     if(refListActiveTab === 'productTypes') newInput.placeholder = 'e.g. Sauce';
     else if(refListActiveTab === 'units') newInput.placeholder = 'e.g. kg, pcs, carton...';
     else if(refListActiveTab === 'salesReps') newInput.placeholder = 'Full Name';
+    else if(refListActiveTab === 'cookingMethods') newInput.placeholder = 'e.g. Deep Fry, Steam, Microwave...';
     else newInput.placeholder = isDestinationsTab ? 'Search world countries...' : 'Add a new entry...';
   };
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
@@ -4748,6 +4968,17 @@ function renderRefListItems(){
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
+        ${isCustomers && isEditing ? `
+          <div class="reflist-locations-edit">
+            <label class="reflist-locations-label">Locations (optional)</label>
+            ${trialStringListHtml(refListEditingLocations, true, 'reflist-location-input', 'company-location', 'e.g. Office, Kitchen, Factory 1')}
+          </div>
+        ` : ''}
+        ${isCustomers && !isEditing && (item.locations || []).length ? `
+          <div class="reflist-company-locations">
+            ${item.locations.map(loc => `<span class="reflist-location-chip">${escapeHtml(loc)}</span>`).join('')}
+          </div>
+        ` : ''}
         ${companyLogoEditHtml}
         ${contactSummaryHtml}
         ${contactEditGridHtml}
@@ -4810,6 +5041,7 @@ function renderRefListItems(){
       refListEditingId = btn.closest('.reflist-item').dataset.id;
       const editingItem = metaLists[refListActiveTab].find(x => x.id === refListEditingId);
       refListEditingCustomerImage = editingItem ? (editingItem.image || '') : '';
+      refListEditingLocations = editingItem ? [...(editingItem.locations || [])] : [];
       renderRefListItems();
       const inp = container.querySelector(`.reflist-item[data-id="${CSS.escape(refListEditingId)}"] .reflist-item-name-input`);
       if(inp){ inp.focus(); inp.select(); }
@@ -4820,6 +5052,13 @@ function renderRefListItems(){
     const item = metaLists[refListActiveTab].find(x => x.id === id);
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
     const newCountry = isCustomers ? row.querySelector('.reflist-item-country-input').value.trim() : undefined;
+    // Read straight from the row's own DOM rather than trusting
+    // refListEditingLocations to be fully up to date — its change-event
+    // sync (below) can miss the very last keystroke if Enter triggers this
+    // save before a location input's blur fires.
+    const newLocations = isCustomers
+      ? [...row.querySelectorAll('.reflist-location-input')].map(el => el.value.trim()).filter(Boolean)
+      : undefined;
     const newContact = isContacts ? {
       contactType: row.querySelector('.reflist-contact-type-input').value.trim(),
       company: row.querySelector('.reflist-contact-company-input').value.trim(),
@@ -4838,11 +5077,12 @@ function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {}));
+    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {}));
     const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
     const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
-    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged)){
-      refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); return;
+    const locationsUnchanged = !isCustomers || JSON.stringify(newLocations) === JSON.stringify(item.locations || []);
+    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged && locationsUnchanged)){
+      refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
       alert(`"${newVal}" is already in this list.`);
@@ -4850,18 +5090,39 @@ function renderRefListItems(){
     }
     refListEditingId = null;
     refListEditingCustomerImage = null;
+    refListEditingLocations = [];
     renderRefListItems();
   };
   container.querySelectorAll('[data-role="save"]').forEach(btn => {
     btn.addEventListener('click', () => saveEdit(btn.closest('.reflist-item')));
   });
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
-    btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); });
+    btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); });
   });
   container.querySelectorAll('.reflist-item-name-input, .reflist-item-country-input, .reflist-contact-type-input, .reflist-contact-company-input, .reflist-contact-country-input, .reflist-contact-jobtitle-input, .reflist-contact-department-input, .reflist-contact-email-input, .reflist-contact-phone-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
-      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; renderRefListItems(); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); }
+    });
+  });
+  // Locations (Company Directory only) — a live add/remove list, same
+  // wiring shape as Trial Results' Test Participants/Cooking Method.
+  container.querySelector('[data-role="add-company-location"]')?.addEventListener('click', () => {
+    refListEditingLocations.push('');
+    renderRefListItems();
+  });
+  container.querySelectorAll('[data-role="remove-company-location"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      refListEditingLocations.splice(idx, 1);
+      renderRefListItems();
+    });
+  });
+  container.querySelectorAll('.reflist-location-input').forEach((inp, idx) => {
+    inp.addEventListener('change', () => { refListEditingLocations[idx] = inp.value.trim(); });
+    inp.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); }
     });
   });
   container.querySelectorAll('[data-role="delete"]').forEach(btn => {
@@ -5004,8 +5265,8 @@ function computeActionItems(){
   });
   trials.forEach(t => {
     if((t.recipeIds || []).length && trialAvgScoreRatio(t) === null){
-      const label = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial';
-      items.push({ severity: 'medium', title: 'Score this trial', subjectIcon: 'flask-conical', subject: label, itemType: 'trial', itemId: t.id });
+      const label = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled test';
+      items.push({ severity: 'medium', title: 'Score this test', subjectIcon: 'flask-conical', subject: label, itemType: 'trial', itemId: t.id });
     }
   });
   projects.forEach(p => {
@@ -5035,14 +5296,50 @@ function migrateMonthlyUpdate(mu){
   return {
     ...mu,
     plan: mu.plan || '',
+    // "When" is still just mu.date (a plain "YYYY-MM-DD", unchanged) plus
+    // this new optional mu.time ("HH:mm") shown alongside it — kept as two
+    // separate fields on purpose rather than merging into one
+    // datetime-local value, since mu.date's plain-date format is relied on
+    // everywhere (getTaskStatus, computeTaskTracking, the Calendar's day-
+    // cell lookup, formatDateLong) and switching it would break all of
+    // those string comparisons at once.
+    time: mu.time || '',
+    planWho: mu.planWho || '',
+    planWhere: mu.planWhere || '',
+    planHow: mu.planHow || '',
     actionTaken: mu.actionTaken !== undefined ? mu.actionTaken : (mu.results || ''),
     nextAction: mu.nextAction !== undefined ? mu.nextAction : (mu.nextPlan || ''),
     nextActionDue: mu.nextActionDue !== undefined ? mu.nextActionDue : (mu.nextPlanDate || ''),
+    // Next Action gets the exact same 5W1H shape as Plan (see above) — its
+    // own When/Who/Where/How alongside the existing nextAction ("What")
+    // and nextActionDue ("When" date part, unchanged for the same reason
+    // mu.date stays untouched).
+    nextActionTime: mu.nextActionTime || '',
+    nextActionWho: mu.nextActionWho || '',
+    nextActionWhere: mu.nextActionWhere || '',
+    nextActionHow: mu.nextActionHow || '',
     autoCreatePlan: !!mu.autoCreatePlan,
     sourceUpdateId: mu.sourceUpdateId || '',
     linkedRecipeId: mu.linkedRecipeId || '',
-    attachments: Array.isArray(mu.attachments) ? mu.attachments : []
+    attachments: Array.isArray(mu.attachments) ? mu.attachments : [],
+    completedDate: mu.completedDate || ''
   };
+}
+// Combines the 5W1H fields into one line for anywhere Plan is shown as a
+// single summary (Task Tracking, the Calendar) — the date itself is left
+// out since every one of those places already shows/groups by date some
+// other way (a date heading, the day cell itself, the entry's own header).
+function muPlanSummaryLine(mu){
+  const parts = [];
+  if(mu.time) parts.push(mu.time);
+  if(mu.planWho) parts.push(mu.planWho);
+  // What before Where — Where (a company name) tends to run long and, in
+  // the truncated single-line spots this feeds (Task Tracking, Calendar
+  // chips), was pushing What off the end entirely. What is the part
+  // actually worth reading if something has to get cut off.
+  if(mu.plan) parts.push(mu.plan);
+  if(mu.planWhere) parts.push(`@ ${mu.planWhere}`);
+  return parts.join(' · ');
 }
 
 // "Planned" (auto-created, nothing done yet) vs "logged" (Action Taken has
@@ -5104,10 +5401,11 @@ async function translateText(text, targetLang){
   return data[0].map(chunk => chunk[0]).join('');
 }
 
-// Appends the translation as a new line rather than replacing the
-// original — an Activities Updates entry then reads bilingually instead
-// of losing whatever was typed first. Shared by both the "Add Update"
-// panel and the "Edit entry" popup, since both use the exact same
+// Puts the translated text first with the original following in
+// parentheses — an Activities Updates entry then reads bilingually, led
+// by whichever language was just translated to, instead of losing
+// whatever was typed first. Shared by both the "Add Update" panel and
+// the "Edit entry" popup, since both use the exact same
 // .mu-field-with-translate + .mu-translate-btn markup pair.
 function wireMuTranslateButton(wrapEl){
   const textarea = wrapEl.querySelector('textarea');
@@ -5119,7 +5417,7 @@ function wireMuTranslateButton(wrapEl){
     btn.classList.add('loading');
     try{
       const translated = await translateText(original, guessTranslateTargetLang(original));
-      textarea.value = original + '\n' + translated;
+      textarea.value = `${translated}\n(${original})`;
     }catch(err){
       console.error('Forge: translation failed', err);
       alert('Translation failed — the free translation service may be temporarily unavailable. Please try again in a moment.');
@@ -5140,8 +5438,9 @@ function maybeAutoCreateNextPlan(p, mu){
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
   if(p.monthlyUpdates.some(x => x.sourceUpdateId === mu.id)) return;
   p.monthlyUpdates.push({
-    id: uid(), date: mu.nextActionDue,
-    plan: mu.nextAction, actionTaken: '', nextAction: '', nextActionDue: '',
+    id: uid(), date: mu.nextActionDue, time: mu.nextActionTime || '',
+    planWho: mu.nextActionWho || '', plan: mu.nextAction, planWhere: mu.nextActionWhere || '', planHow: mu.nextActionHow || '',
+    actionTaken: '', nextAction: '', nextActionDue: '',
     autoCreatePlan: false, sourceUpdateId: mu.id,
     createdBy: currentUser?.email || '', createdAt: Date.now()
   });
@@ -5149,31 +5448,50 @@ function maybeAutoCreateNextPlan(p, mu){
 
 function captureMonthlyUpdateDraft(p, block){
   const dateInput = block.querySelector('.proj-mu-date');
+  const timeInput = block.querySelector('.proj-mu-time');
+  const whoInput = block.querySelector('.proj-mu-who');
   const planInput = block.querySelector('.proj-mu-plan');
+  const whereInput = block.querySelector('.proj-mu-where');
+  const howInput = block.querySelector('.proj-mu-how');
   const actionInput = block.querySelector('.proj-mu-action');
+  const nextActionTimeInput = block.querySelector('.proj-mu-nextaction-time');
+  const nextActionWhoInput = block.querySelector('.proj-mu-nextaction-who');
   const nextActionInput = block.querySelector('.proj-mu-nextaction');
+  const nextActionWhereInput = block.querySelector('.proj-mu-nextaction-where');
+  const nextActionHowInput = block.querySelector('.proj-mu-nextaction-how');
   const nextActionDueInput = block.querySelector('.proj-mu-nextaction-due');
   const autoCreateInput = block.querySelector('.proj-mu-autocreate');
   const recipeInput = block.querySelector('.proj-mu-recipe');
+  const completedDateInput = block.querySelector('.proj-mu-completed-date');
   if(!dateInput) return false;
   const date = dateInput.value;
+  const time = timeInput?.value || '';
+  const planWho = whoInput?.value.trim() || '';
   const plan = planInput.value.trim();
+  const planWhere = whereInput?.value.trim() || '';
+  const planHow = howInput?.value.trim() || '';
   const actionTaken = actionInput.value.trim();
+  const nextActionTime = nextActionTimeInput?.value || '';
+  const nextActionWho = nextActionWhoInput?.value.trim() || '';
   const nextAction = nextActionInput.value.trim();
+  const nextActionWhere = nextActionWhereInput?.value.trim() || '';
+  const nextActionHow = nextActionHowInput?.value.trim() || '';
   const nextActionDue = nextActionDueInput.value;
   const autoCreatePlan = !!autoCreateInput?.checked;
   const linkedRecipeId = recipeInput?.value || '';
+  const completedDate = resolveMuCompletedDate(actionTaken, completedDateInput?.value || '', new Date().toISOString().slice(0, 10));
   if(!date || (!plan && !actionTaken && !nextAction)) return false;
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
   const mu = {
-    id: uid(), date, plan, actionTaken, nextAction, nextActionDue, autoCreatePlan,
-    linkedRecipeId, attachments: monthlyUpdateDraftAttachments,
+    id: uid(), date, time, planWho, plan, planWhere, planHow, actionTaken,
+    nextActionTime, nextActionWho, nextAction, nextActionWhere, nextActionHow, nextActionDue, autoCreatePlan,
+    linkedRecipeId, attachments: monthlyUpdateDraftAttachments, completedDate,
     sourceUpdateId: '', createdBy: currentUser?.email || '', createdAt: Date.now()
   };
   monthlyUpdateDraftAttachments = [];
   p.monthlyUpdates.push(mu);
   maybeAutoCreateNextPlan(p, mu);
-  return true;
+  return mu;
 }
 
 function blankProject(){
@@ -5314,7 +5632,7 @@ const TRIAL_MAX_PRODUCTS = 4;
 // A trial has no name of its own — it's a comparison of recipes — so its
 // label is just whichever recipes it's comparing, joined together.
 function trialLabel(t){
-  return (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial';
+  return (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled test';
 }
 
 function blankTrial(){
@@ -5322,13 +5640,73 @@ function blankTrial(){
     id: uid(),
     recipeIds: [],
     manualProducts: [],
-    photos: [],
-    evaluation: [],
+    linkedProjectId: '',
+    samplePreparedBy: '',
+    testParticipants: [],
+    testDate: '',
+    cookingMethodSteps: [],
+    productData: {},
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
     updatedBy: currentUser?.email || '',
     updatedAt: Date.now()
   };
+}
+// Old trials only had photos (up to 3, shared across the whole trial) and
+// evaluation (freeform criteria rows) — replaced by a fixed test-report
+// format (see TRIAL_FIXED_CRITERIA/TRIAL_IMPROVEMENT_CRITERIA) with photos
+// and scores per product instead. The old fields are left on the document
+// untouched (unused, harmless) rather than migrated/stripped, same
+// never-destroy-data approach as migrateTrialsFromRecipes above.
+function migrateTrial(t){
+  return {
+    ...t,
+    linkedProjectId: t.linkedProjectId || '',
+    samplePreparedBy: t.samplePreparedBy || '',
+    testParticipants: Array.isArray(t.testParticipants) ? t.testParticipants : [],
+    testDate: t.testDate || '',
+    cookingMethodSteps: Array.isArray(t.cookingMethodSteps) ? t.cookingMethodSteps : [],
+    productData: (t.productData && typeof t.productData === 'object') ? t.productData : {}
+  };
+}
+// Lazily creates the per-product data bucket (photos + fixed scores) keyed
+// by product id — works for both a linked recipe's id and a manual
+// product's own id, same keying convention the old evaluation.scores map
+// already used. Mutates `t` in place so the caller doesn't have to.
+function getTrialProductData(t, productId){
+  if(!t.productData || typeof t.productData !== 'object') t.productData = {};
+  if(!t.productData[productId]) t.productData[productId] = {};
+  return t.productData[productId];
+}
+const TRIAL_FIXED_CRITERIA = [
+  { key: 'appearanceExterior', label: 'Appearance (Exterior)' },
+  { key: 'appearanceInterior', label: 'Appearance (Interior)' },
+  { key: 'odor', label: 'Odor' },
+  { key: 'taste', label: 'Taste' },
+  { key: 'texture', label: 'Texture' }
+];
+const TRIAL_IMPROVEMENT_CRITERIA = [
+  { key: 'improveAppearanceInterior', label: 'Appearance (Interior)' },
+  { key: 'improveOdor', label: 'Odor' },
+  { key: 'improveTexture', label: 'Texture' }
+];
+const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted'];
+// Shared by Test Participants and Cooking Method — both are just a plain
+// numbered list of strings, add/remove one at a time. `addRole` becomes
+// both the "add-<addRole>" and "remove-<addRole>" data-role the wiring
+// below listens for.
+function trialStringListHtml(items, isEditing, inputClass, addRole, placeholder, datalistId){
+  const list = items || [];
+  const rows = list.map((val, idx) => `
+    <div class="trial-string-list-row" data-idx="${idx}">
+      <span class="trial-string-list-num">${idx + 1}.</span>
+      <input type="text" class="${inputClass}" value="${escapeHtml(val)}" placeholder="${escapeHtml(placeholder)}" ${datalistId ? `list="${datalistId}"` : ''} ${isEditing ? '' : 'readonly'}>
+      ${isEditing ? `<button type="button" class="icon-btn" data-role="remove-${addRole}" data-idx="${idx}" title="Remove">${icon('x')}</button>` : ''}
+    </div>
+  `).join('');
+  const empty = !list.length && !isEditing ? '<div class="overview-empty">None listed</div>' : '';
+  const addBtn = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-${addRole}">+ Add</button>` : '';
+  return rows + empty + addBtn;
 }
 
 // A product being compared that isn't one of this app's own Recipes — a
@@ -5391,10 +5769,10 @@ function mountTrialsView(){
   main.classList.remove('main-wide');
   main.innerHTML = `
     <div class="main-header">
-      <div class="section-title-display">${icon('flask-conical', 24)} Trial Results</div>
+      <div class="section-title-display">${icon('flask-conical', 24)} Test Results</div>
     </div>
     <div class="card">
-      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Trial</button>
+      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Test</button>
       <div id="trialsList"></div>
     </div>
   `;
@@ -5416,19 +5794,25 @@ function renderTrialsList(){
   const container = document.getElementById('trialsList');
   if(!container) return;
   if(trials.length === 0){
-    container.innerHTML = '<div class="overview-empty">No trial results yet — click "+ New Trial" above to start one</div>';
+    container.innerHTML = '<div class="overview-empty">No test results yet — click "+ New Test" above to start one</div>';
     return;
   }
   const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
   container.innerHTML = sorted.map(t => {
     const isEditing = t.id === trialEditingId;
     const isExpanded = isEditing || trialExpandedIds.has(t.id);
+    // Migrated view used only for building this HTML string below — the
+    // wiring block further down re-fetches the raw trial from `trials` and
+    // guards each field defensively instead, same split used for Projects'
+    // monthlyUpdates (see migrateMonthlyUpdate).
+    const mt = migrateTrial(t);
+    const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
     const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
     const manualProducts = t.manualProducts || [];
     const combinedCount = (t.recipeIds || []).length + manualProducts.length;
-    const productLabel = combinedCount
+    const productLabel = linkedProject?.name || (combinedCount
       ? [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')].join(', ')
-      : 'Untitled trial';
+      : 'Untitled test');
     const activity = [];
     if(t.createdBy) activity.push(`Created by ${escapeHtml(t.createdBy)}${t.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(t.createdAt)) : ''}`);
     if(t.updatedBy && t.updatedAt !== t.createdAt) activity.push(`Last edited by ${escapeHtml(t.updatedBy)}${t.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(t.updatedAt)) : ''}`);
@@ -5438,6 +5822,36 @@ function renderTrialsList(){
       .filter(r => !usedRecipeIds.has(r.id))
       .sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
     const atMax = combinedCount >= TRIAL_MAX_PRODUCTS;
+
+    // Before/After frying photos live per product now (not 3 shared across
+    // the whole trial) — same idea as the read-only product cards below,
+    // built once here and dropped into each card.
+    const trialPhotoPairHtml = productId => {
+      const pd = getTrialProductData(mt, productId);
+      const slot = (field, label) => {
+        const photo = pd[field];
+        if(photo){
+          return `
+            <div class="trial-photo-slot">
+              <div class="trial-photo-slot-label">${escapeHtml(label)}</div>
+              <div class="trial-photo-thumb" data-product-id="${escapeHtml(productId)}" data-slot="${field}">
+                <img src="${escapeHtml(photo)}" alt="${escapeHtml(label)}">
+                ${isEditing ? `<button class="icon-btn" data-role="remove-trial-photo" title="Remove">${icon('x')}</button>` : ''}
+              </div>
+            </div>
+          `;
+        }
+        return `
+          <div class="trial-photo-slot">
+            <div class="trial-photo-slot-label">${escapeHtml(label)}</div>
+            ${isEditing
+              ? `<input type="file" class="trial-product-photo-input" data-product-id="${escapeHtml(productId)}" data-slot="${field}" accept="image/*">`
+              : '<div class="trial-photo-empty">No photo</div>'}
+          </div>
+        `;
+      };
+      return `<div class="trial-photo-pair">${slot('beforePhoto', 'Before frying')}${slot('afterPhoto', 'After frying')}</div>`;
+    };
 
     // Side-by-side product cards (same visual language as Compare Recipes'
     // info-grid) so every product being evaluated is visible at once,
@@ -5465,6 +5879,7 @@ function renderTrialsList(){
           ${link?.project.destinationCountry ? `<div class="ci-row"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
           ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Project Owner:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
           ${link ? `<div class="ci-row"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
+          ${trialPhotoPairHtml(r.id)}
           ${removeBtn}
         </div>
       `;
@@ -5497,6 +5912,7 @@ function renderTrialsList(){
                   : `<input type="${field === 'date' ? 'date' : 'text'}" class="tmanual-field" data-field="${field}" value="${escapeHtml(mp[field] || '')}" placeholder="-" ${datalist ? `list="${datalist}"` : ''}>`
               }</div>
             `).join('')}
+            ${trialPhotoPairHtml(mp.id)}
             ${removeBtn}
           </div>
         `;
@@ -5505,6 +5921,7 @@ function renderTrialsList(){
         <div class="compare-info-col">
           <div class="ci-name">${escapeHtml(mp.name || 'Untitled')} <span style="font-weight:400;color:var(--text-dim);">(manual)</span></div>
           ${manualFieldRows.map(([field, label]) => mp[field] ? `<div class="ci-row"><b>${label}:</b> ${escapeHtml(mp[field])}</div>` : '').join('')}
+          ${trialPhotoPairHtml(mp.id)}
         </div>
       `;
     }).join('');
@@ -5515,63 +5932,106 @@ function renderTrialsList(){
     // in the evaluation table below, so each product's card lines up with
     // its own score column — same technique used on the Compare Recipes page.
     const productCardsGrid = productCardsHtml
-      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},1fr) 160px 34px;"><div class="compare-info-spacer"></div>${productCardsHtml}<div class="compare-info-spacer"></div><div class="compare-info-spacer"></div></div>`
+      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},1fr);"><div class="compare-info-spacer"></div>${productCardsHtml}</div>`
       : '<div class="overview-empty">No products added yet</div>';
-
-    const photosHtml = t.photos.map((photo, idx) => `
-      <div class="trial-photo-thumb" data-idx="${idx}">
-        <img src="${escapeHtml(photo)}" alt="Trial photo ${idx+1}">
-        ${isEditing ? `<button class="icon-btn" title="Remove this photo">${icon('x')}</button>` : ''}
-      </div>
-    `).join('');
 
     // Each row's score is per-product (columns matching the product cards
     // above) so every sample can be scored against the same criteria in one
     // glance, the same way Compare Recipes lines up ingredients per recipe.
-    // Manual products score exactly like linked recipes — same {id: score}
-    // map, just keyed by the manual product's own id instead of a recipeId.
+    // Manual products score exactly like linked recipes — same map keyed by
+    // the manual product's own id instead of a recipeId (see
+    // getTrialProductData). Fixed rows (see TRIAL_FIXED_CRITERIA) replace
+    // the old freeform criteria list — the report format this now follows
+    // always asks the same handful of questions.
     const evalTargets = [
       ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
       ...manualProducts.map(mp => ({ id: mp.id, label: mp.name || 'Untitled' }))
     ];
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
-    const evalRows = t.evaluation.length === 0
-      ? `<tr><td colspan="${evalTargets.length + 3}"><div class="overview-empty">No evaluation criteria added yet</div></td></tr>`
-      : t.evaluation.map((row, idx) => {
-        if(!row.scores) row.scores = {};
-        // Carries forward a score saved under the old single-product format
-        // (before comparison support existed) so it isn't silently dropped.
-        if(row.score !== undefined && Object.keys(row.scores).length === 0 && evalTargets.length === 1){
-          row.scores[evalTargets[0].id] = row.score;
-        }
-        const scoreCells = evalTargets.map((p, i) => `
-          <td class="${i > 0 ? 'recipe-boundary' : ''}"><input type="text" class="teval-score" ${isEditing ? '' : 'readonly'} data-recipe-id="${escapeHtml(p.id)}" value="${escapeHtml(row.scores[p.id] || '')}" placeholder="e.g. 8/9"></td>
-        `).join('');
-        return `
-          <tr data-idx="${idx}">
-            <td><input type="text" class="teval-criteria" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.criteria || '')}" placeholder="e.g. Appearance"></td>
-            ${scoreCells}
-            <td><input type="text" class="teval-comment" ${isEditing ? '' : 'readonly'} value="${escapeHtml(row.comment || '')}" placeholder="Notes"></td>
-            <td class="col-del">${isEditing ? `<button class="icon-btn" data-role="delete-eval-row" title="Delete">${icon('x')}</button>` : ''}</td>
-          </tr>
-        `;
-      }).join('');
+    const fixedCriteriaRowsHtml = TRIAL_FIXED_CRITERIA.map(c => `
+      <tr>
+        <td><b>${escapeHtml(c.label)}</b></td>
+        ${evalTargets.map((p, i) => {
+          const pd = getTrialProductData(mt, p.id);
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${c.key}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.key] || '')}</textarea></td>`;
+        }).join('')}
+      </tr>
+    `).join('');
+    // Test Result is a dropdown (not free text) so Accepted/Not accepted
+    // can be colored — matches the sample report's red "Not accepted" text.
+    const testResultRowHtml = `
+      <tr>
+        <td><b>Test Result</b></td>
+        ${evalTargets.map((p, i) => {
+          const pd = getTrialProductData(mt, p.id);
+          const val = pd.testResult || '';
+          const resultClass = val === 'Accepted' ? 'trial-result-accepted' : (val === 'Not accepted' ? 'trial-result-not-accepted' : '');
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''} ${resultClass}">${isEditing
+            ? `<select class="proj-select teval-testresult" data-product-id="${escapeHtml(p.id)}"><option value="">-</option>${TRIAL_TEST_RESULT_OPTIONS.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+            : `<b>${escapeHtml(val || '-')}</b>`}</td>`;
+        }).join('')}
+      </tr>
+    `;
+    const improvementRowsHtml = TRIAL_IMPROVEMENT_CRITERIA.map(c => `
+      <tr>
+        <td><b>${escapeHtml(c.label)}</b></td>
+        ${evalTargets.map((p, i) => {
+          const pd = getTrialProductData(mt, p.id);
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="${c.key}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.key] || '')}</textarea></td>`;
+        }).join('')}
+      </tr>
+    `).join('');
 
-    // 220px leading column + 34px trailing delete-icon column mirror the
-    // product-card spacer above so the two grids share the same column ruler.
-    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(evalTargets.length)}<col style="width:160px;"><col style="width:34px;"></colgroup>`;
+    // 220px leading column mirrors the product-card spacer above so the two
+    // grids share the same column ruler — rows are fixed now, so no
+    // trailing comment/delete columns are needed any more.
+    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(evalTargets.length)}</colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
         <div class="part-header" style="margin-bottom:12px;">
-          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this trial">${icon('chevron-right')}</button>
+          <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
-          <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'} · ${t.photos.length} photo${t.photos.length === 1 ? '' : 's'} · ${t.evaluation.length} criteri${t.evaluation.length === 1 ? 'on' : 'a'}</span>
+          <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
           <button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>
           <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
         <div class="part-body">
+          <div class="trial-header-row">
+            <div class="field" style="margin-bottom:0;">
+              <label>Project Name</label>
+              ${isEditing
+                ? `<select class="proj-select trial-linked-project">
+                    <option value="">- Select a project -</option>
+                    ${[...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'})).map(p => `<option value="${escapeHtml(p.id)}" ${p.id === mt.linkedProjectId ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('')}
+                  </select>`
+                : `<input type="text" value="${escapeHtml(linkedProject?.name || '')}" placeholder="-" readonly>`}
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>Customer</label>
+              <input type="text" value="${escapeHtml(linkedProject?.customerName || '')}" placeholder="-" readonly title="Comes from the linked project above">
+            </div>
+          </div>
+          <div class="trial-header-row">
+            <div class="field" style="margin-bottom:0;">
+              <label>Sample Prepared By</label>
+              <input type="text" class="trial-sample-prepared-by" list="salesRepDatalist" value="${escapeHtml(mt.samplePreparedBy)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>Test Date</label>
+              <input type="date" class="trial-test-date" value="${escapeHtml(mt.testDate)}" ${isEditing ? '' : 'readonly'}>
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;margin-top:12px;">
+            <label>Test Participants</label>
+            ${trialStringListHtml(mt.testParticipants, isEditing, 'trial-participant-input', 'test-participant', 'e.g. Yano-san', 'salesRepDatalist')}
+          </div>
+          <div class="field" style="margin-top:12px;">
+            <label>Cooking Method</label>
+            ${trialStringListHtml(mt.cookingMethodSteps, isEditing, 'trial-cooking-step-input', 'cooking-step', 'e.g. Deep Fry 170°C, 5 Mins.', 'cookingMethodDatalist')}
+          </div>
+
           <div class="field">
             <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
             ${productCardsGrid}
@@ -5591,22 +6051,30 @@ function renderTrialsList(){
           </div>
           ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
-          <div class="field" style="margin-top:14px;">
-            <label>Photos (up to 3)</label>
-            <div class="trial-photos-row">${photosHtml}</div>
-            ${isEditing && t.photos.length < 3 ? `<input type="file" class="trial-photo-input" accept="image/*">` : ''}
-          </div>
-
           <div class="field">
-            <label>Sensory Evaluation (compare side by side)</label>
+            <label>Sensory Evaluation</label>
+            ${evalTargets.length ? `
             <div style="overflow-x:auto;">
               <table class="compare-table">
                 ${trialColgroup}
-                <thead><tr><th>Criteria</th>${evalHeaderCells}<th>Comment</th><th class="col-del"></th></tr></thead>
-                <tbody>${evalRows}</tbody>
+                <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
               </table>
             </div>
-            ${isEditing ? `<button class="btn btn-sm add-row-btn" type="button" data-role="add-eval-row">+ Add Criteria</button>` : ''}
+            ` : '<div class="overview-empty">Add a product above first</div>'}
+          </div>
+
+          <div class="field">
+            <label>Improvement Guidelines</label>
+            ${evalTargets.length ? `
+            <div style="overflow-x:auto;">
+              <table class="compare-table">
+                ${trialColgroup}
+                <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                <tbody>${improvementRowsHtml}</tbody>
+              </table>
+            </div>
+            ` : '<div class="overview-empty">Add a product above first</div>'}
           </div>
         </div>
       </div>
@@ -5652,10 +6120,10 @@ function renderTrialsList(){
     });
 
     block.querySelector('[data-role="delete-trial"]').addEventListener('click', () => {
-      if(!confirm('Delete this trial result? This cannot be undone.')) return;
+      if(!confirm('Delete this test result? This cannot be undone.')) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',
-        'Enter your password to delete this trial result.',
+        'Enter your password to delete this test result.',
         () => {
           const deletedLabel = trialLabel(t);
           trials = trials.filter(x => x.id !== t.id);
@@ -5722,46 +6190,81 @@ function renderTrialsList(){
       });
     });
 
-    block.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
-        t.photos.splice(idx, 1);
+    if(isEditing){
+      block.querySelector('.trial-linked-project')?.addEventListener('change', e => {
+        t.linkedProjectId = e.target.value;
         scheduleTrialSave(t);
-        renderTrialsList();
+        renderTrialsList(); // Customer field derives from the newly-picked project
       });
-    });
+      block.querySelector('.trial-sample-prepared-by')?.addEventListener('change', e => { t.samplePreparedBy = e.target.value.trim(); scheduleTrialSave(t); });
+      block.querySelector('.trial-test-date')?.addEventListener('change', e => { t.testDate = e.target.value; scheduleTrialSave(t); });
 
-    block.querySelector('.trial-photo-input')?.addEventListener('change', async e => {
-      const file = e.target.files[0];
-      e.target.value = '';
-      if(!file || t.photos.length >= 3) return;
-      t.photos.push(await resizeImageFile(file, 500));
-      scheduleTrialSave(t);
-      renderTrialsList();
-    });
-
-    block.querySelector('[data-role="add-eval-row"]')?.addEventListener('click', () => {
-      t.evaluation.push({ criteria: '', scores: {}, comment: '' });
-      scheduleTrialSave(t);
-      renderTrialsList();
-    });
-
-    block.querySelectorAll('tbody tr[data-idx]').forEach(tr => {
-      const idx = parseInt(tr.dataset.idx, 10);
-      const row = t.evaluation[idx];
-      tr.querySelector('.teval-criteria').addEventListener('change', e => { row.criteria = e.target.value.trim(); scheduleTrialSave(t); });
-      tr.querySelectorAll('.teval-score').forEach(scoreInput => {
-        scoreInput.addEventListener('change', e => {
-          if(!row.scores) row.scores = {};
-          row.scores[scoreInput.dataset.recipeId] = e.target.value.trim();
+      // Test Participants and Cooking Method are both a plain numbered list
+      // of strings — same add/remove/edit wiring, just different field
+      // names and data-roles (see trialStringListHtml).
+      [
+        { field: 'testParticipants', inputClass: 'trial-participant-input', role: 'test-participant' },
+        { field: 'cookingMethodSteps', inputClass: 'trial-cooking-step-input', role: 'cooking-step' }
+      ].forEach(({ field, inputClass, role }) => {
+        block.querySelector(`[data-role="add-${role}"]`)?.addEventListener('click', () => {
+          if(!Array.isArray(t[field])) t[field] = [];
+          t[field].push('');
           scheduleTrialSave(t);
+          renderTrialsList();
+        });
+        block.querySelectorAll(`[data-role="remove-${role}"]`).forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.dataset.idx, 10);
+            if(!Array.isArray(t[field])) return;
+            t[field].splice(idx, 1);
+            scheduleTrialSave(t);
+            renderTrialsList();
+          });
+        });
+        block.querySelectorAll(`.${inputClass}`).forEach((input, idx) => {
+          input.addEventListener('change', () => {
+            if(!Array.isArray(t[field])) t[field] = [];
+            t[field][idx] = input.value.trim();
+            scheduleTrialSave(t);
+          });
         });
       });
-      tr.querySelector('.teval-comment').addEventListener('change', e => { row.comment = e.target.value.trim(); scheduleTrialSave(t); });
-      tr.querySelector('[data-role="delete-eval-row"]')?.addEventListener('click', () => {
-        t.evaluation.splice(idx, 1);
+    }
+
+    block.querySelectorAll('.trial-product-photo-input').forEach(input => {
+      input.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if(!file) return;
+        const pd = getTrialProductData(t, input.dataset.productId);
+        pd[input.dataset.slot] = await resizeImageFile(file, 500);
         scheduleTrialSave(t);
         renderTrialsList();
+      });
+    });
+    block.querySelectorAll('[data-role="remove-trial-photo"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const thumb = btn.closest('.trial-photo-thumb');
+        const pd = getTrialProductData(t, thumb.dataset.productId);
+        pd[thumb.dataset.slot] = '';
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
+
+    block.querySelectorAll('.teval-fixed, .teval-improve').forEach(el => {
+      el.addEventListener('change', () => {
+        const pd = getTrialProductData(t, el.dataset.productId);
+        pd[el.dataset.field] = el.value.trim();
+        scheduleTrialSave(t);
+      });
+    });
+    block.querySelectorAll('.teval-testresult').forEach(el => {
+      el.addEventListener('change', () => {
+        const pd = getTrialProductData(t, el.dataset.productId);
+        pd.testResult = el.value;
+        scheduleTrialSave(t);
+        renderTrialsList(); // re-render so the accepted/not-accepted color applies right away
       });
     });
   });
@@ -6789,28 +7292,102 @@ function renderProjectsList(){
                     <div class="mu-entry-marker"></div>
                     <div class="mu-entry-body">
                       <div class="proj-monthly-add">
-                        <input type="date" class="proj-mu-edit-date" value="${escapeHtml(mu.date || '')}">
-                        <div class="mu-field-with-translate">
-                          <textarea class="proj-mu-edit-plan" placeholder="Plan">${escapeHtml(mu.plan || '')}</textarea>
-                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        <div class="mu-plan-box">
+                          <div class="mu-plan-box-title">Plan</div>
+                          <div class="field">
+                            <label>When</label>
+                            <div class="mu-when-group">
+                              <input type="date" class="proj-mu-edit-date" value="${escapeHtml(mu.date || '')}">
+                              <input type="time" class="proj-mu-edit-time" value="${escapeHtml(mu.time || '')}">
+                            </div>
+                          </div>
+                          <div class="field">
+                            <label>Who</label>
+                            <input type="text" class="proj-mu-edit-who" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planWho || '')}">
+                          </div>
+                          <div class="field">
+                            <label>What</label>
+                            <div class="mu-field-with-translate" style="width:auto;">
+                              <textarea class="proj-mu-edit-plan" placeholder="What">${escapeHtml(mu.plan || '')}</textarea>
+                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                            </div>
+                          </div>
+                          <div class="field">
+                            <label>Where</label>
+                            <input type="text" class="proj-mu-edit-where" list="customerDatalist" placeholder="e.g. UMIOS Office" value="${escapeHtml(mu.planWhere || '')}">
+                            <select class="proj-select proj-mu-edit-where-location" style="display:none;margin-top:6px;"></select>
+                          </div>
+                          <div class="field" style="margin-bottom:0;">
+                            <label>How</label>
+                            <div class="mu-field-with-translate" style="width:auto;">
+                              <textarea class="proj-mu-edit-how" placeholder="How">${escapeHtml(mu.planHow || '')}</textarea>
+                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                            </div>
+                          </div>
                         </div>
-                        <div class="mu-field-with-translate">
-                          <textarea class="proj-mu-edit-action" placeholder="Action Taken">${escapeHtml(mu.actionTaken || '')}</textarea>
-                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        <div class="mu-plan-box">
+                          <div class="mu-plan-box-title">Action Taken</div>
+                          <div class="field">
+                            <label>Action Taken</label>
+                            <div class="mu-field-with-translate" style="width:auto;">
+                              <textarea class="proj-mu-edit-action" placeholder="Action Taken">${escapeHtml(mu.actionTaken || '')}</textarea>
+                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                            </div>
+                          </div>
+                          <div class="field" style="margin-bottom:0;">
+                            <label>Completed Date (optional)</label>
+                            <input type="date" class="proj-mu-edit-completed-date" value="${escapeHtml(mu.completedDate || '')}" title="Completed date — defaults to today once Action Taken is filled in, edit if it was actually finished on a different day">
+                          </div>
                         </div>
-                        <div class="mu-field-with-translate">
-                          <textarea class="proj-mu-edit-nextaction" placeholder="Next Action">${escapeHtml(mu.nextAction || '')}</textarea>
-                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        <div class="mu-plan-box">
+                          <div class="mu-plan-box-title">Next Action</div>
+                          <div class="field">
+                            <label>When</label>
+                            <div class="mu-when-group">
+                              <input type="date" class="proj-mu-edit-nextaction-due" value="${escapeHtml(mu.nextActionDue || '')}" title="Next Action due date">
+                              <input type="time" class="proj-mu-edit-nextaction-time" value="${escapeHtml(mu.nextActionTime || '')}">
+                            </div>
+                          </div>
+                          <div class="field">
+                            <label>Who</label>
+                            <input type="text" class="proj-mu-edit-nextaction-who" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionWho || '')}">
+                          </div>
+                          <div class="field">
+                            <label>What</label>
+                            <div class="mu-field-with-translate" style="width:auto;">
+                              <textarea class="proj-mu-edit-nextaction" placeholder="Next Action">${escapeHtml(mu.nextAction || '')}</textarea>
+                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                            </div>
+                          </div>
+                          <div class="field">
+                            <label>Where</label>
+                            <input type="text" class="proj-mu-edit-nextaction-where" list="customerDatalist" placeholder="e.g. UMIOS Office" value="${escapeHtml(mu.nextActionWhere || '')}">
+                            <select class="proj-select proj-mu-edit-nextaction-where-location" style="display:none;margin-top:6px;"></select>
+                          </div>
+                          <div class="field" style="margin-bottom:0;">
+                            <label>How</label>
+                            <div class="mu-field-with-translate" style="width:auto;">
+                              <textarea class="proj-mu-edit-nextaction-how" placeholder="How">${escapeHtml(mu.nextActionHow || '')}</textarea>
+                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                            </div>
+                          </div>
                         </div>
-                        <input type="date" class="proj-mu-edit-nextaction-due" value="${escapeHtml(mu.nextActionDue || '')}" title="Next Action due date">
-                        <select class="proj-select proj-mu-edit-recipe">${muRecipeOptionsHtml(mu.linkedRecipeId)}</select>
-                        <div class="mu-attachments-editor">
-                          <div class="mu-attachments-chiplist"></div>
-                          <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                        <div class="field">
+                          <label>Linked Recipe (optional)</label>
+                          <select class="proj-select proj-mu-edit-recipe">${muRecipeOptionsHtml(mu.linkedRecipeId)}</select>
+                        </div>
+                        <div class="field">
+                          <label>Attachments (optional)</label>
+                          <div class="mu-attachments-editor">
+                            <div class="mu-attachments-chiplist"></div>
+                            <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                          </div>
                         </div>
                         <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-edit-autocreate" ${mu.autoCreatePlan ? 'checked' : ''}> Create as Plan automatically</label>
-                        <button class="btn btn-sm btn-primary" data-role="save-monthly-update-edit">${icon('save')} Save</button>
-                        <button class="btn btn-sm proj-action-cancel" data-role="cancel-monthly-update-edit">${icon('undo-2')} Cancel</button>
+                        <div style="display:flex;gap:8px;">
+                          <button class="btn btn-sm btn-primary" data-role="save-monthly-update-edit">${icon('save')} Save</button>
+                          <button class="btn btn-sm proj-action-cancel" data-role="cancel-monthly-update-edit">${icon('undo-2')} Cancel</button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -6839,7 +7416,10 @@ function renderProjectsList(){
                   <div class="mu-card-grid"${mu.nextAction ? '' : ' style="grid-template-columns:repeat(2,1fr);"'}>
                     <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('file-text', 14)} PLAN${source ? ' <span class="mu-badge">AUTO-CREATED</span>' : ''}${status === 'planned' ? ' <span class="mu-status-pill">PLANNED</span>' : ''}</div>
+                      ${(mu.time || mu.planWho) ? `<div class="mu-plan-detail-line">${mu.time ? `<b>When:</b> ${escapeHtml(mu.time)}` : ''}${mu.time && mu.planWho ? ' &nbsp;·&nbsp; ' : ''}${mu.planWho ? escapeHtml(mu.planWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
+                      ${mu.planWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.planWhere)}</div>` : ''}
+                      ${mu.planHow ? `<div class="mu-plan-detail-line"><b>How:</b> ${escapeHtml(mu.planHow)}</div>` : ''}
                       ${source ? `<div class="mu-source-link">${icon('undo-2', 12)} From Next action · ${escapeHtml(formatDateLong(source.date))}${source.createdAt ? ', ' + escapeHtml(formatTimeOnly(source.createdAt)) : ''}</div>` : ''}
                     </div>
                     <div class="mu-card mu-card-clickable" title="Click to update">
@@ -6849,7 +7429,10 @@ function renderProjectsList(){
                     ${mu.nextAction ? `
                     <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('clock', 14)} NEXT ACTION${mu.nextActionDue ? `<span class="mu-due-inline${nextActionSuperseded ? ' mu-due-superseded' : ''}">Due ${escapeHtml(formatDateLong(mu.nextActionDue))}</span>` : ''}</div>
+                      ${(mu.nextActionTime || mu.nextActionWho) ? `<div class="mu-plan-detail-line">${mu.nextActionTime ? `<b>When:</b> ${escapeHtml(mu.nextActionTime)}` : ''}${mu.nextActionTime && mu.nextActionWho ? ' &nbsp;·&nbsp; ' : ''}${mu.nextActionWho ? escapeHtml(mu.nextActionWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${escapeHtml(mu.nextAction)}</div>
+                      ${mu.nextActionWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.nextActionWhere)}</div>` : ''}
+                      ${mu.nextActionHow ? `<div class="mu-plan-detail-line"><b>How:</b> ${escapeHtml(mu.nextActionHow)}</div>` : ''}
                     </div>
                     ` : ''}
                   </div>
@@ -7102,33 +7685,107 @@ function renderProjectsList(){
               </div>
               ` : ''}
 
-              <div class="field" style="margin-bottom:0;margin-top:16px;">
+              <div class="field" style="margin-bottom:0;margin-top:16px;" id="activities-updates-${escapeHtml(p.id)}">
                 <label>Activities Updates</label>
                 <div class="mu-timeline proj-monthly-list">${monthlyUpdatesHtml}</div>
                 ${isEditing ? (monthlyUpdateAddOpen ? `
                   <div class="proj-monthly-add">
-                    <input type="date" class="proj-mu-date" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
-                    <div class="mu-field-with-translate">
-                      <textarea class="proj-mu-plan" placeholder="Plan"></textarea>
-                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    <div class="mu-plan-box">
+                      <div class="mu-plan-box-title">Plan</div>
+                      <div class="field">
+                        <label>When</label>
+                        <div class="mu-when-group">
+                          <input type="date" class="proj-mu-date" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
+                          <input type="time" class="proj-mu-time">
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label>Who</label>
+                        <input type="text" class="proj-mu-who" list="salesRepDatalist" placeholder="e.g. Yano-san">
+                      </div>
+                      <div class="field">
+                        <label>What</label>
+                        <div class="mu-field-with-translate" style="width:auto;">
+                          <textarea class="proj-mu-plan" placeholder="What"></textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label>Where</label>
+                        <input type="text" class="proj-mu-where" list="customerDatalist" placeholder="e.g. UMIOS Office">
+                        <select class="proj-select proj-mu-where-location" style="display:none;margin-top:6px;"></select>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>How</label>
+                        <div class="mu-field-with-translate" style="width:auto;">
+                          <textarea class="proj-mu-how" placeholder="How"></textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                      </div>
                     </div>
-                    <div class="mu-field-with-translate">
-                      <textarea class="proj-mu-action" placeholder="Action Taken"></textarea>
-                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    <div class="mu-plan-box">
+                      <div class="mu-plan-box-title">Action Taken</div>
+                      <div class="field">
+                        <label>Action Taken</label>
+                        <div class="mu-field-with-translate" style="width:auto;">
+                          <textarea class="proj-mu-action" placeholder="Action Taken"></textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Completed Date (optional)</label>
+                        <input type="date" class="proj-mu-completed-date" title="Completed date — defaults to today once Action Taken is filled in, edit if it was actually finished on a different day">
+                      </div>
                     </div>
-                    <div class="mu-field-with-translate">
-                      <textarea class="proj-mu-nextaction" placeholder="Next Action"></textarea>
-                      <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                    <div class="mu-plan-box">
+                      <div class="mu-plan-box-title">Next Action</div>
+                      <div class="field">
+                        <label>When</label>
+                        <div class="mu-when-group">
+                          <input type="date" class="proj-mu-nextaction-due" title="Next Action due date">
+                          <input type="time" class="proj-mu-nextaction-time">
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label>Who</label>
+                        <input type="text" class="proj-mu-nextaction-who" list="salesRepDatalist" placeholder="e.g. Yano-san">
+                      </div>
+                      <div class="field">
+                        <label>What</label>
+                        <div class="mu-field-with-translate" style="width:auto;">
+                          <textarea class="proj-mu-nextaction" placeholder="Next Action"></textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                      </div>
+                      <div class="field">
+                        <label>Where</label>
+                        <input type="text" class="proj-mu-nextaction-where" list="customerDatalist" placeholder="e.g. UMIOS Office">
+                        <select class="proj-select proj-mu-nextaction-where-location" style="display:none;margin-top:6px;"></select>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>How</label>
+                        <div class="mu-field-with-translate" style="width:auto;">
+                          <textarea class="proj-mu-nextaction-how" placeholder="How"></textarea>
+                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+                        </div>
+                      </div>
                     </div>
-                    <input type="date" class="proj-mu-nextaction-due" title="Next Action due date">
-                    <select class="proj-select proj-mu-recipe">${muRecipeOptionsHtml('')}</select>
-                    <div class="mu-attachments-editor">
-                      <div class="mu-attachments-chiplist"></div>
-                      <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                    <div class="field">
+                      <label>Linked Recipe (optional)</label>
+                      <select class="proj-select proj-mu-recipe">${muRecipeOptionsHtml('')}</select>
+                    </div>
+                    <div class="field">
+                      <label>Attachments (optional)</label>
+                      <div class="mu-attachments-editor">
+                        <div class="mu-attachments-chiplist"></div>
+                        <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                      </div>
                     </div>
                     <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-autocreate"> Create as Plan automatically</label>
-                    <button class="btn btn-sm btn-primary" data-role="add-monthly-update">${icon('save')} Save</button>
-                    <button class="btn btn-sm proj-action-cancel" data-role="cancel-add-monthly-update">${icon('undo-2')} Cancel</button>
+                    <div style="display:flex;gap:8px;">
+                      <button class="btn btn-sm btn-primary" data-role="add-monthly-update">${icon('save')} Save</button>
+                      <button class="btn btn-sm proj-action-cancel" data-role="cancel-add-monthly-update">${icon('undo-2')} Cancel</button>
+                    </div>
                   </div>
                 ` : `<button class="btn btn-sm" data-role="open-add-monthly-update">+ Add Update</button>`) : ''}
               </div>
@@ -7305,13 +7962,14 @@ function renderProjectsList(){
         // date/results/next-plan boxes silently throws that text away,
         // since Save re-renders the row and only "+ Add Update" used to
         // actually commit it.
-        captureMonthlyUpdateDraft(p, block);
+        const newMuFromSave = captureMonthlyUpdateDraft(p, block);
         projectEditingId = null;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
+        if(newMuFromSave) logMuAddedEvent(p, newMuFromSave);
         projectEditSnapshotBefore = null;
         renderProjectsList();
       });
@@ -7349,13 +8007,23 @@ function renderProjectsList(){
       block.querySelectorAll('.mu-field-with-translate').forEach(wireMuTranslateButton);
       const muAttachEditorEl = block.querySelector('.mu-attachments-editor');
       if(muAttachEditorEl) wireMuAttachmentEditor(muAttachEditorEl, () => monthlyUpdateDraftAttachments);
+      wireWhereLocationPicker(
+        block.querySelector('.proj-mu-where, .proj-mu-edit-where'),
+        block.querySelector('.proj-mu-where-location, .proj-mu-edit-where-location')
+      );
+      wireWhereLocationPicker(
+        block.querySelector('.proj-mu-nextaction-where, .proj-mu-edit-nextaction-where'),
+        block.querySelector('.proj-mu-nextaction-where-location, .proj-mu-edit-nextaction-where-location')
+      );
       block.querySelector('[data-role="add-monthly-update"]')?.addEventListener('click', () => {
-        if(!captureMonthlyUpdateDraft(p, block)){
-          alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
+        const newMu = captureMonthlyUpdateDraft(p, block);
+        if(!newMu){
+          alert('Please pick a date and fill in at least one of What / Action Taken / Next Action.');
           return;
         }
         monthlyUpdateAddOpen = false;
         scheduleProjectSave(p);
+        logMuAddedEvent(p, newMu);
         renderProjectsList();
       });
 
@@ -7375,6 +8043,7 @@ function renderProjectsList(){
           const mu = (p.monthlyUpdates || []).find(x => x.id === updateId);
           monthlyUpdateEditingId = updateId;
           monthlyUpdateDraftAttachments = mu ? (mu.attachments || []).map(a => ({...a})) : [];
+          muEditSnapshotBefore = mu ? snapshotMainFields(mu, MU_DIFF_FIELDS) : null;
           renderProjectsList();
         });
       });
@@ -7384,33 +8053,55 @@ function renderProjectsList(){
         const mu = (p.monthlyUpdates || []).find(x => x.id === monthlyUpdateEditingId);
         if(!entry || !mu) return;
         const date = entry.querySelector('.proj-mu-edit-date').value;
+        const time = entry.querySelector('.proj-mu-edit-time')?.value || '';
+        const planWho = entry.querySelector('.proj-mu-edit-who')?.value.trim() || '';
         const plan = entry.querySelector('.proj-mu-edit-plan').value.trim();
+        const planWhere = entry.querySelector('.proj-mu-edit-where')?.value.trim() || '';
+        const planHow = entry.querySelector('.proj-mu-edit-how')?.value.trim() || '';
         const actionTaken = entry.querySelector('.proj-mu-edit-action').value.trim();
+        const nextActionTime = entry.querySelector('.proj-mu-edit-nextaction-time')?.value || '';
+        const nextActionWho = entry.querySelector('.proj-mu-edit-nextaction-who')?.value.trim() || '';
         const nextAction = entry.querySelector('.proj-mu-edit-nextaction').value.trim();
+        const nextActionWhere = entry.querySelector('.proj-mu-edit-nextaction-where')?.value.trim() || '';
+        const nextActionHow = entry.querySelector('.proj-mu-edit-nextaction-how')?.value.trim() || '';
         const nextActionDue = entry.querySelector('.proj-mu-edit-nextaction-due').value;
         const autoCreatePlan = !!entry.querySelector('.proj-mu-edit-autocreate')?.checked;
         const linkedRecipeId = entry.querySelector('.proj-mu-edit-recipe')?.value || '';
+        const completedDate = resolveMuCompletedDate(actionTaken, entry.querySelector('.proj-mu-edit-completed-date')?.value || '', new Date().toISOString().slice(0, 10));
         if(!date || (!plan && !actionTaken && !nextAction)){
-          alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
+          alert('Please pick a date and fill in at least one of What / Action Taken / Next Action.');
           return;
         }
         mu.date = date;
+        mu.time = time;
+        mu.planWho = planWho;
         mu.plan = plan;
+        mu.planWhere = planWhere;
+        mu.planHow = planHow;
         mu.actionTaken = actionTaken;
+        mu.nextActionTime = nextActionTime;
+        mu.nextActionWho = nextActionWho;
         mu.nextAction = nextAction;
+        mu.nextActionWhere = nextActionWhere;
+        mu.nextActionHow = nextActionHow;
         mu.nextActionDue = nextActionDue;
         mu.autoCreatePlan = autoCreatePlan;
         mu.linkedRecipeId = linkedRecipeId;
         mu.attachments = monthlyUpdateDraftAttachments;
+        mu.completedDate = completedDate;
+        const muChanges = diffMainFields(muEditSnapshotBefore, mu, MU_DIFF_FIELDS);
         monthlyUpdateEditingId = null;
         monthlyUpdateDraftAttachments = [];
+        muEditSnapshotBefore = null;
         maybeAutoCreateNextPlan(p, mu);
         scheduleProjectSave(p);
+        logActivityEvent('updated', 'project', p.name || 'Untitled project', muChanges);
         renderProjectsList();
       });
       block.querySelector('[data-role="cancel-monthly-update-edit"]')?.addEventListener('click', () => {
         monthlyUpdateEditingId = null;
         monthlyUpdateDraftAttachments = [];
+        muEditSnapshotBefore = null;
         renderProjectsList();
       });
     }else{
@@ -7596,14 +8287,29 @@ function openMuEditModal(projectId, updateId){
   if(!target) return;
   const mu = migrateMonthlyUpdate(target.mu);
   document.getElementById('muEditModalDate').value = mu.date || '';
+  document.getElementById('muEditModalTime').value = mu.time || '';
+  document.getElementById('muEditModalWho').value = mu.planWho || '';
   document.getElementById('muEditModalPlan').value = mu.plan || '';
+  document.getElementById('muEditModalWhere').value = mu.planWhere || '';
+  // Setting .value in JS doesn't fire 'input' on its own — dispatch it so
+  // wireWhereLocationPicker's listener re-evaluates against this entry's
+  // Where value instead of whatever the previously-open entry left behind.
+  document.getElementById('muEditModalWhere').dispatchEvent(new Event('input'));
+  document.getElementById('muEditModalHow').value = mu.planHow || '';
   document.getElementById('muEditModalAction').value = mu.actionTaken || '';
-  document.getElementById('muEditModalNextAction').value = mu.nextAction || '';
   document.getElementById('muEditModalNextActionDue').value = mu.nextActionDue || '';
+  document.getElementById('muEditModalNextActionTime').value = mu.nextActionTime || '';
+  document.getElementById('muEditModalNextActionWho').value = mu.nextActionWho || '';
+  document.getElementById('muEditModalNextAction').value = mu.nextAction || '';
+  document.getElementById('muEditModalNextActionWhere').value = mu.nextActionWhere || '';
+  document.getElementById('muEditModalNextActionWhere').dispatchEvent(new Event('input'));
+  document.getElementById('muEditModalNextActionHow').value = mu.nextActionHow || '';
+  document.getElementById('muEditModalCompletedDate').value = mu.completedDate || '';
   document.getElementById('muEditModalAutoCreate').checked = !!mu.autoCreatePlan;
   document.getElementById('muEditModalRecipe').innerHTML = muRecipeOptionsHtml(mu.linkedRecipeId);
   muEditModalAttachments = (mu.attachments || []).map(a => ({...a}));
   redrawMuEditModalAttachments();
+  muEditSnapshotBefore = snapshotMainFields(mu, MU_DIFF_FIELDS);
   document.getElementById('muEditModalOverlay').classList.add('open');
 }
 function redrawMuEditModalAttachments(){
@@ -7627,32 +8333,53 @@ function closeMuEditModal(){
   document.getElementById('muEditModalOverlay').classList.remove('open');
   muEditModalContext = null;
   muEditModalAttachments = [];
+  muEditSnapshotBefore = null;
 }
 function saveMuEditModal(){
   const target = getMuEditModalTarget();
   if(!target) return;
   const date = document.getElementById('muEditModalDate').value;
+  const time = document.getElementById('muEditModalTime').value;
+  const planWho = document.getElementById('muEditModalWho').value.trim();
   const plan = document.getElementById('muEditModalPlan').value.trim();
+  const planWhere = document.getElementById('muEditModalWhere').value.trim();
+  const planHow = document.getElementById('muEditModalHow').value.trim();
   const actionTaken = document.getElementById('muEditModalAction').value.trim();
+  const nextActionTime = document.getElementById('muEditModalNextActionTime').value;
+  const nextActionWho = document.getElementById('muEditModalNextActionWho').value.trim();
   const nextAction = document.getElementById('muEditModalNextAction').value.trim();
+  const nextActionWhere = document.getElementById('muEditModalNextActionWhere').value.trim();
+  const nextActionHow = document.getElementById('muEditModalNextActionHow').value.trim();
   const nextActionDue = document.getElementById('muEditModalNextActionDue').value;
   const autoCreatePlan = document.getElementById('muEditModalAutoCreate').checked;
   const linkedRecipeId = document.getElementById('muEditModalRecipe').value;
+  const completedDate = resolveMuCompletedDate(actionTaken, document.getElementById('muEditModalCompletedDate').value, new Date().toISOString().slice(0, 10));
   if(!date || (!plan && !actionTaken && !nextAction)){
-    alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
+    alert('Please pick a date and fill in at least one of What / Action Taken / Next Action.');
     return;
   }
   const { p, mu } = target;
   mu.date = date;
+  mu.time = time;
+  mu.planWho = planWho;
   mu.plan = plan;
+  mu.planWhere = planWhere;
+  mu.planHow = planHow;
   mu.actionTaken = actionTaken;
+  mu.nextActionTime = nextActionTime;
+  mu.nextActionWho = nextActionWho;
   mu.nextAction = nextAction;
+  mu.nextActionWhere = nextActionWhere;
+  mu.nextActionHow = nextActionHow;
   mu.nextActionDue = nextActionDue;
   mu.autoCreatePlan = autoCreatePlan;
   mu.linkedRecipeId = linkedRecipeId;
   mu.attachments = muEditModalAttachments;
+  mu.completedDate = completedDate;
+  const muChanges = diffMainFields(muEditSnapshotBefore, mu, MU_DIFF_FIELDS);
   maybeAutoCreateNextPlan(p, mu);
   scheduleProjectSave(p);
+  logActivityEvent('updated', 'project', p.name || 'Untitled project', muChanges);
   muEditModalAttachments = [];
   closeMuEditModal();
   renderProjectsList();
@@ -7690,6 +8417,9 @@ function initProjectsModal(){
     if(e.target.id === 'muEditModalOverlay') closeMuEditModal();
   });
   document.getElementById('btnSaveMuEditModal').addEventListener('click', saveMuEditModal);
+  document.querySelectorAll('#muEditModalOverlay .mu-field-with-translate').forEach(wireMuTranslateButton);
+  wireWhereLocationPicker(document.getElementById('muEditModalWhere'), document.getElementById('muEditModalWhereLocation'));
+  wireWhereLocationPicker(document.getElementById('muEditModalNextActionWhere'), document.getElementById('muEditModalNextActionWhereLocation'));
   document.getElementById('muEditModalAttachInput').addEventListener('change', async e => {
     const files = Array.from(e.target.files || []);
     e.target.value = '';
@@ -8174,7 +8904,7 @@ function attachTrialsListener(){
     if(mainFeatureView === 'trials') renderTrialsList();
   }, err => {
     console.error('Forge: trials listener error', err);
-    showCloudError('Failed to load trial results from Firebase: ' + err.message);
+    showCloudError('Failed to load test results from Firebase: ' + err.message);
   });
 }
 
@@ -8240,6 +8970,25 @@ const PROJECT_DIFF_FIELDS = {
 // recipes/products this trial is comparing" as the one thing worth diffing.
 const TRIAL_DIFF_FIELDS = { label: 'Recipes / Products Compared' };
 const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
+// An Activities Update entry's own main fields — linkedRecipeId/attachments
+// are deliberately left out, same "main scalar fields only" rule as
+// everywhere else (they're refs/arrays, not something a plain before/after
+// string reads well for).
+const MU_DIFF_FIELDS = {
+  date: 'When (Date)', time: 'When (Time)', planWho: 'Who', plan: 'What', planWhere: 'Where', planHow: 'How',
+  actionTaken: 'Action Taken', completedDate: 'Completed Date',
+  nextActionDue: 'Next Action When (Date)', nextActionTime: 'Next Action When (Time)', nextActionWho: 'Next Action Who',
+  nextAction: 'Next Action What', nextActionWhere: 'Next Action Where', nextActionHow: 'Next Action How'
+};
+// Auto-fills Completed Date with today the first time Action Taken gets
+// filled in, but only if the field was left blank — never overwrites a
+// date someone already typed (an entry logged today that was actually
+// finished yesterday, say). Clears it back out if Action Taken is emptied
+// again, so a reopened/undone task doesn't keep a stale completion date.
+function resolveMuCompletedDate(actionTaken, completedDateInput, todayStr){
+  if(!actionTaken.trim()) return '';
+  return completedDateInput || todayStr;
+}
 
 function snapshotMainFields(obj, fieldMap){
   const snap = {};
@@ -8266,13 +9015,24 @@ let recipeEditSnapshotBefore = null;
 let projectEditSnapshotBefore = null;
 let trialEditSnapshotBefore = null;
 let materialEditSnapshotBefore = null;
+let muEditSnapshotBefore = null;
+// A brand new Activities Update entry has no "before" state to diff against
+// (see diffMainFields's null-before short-circuit), so it gets its own
+// one-line "Added: ..." notification instead of a field-by-field diff.
+function logMuAddedEvent(p, mu){
+  logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
+    field: 'Activities Updates',
+    before: '(no entry)',
+    after: `Added: "${(mu.plan || mu.actionTaken || mu.nextAction || 'Untitled').trim()}" (${mu.date})`
+  }]);
+}
 
 /* ---------- Reference Lists: Customers / Sales Reps / Destination Countries ---------- */
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [] };
-const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [] };
+const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units', cookingMethods: 'Cooking Method' };
 // Seeded into metaLists.units the first time it's ever missing from the
 // saved doc (see attachMetaListsListener) — the exact same values every
 // Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
@@ -8317,7 +9077,8 @@ function attachMetaListsListener(){
       productTypes: (Array.isArray(data.productTypes) ? data.productTypes : []).map(metaItem),
       units: needsUnitSeed
         ? DEFAULT_UNIT_SEED.map(name => ({ id: uid(), name, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null }))
-        : (Array.isArray(data.units) ? data.units : []).map(metaItem)
+        : (Array.isArray(data.units) ? data.units : []).map(metaItem),
+      cookingMethods: (Array.isArray(data.cookingMethods) ? data.cookingMethods : []).map(metaItem)
     };
     if(needsUnitSeed) setDoc(metaListsDoc, metaLists);
     renderMetaDatalists();
@@ -8364,7 +9125,7 @@ function removeMetaListItem(key, id){
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -8901,6 +9662,39 @@ function allProjectAttachments(p){
   return [...(p.monthlyUpdates || [])]
     .sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||0) - (a.createdAt||0))
     .flatMap(mu => migrateMonthlyUpdate(mu).attachments || []);
+}
+// A Where field's value matching a Company Directory entry that has its
+// own Locations (see Company Directory's Locations feature) triggers a
+// follow-up location picker right below it — selecting one appends
+// "(Location)" onto the company name already typed, e.g. "UMIOS ASIA
+// OCEANIA CO., LTD. (Office)". Re-recognizes an already-"Company
+// (Location)" value on re-edit by stripping the trailing "(...)" before
+// matching, so the picker still offers to change it, not just append a
+// second one.
+function wireWhereLocationPicker(whereInput, locationSelect){
+  if(!whereInput || !locationSelect) return;
+  const sync = () => {
+    const raw = whereInput.value.trim();
+    const companyName = raw.replace(/\s*\([^)]*\)\s*$/, '').trim();
+    const company = companyName ? metaLists.customers.find(c => metaItemName(c) === companyName) : null;
+    const locations = company?.locations || [];
+    if(locations.length){
+      locationSelect.innerHTML = `<option value="">- Select location -</option>${locations.map(loc => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)}</option>`).join('')}`;
+      locationSelect.style.display = '';
+      locationSelect.dataset.companyName = companyName;
+    }else{
+      locationSelect.style.display = 'none';
+      locationSelect.innerHTML = '';
+    }
+  };
+  whereInput.addEventListener('input', sync);
+  locationSelect.addEventListener('change', () => {
+    const loc = locationSelect.value;
+    const companyName = locationSelect.dataset.companyName || '';
+    if(loc && companyName) whereInput.value = `${companyName} (${loc})`;
+    locationSelect.style.display = 'none';
+  });
+  sync(); // covers the field already having a value when this wires (editing an existing entry)
 }
 function muRecipeOptionsHtml(selectedId){
   return `<option value="">No linked recipe</option>` +
@@ -9685,7 +10479,7 @@ function formatTimeOnly(ts){
 // just a lightweight badge count, not something that needs to sync across
 // devices.
 const LOGIN_EVENTS_LAST_SEEN_KEY = 'forgeLastSeenLoginEventAt';
-const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Trial', material: 'Ingredient' };
+const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Test', material: 'Ingredient' };
 const ACTIVITY_VERB_LABELS = { created: 'added', updated: 'edited', deleted: 'deleted' };
 // Merges the sign-in log with the add/edit/delete activity log into one
 // feed, newest first — this is the only place the two collections meet;
@@ -9872,7 +10666,17 @@ function parseScoreRatio(s){
   return num / den;
 }
 
+// Trial Results (see v3.0.223) replaced the old freeform "N/M" evaluation
+// score with a fixed Accepted/Not accepted Test Result per product — a
+// trial made after that rework has no `evaluation` scores to read any
+// more, so this prefers the new field (acceptance rate) and only falls
+// back to the legacy ratio for trials from before the format changed, so
+// the trend below doesn't just go permanently blank from that point on.
 function trialAvgScoreRatio(t){
+  const results = Object.values(t.productData || {}).map(pd => pd.testResult).filter(Boolean);
+  if(results.length){
+    return results.filter(r => r === 'Accepted').length / results.length;
+  }
   const ratios = (t.evaluation || []).map(e => parseScoreRatio(e.score)).filter(v => v !== null);
   if(!ratios.length) return null;
   return ratios.reduce((s,v) => s+v, 0) / ratios.length;
@@ -9975,7 +10779,7 @@ function computeDashboardData(){
   const mergedRecentActivity = [
     ...recipes.filter(r => r.updatedAt).map(r => ({ type: 'recipe', icon: 'file-text', id: r.id, name: recipeDisplayLabel(r), updatedAt: r.updatedAt })),
     ...projects.filter(p => p.updatedAt).map(p => ({ type: 'project', icon: 'folder', id: p.id, name: p.name || 'Untitled project', updatedAt: p.updatedAt })),
-    ...trials.filter(t => t.updatedAt).map(t => ({ type: 'trial', icon: 'flask-conical', id: t.id, name: (t.recipeIds||[]).map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled trial', updatedAt: t.updatedAt }))
+    ...trials.filter(t => t.updatedAt).map(t => ({ type: 'trial', icon: 'flask-conical', id: t.id, name: (t.recipeIds||[]).map(id => recipes.find(r=>r.id===id)).filter(Boolean).map(recipeDisplayLabel).join(', ') || 'Untitled test', updatedAt: t.updatedAt }))
   ].sort((a,b) => b.updatedAt - a.updatedAt).slice(0, 5);
 
   return {
@@ -10074,11 +10878,25 @@ function computeTaskTracking(){
   soonCutoffDate.setDate(soonCutoffDate.getDate() + 7);
   const soonCutoffStr = soonCutoffDate.toISOString().slice(0, 10);
 
-  const overdue = [], dueToday = [], dueSoon = [];
+  const overdue = [], dueToday = [], dueSoon = [], completedToday = [];
   projects.forEach(p => {
     (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
-      if(monthlyUpdateStatus(mu) !== 'planned' || !mu.date) return;
-      const task = { projectId: p.id, projectName: p.name || 'Untitled project', projectImage: p.image || '', text: mu.plan || 'Untitled task', date: mu.date };
+      if(!mu.date) return;
+      // Uses the entry's own Completed Date (see resolveMuCompletedDate),
+      // not its due date — a task logged today that was actually finished
+      // yesterday shows up under yesterday, not here, once that date is
+      // corrected on the entry itself.
+      if(monthlyUpdateStatus(mu) === 'logged'){
+        if(mu.completedDate === todayStr){
+          // planText set (Task Tracking's other 3 lists never set it) is
+          // what tells taskRowHtml to show the Plan → Done two-line format
+          // instead of a single line — so it's clear what was asked for
+          // and what actually got done, not just the end result alone.
+          completedToday.push({ projectId: p.id, projectName: p.name || 'Untitled project', projectImage: p.image || '', text: mu.actionTaken || mu.plan || 'Untitled task', planText: muPlanSummaryLine(mu), date: mu.date });
+        }
+        return;
+      }
+      const task = { projectId: p.id, projectName: p.name || 'Untitled project', projectImage: p.image || '', text: muPlanSummaryLine(mu) || 'Untitled task', date: mu.date };
       if(mu.date < todayStr) overdue.push(task);
       else if(mu.date === todayStr) dueToday.push(task);
       else if(mu.date <= soonCutoffStr) dueSoon.push(task);
@@ -10086,7 +10904,106 @@ function computeTaskTracking(){
   });
   overdue.sort((a, b) => a.date.localeCompare(b.date));
   dueSoon.sort((a, b) => a.date.localeCompare(b.date));
-  return { overdue, dueToday, dueSoon };
+  return { overdue, dueToday, dueSoon, completedToday };
+}
+
+// Tracks which month the Home dashboard's Activities Calendar is currently
+// showing — any date within that month works, only year/month are read.
+// Reset to the real current month by the Today button; otherwise carried
+// forward across re-renders so paging doesn't snap back to the current
+// month every time something else on the dashboard changes.
+let homeCalendarViewDate = new Date();
+
+// Every Activities Update with a due date, across every project — same
+// source Task Tracking reads (see computeTaskTracking), just not filtered
+// down to planned/overdue/soon since the calendar shows a whole month at
+// once regardless of status.
+function computeCalendarEvents(){
+  const events = [];
+  projects.forEach(p => {
+    (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
+      if(!mu.date) return;
+      events.push({
+        projectId: p.id,
+        projectName: p.name || 'Untitled project',
+        text: muPlanSummaryLine(mu) || mu.actionTaken || 'Untitled task',
+        date: mu.date,
+        mu
+      });
+    });
+  });
+  return events;
+}
+// Builds a date string from a Date's own local Y/M/D components — never
+// through toISOString() here, since that converts local midnight to UTC
+// and can silently shift the date backward a day in positive-offset
+// timezones. mu.date itself is already a plain "YYYY-MM-DD" string (from a
+// <input type=date>, no timezone attached), so this has to match that
+// exactly for day cells to line up with the right events.
+function calGridDateStr(d){
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+const CAL_DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+function renderCalendarCardHtml(viewDate, events){
+  const year = viewDate.getFullYear(), month = viewDate.getMonth();
+  // Matches the rest of the app's existing (if imperfect in far-west
+  // timezones) "today" convention — see getTaskStatus/computeTaskTracking
+  // — so a task the calendar colors as overdue agrees with Task Tracking.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const firstOfMonth = new Date(year, month, 1);
+  const startDow = firstOfMonth.getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+  const gridStart = new Date(year, month, 1 - startDow);
+
+  const eventsByDate = {};
+  events.forEach(ev => {
+    (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
+  });
+
+  let cellsHtml = '';
+  for(let i = 0; i < totalCells; i++){
+    const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+    const dStr = calGridDateStr(cellDate);
+    const inMonth = cellDate.getMonth() === month;
+    const isToday = dStr === todayStr;
+    const dayEvents = (eventsByDate[dStr] || []).sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
+    const dayLabel = cellDate.getDate() === 1
+      ? `${cellDate.toLocaleDateString('en-US', { month: 'short' })} ${cellDate.getDate()}`
+      : String(cellDate.getDate());
+    cellsHtml += `
+      <div class="cal-cell${inMonth ? '' : ' cal-cell-outmonth'}${isToday ? ' cal-cell-today' : ''}">
+        <div class="cal-cell-date">${escapeHtml(dayLabel)}</div>
+        <div class="cal-cell-events">
+          ${dayEvents.map(ev => {
+            const status = getTaskStatus(ev.mu, todayStr);
+            return `
+              <div class="cal-event-wrap">
+                <button type="button" class="cal-event cal-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">${escapeHtml(ev.text)}</button>
+                <div class="cal-event-tooltip"><b>${escapeHtml(ev.projectName)}</b><br>${escapeHtml(ev.text)}</div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  return `
+    <div class="dash-card" id="activitiesCalendarCard" style="margin-bottom:14px;">
+      <div class="cal-header-bar">
+        <div class="dash-card-title" style="margin-bottom:0;">Activities Calendar</div>
+        <div class="cal-nav">
+          <button type="button" class="btn btn-sm" id="calToday">Today</button>
+          <button type="button" class="icon-btn" id="calPrevMonth" title="Previous month">‹</button>
+          <span class="cal-month-label">${escapeHtml(viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))}</span>
+          <button type="button" class="icon-btn" id="calNextMonth" title="Next month">›</button>
+        </div>
+      </div>
+      <div class="cal-dow-row">${CAL_DOW_NAMES.map(n => `<div class="cal-dow">${n}</div>`).join('')}</div>
+      <div class="cal-grid">${cellsHtml}</div>
+    </div>
+  `;
 }
 
 function renderDashboardHome(){
@@ -10146,27 +11063,64 @@ function renderDashboardHome(){
   // Action due dates rather than being a separate fabricated system.
   const SEVERITY_DOT_COLOR = { high:'var(--danger)', medium:'var(--accent)', low:'var(--text-dim)' };
   const taskRowHtml = t => `
-    <div class="task-tracking-row action-go-btn" data-item-type="project" data-item-id="${escapeHtml(t.projectId)}">
+    <div class="task-tracking-row action-go-btn" data-item-type="project" data-item-id="${escapeHtml(t.projectId)}" data-focus-section="activities">
       ${t.projectImage
         ? `<img class="task-tracking-thumb" src="${escapeHtml(t.projectImage)}" alt="">`
         : `<span class="task-tracking-thumb task-tracking-thumb-empty">${icon('folder', 14)}</span>`}
       <div class="task-tracking-body">
-        <div class="task-tracking-text">${escapeHtml(t.text)}</div>
-        <div class="task-tracking-meta">${icon('folder', 12)} ${escapeHtml(t.projectName)} · ${escapeHtml(formatDateLong(t.date))}</div>
+        ${t.planText ? `
+          <div class="task-tracking-plan-line"><span class="task-tracking-line-label">Plan:</span> ${escapeHtml(t.planText)}</div>
+          <div class="task-tracking-done-line"><span class="task-tracking-line-label">Done:</span> ${escapeHtml(t.text)}</div>
+        ` : `<div class="task-tracking-text">${escapeHtml(t.text)}</div>`}
+        <div class="task-tracking-meta">${icon('folder', 12)} ${escapeHtml(t.projectName)}</div>
       </div>
     </div>
   `;
+  // Items already arrive sorted by date (see computeTaskTracking), so a
+  // group heading only needs to go in front of each run of same-date
+  // items — the per-row date this replaced was repeating the same date
+  // over and over down a run, this says it once per group instead.
+  const taskTrackingTodayStr = new Date().toISOString().slice(0, 10);
+  const taskColumnItemsHtml = (items, showOverdueDays) => {
+    let html = '', lastDate = null;
+    items.forEach(t => {
+      if(t.date !== lastDate){
+        const overdueDayCount = daysBetween(t.date, taskTrackingTodayStr);
+        const overdueSuffix = showOverdueDays ? ` <span class="task-tracking-overdue-days">(-${overdueDayCount} Day${overdueDayCount === 1 ? '' : 's'})</span>` : '';
+        html += `<div class="task-tracking-date-heading">${escapeHtml(formatDateLong(t.date))}${overdueSuffix}</div>`;
+        lastDate = t.date;
+      }
+      html += taskRowHtml(t);
+    });
+    return html;
+  };
   const taskTrackingCols = [
     { key: 'overdue', label: 'Overdue', color: 'var(--danger)', empty: 'Nothing overdue' },
-    { key: 'dueToday', label: 'Due Today', color: 'var(--accent)', empty: 'Nothing due today' },
     { key: 'dueSoon', label: 'Due Soon (7 days)', color: 'var(--primary-dark)', empty: 'Nothing due soon' }
   ];
-  const taskTrackingHtml = taskTrackingCols.map(col => `
+  const renderTaskTrackingCol = col => `
     <div class="task-tracking-col">
       <div class="task-tracking-col-title" style="color:${col.color};">${escapeHtml(col.label)} <span class="dbl-count">${taskTracking[col.key].length}</span></div>
-      ${taskTracking[col.key].length ? taskTracking[col.key].map(taskRowHtml).join('') : `<div class="dash-empty">${escapeHtml(col.empty)}</div>`}
+      ${taskTracking[col.key].length ? taskColumnItemsHtml(taskTracking[col.key], col.key === 'overdue') : `<div class="dash-empty">${escapeHtml(col.empty)}</div>`}
     </div>
-  `).join('');
+  `;
+  // "Due Today" always has exactly one possible date (today), unlike the
+  // other two columns, so its heading shows even with nothing due — and it
+  // gets a second, separate list right below for entries due today that
+  // are already logged (see completedToday in computeTaskTracking), so the
+  // column reads as "today's full picture", not just what's still open.
+  const dueTodayColHtml = `
+    <div class="task-tracking-col">
+      <div class="task-tracking-col-title" style="color:var(--accent);">Due Today <span class="dbl-count">${taskTracking.dueToday.length}</span></div>
+      <div class="task-tracking-date-heading">${escapeHtml(formatDateLong(taskTrackingTodayStr))}</div>
+      ${taskTracking.dueToday.length ? taskTracking.dueToday.map(taskRowHtml).join('') : `<div class="dash-empty">Nothing due today</div>`}
+      ${taskTracking.completedToday.length ? `
+      <div class="task-tracking-completed-heading">${icon('check', 12)} Completed Today <span class="dbl-count">${taskTracking.completedToday.length}</span></div>
+      ${taskTracking.completedToday.map(taskRowHtml).join('')}
+      ` : ''}
+    </div>
+  `;
+  const taskTrackingHtml = renderTaskTrackingCol(taskTrackingCols[0]) + dueTodayColHtml + renderTaskTrackingCol(taskTrackingCols[1]);
   const shownActionItems = actionItems.slice(0, 5);
   const actionItemsHtml = shownActionItems.length
     ? shownActionItems.map(item => `
@@ -10250,6 +11204,8 @@ function renderDashboardHome(){
         <div class="task-tracking-grid">${taskTrackingHtml}</div>
       </div>
 
+      ${renderCalendarCardHtml(homeCalendarViewDate, computeCalendarEvents())}
+
       <div class="dash-row">
         <div class="dash-card" id="needsAttentionCard">
           <div class="dash-card-title">Needs Attention</div>
@@ -10304,8 +11260,8 @@ function renderDashboardHome(){
 
       <div class="dash-row">
         <div class="dash-card">
-          <div class="dash-card-title">Trial evaluation score, last 6 months${d.avgTrialScorePct != null ? ` <span class="dbl-count">(avg ${d.avgTrialScorePct}%)</span>` : ''}</div>
-          ${d.trend.some(t => t.avg != null) ? `<div class="dash-trend">${trendHtml}</div>` : '<div class="dash-empty">No scored trials yet</div>'}
+          <div class="dash-card-title">Test acceptance rate, last 6 months${d.avgTrialScorePct != null ? ` <span class="dbl-count">(avg ${d.avgTrialScorePct}%)</span>` : ''}</div>
+          ${d.trend.some(t => t.avg != null) ? `<div class="dash-trend">${trendHtml}</div>` : '<div class="dash-empty">No scored test results yet</div>'}
         </div>
         <div class="dash-card">
           <div class="dash-card-title">Most-iterated recipes</div>
@@ -10323,13 +11279,32 @@ function renderDashboardHome(){
   `;
 }
 
+function refreshDashboardHome(){
+  const main = document.getElementById('mainArea');
+  main.innerHTML = renderDashboardHome();
+  wireDashboardHome();
+}
+
 function wireDashboardHome(){
   const main = document.getElementById('mainArea');
+
+  document.getElementById('calToday')?.addEventListener('click', () => {
+    homeCalendarViewDate = new Date();
+    refreshDashboardHome();
+  });
+  document.getElementById('calPrevMonth')?.addEventListener('click', () => {
+    homeCalendarViewDate = new Date(homeCalendarViewDate.getFullYear(), homeCalendarViewDate.getMonth() - 1, 1);
+    refreshDashboardHome();
+  });
+  document.getElementById('calNextMonth')?.addEventListener('click', () => {
+    homeCalendarViewDate = new Date(homeCalendarViewDate.getFullYear(), homeCalendarViewDate.getMonth() + 1, 1);
+    refreshDashboardHome();
+  });
 
   main.querySelectorAll('.action-go-btn').forEach(el => {
     el.addEventListener('click', () => {
       const type = el.dataset.itemType, id = el.dataset.itemId;
-      if(type === 'project') openProjectFromDashboard(id);
+      if(type === 'project') openProjectFromDashboard(id, el.dataset.focusSection);
       else if(type === 'trial') openTrialFromDashboard(id);
       else if(type === 'material') openMaterialFromDashboard(id);
       else if(type === 'recipe') openRecipeFromDashboard(id);
@@ -10405,7 +11380,7 @@ const FEATURE_VIEW_MOUNTERS = {
 // open the relevant feature view already expanded (and, for a project,
 // filtered down to it) instead of just dropping the user on an unfiltered
 // list they'd have to search through themselves.
-function openProjectFromDashboard(projectId){
+function openProjectFromDashboard(projectId, focusSection){
   const p = projects.find(x => x.id === projectId);
   mainFeatureView = 'projects';
   renderMain();
@@ -10414,6 +11389,9 @@ function openProjectFromDashboard(projectId){
   const input = document.getElementById('projectSearchInput');
   if(input && p && p.name) input.value = p.name;
   renderProjectsList();
+  if(focusSection === 'activities'){
+    document.getElementById(`activities-updates-${projectId}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 }
 function openTrialFromDashboard(trialId){
   mainFeatureView = 'trials';
@@ -12962,7 +13940,7 @@ function importFromFile(file){
       if(mainFeatureView === 'trials') renderTrialsList();
       renderSidebar();
       renderMain();
-      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s), ${importedTrials.length} trial result(s)`);
+      alert(`Import successful: ${importedRecipes.length} recipe(s), added ${addedMaterials} new ingredient(s) to the library (duplicates skipped), ${importedProjects.length} project(s), ${importedTrials.length} test result(s)`);
     }catch(err){
       alert('Could not read file: ' + err.message);
     }
@@ -13042,6 +14020,11 @@ function applyStaticIcons(){
   setIcon('btnCloseVersionsModal', 'x', 16);
   setIcon('btnCloseVersionPreviewModal', 'x', 16);
   setIcon('btnCloseProductLogModal', 'x', 16);
+  setIcon('btnMuEditModalTranslatePlan', 'globe', 14);
+  setIcon('btnMuEditModalTranslateAction', 'globe', 14);
+  setIcon('btnMuEditModalTranslateHow', 'globe', 14);
+  setIcon('btnMuEditModalTranslateNextAction', 'globe', 14);
+  setIcon('btnMuEditModalTranslateNextActionHow', 'globe', 14);
   prefixIcon('btnCompare', 'scale');
   prefixIcon('btnOpenUserAdmin', 'users');
   prefixIcon('btnOpenMyProfile', 'user');
