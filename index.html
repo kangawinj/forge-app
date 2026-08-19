@@ -2266,6 +2266,11 @@
   .user-admin-status-pending{color:var(--accent);}
   .user-admin-status-approved{color:var(--ok);}
   .user-admin-status-rejected{color:var(--danger);}
+  /* Per-user module access checkboxes — a full-width row of its own below
+     the email/status/actions line, one checkbox per toggleable nav module
+     (see MODULE_PERMISSIONS). */
+  .user-admin-permissions{flex-basis:100%;display:flex;flex-wrap:wrap;gap:4px 16px;margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
+  .user-admin-permission-toggle{display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);cursor:pointer;}
   /* Contact Directory (salesReps) — the one Reference List with enough
      fields (Contact Type, Company, Country, Job Title, Department, Email,
      Phone) that cramming them into the shared single-line add-row/edit-row
@@ -3690,6 +3695,36 @@ function isApprovalExempt(email){
   return email === ADMIN_EMAIL || email === 'forge-setup-test@example.com';
 }
 
+// Per-user access to whole nav-level modules (Projects/Trials/Ingredients/
+// Reference Lists) — set by the admin in Manage Users, stored on the same
+// userApprovals/{uid} doc that already holds pending/approved status (same
+// doc, same admin-only write rule, so "only the admin can set this" comes
+// for free). Recipes itself is deliberately NOT one of these — it's the
+// app's core function with too many entry points (sidebar, notifications,
+// Activities Updates links) to gate cleanly, and every approved user needs
+// it anyway. This is UI-only enforcement (hides the nav tab) — it does not
+// lock the underlying Firestore collections, so it's meant to declutter the
+// nav for each person's role, not as a hard security boundary.
+const MODULE_PERMISSIONS = [
+  { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
+  { key: 'trials', label: 'Trials', navBtnId: 'btnOpenTrials' },
+  { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
+  { key: 'refLists', label: 'Reference Lists', navBtnId: 'btnOpenRefLists' }
+];
+// Missing/undefined defaults to true (granted) so existing approved users
+// keep full access the moment this ships, with nothing to migrate — a
+// module is only hidden once the admin explicitly flips it off.
+function userModulePermissions(item){
+  const stored = item?.permissions || {};
+  const out = {};
+  MODULE_PERMISSIONS.forEach(m => { out[m.key] = stored[m.key] !== false; });
+  return out;
+}
+let myModulePermissions = null; // null = unrestricted (admin/exempt, or not loaded yet)
+function hasModuleAccess(key){
+  return !myModulePermissions || myModulePermissions[key] !== false;
+}
+
 function showCloudError(message){
   const el = document.getElementById('cloudErrorBanner');
   if(!el) return;
@@ -3946,7 +3981,8 @@ const CHANGELOG = [
   { version: "3.0.211", date: "2026-08-19", note: "Activities Updates entries (add, edit, and the update popup) can now link to a recipe and attach files or photos — a linked recipe shows as a clickable chip that jumps straight to it, and attachments show as small thumbnails/file chips, clickable to open or download" },
   { version: "3.0.212", date: "2026-08-19", note: "An Activities Updates entry with no Next Action recorded no longer shows an empty \"Add after recording Action taken\" placeholder card — the card is left out entirely, and PLAN / ACTION TAKEN share the row instead" },
   { version: "3.0.213", date: "2026-08-19", note: "Clicking an Activities Updates attachment now opens a Preview popup instead of downloading it straight away — photos and PDFs show inline, other file types show a Download button, and Prev/Next cycles through every attachment on that entry" },
-  { version: "3.0.214", date: "2026-08-19", note: "A project's summary now has an \"Attachments\" section (below Requirements / Certifications) listing every file attached across all of its Activities Updates in one place, newest first — no need to open each update to find one. Only shown once the project has at least one attachment" }
+  { version: "3.0.214", date: "2026-08-19", note: "A project's summary now has an \"Attachments\" section (below Requirements / Certifications) listing every file attached across all of its Activities Updates in one place, newest first — no need to open each update to find one. Only shown once the project has at least one attachment" },
+  { version: "3.0.215", date: "2026-08-19", note: "Manage Users: the admin can now turn Projects / Trials / Ingredients / Reference Lists on or off per person — a member without access to a module simply doesn't see its tab in the navbar. Only kangawin@th-umios.com (the one admin) can set this, same as everything else in Manage Users. Recipes itself always stays on for every approved member — it's the app's core function" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4034,6 +4070,10 @@ function renderApp(){
   document.getElementById('navbarAccountEmail').textContent = currentUser ? currentUser.email : '';
   const isAdminUser = currentUser?.email === ADMIN_EMAIL;
   document.getElementById('btnOpenUserAdmin').style.display = isAdminUser ? '' : 'none';
+  MODULE_PERMISSIONS.forEach(m => {
+    const btn = document.getElementById(m.navBtnId);
+    if(btn) btn.style.display = hasModuleAccess(m.key) ? '' : 'none';
+  });
 }
 
 function goToAuth(){
@@ -5919,6 +5959,16 @@ function userAdminRowHtml(item, isPendingSection){
         ${item.status !== 'rejected' ? `<button class="btn btn-sm btn-danger" data-role="reject" data-uid="${escapeHtml(item.id)}">Reject</button>` : ''}
         <button class="btn btn-sm" data-role="reset-email" data-email="${escapeHtml(item.email || '')}">Send Reset Email</button>
       </div>
+      ${!isPendingSection && item.email !== ADMIN_EMAIL ? `
+      <div class="user-admin-permissions">
+        ${MODULE_PERMISSIONS.map(m => `
+          <label class="user-admin-permission-toggle">
+            <input type="checkbox" data-role="toggle-permission" data-uid="${escapeHtml(item.id)}" data-module="${m.key}" ${userModulePermissions(item)[m.key] ? 'checked' : ''}>
+            ${escapeHtml(m.label)}
+          </label>
+        `).join('')}
+      </div>
+      ` : ''}
     </div>
   `;
 }
@@ -5939,6 +5989,13 @@ function renderUserAdminLists(){
   });
   document.querySelectorAll('#userAdminModalOverlay [data-role="reject"]').forEach(btn => {
     btn.addEventListener('click', () => decideUserApproval(btn.dataset.uid, 'rejected'));
+  });
+  document.querySelectorAll('#userAdminModalOverlay [data-role="toggle-permission"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = cb.checked;
+      setDoc(doc(userApprovalsCol, cb.dataset.uid), { permissions: { [cb.dataset.module]: checked } }, { merge: true })
+        .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
+    });
   });
   document.querySelectorAll('#userAdminModalOverlay [data-role="reset-email"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -13082,6 +13139,7 @@ onAuthStateChanged(auth, user => {
     document.getElementById('registerError').textContent = '';
     if(isApprovalExempt(user.email)){
       myApprovalStatus = 'exempt';
+      myModulePermissions = null;
       unlockAppAfterApproval();
     }else if(!unsubscribeMyApproval){
       unsubscribeMyApproval = onSnapshot(doc(userApprovalsCol, user.uid), snap => {
@@ -13098,8 +13156,17 @@ onAuthStateChanged(auth, user => {
         }
         const data = snap.data();
         myApprovalStatus = data ? data.status : 'pending';
+        myModulePermissions = userModulePermissions(data);
         if(myApprovalStatus === 'approved'){
           unlockAppAfterApproval();
+          // Covers the admin revoking a module while this person is
+          // actively sitting on that exact view — without this they'd be
+          // left looking at a screen whose own nav tab just disappeared.
+          if(mainFeatureView && MODULE_PERMISSIONS.some(m => m.key === mainFeatureView) && !hasModuleAccess(mainFeatureView)){
+            mainFeatureView = null;
+            renderMain();
+            renderSidebar();
+          }
         }else{
           appView = 'pending';
           renderPendingScreen();
@@ -13112,6 +13179,7 @@ onAuthStateChanged(auth, user => {
   }else{
     currentUser = null;
     myApprovalStatus = null;
+    myModulePermissions = null;
     if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
     if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
     if(unsubscribeMaterials){ unsubscribeMaterials(); unsubscribeMaterials = null; }
