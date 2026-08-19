@@ -3294,6 +3294,23 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="unsavedChangesModalOverlay">
+  <div class="modal" style="max-width:380px;">
+    <div class="modal-header">
+      <div class="modal-title">Unsaved changes</div>
+      <button class="icon-btn" id="btnCloseUnsavedChanges" title="Cancel">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:0;">You're still editing a project and haven't saved yet. Save your changes before leaving?</p>
+      <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:6px;">
+        <button class="btn btn-sm" id="btnUnsavedCancel">Cancel</button>
+        <button class="btn btn-sm btn-danger" id="btnUnsavedDiscard">Discard</button>
+        <button class="btn btn-sm btn-primary" id="btnUnsavedSave">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <script type="module">
 /* ---------- Firebase (shared cloud backend) ----------
    Every device that opens this file talks to the same Firebase project, so
@@ -3592,7 +3609,8 @@ const CHANGELOG = [
   { version: "3.0.187", date: "2026-08-17", note: "\"Projects by Status\" on the Projects dashboard is now clickable — click any status row (e.g. \"In Progress\") to filter the table below to just that status, same as picking it from the Status dropdown, and jump straight down to it" },
   { version: "3.0.188", date: "2026-08-17", note: "Moved the Project Photos gallery — it no longer sits as its own strip above \"Projects by Status\"; each status's photos now show directly above that status's own bar inside the card instead, so the photos and the numbers they belong to stay together" },
   { version: "3.0.189", date: "2026-08-17", note: "Added a \"Columns\" picker to the Projects table — click it to show/hide Photo, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, Reqs, or Products, so you can focus on just what you need. Your choice is remembered on this device for next time" },
-  { version: "3.0.190", date: "2026-08-17", note: "Replaced the Status/Owner/Factory Rep/PD dropdowns above the Projects table with Excel-style filters right on each sortable column header — click the ▾ next to a column name (Project, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, or Products) to check/uncheck exactly which values to show, instead of picking one value at a time" }
+  { version: "3.0.190", date: "2026-08-17", note: "Replaced the Status/Owner/Factory Rep/PD dropdowns above the Projects table with Excel-style filters right on each sortable column header — click the ▾ next to a column name (Project, Status, Requested, Customer, Destination, Owner, Factory Rep, PD, Factory, or Products) to check/uncheck exactly which values to show, instead of picking one value at a time" },
+  { version: "3.0.191", date: "2026-08-17", note: "If you're editing a project's details (or filling in \"+ New Project\") and haven't clicked Save yet, navigating away — a navbar tab, the logo, a recipe in the sidebar, \"+ New Recipe\", or closing/refreshing the tab — now asks first: Save, Discard, or Cancel and stay, instead of silently losing what you typed" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4244,11 +4262,11 @@ function renderRefListItems(){
   });
 }
 function initRefListsView(){
-  document.getElementById('btnOpenRefLists').addEventListener('click', () => {
+  document.getElementById('btnOpenRefLists').addEventListener('click', () => guardNavigation(() => {
     mainFeatureView = 'refLists';
     renderMain();
     renderSidebar();
-  });
+  }));
 }
 
 /* ---------- Projects modal (tracks a project's products against existing
@@ -5112,11 +5130,11 @@ function renderTrialsList(){
 }
 
 function initTrialsView(){
-  document.getElementById('btnOpenTrials').addEventListener('click', () => {
+  document.getElementById('btnOpenTrials').addEventListener('click', () => guardNavigation(() => {
     mainFeatureView = 'trials';
     renderMain();
     renderSidebar();
-  });
+  }));
 }
 
 function mountProjectsView(){
@@ -5220,6 +5238,58 @@ let projectSortDir = 'desc';
 // single persistent window resize listener wired near the bottom of the
 // script, which just calls whatever this currently points at.
 let activeProjScrollbarProxySync = null;
+
+/* ---------- Unsaved-changes guard (Projects only) ----------
+   Recipe edits autosave within ~400ms of any change (see scheduleSave), and
+   Trial edits save on every field's own 'change' event — neither can lose
+   real work by navigating away. A project's main fields are different: they
+   only get read out of the DOM and saved when the row's own Save button is
+   clicked (see the [data-role="save-project"] handler), so typing into an
+   open edit row or the "+ New Project" panel and then clicking a navbar tab
+   or a different recipe would silently throw that away. This guard catches
+   exactly that gap — see guardNavigation, wired onto every persistent
+   navbar/sidebar click that can navigate away while Projects is open. */
+function hasUnsavedProjectEdit(){
+  if(projectEditingId) return true;
+  if(newProjectOpen && document.getElementById('newProjName')?.value.trim()) return true;
+  return false;
+}
+let pendingGuardedNavigation = null;
+function guardNavigation(action){
+  if(!hasUnsavedProjectEdit()){ action(); return; }
+  pendingGuardedNavigation = action;
+  document.getElementById('unsavedChangesModalOverlay').classList.add('open');
+}
+function closeUnsavedChangesModal(){
+  document.getElementById('unsavedChangesModalOverlay').classList.remove('open');
+  pendingGuardedNavigation = null;
+}
+function initUnsavedChangesGuard(){
+  document.getElementById('btnCloseUnsavedChanges').addEventListener('click', closeUnsavedChangesModal);
+  document.getElementById('btnUnsavedCancel').addEventListener('click', closeUnsavedChangesModal);
+  // Reuses the real Save/Cancel buttons already wired on the open edit row
+  // or the "+ New Project" panel instead of duplicating their logic — a
+  // plain click() dispatch runs the exact same handler a manual click would.
+  document.getElementById('btnUnsavedSave').addEventListener('click', () => {
+    document.querySelector('[data-role="save-project"]')?.click();
+    document.getElementById('btnSaveNewProject')?.click();
+    const action = pendingGuardedNavigation;
+    closeUnsavedChangesModal();
+    action?.();
+  });
+  document.getElementById('btnUnsavedDiscard').addEventListener('click', () => {
+    document.querySelector('[data-role="cancel-project"]')?.click();
+    document.getElementById('btnCancelNewProject')?.click();
+    const action = pendingGuardedNavigation;
+    closeUnsavedChangesModal();
+    action?.();
+  });
+  window.addEventListener('beforeunload', e => {
+    if(!hasUnsavedProjectEdit()) return;
+    e.preventDefault();
+    e.returnValue = '';
+  });
+}
 
 // Accessor per sortable column — keeps the header-click handler and the
 // comparator working off the same single source of truth for "what does
@@ -6624,11 +6694,11 @@ function saveMuEditModal(){
 // "product progress log" popup (stays a real modal, per the decision to
 // keep small utility dialogs as popups).
 function initProjectsModal(){
-  document.getElementById('btnOpenProjects').addEventListener('click', () => {
+  document.getElementById('btnOpenProjects').addEventListener('click', () => guardNavigation(() => {
     mainFeatureView = 'projects';
     renderMain();
     renderSidebar();
-  });
+  }));
 
   document.getElementById('btnCloseProductLogModal').addEventListener('click', closeProductLogModal);
   document.getElementById('productLogModalOverlay').addEventListener('click', e => {
@@ -7784,7 +7854,7 @@ function initMaterialLibrary(){
     renderMain();
     renderSidebar();
   };
-  document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', openMaterialsView);
+  document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', () => guardNavigation(openMaterialsView));
   document.getElementById('btnCloseMaterialDetail').addEventListener('click', closeMaterialDetail);
   document.getElementById('materialDetailModalOverlay').addEventListener('click', e => {
     if(e.target.id === 'materialDetailModalOverlay') closeMaterialDetail();
@@ -8072,13 +8142,13 @@ function renderRecipeCards(container, query){
         <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
         <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
       `;
-      div.addEventListener('click', () => {
+      div.addEventListener('click', () => guardNavigation(() => {
         if(r.id !== currentId) unlockedRecipeId = null;
         currentId = r.id;
         mainFeatureView = null;
         renderMain();
         renderSidebar();
-      });
+      }));
       container.appendChild(div);
     });
 }
@@ -11527,7 +11597,7 @@ function importFromFile(file){
 }
 
 /* ---------- Init ---------- */
-document.getElementById('btnNew').addEventListener('click', createNewRecipe);
+document.getElementById('btnNew').addEventListener('click', () => guardNavigation(createNewRecipe));
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
 document.getElementById('btnExportAll').addEventListener('click', exportAll);
 document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
@@ -11543,12 +11613,12 @@ function goHome(){
   renderMain();
   renderSidebar();
 }
-document.getElementById('navbarBrand').addEventListener('click', goHome);
-document.getElementById('btnRecipesTab').addEventListener('click', () => {
+document.getElementById('navbarBrand').addEventListener('click', () => guardNavigation(goHome));
+document.getElementById('btnRecipesTab').addEventListener('click', () => guardNavigation(() => {
   mainFeatureView = 'recipesList';
   renderMain();
   renderSidebar();
-});
+}));
 
 document.getElementById('navbarAccount').addEventListener('click', e => {
   e.stopPropagation();
@@ -11633,6 +11703,7 @@ initRefListsView();
 initMaterialLibrary();
 initProjectsModal();
 initTrialsView();
+initUnsavedChangesGuard();
 renderFooter();
 
 // Scrolling the mouse wheel over a focused number input silently changes
