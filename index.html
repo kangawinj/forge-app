@@ -247,8 +247,19 @@
   .navbar-notif-item{padding:8px;border-radius:var(--radius);font-size:12px;}
   .navbar-notif-item:hover{background:var(--primary-light);}
   .navbar-notif-item .ni-email{font-weight:600;color:var(--text);word-break:break-all;}
+  .navbar-notif-item .ni-by{font-weight:400;font-size:11px;color:var(--text-dim);margin-top:2px;word-break:break-all;}
   .navbar-notif-item .ni-time{color:var(--text-dim);margin-top:2px;}
+  .navbar-notif-item-clickable{cursor:pointer;}
+  .ni-changes-hint{font-size:11px;color:var(--primary);margin-top:4px;font-weight:600;}
   .navbar-notif-empty{font-size:12px;color:var(--text-dim);padding:16px 8px;text-align:center;}
+  /* ---------- "What changed" modal (per-notification field diff) ---------- */
+  .activity-change-row{padding:8px 0;border-bottom:1px solid var(--border);}
+  .activity-change-row:last-child{border-bottom:none;}
+  .activity-change-field{font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:3px;}
+  .activity-change-values{display:flex;align-items:center;gap:8px;font-size:13px;flex-wrap:wrap;}
+  .activity-change-before{color:var(--danger);text-decoration:line-through;word-break:break-word;}
+  .activity-change-arrow{color:var(--text-dim);flex-shrink:0;}
+  .activity-change-after{color:var(--ok);font-weight:600;word-break:break-word;}
   .app-footer{
     position:fixed;
     left:0; right:0; bottom:0;
@@ -2498,6 +2509,31 @@
   .mu-empty{color:var(--text-dim);font-style:italic;}
   .mu-due-inline{margin-left:auto;font-weight:700;color:var(--primary-dark);text-transform:none;letter-spacing:normal;white-space:nowrap;}
   .mu-source-link{display:flex;align-items:center;gap:4px;font-size:11px;color:var(--text-dim);margin-top:8px;padding-top:8px;border-top:1px dashed var(--border);}
+  /* Linked recipe + attachments row on a saved Activities Update — sits
+     below the PLAN/ACTION TAKEN/NEXT ACTION grid, outside any
+     .mu-card-clickable, so clicking a chip never also opens the update
+     popup underneath it. */
+  .mu-entry-extras{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:8px;}
+  .mu-recipe-link{display:inline-flex;align-items:center;gap:4px;background:var(--accent-light);color:var(--primary-dark);border:none;font-size:11px;font-weight:600;padding:3px 8px;border-radius:12px;cursor:pointer;}
+  .mu-recipe-link:hover{text-decoration:underline;}
+  .mu-attachment-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:2px 8px 2px 2px;font-size:11px;max-width:180px;}
+  .mu-attachment-thumb{width:20px;height:20px;border-radius:50%;object-fit:cover;flex-shrink:0;}
+  .mu-attachment-file-icon{display:flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:50%;background:var(--border);color:var(--text-dim);flex-shrink:0;}
+  .mu-attachment-name{display:inline-flex;align-items:center;gap:5px;color:var(--text);background:none;border:none;padding:0;font:inherit;cursor:pointer;max-width:100%;overflow:hidden;}
+  .mu-attachment-name:hover{text-decoration:underline;}
+  .mu-attachment-name-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .mu-attachment-remove{display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;flex-shrink:0;}
+  .mu-attachment-remove:hover{color:var(--danger);}
+  .mu-attachments-editor{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
+  .mu-attach-btn{display:inline-flex;align-items:center;gap:5px;}
+  /* Attachment Preview popup — image/PDF render inline, other file types
+     fall back to a centered message + the always-present Download button. */
+  .mu-attachment-preview-body{display:flex;align-items:center;justify-content:center;min-height:200px;max-height:65vh;background:var(--bg);border-radius:var(--radius);overflow:auto;}
+  .mu-attachment-preview-img{max-width:100%;max-height:65vh;object-fit:contain;display:block;}
+  .mu-attachment-preview-frame{width:100%;height:65vh;border:none;}
+  .mu-attachment-preview-fallback{display:flex;flex-direction:column;align-items:center;gap:10px;color:var(--text-dim);padding:40px;text-align:center;}
+  .mu-attachment-preview-footer{display:flex;align-items:center;gap:10px;margin-top:14px;}
+  .mu-attachment-preview-counter{font-size:12px;color:var(--text-dim);flex:1;text-align:center;}
   @media (max-width:900px){
     .mu-card-grid{grid-template-columns:1fr;}
   }
@@ -2679,7 +2715,7 @@
     height:64px;
     border-radius:50%;
     object-fit:cover;
-    border-width:3px;
+    border-width:5px;
     border-style:solid;
   }
   /* A project with no photo yet still gets a circle in the strip (same size/
@@ -2707,6 +2743,7 @@
   .dash-bar-item-clickable:hover .dash-bar-label-row span:first-child{color:var(--primary);text-decoration:underline;}
   .dash-status-group{margin-bottom:6px;}
   .dash-status-group:last-child{margin-bottom:0;}
+  .dash-status-group .dash-bar-label-row span:first-child{font-weight:700;}
   .dash-bar-label-row{
     display:flex;
     justify-content:space-between;
@@ -3366,6 +3403,24 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="muAttachmentPreviewModalOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title" id="muAttachmentPreviewTitle">Attachment</div>
+      <button class="icon-btn" id="btnCloseMuAttachmentPreview" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="muAttachmentPreviewBody" class="mu-attachment-preview-body"></div>
+      <div class="mu-attachment-preview-footer">
+        <button class="btn btn-sm" id="btnMuAttachmentPreviewPrev" title="Previous attachment">${'‹'} Prev</button>
+        <span id="muAttachmentPreviewCounter" class="mu-attachment-preview-counter"></span>
+        <button class="btn btn-sm" id="btnMuAttachmentPreviewNext" title="Next attachment">Next ${'›'}</button>
+        <a class="btn btn-primary btn-sm" id="btnMuAttachmentPreviewDownload" download>Download</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="modal-overlay" id="muEditModalOverlay">
   <div class="modal" style="max-width:560px;">
     <div class="modal-header">
@@ -3392,6 +3447,17 @@
       <div class="field">
         <label>Next Action Due Date</label>
         <input type="date" id="muEditModalNextActionDue">
+      </div>
+      <div class="field">
+        <label>Linked Recipe (optional)</label>
+        <select class="proj-select" id="muEditModalRecipe"></select>
+      </div>
+      <div class="field">
+        <label>Attachments (optional)</label>
+        <div class="mu-attachments-editor" id="muEditModalAttachEditor">
+          <div class="mu-attachments-chiplist" id="muEditModalAttachChips"></div>
+          <label class="btn btn-sm mu-attach-btn">+ Attach file/photo<input type="file" class="mu-attach-input" id="muEditModalAttachInput" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+        </div>
       </div>
       <label class="mu-autocreate-label" style="margin-bottom:16px;"><input type="checkbox" id="muEditModalAutoCreate"> Create as Plan automatically</label>
       <div style="display:flex;gap:8px;">
@@ -3505,6 +3571,18 @@
         <button class="btn" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="activityChangesModalOverlay">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-header">
+      <div class="modal-title" id="activityChangesTitle">What changed</div>
+      <button class="icon-btn" id="btnCloseActivityChanges" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <div id="activityChangesList"></div>
     </div>
   </div>
 </div>
@@ -3861,7 +3939,14 @@ const CHANGELOG = [
   { version: "3.0.204", date: "2026-08-17", note: "The bell icon is now \"Notifications\", not just sign-ins — it shows who added, edited, or deleted a Recipe, Project, Trial, or Ingredient, merged into the same feed as sign-ins. An edit only counts once per Save (not per autosave tick while typing), so the feed stays readable instead of filling up with every keystroke" },
   { version: "3.0.205", date: "2026-08-17", note: "Added an \"Export Excel\" button to a recipe's toolbar (next to Print / PDF) — downloads a 3-sheet .xlsx workbook: Overview (product/project details), Ingredients (every Part and Sub-part's ingredients with %, weight, and note), and Process (each process's steps in order)" },
   { version: "3.0.206", date: "2026-08-17", note: "Reordered each Notifications line so the item's name leads and who did it follows — e.g. \"Project \\\"Takoyaki & Yakisoba\\\" edited by kangawin@th-umios.com\" instead of starting with the email" },
-  { version: "3.0.207", date: "2026-08-17", note: "\"Projects by Status\" now shows every project in each status, not just the ones with a photo uploaded — a project without one gets a plain placeholder circle instead of being left out of the strip" }
+  { version: "3.0.207", date: "2026-08-17", note: "\"Projects by Status\" now shows every project in each status, not just the ones with a photo uploaded — a project without one gets a plain placeholder circle instead of being left out of the strip" },
+  { version: "3.0.208", date: "2026-08-19", note: "Notifications: \"edited by ...\" now sits on its own line in smaller text below the item's name, instead of being crammed into the same bold line" },
+  { version: "3.0.209", date: "2026-08-19", note: "Click a Notifications item for a Recipe, Project, Trial, or Ingredient edit to see exactly what changed — each main field that was different shows its value before and after, e.g. \"Status: Not Started → In Progress\"" },
+  { version: "3.0.210", date: "2026-08-19", note: "\"Projects by Status\" — the status name above each photo strip (e.g. \"Not Started\") is now bold, and the status-colored ring around each project's photo is thicker and glows more clearly" },
+  { version: "3.0.211", date: "2026-08-19", note: "Activities Updates entries (add, edit, and the update popup) can now link to a recipe and attach files or photos — a linked recipe shows as a clickable chip that jumps straight to it, and attachments show as small thumbnails/file chips, clickable to open or download" },
+  { version: "3.0.212", date: "2026-08-19", note: "An Activities Updates entry with no Next Action recorded no longer shows an empty \"Add after recording Action taken\" placeholder card — the card is left out entirely, and PLAN / ACTION TAKEN share the row instead" },
+  { version: "3.0.213", date: "2026-08-19", note: "Clicking an Activities Updates attachment now opens a Preview popup instead of downloading it straight away — photos and PDFs show inline, other file types show a Download button, and Prev/Next cycles through every attachment on that entry" },
+  { version: "3.0.214", date: "2026-08-19", note: "A project's summary now has an \"Attachments\" section (below Requirements / Certifications) listing every file attached across all of its Activities Updates in one place, newest first — no need to open each update to find one. Only shown once the project has at least one attachment" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4914,7 +4999,9 @@ function migrateMonthlyUpdate(mu){
     nextAction: mu.nextAction !== undefined ? mu.nextAction : (mu.nextPlan || ''),
     nextActionDue: mu.nextActionDue !== undefined ? mu.nextActionDue : (mu.nextPlanDate || ''),
     autoCreatePlan: !!mu.autoCreatePlan,
-    sourceUpdateId: mu.sourceUpdateId || ''
+    sourceUpdateId: mu.sourceUpdateId || '',
+    linkedRecipeId: mu.linkedRecipeId || '',
+    attachments: Array.isArray(mu.attachments) ? mu.attachments : []
   };
 }
 
@@ -5027,6 +5114,7 @@ function captureMonthlyUpdateDraft(p, block){
   const nextActionInput = block.querySelector('.proj-mu-nextaction');
   const nextActionDueInput = block.querySelector('.proj-mu-nextaction-due');
   const autoCreateInput = block.querySelector('.proj-mu-autocreate');
+  const recipeInput = block.querySelector('.proj-mu-recipe');
   if(!dateInput) return false;
   const date = dateInput.value;
   const plan = planInput.value.trim();
@@ -5034,12 +5122,15 @@ function captureMonthlyUpdateDraft(p, block){
   const nextAction = nextActionInput.value.trim();
   const nextActionDue = nextActionDueInput.value;
   const autoCreatePlan = !!autoCreateInput?.checked;
+  const linkedRecipeId = recipeInput?.value || '';
   if(!date || (!plan && !actionTaken && !nextAction)) return false;
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
   const mu = {
     id: uid(), date, plan, actionTaken, nextAction, nextActionDue, autoCreatePlan,
+    linkedRecipeId, attachments: monthlyUpdateDraftAttachments,
     sourceUpdateId: '', createdBy: currentUser?.email || '', createdAt: Date.now()
   };
+  monthlyUpdateDraftAttachments = [];
   p.monthlyUpdates.push(mu);
   maybeAutoCreateNextPlan(p, mu);
   return true;
@@ -5497,13 +5588,15 @@ function renderTrialsList(){
     if(isEditing){
       block.querySelector('[data-role="save-trial"]').addEventListener('click', () => {
         trialEditingId = null;
-        logActivityEvent('updated', 'trial', trialLabel(t));
+        logActivityEvent('updated', 'trial', trialLabel(t), diffMainFields(trialEditSnapshotBefore, { label: trialLabel(t) }, TRIAL_DIFF_FIELDS));
+        trialEditSnapshotBefore = null;
         renderTrialsList();
       });
     }else{
       block.querySelector('[data-role="edit-trial"]').addEventListener('click', () => {
         trialEditingId = id;
         trialExpandedIds.add(id);
+        trialEditSnapshotBefore = { label: trialLabel(t) };
         renderTrialsList();
       });
     }
@@ -5719,6 +5812,12 @@ function mountProjectsView(){
 let projectEditingId = null;
 let monthlyUpdateEditingId = null;
 let monthlyUpdateAddOpen = false;
+// Staged attachments for whichever Activities Updates inline form (add or
+// edit) is currently open — only one can be open at a time (see
+// monthlyUpdateEditingId / monthlyUpdateAddOpen above), so one shared array
+// is enough. Reset to [] on open/cancel, read into the entry on Save.
+let monthlyUpdateDraftAttachments = [];
+let muEditModalAttachments = [];
 let projectExpandedIds = new Set();
 let editingProjectImage = ''; // staged photo as a data URL for whichever project is being edited
 let newProjectOpen = false; // whether the "+ New Project" entry panel is showing, below the button
@@ -6647,6 +6746,11 @@ function renderProjectsList(){
                           <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                         </div>
                         <input type="date" class="proj-mu-edit-nextaction-due" value="${escapeHtml(mu.nextActionDue || '')}" title="Next Action due date">
+                        <select class="proj-select proj-mu-edit-recipe">${muRecipeOptionsHtml(mu.linkedRecipeId)}</select>
+                        <div class="mu-attachments-editor">
+                          <div class="mu-attachments-chiplist"></div>
+                          <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                        </div>
                         <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-edit-autocreate" ${mu.autoCreatePlan ? 'checked' : ''}> Create as Plan automatically</label>
                         <button class="btn btn-sm btn-primary" data-role="save-monthly-update-edit">${icon('save')} Save</button>
                         <button class="btn btn-sm proj-action-cancel" data-role="cancel-monthly-update-edit">${icon('undo-2')} Cancel</button>
@@ -6664,6 +6768,7 @@ function renderProjectsList(){
               const taskStatus = getTaskStatus(mu, todayStr);
               const meta = TASK_STATUS_META[taskStatus];
               const nextActionSuperseded = mu.nextActionDue && migratedUpdates.some(x => x.sourceUpdateId === mu.id);
+              const linkedRecipe = mu.linkedRecipeId ? recipes.find(r => r.id === mu.linkedRecipeId) : null;
               return `
               <div class="mu-entry${idx === sorted.length - 1 ? ' mu-entry-last' : ''}" data-update-id="${escapeHtml(mu.id)}">
                 <div class="mu-entry-marker${status === 'planned' ? ' mu-marker-planned' : ''}"></div>
@@ -6674,7 +6779,7 @@ function renderProjectsList(){
                     ${isEditing ? `<button class="icon-btn" title="Edit this update" data-role="edit-monthly-update" style="float:right;">${icon('pencil')}</button><button class="icon-btn" title="Delete this update" data-role="delete-monthly-update" style="float:right;">${icon('x')}</button>` : ''}
                     <div class="mu-entry-by">${mu.createdBy ? escapeHtml(mu.createdBy) : ''}</div>
                   </div>
-                  <div class="mu-card-grid">
+                  <div class="mu-card-grid"${mu.nextAction ? '' : ' style="grid-template-columns:repeat(2,1fr);"'}>
                     <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('file-text', 14)} PLAN${source ? ' <span class="mu-badge">AUTO-CREATED</span>' : ''}${status === 'planned' ? ' <span class="mu-status-pill">PLANNED</span>' : ''}</div>
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
@@ -6684,11 +6789,19 @@ function renderProjectsList(){
                       <div class="mu-card-title">${icon('check', 14)} ACTION TAKEN</div>
                       <div class="mu-card-text">${mu.actionTaken ? escapeHtml(mu.actionTaken) : '<span class="mu-empty">Not yet taken action</span>'}</div>
                     </div>
+                    ${mu.nextAction ? `
                     <div class="mu-card mu-card-clickable" title="Click to update">
                       <div class="mu-card-title">${icon('clock', 14)} NEXT ACTION${mu.nextActionDue ? `<span class="mu-due-inline${nextActionSuperseded ? ' mu-due-superseded' : ''}">Due ${escapeHtml(formatDateLong(mu.nextActionDue))}</span>` : ''}</div>
-                      <div class="mu-card-text">${mu.nextAction ? escapeHtml(mu.nextAction) : '<span class="mu-empty">Add after recording Action taken</span>'}</div>
+                      <div class="mu-card-text">${escapeHtml(mu.nextAction)}</div>
                     </div>
+                    ` : ''}
                   </div>
+                  ${(linkedRecipe || mu.attachments.length) ? `
+                  <div class="mu-entry-extras">
+                    ${linkedRecipe ? `<button type="button" class="mu-recipe-link" data-role="open-mu-recipe" data-recipe-id="${escapeHtml(linkedRecipe.id)}">${icon('link', 12)} ${escapeHtml(recipeDisplayLabel(linkedRecipe))}</button>` : ''}
+                    ${muAttachmentChipsHtml(mu.attachments, false)}
+                  </div>
+                  ` : ''}
                 </div>
               </div>
             `;
@@ -6766,6 +6879,7 @@ function renderProjectsList(){
           </table>
           </div>
         ` : '<div class="overview-empty">No flavors yet</div>';
+        const allAttachments = allProjectAttachments(p);
         const readOnlyDetailView = `
           <div class="project-detail-view">
             <div class="project-detail-photo">
@@ -6779,6 +6893,10 @@ function renderProjectsList(){
               <dl class="material-detail-list" style="margin-top:10px;">${readOnlyDetailRowsAfter}</dl>
               <div class="material-detail-notes-label">Requirements / Certifications</div>
               <div class="material-detail-notes">${escapeHtml(p.requirements || '-')}</div>
+              ${allAttachments.length ? `
+              <div class="material-detail-notes-label">Attachments (${allAttachments.length})</div>
+              <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
+              ` : ''}
             </div>
           </div>
         `;
@@ -6946,6 +7064,11 @@ function renderProjectsList(){
                       <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                     </div>
                     <input type="date" class="proj-mu-nextaction-due" title="Next Action due date">
+                    <select class="proj-select proj-mu-recipe">${muRecipeOptionsHtml('')}</select>
+                    <div class="mu-attachments-editor">
+                      <div class="mu-attachments-chiplist"></div>
+                      <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                    </div>
                     <label class="mu-autocreate-label"><input type="checkbox" class="proj-mu-autocreate"> Create as Plan automatically</label>
                     <button class="btn btn-sm btn-primary" data-role="add-monthly-update">${icon('save')} Save</button>
                     <button class="btn btn-sm proj-action-cancel" data-role="cancel-add-monthly-update">${icon('undo-2')} Cancel</button>
@@ -7131,7 +7254,8 @@ function renderProjectsList(){
         monthlyUpdateAddOpen = false;
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
-        logActivityEvent('updated', 'project', p.name || 'Untitled project');
+        logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
+        projectEditSnapshotBefore = null;
         renderProjectsList();
       });
       block.querySelector('[data-role="duplicate-project"]').addEventListener('click', () => {
@@ -7147,22 +7271,27 @@ function renderProjectsList(){
         projectEditingId = null;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
+        projectEditSnapshotBefore = null;
         projectExpandedIds.add(p.id);
         renderProjectsList();
       });
 
       block.querySelector('[data-role="open-add-monthly-update"]')?.addEventListener('click', () => {
         monthlyUpdateAddOpen = true;
+        monthlyUpdateDraftAttachments = [];
         renderProjectsList();
       });
       block.querySelector('[data-role="cancel-add-monthly-update"]')?.addEventListener('click', () => {
         monthlyUpdateAddOpen = false;
+        monthlyUpdateDraftAttachments = [];
         renderProjectsList();
       });
       // Whichever of the Add-Update panel or an Edit-entry popup is
       // currently open (only one at a time), wire up its Plan/Action
-      // Taken/Next Action translate buttons.
+      // Taken/Next Action translate buttons and its attachment editor.
       block.querySelectorAll('.mu-field-with-translate').forEach(wireMuTranslateButton);
+      const muAttachEditorEl = block.querySelector('.mu-attachments-editor');
+      if(muAttachEditorEl) wireMuAttachmentEditor(muAttachEditorEl, () => monthlyUpdateDraftAttachments);
       block.querySelector('[data-role="add-monthly-update"]')?.addEventListener('click', () => {
         if(!captureMonthlyUpdateDraft(p, block)){
           alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
@@ -7185,7 +7314,10 @@ function renderProjectsList(){
 
       block.querySelectorAll('[data-role="edit-monthly-update"]').forEach(btn => {
         btn.addEventListener('click', () => {
-          monthlyUpdateEditingId = btn.closest('[data-update-id]').dataset.updateId;
+          const updateId = btn.closest('[data-update-id]').dataset.updateId;
+          const mu = (p.monthlyUpdates || []).find(x => x.id === updateId);
+          monthlyUpdateEditingId = updateId;
+          monthlyUpdateDraftAttachments = mu ? (mu.attachments || []).map(a => ({...a})) : [];
           renderProjectsList();
         });
       });
@@ -7200,6 +7332,7 @@ function renderProjectsList(){
         const nextAction = entry.querySelector('.proj-mu-edit-nextaction').value.trim();
         const nextActionDue = entry.querySelector('.proj-mu-edit-nextaction-due').value;
         const autoCreatePlan = !!entry.querySelector('.proj-mu-edit-autocreate')?.checked;
+        const linkedRecipeId = entry.querySelector('.proj-mu-edit-recipe')?.value || '';
         if(!date || (!plan && !actionTaken && !nextAction)){
           alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
           return;
@@ -7210,13 +7343,17 @@ function renderProjectsList(){
         mu.nextAction = nextAction;
         mu.nextActionDue = nextActionDue;
         mu.autoCreatePlan = autoCreatePlan;
+        mu.linkedRecipeId = linkedRecipeId;
+        mu.attachments = monthlyUpdateDraftAttachments;
         monthlyUpdateEditingId = null;
+        monthlyUpdateDraftAttachments = [];
         maybeAutoCreateNextPlan(p, mu);
         scheduleProjectSave(p);
         renderProjectsList();
       });
       block.querySelector('[data-role="cancel-monthly-update-edit"]')?.addEventListener('click', () => {
         monthlyUpdateEditingId = null;
+        monthlyUpdateDraftAttachments = [];
         renderProjectsList();
       });
     }else{
@@ -7224,6 +7361,7 @@ function renderProjectsList(){
         projectEditingId = p.id;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
+        projectEditSnapshotBefore = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
         renderProjectsList();
       });
     }
@@ -7301,6 +7439,27 @@ function renderProjectsList(){
         el.addEventListener('click', () => {
           const updateId = el.closest('[data-update-id]')?.dataset.updateId;
           if(updateId) openMuEditModal(p.id, updateId);
+        });
+      });
+      block.querySelectorAll('[data-role="open-mu-recipe"]').forEach(btn => {
+        btn.addEventListener('click', () => openRecipeFromDashboard(btn.dataset.recipeId));
+      });
+      block.querySelectorAll('[data-update-id] .mu-entry-extras [data-role="open-mu-attachment-preview"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const updateId = btn.closest('[data-update-id]')?.dataset.updateId;
+          const mu = migrateMonthlyUpdate((p.monthlyUpdates || []).find(x => x.id === updateId) || {});
+          const idx = mu.attachments.findIndex(a => a.id === btn.dataset.attachmentId);
+          if(idx !== -1) openMuAttachmentPreview(mu.attachments, idx);
+        });
+      });
+      // Same preview popup from the project summary's consolidated
+      // "Attachments" section — cycles through every attachment on the
+      // project (all updates combined), not just one entry's.
+      block.querySelectorAll('.project-all-attachments [data-role="open-mu-attachment-preview"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const all = allProjectAttachments(p);
+          const idx = all.findIndex(a => a.id === btn.dataset.attachmentId);
+          if(idx !== -1) openMuAttachmentPreview(all, idx);
         });
       });
     }
@@ -7385,11 +7544,32 @@ function openMuEditModal(projectId, updateId){
   document.getElementById('muEditModalNextAction').value = mu.nextAction || '';
   document.getElementById('muEditModalNextActionDue').value = mu.nextActionDue || '';
   document.getElementById('muEditModalAutoCreate').checked = !!mu.autoCreatePlan;
+  document.getElementById('muEditModalRecipe').innerHTML = muRecipeOptionsHtml(mu.linkedRecipeId);
+  muEditModalAttachments = (mu.attachments || []).map(a => ({...a}));
+  redrawMuEditModalAttachments();
   document.getElementById('muEditModalOverlay').classList.add('open');
+}
+function redrawMuEditModalAttachments(){
+  const chipList = document.getElementById('muEditModalAttachChips');
+  chipList.innerHTML = muAttachmentChipsHtml(muEditModalAttachments, true);
+  chipList.querySelectorAll('[data-role="remove-mu-attachment"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = muEditModalAttachments.findIndex(a => a.id === btn.dataset.attachmentId);
+      if(idx !== -1) muEditModalAttachments.splice(idx, 1);
+      redrawMuEditModalAttachments();
+    });
+  });
+  chipList.querySelectorAll('[data-role="open-mu-attachment-preview"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = muEditModalAttachments.findIndex(a => a.id === btn.dataset.attachmentId);
+      if(idx !== -1) openMuAttachmentPreview(muEditModalAttachments, idx);
+    });
+  });
 }
 function closeMuEditModal(){
   document.getElementById('muEditModalOverlay').classList.remove('open');
   muEditModalContext = null;
+  muEditModalAttachments = [];
 }
 function saveMuEditModal(){
   const target = getMuEditModalTarget();
@@ -7400,6 +7580,7 @@ function saveMuEditModal(){
   const nextAction = document.getElementById('muEditModalNextAction').value.trim();
   const nextActionDue = document.getElementById('muEditModalNextActionDue').value;
   const autoCreatePlan = document.getElementById('muEditModalAutoCreate').checked;
+  const linkedRecipeId = document.getElementById('muEditModalRecipe').value;
   if(!date || (!plan && !actionTaken && !nextAction)){
     alert('Please pick a date and fill in at least one of Plan / Action Taken / Next Action.');
     return;
@@ -7411,8 +7592,11 @@ function saveMuEditModal(){
   mu.nextAction = nextAction;
   mu.nextActionDue = nextActionDue;
   mu.autoCreatePlan = autoCreatePlan;
+  mu.linkedRecipeId = linkedRecipeId;
+  mu.attachments = muEditModalAttachments;
   maybeAutoCreateNextPlan(p, mu);
   scheduleProjectSave(p);
+  muEditModalAttachments = [];
   closeMuEditModal();
   renderProjectsList();
 }
@@ -7449,6 +7633,18 @@ function initProjectsModal(){
     if(e.target.id === 'muEditModalOverlay') closeMuEditModal();
   });
   document.getElementById('btnSaveMuEditModal').addEventListener('click', saveMuEditModal);
+  document.getElementById('muEditModalAttachInput').addEventListener('change', async e => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    for(const file of files){
+      try{
+        muEditModalAttachments.push(await fileToMuAttachment(file));
+      }catch(err){
+        alert(err.message || 'Could not attach that file.');
+      }
+    }
+    redrawMuEditModalAttachments();
+  });
 }
 
 function initCompareView(){
@@ -7942,24 +8138,77 @@ function attachLoginEventsListener(){
 // Most-recent-50 add/edit/delete events, newest first — same bounded-query
 // shape as attachLoginEventsListener, merged with it in the notification
 // bell. Fire-and-forget: a failed write here should never block the actual
-// save/delete it's describing, so callers don't await this.
-function logActivityEvent(type, entityType, entityName){
+// save/delete it's describing, so callers don't await this. `changes` is
+// only ever populated for 'updated' events (see diffMainFields) — created/
+// deleted events just pass an empty array, since "before" doesn't exist for
+// a create and "after" doesn't exist for a delete.
+function logActivityEvent(type, entityType, entityName, changes){
   return setDoc(doc(activityEventsCol, uid()), {
     type, entityType,
     entityName: entityName || 'Untitled',
     by: currentUser?.email || '',
-    at: Date.now()
+    at: Date.now(),
+    changes: changes || []
   }).catch(err => console.error('Forge: failed to log activity event', err));
 }
 function attachActivityEventsListener(){
   const q = query(activityEventsCol, orderBy('at', 'desc'), limit(50));
   unsubscribeActivityEvents = onSnapshot(q, snapshot => {
-    activityEvents = snapshot.docs.map(d => d.data());
+    activityEvents = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
     renderNotificationsBell();
   }, err => {
     console.error('Forge: activity events listener error', err);
   });
 }
+
+// ---------- Before/after field diffs (see the click handler on each
+// notification item in renderNotificationsBell) ----------
+// Only "main" scalar fields are tracked, not nested lists (a recipe's
+// ingredients/parts/processes, a project's flavors/products/monthly
+// updates, etc.) — those are complex enough that a flat field-diff would
+// either be unreadable or require a much bigger structural diff engine;
+// recipes already have full Version History for that level of detail.
+const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %' };
+const PROJECT_DIFF_FIELDS = {
+  name: 'Project Name', status: 'Status', requestDate: 'Request Date', startDate: 'Start Date', targetEndDate: 'Target / End Date',
+  customerName: 'Customer Name', destinationCountry: 'Destination Country', ownerSalesRep: 'Project Owner', factorySalesRep: 'Factory Sales Rep',
+  responsiblePerson: 'Responsible Person (PD)', factoryName: 'Factory',
+  portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
+  innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
+  outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',
+  moqQty: 'MOQ Qty', moqUnit: 'MOQ Unit', requirements: 'Requirements / Certifications'
+};
+// Trials have no meaningful set of scalar fields of their own (they're just
+// a comparison of recipes/manual products) — "label" stands in for "which
+// recipes/products this trial is comparing" as the one thing worth diffing.
+const TRIAL_DIFF_FIELDS = { label: 'Recipes / Products Compared' };
+const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
+
+function snapshotMainFields(obj, fieldMap){
+  const snap = {};
+  Object.keys(fieldMap).forEach(key => { snap[key] = obj[key] ?? ''; });
+  return snap;
+}
+// Compares two same-shaped snapshots (see snapshotMainFields) and returns
+// only the fields that actually differ, as { field, before, after } for the
+// notification's "what changed" view. `before` being null/undefined (the
+// "started editing" snapshot was never captured, e.g. an old browser tab
+// still open from before this feature shipped) just yields no diff rather
+// than a false "everything changed."
+function diffMainFields(before, after, fieldMap){
+  if(!before) return [];
+  return Object.keys(fieldMap)
+    .filter(key => String(before[key] ?? '') !== String((after[key]) ?? ''))
+    .map(key => ({
+      field: fieldMap[key],
+      before: String(before[key] ?? '').trim() || '(blank)',
+      after: String(after[key] ?? '').trim() || '(blank)'
+    }));
+}
+let recipeEditSnapshotBefore = null;
+let projectEditSnapshotBefore = null;
+let trialEditSnapshotBefore = null;
+let materialEditSnapshotBefore = null;
 
 /* ---------- Reference Lists: Customers / Sales Reps / Destination Countries ---------- */
 /* Each list holds { id, name } records rather than plain strings, so future
@@ -8443,7 +8692,7 @@ function mountMaterialsView(){
     }
     errEl.textContent = '';
     const existing = editingMaterialId ? ingredientMaster.find(m => m.id === editingMaterialId) : null;
-    saveMaterialToCloud({
+    const materialAfter = {
       id: editingMaterialId || uid(),
       nameEn,
       nameTh,
@@ -8458,8 +8707,9 @@ function mountMaterialsView(){
       createdAt: existing?.createdAt || Date.now(),
       updatedBy: currentUser?.email || '',
       updatedAt: Date.now()
-    });
-    logActivityEvent(existing ? 'updated' : 'created', 'material', materialLabel({ nameEn, nameTh }));
+    };
+    saveMaterialToCloud(materialAfter);
+    logActivityEvent(existing ? 'updated' : 'created', 'material', materialLabel(materialAfter), existing ? diffMainFields(materialEditSnapshotBefore, materialAfter, MATERIAL_DIFF_FIELDS) : []);
     cancelEditMaterial();
   });
 
@@ -8541,6 +8791,163 @@ function resizeImageFile(file, maxDim){
   });
 }
 
+// Activities Updates attachments — same "no Firebase Storage, base64 in the
+// Firestore document" approach as every photo elsewhere in Forge. Images go
+// through the same resize/compress used for photos so they stay small;
+// non-image files (PDF/Word/Excel) can't be resized, so they're capped
+// instead — the whole project document (name, products, every update, every
+// attachment) has to fit Firestore's 1MB document limit.
+const MU_ATTACHMENT_MAX_BYTES = 300 * 1024;
+const MU_ATTACHMENT_IMAGE_MAX_DIM = 640;
+function readFileAsDataUrl(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => resolve(reader.result);
+    reader.readAsDataURL(file);
+  });
+}
+async function fileToMuAttachment(file){
+  const isImage = file.type.startsWith('image/');
+  if(isImage){
+    const dataUrl = await resizeImageFile(file, MU_ATTACHMENT_IMAGE_MAX_DIM);
+    return { id: uid(), name: file.name, dataUrl, isImage: true };
+  }
+  if(file.size > MU_ATTACHMENT_MAX_BYTES){
+    throw new Error(`"${file.name}" is too big (${Math.round(file.size/1024)}KB) — files must be under ${Math.round(MU_ATTACHMENT_MAX_BYTES/1024)}KB`);
+  }
+  const dataUrl = await readFileAsDataUrl(file);
+  return { id: uid(), name: file.name, dataUrl, isImage: false };
+}
+// Shared by the popup modal, the inline add form, the inline edit form, and
+// the read-only card — `editable` controls whether a remove (✕) button
+// shows on each chip.
+function muAttachmentChipsHtml(attachments, editable){
+  if(!attachments || !attachments.length) return '';
+  return attachments.map(a => `
+    <span class="mu-attachment-chip" data-attachment-id="${escapeHtml(a.id)}">
+      <button type="button" class="mu-attachment-name" data-role="open-mu-attachment-preview" data-attachment-id="${escapeHtml(a.id)}" title="Click to preview">
+        ${a.isImage
+          ? `<img src="${escapeHtml(a.dataUrl)}" class="mu-attachment-thumb" alt="${escapeHtml(a.name)}">`
+          : `<span class="mu-attachment-file-icon">${icon('file-text', 12)}</span>`}
+        <span class="mu-attachment-name-text">${escapeHtml(a.name)}</span>
+      </button>
+      ${editable ? `<button type="button" class="mu-attachment-remove" data-role="remove-mu-attachment" data-attachment-id="${escapeHtml(a.id)}" title="Remove">${icon('x', 10)}</button>` : ''}
+    </span>
+  `).join('');
+}
+// Every attachment across every Activities Update on a project, newest
+// entry first — powers the project summary's consolidated "Attachments"
+// section, so a file doesn't only turn up by scrolling through each
+// individual update looking for it.
+function allProjectAttachments(p){
+  return [...(p.monthlyUpdates || [])]
+    .sort((a,b) => (b.date||'').localeCompare(a.date||'') || (b.createdAt||0) - (a.createdAt||0))
+    .flatMap(mu => migrateMonthlyUpdate(mu).attachments || []);
+}
+function muRecipeOptionsHtml(selectedId){
+  return `<option value="">No linked recipe</option>` +
+    recipes.slice().sort((a,b) => (a.name||'').localeCompare(b.name||'')).map(r =>
+      `<option value="${escapeHtml(r.id)}" ${r.id === selectedId ? 'selected' : ''}>${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}</option>`
+    ).join('');
+}
+// Wires a file input + its sibling chip-list container so picking files
+// stages them into `draftArrayGetter()`'s array and redraws just that
+// container — never a full renderProjectsList(), which would wipe out
+// whatever the user is mid-typing in the Plan/Action Taken/Next Action
+// fields of the very same form.
+function wireMuAttachmentEditor(container, draftArrayGetter, onChange){
+  const input = container.querySelector('.mu-attach-input');
+  const chipList = container.querySelector('.mu-attachments-chiplist');
+  if(!input || !chipList) return;
+  const redraw = () => {
+    chipList.innerHTML = muAttachmentChipsHtml(draftArrayGetter(), true);
+    chipList.querySelectorAll('[data-role="remove-mu-attachment"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const arr = draftArrayGetter();
+        const idx = arr.findIndex(a => a.id === btn.dataset.attachmentId);
+        if(idx !== -1) arr.splice(idx, 1);
+        redraw();
+      });
+    });
+    chipList.querySelectorAll('[data-role="open-mu-attachment-preview"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const arr = draftArrayGetter();
+        const idx = arr.findIndex(a => a.id === btn.dataset.attachmentId);
+        if(idx !== -1) openMuAttachmentPreview(arr, idx);
+      });
+    });
+  };
+  input.addEventListener('change', async () => {
+    const files = Array.from(input.files || []);
+    input.value = '';
+    for(const file of files){
+      try{
+        draftArrayGetter().push(await fileToMuAttachment(file));
+      }catch(err){
+        alert(err.message || 'Could not attach that file.');
+      }
+    }
+    redraw();
+    onChange?.();
+  });
+  redraw();
+}
+
+// Attachment Preview popup — a click on an attachment chip's name/thumbnail
+// (editable draft, popup modal, or the read-only saved card) opens this
+// instead of the browser just downloading the data URI straight away.
+// Images render inline, PDFs render in an iframe (browsers can display
+// those natively), anything else (Word/Excel/CSV) falls back to a plain
+// Download button since there's no way to render those in a browser tab.
+// Prev/Next cycles through every attachment on the same entry.
+let muAttachmentPreviewContext = null; // { attachments, index }
+function openMuAttachmentPreview(attachments, index){
+  if(!attachments || !attachments.length) return;
+  muAttachmentPreviewContext = { attachments, index: Math.max(0, Math.min(index, attachments.length - 1)) };
+  renderMuAttachmentPreview();
+  document.getElementById('muAttachmentPreviewModalOverlay').classList.add('open');
+}
+function closeMuAttachmentPreview(){
+  document.getElementById('muAttachmentPreviewModalOverlay').classList.remove('open');
+  muAttachmentPreviewContext = null;
+}
+function renderMuAttachmentPreview(){
+  if(!muAttachmentPreviewContext) return;
+  const { attachments, index } = muAttachmentPreviewContext;
+  const a = attachments[index];
+  document.getElementById('muAttachmentPreviewTitle').textContent = a.name;
+  const body = document.getElementById('muAttachmentPreviewBody');
+  const isPdf = a.dataUrl.startsWith('data:application/pdf');
+  if(a.isImage){
+    body.innerHTML = `<img src="${escapeHtml(a.dataUrl)}" alt="${escapeHtml(a.name)}" class="mu-attachment-preview-img">`;
+  }else if(isPdf){
+    body.innerHTML = `<iframe src="${escapeHtml(a.dataUrl)}" class="mu-attachment-preview-frame" title="${escapeHtml(a.name)}"></iframe>`;
+  }else{
+    body.innerHTML = `<div class="mu-attachment-preview-fallback">${icon('file-text', 40)}<p>This file type can't be previewed here — use Download to open it.</p></div>`;
+  }
+  document.getElementById('muAttachmentPreviewCounter').textContent = attachments.length > 1 ? `${index + 1} / ${attachments.length}` : '';
+  document.getElementById('btnMuAttachmentPreviewPrev').style.visibility = attachments.length > 1 ? 'visible' : 'hidden';
+  document.getElementById('btnMuAttachmentPreviewNext').style.visibility = attachments.length > 1 ? 'visible' : 'hidden';
+  const downloadBtn = document.getElementById('btnMuAttachmentPreviewDownload');
+  downloadBtn.href = a.dataUrl;
+  downloadBtn.download = a.name;
+}
+function muAttachmentPreviewStep(delta){
+  if(!muAttachmentPreviewContext) return;
+  const { attachments } = muAttachmentPreviewContext;
+  muAttachmentPreviewContext.index = (muAttachmentPreviewContext.index + delta + attachments.length) % attachments.length;
+  renderMuAttachmentPreview();
+}
+function initMuAttachmentPreviewModal(){
+  document.getElementById('btnCloseMuAttachmentPreview').addEventListener('click', closeMuAttachmentPreview);
+  document.getElementById('muAttachmentPreviewModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'muAttachmentPreviewModalOverlay') closeMuAttachmentPreview();
+  });
+  document.getElementById('btnMuAttachmentPreviewPrev').addEventListener('click', () => muAttachmentPreviewStep(-1));
+  document.getElementById('btnMuAttachmentPreviewNext').addEventListener('click', () => muAttachmentPreviewStep(1));
+}
+
 function setMaterialImagePreview(dataUrl){
   const img = document.getElementById('mf-imagePreview');
   const removeBtn = document.getElementById('btnRemoveMaterialImage');
@@ -8571,6 +8978,7 @@ function fillMaterialForm(m){
 
 function startEditMaterial(m){
   editingMaterialId = m.id;
+  materialEditSnapshotBefore = snapshotMainFields(m, MATERIAL_DIFF_FIELDS);
   fillMaterialForm(m);
   document.getElementById('materialFormTitle').innerHTML = `${icon('pencil')} Editing: ${escapeHtml(materialLabel(m))}`;
   document.getElementById('btnAddMaterial').textContent = 'Save Changes';
@@ -8593,6 +9001,7 @@ function startCopyMaterial(m){
 
 function cancelEditMaterial(){
   editingMaterialId = null;
+  materialEditSnapshotBefore = null;
   MATERIAL_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(null);
@@ -8833,7 +9242,8 @@ function saveNow(){
   cancelVersionCheckpoint(r);
   pushVersionCheckpoint(r, 'Saved');
   performSave(r);
-  logActivityEvent('updated', 'recipe', r.name || 'Untitled recipe');
+  logActivityEvent('updated', 'recipe', r.name || 'Untitled recipe', diffMainFields(recipeEditSnapshotBefore, r, RECIPE_DIFF_FIELDS));
+  recipeEditSnapshotBefore = null;
   if(versionsModalRecipe === r) renderVersionsList(r);
   unlockedRecipeId = null;
   renderMain();
@@ -9229,24 +9639,66 @@ function renderNotificationsBell(){
   const badge = document.getElementById('navbarNotifBadge');
   if(!list || !badge) return;
   const merged = [
-    ...loginEvents.map(ev => ({ at: ev.timestamp, line: `${ev.email || 'Unknown'} signed in` })),
+    ...loginEvents.map(ev => ({ at: ev.timestamp, title: `${ev.email || 'Unknown'} signed in`, by: '', id: null, changes: [] })),
     ...activityEvents.map(ev => ({
       at: ev.at,
-      line: `${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}" ${ACTIVITY_VERB_LABELS[ev.type] || ev.type} by ${ev.by || 'Unknown'}`
+      title: `${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}" ${ACTIVITY_VERB_LABELS[ev.type] || ev.type}`,
+      by: `by ${ev.by || 'Unknown'}`,
+      id: ev.id,
+      changes: ev.changes || []
     }))
   ].sort((a, b) => b.at - a.at).slice(0, 50);
   list.innerHTML = merged.length
     ? merged.map(item => `
-        <div class="navbar-notif-item">
-          <div class="ni-email">${escapeHtml(item.line)}</div>
+        <div class="navbar-notif-item${item.changes.length ? ' navbar-notif-item-clickable' : ''}" ${item.changes.length ? `data-activity-id="${escapeHtml(item.id)}"` : ''}>
+          <div class="ni-email">${escapeHtml(item.title)}</div>
+          ${item.by ? `<div class="ni-by">${escapeHtml(item.by)}</div>` : ''}
           <div class="ni-time">${escapeHtml(formatActivityDateTime(item.at) || '')}</div>
+          ${item.changes.length ? `<div class="ni-changes-hint">${item.changes.length} field${item.changes.length === 1 ? '' : 's'} changed — click to view</div>` : ''}
         </div>
       `).join('')
     : '<div class="navbar-notif-empty">No activity recorded yet</div>';
+  list.querySelectorAll('[data-activity-id]').forEach(el => {
+    el.addEventListener('click', () => {
+      const ev = activityEvents.find(e => e.id === el.dataset.activityId);
+      if(ev) openActivityChangesModal(ev);
+    });
+  });
   const lastSeen = Number(localStorage.getItem(LOGIN_EVENTS_LAST_SEEN_KEY) || 0);
   const unreadCount = merged.filter(item => item.at > lastSeen).length;
   badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
   badge.style.display = unreadCount > 0 ? 'flex' : 'none';
+}
+
+// Opens the "what changed" modal for one activity event — see the
+// [data-activity-id] click wiring right above, in renderNotificationsBell.
+function openActivityChangesModal(ev){
+  const entityLabel = ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType;
+  document.getElementById('activityChangesTitle').textContent = `${entityLabel} "${ev.entityName || 'Untitled'}"`;
+  const list = document.getElementById('activityChangesList');
+  const changes = ev.changes || [];
+  list.innerHTML = `
+    <p style="font-size:12px;color:var(--text-dim);margin-top:0;">Edited by ${escapeHtml(ev.by || 'Unknown')} · ${escapeHtml(formatActivityDateTime(ev.at) || '')}</p>
+    ${changes.length ? changes.map(c => `
+      <div class="activity-change-row">
+        <div class="activity-change-field">${escapeHtml(c.field)}</div>
+        <div class="activity-change-values">
+          <span class="activity-change-before">${escapeHtml(c.before)}</span>
+          <span class="activity-change-arrow">→</span>
+          <span class="activity-change-after">${escapeHtml(c.after)}</span>
+        </div>
+      </div>
+    `).join('') : '<div class="overview-empty">No field changes recorded for this edit</div>'}
+  `;
+  document.getElementById('activityChangesModalOverlay').classList.add('open');
+}
+function initActivityChangesModal(){
+  document.getElementById('btnCloseActivityChanges').addEventListener('click', () => {
+    document.getElementById('activityChangesModalOverlay').classList.remove('open');
+  });
+  document.getElementById('activityChangesModalOverlay').addEventListener('click', e => {
+    if(e.target.id === 'activityChangesModalOverlay') document.getElementById('activityChangesModalOverlay').classList.remove('open');
+  });
 }
 
 function refreshCodeCountryBadge(r){
@@ -9303,9 +9755,11 @@ const LUCIDE_ICONS = {
   'git-branch': '<line x1="6" x2="6" y1="3" y2="15" /><circle cx="18" cy="6" r="3" /><circle cx="6" cy="18" r="3" /><path d="M18 9a9 9 0 0 1-9 9" />',
   'globe': '<circle cx="12" cy="12" r="10" /><path d="M12 2a14.5 14.5 0 0 0 0 20 14.5 14.5 0 0 0 0-20" /><path d="M2 12h20" />',
   'grip-vertical': '<circle cx="9" cy="5" r="1" /><circle cx="9" cy="12" r="1" /><circle cx="9" cy="19" r="1" /><circle cx="15" cy="5" r="1" /><circle cx="15" cy="12" r="1" /><circle cx="15" cy="19" r="1" />',
+  'link': '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" /><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />',
   'list': '<path d="M3 5h.01" /><path d="M3 12h.01" /><path d="M3 19h.01" /><path d="M8 5h13" /><path d="M8 12h13" /><path d="M8 19h13" />',
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
   'log-out': '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
+  'paperclip': '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />',
   'menu': '<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />',
   'move': '<path d="M12 2v20" /><path d="m15 19-3 3-3-3" /><path d="m19 9 3 3-3 3" /><path d="M2 12h20" /><path d="m5 9-3 3 3 3" /><path d="m9 5 3-3 3 3" />',
   'party-popper': '<path d="M5.8 11.3 2 22l10.7-3.79" /><path d="M4 3h.01" /><path d="M22 8h.01" /><path d="M15 2h.01" /><path d="M22 20h.01" /><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" /><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" /><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" /><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />',
@@ -9511,8 +9965,8 @@ function renderStatusBarList(groups){
         ${projectsForStatus.map(p => `
           <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
             ${p.image
-              ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 8px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
-              : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
+              ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+              : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
             <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
           </button>
         `).join('')}
@@ -10341,6 +10795,7 @@ function renderLockState(r){
         `Enter your password to unlock editing for the recipe "${r.name || 'Untitled recipe'}"`,
         () => {
           unlockedRecipeId = r.id;
+          recipeEditSnapshotBefore = snapshotMainFields(r, RECIPE_DIFF_FIELDS);
           renderMain();
         }
       );
@@ -12568,12 +13023,14 @@ initVersionPreviewModal();
 initRefListsView();
 initMaterialLibrary();
 initProjectsModal();
+initMuAttachmentPreviewModal();
 initTrialsView();
 initUnsavedChangesGuard();
 initUserAdminPanel();
 initMyProfileModal();
 initSecurityModal();
 initDataManagementModal();
+initActivityChangesModal();
 renderFooter();
 
 // Scrolling the mouse wheel over a focused number input silently changes
