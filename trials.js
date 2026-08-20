@@ -390,7 +390,6 @@ export function renderTrialsList(){
           </div>
           ${linkedProject ? `
           <div class="compare-info-col" style="margin-bottom:16px;">
-            <div class="ci-name">${escapeHtml(linkedProject.name || 'Untitled project')}</div>
             <div class="ci-row"><b>Status:</b> ${escapeHtml(PROJECT_STATUS_LABELS[linkedProject.status] || linkedProject.status || '-')}</div>
             <div class="ci-row"><b>Destination:</b> ${escapeHtml(linkedProject.destinationCountry || '-')}</div>
             <div class="ci-row"><b>Project Owner:</b> ${escapeHtml(linkedProject.ownerSalesRep || '-')}</div>
