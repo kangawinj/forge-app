@@ -1537,15 +1537,21 @@ export function renderProjectsList(){
         ` : '<div class="overview-empty">No flavors yet</div>';
         const allAttachments = allProjectAttachments(p);
         const readOnlyRequirementsHtml = `
-          <div class="material-detail-notes-label">Requirements</div>
-          <dl class="material-detail-list" style="margin-top:4px;">${detailRowsHtml([
-            ['Cooking Condition', req.cookingCondition],
-            ['Certificate', req.certificate]
-          ])}</dl>
-          ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
-          ${req.recipe ? `<div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
-          ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
-          ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
+          <div class="requirements-box">
+            <div class="requirements-box-title">Requirements</div>
+            <div class="material-detail-notes-label">Flavor / Filling</div>
+            ${readOnlyFlavorsHtml}
+            ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
+            ${req.recipe ? `<div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
+            <dl class="material-detail-list requirements-box-divider-below">${detailRowsHtml([
+              ['Cooking Condition', req.cookingCondition]
+            ])}</dl>
+            ${req.packagingCondition ? `<div class="material-detail-notes-label" style="margin-top:0;">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
+            ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
+            <dl class="material-detail-list requirements-box-divider">${detailRowsHtml([
+              ['Certificate', req.certificate]
+            ])}</dl>
+          </div>
         `;
         const readOnlyDetailView = `
           <div class="project-detail-view">
@@ -1556,8 +1562,6 @@ export function renderProjectsList(){
               <div class="project-detail-title">${escapeHtml(p.name || 'Untitled project')}</div>
               <dl class="material-detail-list">${readOnlyDetailRowsBefore}${readOnlyDetailRowsAfter}</dl>
               ${readOnlyRequirementsHtml}
-              <div class="material-detail-notes-label">Flavor / Filling</div>
-              ${readOnlyFlavorsHtml}
               ${allAttachments.length ? `
               <div class="material-detail-notes-label">Attachments (${allAttachments.length})</div>
               <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
@@ -1665,52 +1669,54 @@ export function renderProjectsList(){
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <label>Requirements</label>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Composition</label>
-                    <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
+                  <div class="requirements-box">
+                    <div class="requirements-box-title">Requirements</div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Flavor / Filling</label>
+                      <div class="flavor-table-scroll">
+                      <table class="flavor-table flavor-table-edit">
+                        <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                        <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
+                          <tr data-flavor-id="${escapeHtml(f.id)}">
+                            <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                            <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+                            <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+                            <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                            <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
+                            <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+                            <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                            <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
+                          </tr>
+                        `).join('')}</tbody>
+                      </table>
+                      </div>
+                      ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Composition</label>
+                      <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Recipe</label>
+                      <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
+                    </div>
+                    <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
+                      <label>Cooking Condition</label>
+                      <input type="text" class="proj-req-cooking-condition" list="cookingMethodDatalist" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Packaging condition</label>
+                      <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Note</label>
+                      <textarea class="proj-req-note" ${ro} placeholder="Anything else not covered above">${escapeHtml(req.note)}</textarea>
+                    </div>
+                    <div class="field requirements-box-divider" style="margin-bottom:0;">
+                      <label>Certificate</label>
+                      <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
+                    </div>
                   </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Recipe</label>
-                    <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Packaging condition</label>
-                    <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Cooking Condition</label>
-                    <input type="text" class="proj-req-cooking-condition" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Certificate</label>
-                    <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
-                  </div>
-                  <div class="field" style="margin-bottom:0;">
-                    <label>Note</label>
-                    <textarea class="proj-req-note" ${ro} placeholder="Anything else not covered above">${escapeHtml(req.note)}</textarea>
-                  </div>
-                </div>
-                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <label>Flavor / Filling</label>
-                  <div class="flavor-table-scroll">
-                  <table class="flavor-table flavor-table-edit">
-                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
-                    <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
-                      <tr data-flavor-id="${escapeHtml(f.id)}">
-                        <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
-                        <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
-                        <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
-                        <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
-                        <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
-                        <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
-                        <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
-                        <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
-                      </tr>
-                    `).join('')}</tbody>
-                  </table>
-                  </div>
-                  ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
                 </div>
               </div>
               ` : readOnlyDetailView}
@@ -2001,6 +2007,17 @@ export function renderProjectsList(){
         const match = metaLists.customers.find(c => metaItemName(c) === e.target.value.trim());
         if(match && match.country){
           block.querySelector('.proj-destination').value = match.country;
+        }
+      });
+
+      // Picking a Cooking Method that has Steps on file (see Reference
+      // Lists) pulls them in as a starting point -- still a plain text
+      // field afterward, so it can be trimmed/edited freely rather than
+      // staying locked to whatever the reference list says.
+      block.querySelector('.proj-req-cooking-condition').addEventListener('change', e => {
+        const match = metaLists.cookingMethods.find(m => metaItemName(m) === e.target.value.trim());
+        if(match && (match.steps || []).length){
+          e.target.value = match.steps.join(' → ');
         }
       });
 

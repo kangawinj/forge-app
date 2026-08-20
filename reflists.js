@@ -24,6 +24,7 @@ let refListEditingCustomerImage = null;
 // needs somewhere to hold the in-progress array instead of re-reading it
 // fresh from item.locations, which would just show the last-saved state.
 let refListEditingLocations = [];
+let refListEditingSteps = [];
 
 export function mountRefListsView(){
   const main = document.getElementById('mainArea');
@@ -234,6 +235,7 @@ export function renderRefListItems(){
   const isCustomers = refListActiveTab === 'customers';
   const isProductTypes = refListActiveTab === 'productTypes';
   const isContacts = refListActiveTab === 'salesReps';
+  const isCookingMethods = refListActiveTab === 'cookingMethods';
   const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
@@ -263,6 +265,15 @@ export function renderRefListItems(){
         <input type="text" class="reflist-contact-department-input" placeholder="Department" value="${escapeHtml(item.department || '')}">
         <input type="email" class="reflist-contact-email-input" placeholder="Email" value="${escapeHtml(item.email || '')}">
         <input type="tel" class="reflist-contact-phone-input" placeholder="Phone Number" value="${escapeHtml(item.phone || '')}">
+      </div>
+    ` : '';
+    // Steps (Cooking Method only) — an ordered, add/remove-one-at-a-time
+    // list, same wiring shape as Company Directory's Locations and Test
+    // Results' Cooking Method steps (see trialStringListHtml).
+    const cookingStepsHtml = isCookingMethods ? `
+      <div class="reflist-locations-edit">
+        <label class="reflist-locations-label">Steps (optional)</label>
+        ${trialStringListHtml(isEditing ? refListEditingSteps : (item.steps || []), isEditing, 'reflist-cooking-step-input', 'cooking-method-step', 'e.g. Deep fry 170°C, 5 min')}
       </div>
     ` : '';
     // Company Directory's optional logo — a plain preview circle when not
@@ -308,6 +319,7 @@ export function renderRefListItems(){
         ${companyLogoEditHtml}
         ${contactSummaryHtml}
         ${contactEditGridHtml}
+        ${cookingStepsHtml}
         ${activity.length ? `<div class="reflist-item-meta">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
       </div>
       ${isProductTypes ? `<span class="reflist-code-badge" data-code-badge>${escapeHtml(item.code || productTypeCode(item.name))}</span>` : ''}
@@ -368,6 +380,7 @@ export function renderRefListItems(){
       const editingItem = metaLists[refListActiveTab].find(x => x.id === refListEditingId);
       refListEditingCustomerImage = editingItem ? (editingItem.image || '') : '';
       refListEditingLocations = editingItem ? [...(editingItem.locations || [])] : [];
+      refListEditingSteps = editingItem ? [...(editingItem.steps || [])] : [];
       renderRefListItems();
       const inp = container.querySelector(`.reflist-item[data-id="${CSS.escape(refListEditingId)}"] .reflist-item-name-input`);
       if(inp){ inp.focus(); inp.select(); }
@@ -394,6 +407,9 @@ export function renderRefListItems(){
       email: row.querySelector('.reflist-contact-email-input').value.trim(),
       phone: row.querySelector('.reflist-contact-phone-input').value.trim()
     } : undefined;
+    const newSteps = isCookingMethods
+      ? [...row.querySelectorAll('.reflist-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+      : undefined;
     if(isCustomers && newCountry && !metaLists.destinationCountries.some(x => metaItemName(x) === newCountry)){
       alert(`"${newCountry}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
       return; // stay in edit mode so the country can be fixed
@@ -403,12 +419,13 @@ export function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : {}));
+    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : (isCookingMethods ? { steps: newSteps } : {})));
     const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
     const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
     const locationsUnchanged = !isCustomers || JSON.stringify(newLocations) === JSON.stringify(item.locations || []);
-    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged && locationsUnchanged)){
-      refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); return;
+    const stepsUnchanged = !isCookingMethods || JSON.stringify(newSteps) === JSON.stringify(item.steps || []);
+    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged && locationsUnchanged && stepsUnchanged)){
+      refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
       alert(`"${newVal}" is already in this list.`);
@@ -417,18 +434,19 @@ export function renderRefListItems(){
     refListEditingId = null;
     refListEditingCustomerImage = null;
     refListEditingLocations = [];
+    refListEditingSteps = [];
     renderRefListItems();
   };
   container.querySelectorAll('[data-role="save"]').forEach(btn => {
     btn.addEventListener('click', () => saveEdit(btn.closest('.reflist-item')));
   });
   container.querySelectorAll('[data-role="cancel"]').forEach(btn => {
-    btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); });
+    btn.addEventListener('click', () => { refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; renderRefListItems(); });
   });
   container.querySelectorAll('.reflist-item-name-input, .reflist-item-country-input, .reflist-contact-type-input, .reflist-contact-company-input, .reflist-contact-country-input, .reflist-contact-jobtitle-input, .reflist-contact-department-input, .reflist-contact-email-input, .reflist-contact-phone-input').forEach(inp => {
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
-      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; renderRefListItems(); }
     });
   });
   // Locations (Company Directory only) — a live add/remove list, same
@@ -448,7 +466,27 @@ export function renderRefListItems(){
     inp.addEventListener('change', () => { refListEditingLocations[idx] = inp.value.trim(); });
     inp.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
-      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; renderRefListItems(); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; renderRefListItems(); }
+    });
+  });
+  // Steps (Cooking Method only) — same live add/remove list wiring as
+  // Locations above.
+  container.querySelector('[data-role="add-cooking-method-step"]')?.addEventListener('click', () => {
+    refListEditingSteps.push('');
+    renderRefListItems();
+  });
+  container.querySelectorAll('[data-role="remove-cooking-method-step"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      refListEditingSteps.splice(idx, 1);
+      renderRefListItems();
+    });
+  });
+  container.querySelectorAll('.reflist-cooking-step-input').forEach((inp, idx) => {
+    inp.addEventListener('change', () => { refListEditingSteps[idx] = inp.value.trim(); });
+    inp.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); saveEdit(inp.closest('.reflist-item')); }
+      else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; renderRefListItems(); }
     });
   });
   container.querySelectorAll('[data-role="delete"]').forEach(btn => {

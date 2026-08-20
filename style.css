@@ -1547,6 +1547,56 @@
     font-size:13px;
     white-space:pre-wrap;
   }
+  .requirements-box{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px 18px;
+    margin-top:16px;
+    background:var(--bg);
+  }
+  .requirements-box .material-detail-notes-label:first-child{margin-top:0;}
+  /* Sub-headings inside the Requirements box (Composition, Recipe,
+     Packaging condition, Flavor / Filling, plus the Cooking Condition /
+     Certificate labels) are easy to lose track of once everything sits
+     inside one shared box -- give them the same accent color as the box
+     title, a touch bigger, so each field reads as its own labeled section
+     at a glance instead of blending into the surrounding text. */
+  .requirements-box dt,
+  .requirements-box .material-detail-notes-label{
+    color:var(--primary-dark);
+    font-size:13.5px;
+    font-weight:700;
+  }
+  .requirements-box .material-detail-notes-label{
+    border-bottom:1px solid var(--border);
+    padding-bottom:3px;
+  }
+  .requirements-box-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--primary-dark);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:12px;
+  }
+  /* A dt/dd row on its own (Certificate, at the very bottom) doesn't get
+     the .material-detail-notes-label's border-bottom every other section
+     header in the box has -- this gives it the same "new section starts
+     here" divider line above it instead. */
+  .requirements-box-divider{
+    margin-top:16px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+  }
+  /* Same idea, but trailing the row instead (Cooking Condition) -- the
+     line marks the end of that field rather than the start of the next
+     one, since what follows (Packaging condition) already has its own
+     label styling immediately after. */
+  .requirements-box-divider-below{
+    margin-bottom:12px;
+    padding-bottom:12px;
+    border-bottom:1px solid var(--border);
+  }
   .material-detail-activity{
     margin-top:16px;
     padding-top:12px;
