@@ -3,7 +3,7 @@ import {
   playContentTransition, projects, findProjectForRecipe, fullCode, formatWeight,
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
-  trialStringListHtml, trialsCol, showCloudError
+  trialStringListHtml, trialsCol, showCloudError, PROJECT_STATUS_LABELS
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -388,6 +388,16 @@ export function renderTrialsList(){
               <input type="text" value="${escapeHtml(linkedProject?.customerName || '')}" placeholder="-" readonly title="Comes from the linked project above">
             </div>
           </div>
+          ${linkedProject ? `
+          <div class="compare-info-col" style="margin-bottom:16px;">
+            <div class="ci-name">${escapeHtml(linkedProject.name || 'Untitled project')}</div>
+            <div class="ci-row"><b>Status:</b> ${escapeHtml(PROJECT_STATUS_LABELS[linkedProject.status] || linkedProject.status || '-')}</div>
+            <div class="ci-row"><b>Destination:</b> ${escapeHtml(linkedProject.destinationCountry || '-')}</div>
+            <div class="ci-row"><b>Project Owner:</b> ${escapeHtml(linkedProject.ownerSalesRep || '-')}</div>
+            <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
+            <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
+          </div>
+          ` : ''}
           <div class="trial-header-row">
             <div class="field" style="margin-bottom:0;">
               <label>Sample Prepared By</label>

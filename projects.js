@@ -251,12 +251,27 @@ function wireMuTranslateButton(wrapEl){
 // with a due date, chains a new Planned entry whose Plan is that Next
 // Action text — the follow-up shows up ready to log once it's actually
 // acted on, instead of retyping the same reminder as a new entry by hand.
-// Guarded against firing twice for the same source (e.g. re-saving an
-// already-chained entry with the checkbox still on).
+// Called after every save of an entry (new or edited), so if a linked
+// Plan entry already exists (found via sourceUpdateId) this re-syncs its
+// date/time/who/plan/where/how from the source's current Next Action
+// fields instead of creating a second one — editing the original Next
+// Action later keeps the auto-created entry showing the same thing,
+// rather than leaving it frozen at whatever it said at creation time.
 function maybeAutoCreateNextPlan(p, mu){
-  if(!mu.autoCreatePlan || !mu.nextAction || !mu.nextActionDue) return;
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
-  if(p.monthlyUpdates.some(x => x.sourceUpdateId === mu.id)) return;
+  const existing = p.monthlyUpdates.find(x => x.sourceUpdateId === mu.id);
+  if(existing){
+    if(mu.nextAction && mu.nextActionDue){
+      existing.date = mu.nextActionDue;
+      existing.time = mu.nextActionTime || '';
+      existing.planWho = mu.nextActionWho || '';
+      existing.plan = mu.nextAction;
+      existing.planWhere = mu.nextActionWhere || '';
+      existing.planHow = mu.nextActionHow || '';
+    }
+    return;
+  }
+  if(!mu.autoCreatePlan || !mu.nextAction || !mu.nextActionDue) return;
   p.monthlyUpdates.push({
     id: uid(), date: mu.nextActionDue, time: mu.nextActionTime || '',
     planWho: mu.nextActionWho || '', plan: mu.nextAction, planWhere: mu.nextActionWhere || '', planHow: mu.nextActionHow || '',
@@ -3032,4 +3047,4 @@ export function closeProjectFilterMenu(){
   openProjectFilterMenuKey = null;
 }
 
-export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync };
+export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync, PROJECT_STATUS_LABELS };

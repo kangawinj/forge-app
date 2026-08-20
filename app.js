@@ -33,7 +33,7 @@ import {
   monthlyUpdateStatus, getTaskStatus, daysBetween, projectHasUpdateThisMonth,
   projectProgressPct, statusPillHtml, projectNextAction, initProjectsModal,
   initMuAttachmentPreviewModal, openProjectFilterMenuKey, activeProjScrollbarProxySync,
-  blankProduct, scheduleProjectSave
+  blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS
 } from './projects.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
@@ -63,7 +63,7 @@ export {
   ingredientMaster, productTypeCode, recipes, currentId, recipesLoaded,
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
-  allIngredientsInRecipe, formatWeight
+  allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS
 };
 
 const firebaseConfig = {
