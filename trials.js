@@ -428,7 +428,7 @@ export function renderTrialsList(){
               ${req.recipe ? `<div><div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div></div>` : ''}
               ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
               <div>
-                <div class="material-detail-notes-label">Cooking Condition${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
+                <div class="material-detail-notes-label">Cooking Guidelines${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
                 ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
               </div>
               ` : ''}

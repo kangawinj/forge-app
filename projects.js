@@ -995,7 +995,7 @@ function renderNewProjectPanel(){
             <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
           </div>
           <div class="field" style="margin-bottom:8px;">
-            <label>Cooking Condition</label>
+            <label>Cooking Guidelines</label>
             <input type="text" id="newProjReqCookingCondition" placeholder="e.g. N/A">
           </div>
           <div class="field" style="margin-bottom:8px;">
@@ -1641,7 +1641,7 @@ export function renderProjectsList(){
               ${req.recipeAttachments.length ? `<div class="mu-entry-extras" style="margin-top:6px;">${muAttachmentChipsHtml(req.recipeAttachments, false)}</div>` : ''}
             ` : ''}
             ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
-              <div class="material-detail-notes-label">Cooking Condition${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
+              <div class="material-detail-notes-label">Cooking Guidelines${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
               ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
             ` : ''}
             ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
@@ -1810,7 +1810,7 @@ export function renderProjectsList(){
                       ` : ''}
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
-                      <label>Cooking Condition</label>
+                      <label>Cooking Guidelines</label>
                       <input type="text" class="proj-req-cooking-method" list="cookingMethodDatalist" ${ro} value="${escapeHtml(isEditing ? cookingMethodEditing : req.cookingCondition.method)}" placeholder="e.g. Microwave">
                       <div style="margin-top:8px;">
                         ${trialStringListHtml(isEditing ? cookingStepsEditing : req.cookingCondition.steps, isEditing, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
