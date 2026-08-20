@@ -3047,4 +3047,4 @@ export function closeProjectFilterMenu(){
   openProjectFilterMenuKey = null;
 }
 
-export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync, PROJECT_STATUS_LABELS };
+export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync, PROJECT_STATUS_LABELS, getRequirements };

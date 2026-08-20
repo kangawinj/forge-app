@@ -1823,6 +1823,28 @@
     margin-bottom:3px;
   }
   .compare-info-col .ci-row b{color:var(--text);font-weight:600;}
+  /* Trials' linked-project summary card -- unlike the narrow product-
+     comparison cards .compare-info-col/.ci-row were built for, this one
+     sits alone at full card width, so its short fields (Status,
+     Destination, ...) get their own responsive grid instead of stacking
+     one per line down a single narrow column. The Requirements fields
+     below it (longer, sometimes multi-line) get a wider-minimum grid of
+     their own. */
+  .trial-project-summary-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+    gap:4px 24px;
+  }
+  .trial-project-summary-grid .ci-row{margin-bottom:0;}
+  .trial-project-summary-reqs{
+    margin-top:12px;
+    padding-top:12px;
+    border-top:1px solid var(--border);
+    display:grid;
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:0 20px;
+  }
+  .trial-project-summary-reqs .material-detail-notes-label{margin-top:0;}
   /* A manually-typed trial product's fields (no underlying recipe/project
      record to display read-only text from) — same font sizing as .ci-name /
      .ci-row so an editable card doesn't look out of place next to the
@@ -2785,9 +2807,7 @@
   .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
   .trial-string-list-row input{flex:1;}
-  .trial-photo-pair{display:flex;gap:12px;margin-top:10px;}
-  .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;}
-  .trial-photo-slot-label{font-size:11px;color:var(--text-dim);font-weight:600;}
+  .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:10px;}
   .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
   .trial-photo-slot input[type="file"]{width:100px;font-size:11px;}
   .trial-result-accepted{background:color-mix(in srgb, var(--ok) 12%, transparent);}

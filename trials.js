@@ -3,7 +3,8 @@ import {
   playContentTransition, projects, findProjectForRecipe, fullCode, formatWeight,
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
-  trialStringListHtml, trialsCol, showCloudError, PROJECT_STATUS_LABELS
+  trialStringListHtml, trialsCol, showCloudError, PROJECT_STATUS_LABELS,
+  metaLists, metaItemName, getRequirements
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -35,6 +36,7 @@ function blankTrial(){
     samplePreparedBy: '',
     testParticipants: [],
     testDate: '',
+    cookingMethod: '',
     cookingMethodSteps: [],
     productData: {},
     createdBy: currentUser?.email || '',
@@ -56,6 +58,7 @@ function migrateTrial(t){
     samplePreparedBy: t.samplePreparedBy || '',
     testParticipants: Array.isArray(t.testParticipants) ? t.testParticipants : [],
     testDate: t.testDate || '',
+    cookingMethod: t.cookingMethod || '',
     cookingMethodSteps: Array.isArray(t.cookingMethodSteps) ? t.cookingMethodSteps : [],
     productData: (t.productData && typeof t.productData === 'object') ? t.productData : {}
   };
@@ -68,6 +71,27 @@ function getTrialProductData(t, productId){
   if(!t.productData || typeof t.productData !== 'object') t.productData = {};
   if(!t.productData[productId]) t.productData[productId] = {};
   return t.productData[productId];
+}
+// A product's photos: one free-form gallery (up to TRIAL_PHOTO_MAX), each
+// with an editable caption (defaults to the uploaded file's own name) --
+// no fixed "Before/After frying" categories, the caption itself says
+// whatever the photo needs it to. Older trials kept a single plain
+// data-URL string in a separate beforePhoto/afterPhoto field each; both
+// get folded into the one photos array in place the first time it's
+// touched, same lazy-migration approach as getTrialProductData itself
+// just above. Never drops data even if both legacy slots had something.
+const TRIAL_PHOTO_MAX = 4;
+function normalizeTrialPhotos(pd){
+  if(!Array.isArray(pd.photos)){
+    const merged = [];
+    for(const legacyField of ['beforePhoto', 'afterPhoto']){
+      const legacy = pd[legacyField];
+      if(Array.isArray(legacy)) merged.push(...legacy);
+      else if(legacy) merged.push({ id: uid(), dataUrl: legacy, caption: '' });
+    }
+    pd.photos = merged;
+  }
+  return pd.photos;
 }
 const TRIAL_FIXED_CRITERIA = [
   { key: 'appearanceExterior', label: 'Appearance (Exterior)' },
@@ -198,34 +222,35 @@ export function renderTrialsList(){
       .sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
     const atMax = combinedCount >= TRIAL_MAX_PRODUCTS;
 
-    // Before/After frying photos live per product now (not 3 shared across
-    // the whole trial) — same idea as the read-only product cards below,
-    // built once here and dropped into each card.
-    const trialPhotoPairHtml = productId => {
+    // A product's photos live per product now (not 3 shared across the
+    // whole trial) — same idea as the read-only product cards below, built
+    // once here and dropped into each card. No preset "Before/After
+    // frying" categories -- just add up to TRIAL_PHOTO_MAX freely, each
+    // with its own editable caption to say whatever it needs to. Reuses
+    // the same thumbnail-grid-with-caption markup/CSS classes as Projects'
+    // Idea / Reference Images gallery (proj-ref-image-*), just with
+    // trial-specific data attributes on the interactive bits.
+    const trialPhotosHtml = productId => {
       const pd = getTrialProductData(mt, productId);
-      const slot = (field, label) => {
-        const photo = pd[field];
-        if(photo){
-          return `
-            <div class="trial-photo-slot">
-              <div class="trial-photo-slot-label">${escapeHtml(label)}</div>
-              <div class="trial-photo-thumb" data-product-id="${escapeHtml(productId)}" data-slot="${field}">
-                <img src="${escapeHtml(photo)}" alt="${escapeHtml(label)}">
-                ${isEditing ? `<button class="icon-btn" data-role="remove-trial-photo" title="Remove">${icon('x')}</button>` : ''}
-              </div>
-            </div>
-          `;
-        }
-        return `
-          <div class="trial-photo-slot">
-            <div class="trial-photo-slot-label">${escapeHtml(label)}</div>
-            ${isEditing
-              ? `<input type="file" class="trial-product-photo-input" data-product-id="${escapeHtml(productId)}" data-slot="${field}" accept="image/*">`
-              : '<div class="trial-photo-empty">No photo</div>'}
+      const photos = normalizeTrialPhotos(pd);
+      const photosHtml = photos.map(photo => `
+        <div class="proj-ref-image-item">
+          <div class="proj-ref-image-thumb-wrap">
+            <img src="${escapeHtml(photo.dataUrl)}" class="proj-ref-image-thumb" alt="${escapeHtml(photo.caption || 'Product photo')}">
+            ${isEditing ? `<button type="button" class="proj-ref-image-remove" data-role="remove-trial-photo" data-product-id="${escapeHtml(productId)}" data-photo-id="${escapeHtml(photo.id)}" title="Remove">${icon('x', 12)}</button>` : ''}
           </div>
-        `;
-      };
-      return `<div class="trial-photo-pair">${slot('beforePhoto', 'Before frying')}${slot('afterPhoto', 'After frying')}</div>`;
+          ${isEditing
+            ? `<input type="text" class="proj-ref-image-caption-input trial-photo-caption-input" data-product-id="${escapeHtml(productId)}" data-photo-id="${escapeHtml(photo.id)}" value="${escapeHtml(photo.caption || '')}" placeholder="Caption">`
+            : (photo.caption ? `<div class="proj-ref-image-caption">${escapeHtml(photo.caption)}</div>` : '')}
+        </div>
+      `).join('');
+      return `
+        <div class="trial-photo-slot">
+          ${photosHtml ? `<div class="proj-ref-images-grid">${photosHtml}</div>` : ''}
+          ${isEditing && photos.length < TRIAL_PHOTO_MAX ? `<input type="file" class="trial-product-photo-input" data-product-id="${escapeHtml(productId)}" accept="image/*">` : ''}
+          ${!isEditing && !photos.length ? '<div class="trial-photo-empty">No photo</div>' : ''}
+        </div>
+      `;
     };
 
     // Side-by-side product cards (same visual language as Compare Recipes'
@@ -254,22 +279,20 @@ export function renderTrialsList(){
           ${link?.project.destinationCountry ? `<div class="ci-row"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
           ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Project Owner:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
           ${link ? `<div class="ci-row"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
-          ${trialPhotoPairHtml(r.id)}
+          ${trialPhotosHtml(r.id)}
           ${removeBtn}
         </div>
       `;
     }).join('');
 
-    // A manually-typed product (not one of this app's Recipes) gets the same
-    // detail fields as a linked recipe's card. Customer/Destination/Project
-    // Owner pick from the same shared Reference Lists (via the same
-    // datalists Projects itself uses) and Stage uses the same fixed list a
-    // Project's own products track by — only Code/Date/Total weight stay
-    // plain free text, since there's no reference list for those.
+    // A manually-typed product (not one of this app's Recipes) -- just a
+    // name and a Code, both free text, plus its own before/after photos
+    // (see trialPhotosHtml below). Date/Total weight/Customer/
+    // Destination/Project Owner/Stage were dropped; the trial's own
+    // Test Date field above already covers "when", and the rest only
+    // made sense for a product that actually has a linked Project.
     const manualFieldRows = [
-      ['code', 'Code', null], ['date', 'Date', null], ['totalWeight', 'Total weight', null],
-      ['customer', 'Customer', 'customerDatalist'], ['destination', 'Destination', 'destinationDatalist'],
-      ['owner', 'Project Owner', 'salesRepDatalist'], ['stage', 'Stage', 'select']
+      ['code', 'Code', null]
     ];
     const manualCardsHtml = manualProducts.map(mp => {
       const removeBtn = isEditing ? `<button class="icon-btn" data-role="remove-trial-manual" data-manual-id="${escapeHtml(mp.id)}" title="Remove this product" style="margin-top:8px;">${icon('x')} Remove</button>` : '';
@@ -287,7 +310,7 @@ export function renderTrialsList(){
                   : `<input type="${field === 'date' ? 'date' : 'text'}" class="tmanual-field" data-field="${field}" value="${escapeHtml(mp[field] || '')}" placeholder="-" ${datalist ? `list="${datalist}"` : ''}>`
               }</div>
             `).join('')}
-            ${trialPhotoPairHtml(mp.id)}
+            ${trialPhotosHtml(mp.id)}
             ${removeBtn}
           </div>
         `;
@@ -296,7 +319,7 @@ export function renderTrialsList(){
         <div class="compare-info-col">
           <div class="ci-name">${escapeHtml(mp.name || 'Untitled')} <span style="font-weight:400;color:var(--text-dim);">(manual)</span></div>
           ${manualFieldRows.map(([field, label]) => mp[field] ? `<div class="ci-row"><b>${label}:</b> ${escapeHtml(mp[field])}</div>` : '').join('')}
-          ${trialPhotoPairHtml(mp.id)}
+          ${trialPhotosHtml(mp.id)}
         </div>
       `;
     }).join('');
@@ -388,15 +411,33 @@ export function renderTrialsList(){
               <input type="text" value="${escapeHtml(linkedProject?.customerName || '')}" placeholder="-" readonly title="Comes from the linked project above">
             </div>
           </div>
-          ${linkedProject ? `
+          ${linkedProject ? (() => {
+            const req = getRequirements(linkedProject);
+            return `
           <div class="compare-info-col" style="margin-bottom:16px;">
-            <div class="ci-row"><b>Status:</b> ${escapeHtml(PROJECT_STATUS_LABELS[linkedProject.status] || linkedProject.status || '-')}</div>
-            <div class="ci-row"><b>Destination:</b> ${escapeHtml(linkedProject.destinationCountry || '-')}</div>
-            <div class="ci-row"><b>Project Owner:</b> ${escapeHtml(linkedProject.ownerSalesRep || '-')}</div>
-            <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
-            <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
+            <div class="trial-project-summary-grid">
+              <div class="ci-row"><b>Status:</b> ${escapeHtml(PROJECT_STATUS_LABELS[linkedProject.status] || linkedProject.status || '-')}</div>
+              <div class="ci-row"><b>Destination:</b> ${escapeHtml(linkedProject.destinationCountry || '-')}</div>
+              <div class="ci-row"><b>Project Owner:</b> ${escapeHtml(linkedProject.ownerSalesRep || '-')}</div>
+              <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
+              <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
+            </div>
+            ${(req.composition || req.recipe || req.cookingCondition.method || req.cookingCondition.steps.length || req.packagingCondition) ? `
+            <div class="trial-project-summary-reqs">
+              ${req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : ''}
+              ${req.recipe ? `<div><div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div></div>` : ''}
+              ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
+              <div>
+                <div class="material-detail-notes-label">Cooking Condition${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
+                ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+              </div>
+              ` : ''}
+              ${req.packagingCondition ? `<div><div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div></div>` : ''}
+            </div>
+            ` : ''}
           </div>
-          ` : ''}
+          `;
+          })() : ''}
           <div class="trial-header-row">
             <div class="field" style="margin-bottom:0;">
               <label>Sample Prepared By</label>
@@ -413,7 +454,10 @@ export function renderTrialsList(){
           </div>
           <div class="field" style="margin-top:12px;">
             <label>Cooking Method</label>
-            ${trialStringListHtml(mt.cookingMethodSteps, isEditing, 'trial-cooking-step-input', 'cooking-step', 'e.g. Deep Fry 170°C, 5 Mins.', 'cookingMethodDatalist')}
+            <input type="text" class="trial-cooking-method" list="cookingMethodDatalist" value="${escapeHtml(mt.cookingMethod)}" placeholder="e.g. Microwave" ${isEditing ? '' : 'readonly'}>
+            <div style="margin-top:8px;">
+              ${trialStringListHtml(mt.cookingMethodSteps, isEditing, 'trial-cooking-step-input', 'cooking-step', 'e.g. Deep Fry 170°C, 5 Mins.')}
+            </div>
           </div>
 
           <div class="field">
@@ -583,6 +627,21 @@ export function renderTrialsList(){
       block.querySelector('.trial-sample-prepared-by')?.addEventListener('change', e => { t.samplePreparedBy = e.target.value.trim(); scheduleTrialSave(t); });
       block.querySelector('.trial-test-date')?.addEventListener('change', e => { t.testDate = e.target.value; scheduleTrialSave(t); });
 
+      // Picking a Cooking Method that has Steps on file (see Reference
+      // Lists) pulls them in as a starting point — same autofill as
+      // Projects' own Cooking Condition field — still a plain editable
+      // step list afterward, not locked to whatever the reference list
+      // says (see the add/remove/edit wiring below).
+      block.querySelector('.trial-cooking-method')?.addEventListener('change', e => {
+        t.cookingMethod = e.target.value.trim();
+        const match = metaLists.cookingMethods.find(m => metaItemName(m) === t.cookingMethod);
+        if(match && (match.steps || []).length){
+          t.cookingMethodSteps = [...match.steps];
+        }
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+
       // Test Participants and Cooking Method are both a plain numbered list
       // of strings — same add/remove/edit wiring, just different field
       // names and data-roles (see trialStringListHtml).
@@ -621,18 +680,30 @@ export function renderTrialsList(){
         e.target.value = '';
         if(!file) return;
         const pd = getTrialProductData(t, input.dataset.productId);
-        pd[input.dataset.slot] = await resizeImageFile(file, 500);
+        const photos = normalizeTrialPhotos(pd);
+        if(photos.length >= TRIAL_PHOTO_MAX) return;
+        photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500), caption: file.name });
         scheduleTrialSave(t);
         renderTrialsList();
       });
     });
     block.querySelectorAll('[data-role="remove-trial-photo"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const thumb = btn.closest('.trial-photo-thumb');
-        const pd = getTrialProductData(t, thumb.dataset.productId);
-        pd[thumb.dataset.slot] = '';
+        const pd = getTrialProductData(t, btn.dataset.productId);
+        const photos = normalizeTrialPhotos(pd);
+        const idx = photos.findIndex(p => p.id === btn.dataset.photoId);
+        if(idx !== -1) photos.splice(idx, 1);
         scheduleTrialSave(t);
         renderTrialsList();
+      });
+    });
+    block.querySelectorAll('.trial-photo-caption-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const pd = getTrialProductData(t, input.dataset.productId);
+        const photos = normalizeTrialPhotos(pd);
+        const photo = photos.find(p => p.id === input.dataset.photoId);
+        if(photo) photo.caption = input.value.trim();
+        scheduleTrialSave(t);
       });
     });
 
