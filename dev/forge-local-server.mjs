@@ -1,5 +1,6 @@
 import http from "node:http";
 import fs from "node:fs";
+import net from "node:net";
 import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
@@ -107,4 +108,38 @@ function listenOnNextPort() {
   });
 }
 
-listenOnNextPort();
+// Double-clicking the desktop shortcut again while Forge is already running
+// (easy to do -- there's a moment between the click and the browser tab
+// appearing) used to start a second server on the next free port and pop
+// open a second tab, a third on the next double-click, and so on. Check
+// whether something is already listening on one of our own ports first; if
+// so, just reopen a tab there instead of spawning a duplicate server.
+function probePort(port) {
+  return new Promise(resolve => {
+    const socket = net.createConnection({ host: "127.0.0.1", port });
+    const finish = isOpen => { socket.destroy(); resolve(isOpen); };
+    socket.once("connect", () => finish(true));
+    socket.once("error", () => finish(false));
+    socket.setTimeout(300, () => finish(false));
+  });
+}
+
+async function findRunningInstance() {
+  for (const port of candidatePorts) {
+    if (await probePort(port)) return port;
+  }
+  return null;
+}
+
+async function main() {
+  const existingPort = await findRunningInstance();
+  if (existingPort) {
+    const url = `http://127.0.0.1:${existingPort}/`;
+    console.log(`Forge is already running at ${url} -- opening it instead of starting another copy.`);
+    if (process.env.FORGE_NO_BROWSER !== "1") openDefaultBrowser(url);
+    return;
+  }
+  listenOnNextPort();
+}
+
+main();
