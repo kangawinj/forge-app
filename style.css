@@ -38,6 +38,14 @@
     color:var(--text);
     font-size:14px;
     min-width:0;
+    /* Belt-and-suspenders against the whole page picking up a stray
+       horizontal scrollbar -- every dense table/grid in the app that
+       legitimately needs to scroll sideways already does so in its own
+       overflow-x:auto box (.ingredient-tree, .material-table's wrapper,
+       .proj-table-scroll, .dash-table-scroll, .navbar-tabs, etc.), so
+       this only ever catches something those didn't, it never fights
+       them. */
+    overflow-x:hidden;
   }
   .app{
     display:none;
@@ -1058,12 +1066,18 @@
      still happens in section 4; this column just mirrors it live. */
   .components-process-grid{
     display:grid;
-    grid-template-columns:1fr 1fr;
+    /* minmax(0,1fr), not bare 1fr -- a plain 1fr track still won't shrink
+       past its content's min-content width (the ingredient tree's nested
+       rows, drag handles and all, are wide), so without the 0 floor this
+       column pushes the whole page into horizontal scroll on narrow
+       screens instead of scrolling internally via .ingredient-tree's own
+       overflow-x:auto. */
+    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
     gap:20px;
     align-items:start;
   }
   @media (max-width:900px){
-    .components-process-grid{grid-template-columns:1fr;}
+    .components-process-grid{grid-template-columns:minmax(0,1fr);}
   }
   .simple-process-col{
     background:var(--bg);
@@ -3361,8 +3375,43 @@
        anyway) as the fallback. See the .proj-table-scroll rule above. */
     .proj-table-scroll{overflow-x:auto;}
     .proj-overview-table thead th{position:static;box-shadow:none;}
+    /* minmax(0,1fr), not bare 1fr -- these grids hold long text (recipe
+       names, ingredient notes) that would otherwise still push the single
+       remaining column, and the whole page with it, wider than the
+       viewport instead of wrapping/scrolling within its own box. Same fix
+       as .components-process-grid above. */
     .grid-2,.grid-3,
-    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:1fr;}
+    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:minmax(0,1fr);}
+    /* Trials sets .compare-info-grid's columns via an inline style (one
+       track per product being compared, see trials.js) -- inline styles
+       beat a plain class rule regardless of media query, so without
+       !important this still renders as N narrow side-by-side columns
+       (each too narrow to read) instead of collapsing to one. */
+    .compare-info-grid{grid-template-columns:minmax(0,1fr) !important;}
+    /* Trials' Sensory Evaluation / Improvement Guidelines tables (see
+       trialColgroup in trials.js) fix their Criteria column at 220px via
+       an inline <col style>, same override-with-!important reasoning as
+       .compare-info-grid above -- on a phone that alone eats over half
+       the available width, leaving almost nothing for the product
+       columns next to it. The table already scrolls horizontally past
+       this (see the overflow-x:auto wrapper), so this isn't fixing a
+       page-breaking bug like the ones above, just making the visible
+       columns wide enough to actually read on the first swipe. */
+    .compare-table col:first-child{width:110px !important;}
+    /* A native <input type=file>'s own "Choose File / No file chosen"
+       chrome has a browser-enforced minimum render width that a CSS
+       max-width can't shrink below -- left to share a flex row with the
+       other Add-new-entry fields (Reference Lists' Name/Country + the
+       Add button) it just gets crushed against them instead. Giving it
+       (and whatever follows it) its own full-width line fixes that. */
+    .reflist-add-row input[type=file]{flex-basis:100% !important;max-width:none !important;}
+    /* A trial/ingredient-part card's header (chevron + title + summary +
+       Edit/Print/Delete) is a single flex row with no wrap -- a long title
+       still wraps onto multiple lines by itself, but the buttons stay
+       pinned to that same one-line row, ending up squeezed beside/over
+       the wrapped text instead of flowing to their own line below it. */
+    .part-header{flex-wrap:wrap;}
+    .part-header-summary{margin-left:0;white-space:normal;}
     .card{padding:18px 16px;}
     .home-dashboard{max-width:100%;}
     .hd2-greeting{margin-bottom:14px;}

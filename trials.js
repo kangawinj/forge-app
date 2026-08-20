@@ -307,7 +307,7 @@ export function renderTrialsList(){
     // in the evaluation table below, so each product's card lines up with
     // its own score column — same technique used on the Compare Recipes page.
     const productCardsGrid = productCardsHtml
-      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},1fr);"><div class="compare-info-spacer"></div>${productCardsHtml}</div>`
+      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},minmax(0,1fr));"><div class="compare-info-spacer"></div>${productCardsHtml}</div>`
       : '<div class="overview-empty">No products added yet</div>';
 
     // Each row's score is per-product (columns matching the product cards
