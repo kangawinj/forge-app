@@ -3404,6 +3404,20 @@
       display:block !important;
       break-inside:auto;
     }
+    /* The actual culprit: Projects and Test Results each wrap their
+       whole list (#projectsList / #trialsList) in one outer .card --
+       and .card gets break-inside:avoid above. Printing one project/trial
+       hides everything else in that card (dashboard, toolbar, other
+       rows), but what's left is still far taller than a single page, so
+       the avoid can't be honored -- instead of ignoring it and breaking
+       inside, the browser pushes the *entire* card to the next page,
+       leaving the first page (which only has the "Projects"/"Test
+       Results" heading above the card) essentially blank. Let this one
+       outer card break normally; the finer-grained avoid rules above
+       still protect each field's own content from splitting mid-way. */
+    .card:has(#projectsList), .card:has(#trialsList){
+      break-inside:auto;
+    }
   }
 
   @media (max-width:1024px){
