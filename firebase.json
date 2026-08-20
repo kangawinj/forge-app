@@ -12,7 +12,8 @@
       "**/.*",
       "**/node_modules/**",
       "Open Forge.cmd",
-      "forge-local-server.mjs"
+      "forge-local-server.mjs",
+      "forge_icon.ico"
     ],
     "headers": [
       {
