@@ -1845,6 +1845,15 @@
     gap:0 20px;
   }
   .trial-project-summary-reqs .material-detail-notes-label{margin-top:0;}
+  .trial-project-summary-reqs-title{
+    grid-column:1/-1;
+    font-size:12px;
+    font-weight:700;
+    color:var(--primary-dark);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:2px;
+  }
   /* A manually-typed trial product's fields (no underlying recipe/project
      record to display read-only text from) — same font sizing as .ci-name /
      .ci-row so an editable card doesn't look out of place next to the

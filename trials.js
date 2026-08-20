@@ -3,7 +3,7 @@ import {
   playContentTransition, projects, findProjectForRecipe, fullCode, formatWeight,
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
-  trialStringListHtml, trialsCol, showCloudError, PROJECT_STATUS_LABELS,
+  trialStringListHtml, trialsCol, showCloudError,
   metaLists, metaItemName, getRequirements
 } from './app.js';
 import {
@@ -416,7 +416,6 @@ export function renderTrialsList(){
             return `
           <div class="compare-info-col" style="margin-bottom:16px;">
             <div class="trial-project-summary-grid">
-              <div class="ci-row"><b>Status:</b> ${escapeHtml(PROJECT_STATUS_LABELS[linkedProject.status] || linkedProject.status || '-')}</div>
               <div class="ci-row"><b>Destination:</b> ${escapeHtml(linkedProject.destinationCountry || '-')}</div>
               <div class="ci-row"><b>Project Owner:</b> ${escapeHtml(linkedProject.ownerSalesRep || '-')}</div>
               <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
@@ -424,6 +423,7 @@ export function renderTrialsList(){
             </div>
             ${(req.composition || req.recipe || req.cookingCondition.method || req.cookingCondition.steps.length || req.packagingCondition) ? `
             <div class="trial-project-summary-reqs">
+              <div class="trial-project-summary-reqs-title">Requirements</div>
               ${req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : ''}
               ${req.recipe ? `<div><div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div></div>` : ''}
               ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
