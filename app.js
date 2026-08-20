@@ -35,6 +35,19 @@ import {
   initMuAttachmentPreviewModal, openProjectFilterMenuKey, activeProjScrollbarProxySync,
   blankProduct, scheduleProjectSave
 } from './projects.js';
+import {
+  recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
+  RECIPE_DIFF_FIELDS, findProjectForRecipe, fullCode, recipeDisplayLabel,
+  descriptionListHtml, attachRecipesListener, mountRecipesListView,
+  renderRecipeCards, renderRecipesListGrid, yearPrefix, suggestNextRecipeSeq,
+  refreshCodeCountryBadge, updateRecipeTitleDisplay, getCurrent, scheduleSave,
+  saveNow, scheduleVersionCheckpoint, cancelVersionCheckpoint,
+  autoCheckpointVersion, openVersionsModal, initVersionPreviewModal,
+  initVersionsModal, renderLinkedProjectSection, renderProductTypeSelect,
+  refreshCodeProductTypeBadge, bindComboField, blankPart, migrateRecipe,
+  saveRecipeToCloud, resetRecipesState, openRecipe, closeRecipe,
+  setRecipeEditSnapshotBefore, setUnlockedRecipeId, removeRecipe
+} from './recipes.js';
 // metaLists/metaItemName are imported above for app.js's own use (Recipes'
 // bindComboField etc.) — re-exported as-is so projects.js can import them
 // from app.js too, keeping every split module's imports pointed at
@@ -42,7 +55,11 @@ import {
 // `projects` is also imported above (for app.js's own Recipes-linking
 // code) — re-exported so trials.js can keep importing it from app.js too,
 // same reasoning as metaLists/metaItemName above.
-export { metaLists, metaItemName, projects };
+export {
+  metaLists, metaItemName, projects, guardNavigation, migrateTrialsFromRecipes,
+  ingredientMaster, productTypeCode, recipes, currentId, recipesLoaded,
+  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml
+};
 
 const firebaseConfig = {
   apiKey: "AIzaSyCAgzfoTpXFCOijaenipzH1Ev1gYXOceTU",
@@ -57,7 +74,7 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
 const db = getFirestore(firebaseApp);
-const recipesCol = collection(db, "recipes");
+export const recipesCol = collection(db, "recipes");
 export const materialsCol = collection(db, "ingredientMaster");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
@@ -464,7 +481,6 @@ function renderFooter(){
    — real per-user accounts shared across every device, not per-browser. */
 export let currentUser = null; // Firebase User, set by onAuthStateChanged
 let appView = 'auth'; // 'auth' | 'pending' | 'app'
-let unlockedRecipeId = null;
 let pendingAuthCallback = null;
 // This account's own live approval status — null (not yet loaded) |
 // 'pending' | 'approved' | 'rejected' | 'exempt' (admin/test account,
@@ -538,8 +554,7 @@ function goToAuth(){
 }
 
 function goToApp(){
-  currentId = null;
-  unlockedRecipeId = null;
+  closeRecipe();
   mainFeatureView = null;
   appView = 'app';
   renderApp();
@@ -763,163 +778,6 @@ function initAuthConfirmModal(){
         if(callback) callback();
       })
       .catch(() => { errEl.textContent = 'Incorrect password'; });
-  });
-}
-
-/* ---------- Version History (snapshot & restore the recipe's formulation) ---------- */
-let versionsModalRecipe = null;
-
-/* Only the BOM-relevant fields are snapshotted — trial photos are excluded
-   to keep each version small (photos alone could approach Firestore's 1MB
-   doc limit across a few saved versions). */
-function snapshotRecipeCore(r){
-  return {
-    name: r.name,
-    code: r.code,
-    date: r.date,
-    description: JSON.parse(JSON.stringify(r.description)),
-    batchWeight: r.batchWeight,
-    parts: JSON.parse(JSON.stringify(r.parts)),
-    processes: JSON.parse(JSON.stringify(r.processes)),
-    processFlowchart: r.processFlowchart ? JSON.parse(JSON.stringify(r.processFlowchart)) : { nodes: [], edges: [] },
-    processViewMode: r.processViewMode || 'list',
-    yieldPct: r.yieldPct
-  };
-}
-
-function openVersionsModal(r){
-  versionsModalRecipe = r;
-  document.getElementById('versionLabelInput').value = '';
-  renderVersionsList(r);
-  document.getElementById('versionsModalOverlay').classList.add('open');
-}
-
-function closeVersionsModal(){
-  document.getElementById('versionsModalOverlay').classList.remove('open');
-}
-
-function renderVersionsList(r){
-  const listEl = document.getElementById('versionsList');
-  if(!Array.isArray(r.versions) || r.versions.length === 0){
-    listEl.innerHTML = '<div class="overview-empty">No versions saved yet</div>';
-    return;
-  }
-  const sorted = [...r.versions].sort((a,b) => b.savedAt - a.savedAt);
-  listEl.innerHTML = sorted.map(v => `
-    <div class="version-item" data-id="${escapeHtml(v.id)}">
-      <div>
-        <div class="version-item-label">${escapeHtml(v.label || 'Untitled version')}</div>
-        <div class="version-item-date">${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
-      </div>
-      <div class="version-item-actions">
-        <button class="btn btn-sm" data-role="preview-version">Preview</button>
-        <button class="btn btn-sm" data-role="restore-version">Restore</button>
-        <button class="icon-btn" data-role="delete-version" title="Delete this version">${icon('x')}</button>
-      </div>
-    </div>
-  `).join('');
-
-  listEl.querySelectorAll('[data-role="preview-version"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.closest('.version-item').dataset.id;
-      const v = r.versions.find(x => x.id === id);
-      if(v) openVersionPreview(r, v);
-    });
-  });
-  listEl.querySelectorAll('[data-role="restore-version"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.closest('.version-item').dataset.id;
-      const v = r.versions.find(x => x.id === id);
-      if(v) restoreVersion(r, v);
-    });
-  });
-  listEl.querySelectorAll('[data-role="delete-version"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const id = btn.closest('.version-item').dataset.id;
-      r.versions = r.versions.filter(x => x.id !== id);
-      renderVersionsList(r);
-      scheduleSave();
-    });
-  });
-}
-
-// Shared by the Versions list's own Restore button and the Preview modal's
-// Restore button, so restoring a version behaves identically regardless of
-// which one the user reached it from.
-function restoreVersion(r, v){
-  if(!confirm(`Restore version "${v.label || 'Untitled version'}"? This overwrites the recipe's current name, description, ingredients, process steps/components, and yield (trial photos are not affected).`)) return;
-  Object.assign(r, JSON.parse(JSON.stringify(v.snapshot)));
-  migrateRecipe(r);
-  closeVersionPreview();
-  closeVersionsModal();
-  renderMain();
-  scheduleSave();
-}
-
-let versionPreviewContext = null;
-
-// Read-only look at a saved version before committing to Restore — reuses
-// the same tree/process markup as the live editor and the print view, just
-// fed from the version's frozen snapshot instead of the live recipe.
-function openVersionPreview(r, v){
-  versionPreviewContext = { recipe: r, version: v };
-  const snap = v.snapshot || {};
-  const totalWt = allIngredientsInRecipe(snap).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-
-  const snapFlowchart = snap.processFlowchart || { nodes: [], edges: [] };
-  const isFlowMode = snap.processViewMode === 'flowchart' && snapFlowchart.nodes.length > 0;
-
-  document.getElementById('versionPreviewTitle').textContent = v.label || 'Untitled version';
-  document.getElementById('versionPreviewContent').innerHTML = `
-    <div class="reflist-item-meta" style="margin-bottom:12px;">Saved ${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
-    <div class="compare-info-col">
-      <div class="ci-name">${escapeHtml(snap.name || 'Untitled recipe')}</div>
-      <div class="ci-row"><b>Code:</b> ${escapeHtml(snap.code || '-')}</div>
-      <div class="ci-row"><b>Date:</b> ${escapeHtml(snap.date || '-')}</div>
-      <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
-      ${descriptionListHtml(snap)}
-    </div>
-    <div class="overview-title" style="margin-top:16px;">Ingredients</div>
-    ${readOnlyIngredientTreeHtml(snap.parts, totalWt, snapFlowchart.nodes)}
-    <div class="overview-title" style="margin-top:16px;">Process Steps</div>
-    ${isFlowMode ? '<div id="versionPreviewFlowchart"></div>' : `<div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes)}</div>`}
-  `;
-  document.getElementById('versionPreviewModalOverlay').classList.add('open');
-  if(isFlowMode){
-    renderReadOnlyProcessFlowchart(document.getElementById('versionPreviewFlowchart'), snapFlowchart, snap.processes);
-  }
-}
-
-function closeVersionPreview(){
-  document.getElementById('versionPreviewModalOverlay').classList.remove('open');
-  versionPreviewContext = null;
-}
-
-function initVersionPreviewModal(){
-  document.getElementById('btnCloseVersionPreviewModal').addEventListener('click', closeVersionPreview);
-  document.getElementById('btnCloseVersionPreviewModal2').addEventListener('click', closeVersionPreview);
-  document.getElementById('versionPreviewModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'versionPreviewModalOverlay') closeVersionPreview();
-  });
-  document.getElementById('btnRestoreFromPreview').addEventListener('click', () => {
-    if(!versionPreviewContext) return;
-    restoreVersion(versionPreviewContext.recipe, versionPreviewContext.version);
-  });
-}
-
-function initVersionsModal(){
-  document.getElementById('btnCloseVersionsModal').addEventListener('click', closeVersionsModal);
-  document.getElementById('versionsModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'versionsModalOverlay') closeVersionsModal();
-  });
-  document.getElementById('btnSaveVersion').addEventListener('click', () => {
-    const r = versionsModalRecipe;
-    if(!r) return;
-    const label = document.getElementById('versionLabelInput').value.trim();
-    pushVersionCheckpoint(r, label);
-    document.getElementById('versionLabelInput').value = '';
-    renderVersionsList(r);
-    scheduleSave();
   });
 }
 
@@ -1220,8 +1078,6 @@ function initCompareView(){
   });
 }
 
-export let recipes = [];
-export let currentId = null;
 // Which full-page feature (if any) currently owns #mainArea, overriding the
 // normal home-dashboard/recipe-editor split. null = normal (home dashboard
 // if currentId is also null, otherwise the recipe editor for currentId).
@@ -1247,10 +1103,8 @@ const versionCheckpointTimers = new Map();
 // dragend/drop either way. A plain module-level variable is enough since
 // only one drag can be in flight in the whole document at a time.
 let dragPayload = null;
-let unsubscribeRecipes = null;
 let unsubscribeLoginEvents = null;
 let unsubscribeActivityEvents = null;
-export let recipesLoaded = false;
 let loginEvents = [];
 let activityEvents = [];
 
@@ -1304,7 +1158,6 @@ function attachActivityEventsListener(){
 // updates, etc.) — those are complex enough that a flat field-diff would
 // either be unreadable or require a much bigger structural diff engine;
 // recipes already have full Version History for that level of detail.
-const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %' };
 
 export function snapshotMainFields(obj, fieldMap){
   const snap = {};
@@ -1327,96 +1180,7 @@ export function diffMainFields(before, after, fieldMap){
       after: String(after[key] ?? '').trim() || '(blank)'
     }));
 }
-let recipeEditSnapshotBefore = null;
 
-/* Wires a "pick from the shared list" field (Customer Name, Destination
-   Country, Sales Rep). New values can no longer be added by just typing
-   them here — that used to silently grow the shared list from free text,
-   which the Reference Lists screen is meant to curate deliberately.
-   Typing something not already in the list reverts the field and points
-   the user at 📇 Reference Lists instead. The trash button just clears
-   this recipe's own field. */
-/* A recipe's link to a Project isn't a field on the recipe itself - it's
-   read from whichever Project (if any) has a product entry whose recipeId
-   matches, so the Project's own products list stays the single source of
-   truth instead of two places that could drift out of sync. */
-export function findProjectForRecipe(recipeId){
-  for(const proj of projects){
-    const prod = (proj.products || []).find(x => x.recipeId === recipeId);
-    if(prod) return { project: proj, product: prod };
-  }
-  return null;
-}
-
-function renderLinkedProjectSection(r){
-  const select = document.getElementById('f-linkedProject');
-  if(!select) return;
-  const link = findProjectForRecipe(r.id);
-  const sortedProjects = [...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
-  select.innerHTML = `<option value="">— Not linked —</option>` +
-    sortedProjects.map(p => `<option value="${escapeHtml(p.id)}" ${link && link.project.id === p.id ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('');
-
-  const infoEl = document.getElementById('linkedProjectInfo');
-  if(!link){
-    infoEl.innerHTML = '';
-    return;
-  }
-  const { project, product } = link;
-  const facts = [
-    project.customerName ? `<b>Customer:</b> ${escapeHtml(project.customerName)}` : '',
-    project.destinationCountry ? `<b>Destination:</b> ${escapeHtml(project.destinationCountry)}` : '',
-    project.ownerSalesRep ? `<b>Project Owner:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
-    project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
-    `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
-  ].filter(Boolean);
-  infoEl.innerHTML = `<div class="ci-row" style="margin-top:6px;">${facts.join(' &nbsp;|&nbsp; ')}</div>`;
-}
-
-function renderProductTypeSelect(r){
-  const select = document.getElementById('f-productTypeMain');
-  if(!select) return;
-  const sortedTypes = [...metaLists.productTypes].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
-  select.innerHTML = `<option value="">— Select —</option>` +
-    sortedTypes.map(t => `<option value="${escapeHtml(metaItemName(t))}" ${metaItemName(t) === (r.productType || '') ? 'selected' : ''}>${escapeHtml(metaItemName(t))} (${escapeHtml(t.code || productTypeCode(metaItemName(t)))})</option>`).join('');
-}
-
-// The Recipe Code row's Product Type segment is a read-only badge, not its
-// own picker — it always mirrors whatever's chosen in the Product Type
-// field above (see f-productTypeMain), the same way codeYearDisplay mirrors
-// the Date field instead of being independently editable.
-function refreshCodeProductTypeBadge(r){
-  const badge = document.getElementById('codeProductTypeDisplay');
-  if(!badge) return;
-  badge.textContent = recipeProductTypeCode(r) || 'TTT';
-}
-
-function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
-  const input = document.getElementById(inputId);
-  input.value = r[fieldKey] || '';
-  let lastValidValue = r[fieldKey] || '';
-  input.addEventListener('input', e => {
-    r[fieldKey] = e.target.value;
-    scheduleSave();
-  });
-  input.addEventListener('change', () => {
-    const v = input.value.trim();
-    const exists = v === '' || metaLists[metaKey].some(item => metaItemName(item) === v);
-    if(!exists){
-      alert(`"${v}" is not in the list yet. Please add it via Reference Lists first, then pick it here.`);
-      input.value = lastValidValue;
-      r[fieldKey] = lastValidValue;
-      scheduleSave();
-      return;
-    }
-    lastValidValue = v;
-  });
-  document.getElementById(deleteBtnId).addEventListener('click', () => {
-    input.value = '';
-    r[fieldKey] = '';
-    lastValidValue = '';
-    scheduleSave();
-  });
-}
 
 /* Includes the vendor code so materials that share the same name (different
    vendors/codes) are distinguishable in the picker and unambiguous to match
@@ -1566,258 +1330,6 @@ function initMaterialLibrary(){
   });
 }
 
-const PART_COUNT = 4;
-
-function blankPart(name){
-  return { name, ingredients: [ { name:"", percent:0, weight:0, note:"" } ], parts: [] };
-}
-
-function blankRecipe(){
-  return {
-    id: uid(),
-    name: "",
-    code: "",
-    productType: "",
-    recipeSeq: "",
-    date: new Date().toISOString().slice(0,10),
-    customerName: "",
-    destinationCountry: "",
-    salesRep: "",
-    description: [],
-    descPhotos: [],
-    batchWeight: 1000,
-    parts: [],
-    processes: [ { id: uid(), title: "", steps: [], components: [] } ],
-    processFlowchart: { nodes: [], edges: [] },
-    processViewMode: 'list',
-    yieldPct: '',
-    versions: [],
-    createdBy: currentUser?.email || '',
-    createdAt: Date.now(),
-    updatedBy: currentUser?.email || '',
-    updatedAt: Date.now()
-  };
-}
-
-function migrateRecipe(r){
-  if(!Array.isArray(r.parts)){
-    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [{ name:"", percent:0, weight:0, note:"" }];
-    r.parts = [ { name:"Part 1", ingredients: oldIngredients } ];
-    for(let i = r.parts.length; i < PART_COUNT; i++){
-      r.parts.push(blankPart(`Part ${i+1}`));
-    }
-    delete r.ingredients;
-  }
-  // Recursive so it also normalizes Sub-parts nested arbitrarily deep
-  // inside a Part — older saved recipes never had Sub-parts at all, so
-  // `p.parts` simply won't exist on them yet; this backfills it as empty.
-  function migratePart(p){
-    if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
-      p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
-    }
-    p.ingredients.forEach(ing => { if(ing.flowNodeId === undefined) ing.flowNodeId = null; });
-    const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
-    if(oldPartName) p.name = `Part ${oldPartName[1]}`;
-    if(!Array.isArray(p.parts)) p.parts = [];
-    p.parts.forEach(migratePart);
-  }
-  r.parts.forEach(migratePart);
-
-  if(!Array.isArray(r.processes)){
-    const oldSteps = Array.isArray(r.steps) ? r.steps.filter(s => (s||'').trim() !== '') : [];
-    r.processes = [ { id: uid(), title: "", steps: oldSteps } ];
-    delete r.steps;
-  }
-  if(r.processes.length === 0){
-    r.processes.push({ id: uid(), title: "", steps: [], components: [] });
-  }
-  r.processes.forEach(p => {
-    // Backfilled so Process Flowchart nodes can live-link to a specific
-    // Process by a stable id — an array index would break the moment
-    // Processes get reordered or one before it is deleted.
-    if(!p.id) p.id = uid();
-    // A Process is valid with just a title and no steps yet — no longer
-    // force a blank placeholder step just to have something to render.
-    if(!Array.isArray(p.steps)) p.steps = [];
-    if(!Array.isArray(p.components)) p.components = [];
-  });
-
-  if(!r.processFlowchart || typeof r.processFlowchart !== 'object'){
-    r.processFlowchart = { nodes: [], edges: [] };
-  }
-  if(!Array.isArray(r.processFlowchart.nodes)) r.processFlowchart.nodes = [];
-  if(!Array.isArray(r.processFlowchart.edges)) r.processFlowchart.edges = [];
-  // Normalizes any missing/garbage value to 'list' too, not just undefined.
-  if(r.processViewMode !== 'flowchart') r.processViewMode = 'list';
-
-  // Description used to be a single free-text field — upgrade it to a list
-  // of separate points (characteristics, selling points, etc.).
-  if(!Array.isArray(r.description)){
-    r.description = (r.description || '').trim() ? [r.description] : [];
-  }
-  if(!Array.isArray(r.descPhotos)) r.descPhotos = [];
-  if(r.customerName === undefined) r.customerName = '';
-  if(r.destinationCountry === undefined) r.destinationCountry = '';
-  if(r.salesRep === undefined) r.salesRep = '';
-
-  if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
-  if(!Array.isArray(r.versions)) r.versions = [];
-
-  // Older recipes saved before activity tracking existed won't have these —
-  // leave them blank rather than guessing a creator/date that isn't real.
-  if(r.createdBy === undefined) r.createdBy = '';
-  if(r.createdAt === undefined) r.createdAt = null;
-  if(r.updatedBy === undefined) r.updatedBy = '';
-
-  return r;
-}
-
-function saveRecipeToCloud(r){
-  return setDoc(doc(recipesCol, r.id), r);
-}
-
-/* Firestore is the source of truth, but while a recipe is open for editing we
-   keep its in-memory object identity stable across snapshot updates — the
-   input handlers below mutate that object directly on every keystroke, and
-   swapping in a fresh object from an incoming snapshot mid-edit would silently
-   drop whatever the user just typed. Every other recipe still refreshes freely. */
-function attachRecipesListener(){
-  unsubscribeRecipes = onSnapshot(recipesCol, snapshot => {
-    const previousCurrent = recipes.find(r => r.id === currentId);
-    const incoming = snapshot.docs.map(d => d.data());
-    incoming.forEach(r => { migrateRecipe(r); recomputeFromWeights(r); });
-
-    if(previousCurrent && incoming.some(r => r.id === currentId)){
-      recipes = incoming.map(r => r.id === currentId ? previousCurrent : r);
-    }else{
-      recipes = incoming;
-    }
-
-    const firstLoad = !recipesLoaded;
-    recipesLoaded = true;
-    migrateTrialsFromRecipes();
-
-    if(currentId && !recipes.some(r => r.id === currentId)){
-      // the recipe being viewed no longer exists (deleted) -> back to the homepage
-      currentId = null;
-      unlockedRecipeId = null;
-      renderMain();
-    }else if(firstLoad || (!currentId && !mainFeatureView)){
-      // no recipe is open and no full-page feature view is active (home
-      // dashboard is showing) -> safe to re-render on every update, since
-      // there's no in-progress edit/selection whose state needs preserving.
-      // The mainFeatureView check matters now that Compare/Materials/
-      // RefLists/Projects/Trials live in #mainArea too — re-mounting one of
-      // those from scratch (like this branch does) would silently wipe out
-      // whatever the user had picked/typed there, which used to be
-      // impossible when they were separate, always-persistent modals.
-      renderMain();
-    }
-
-    renderSidebar();
-  }, err => {
-    console.error('Forge: recipes listener error', err);
-    showCloudError('Failed to load recipe data from Firebase: ' + err.message);
-  });
-}
-
-function getCurrent(){
-  return recipes.find(r => r.id === currentId);
-}
-
-function performSave(r){
-  if(!r) return;
-  r.updatedAt = Date.now();
-  r.updatedBy = currentUser?.email || '';
-  saveRecipeToCloud(r);
-  renderSidebar();
-  if(r.id === currentId){
-    updateRecipeTitleDisplay(r); // refresh "Last edited by/at" now that it's current
-    const s = document.getElementById('saveStatus');
-    if(s){
-      s.textContent = 'Saved ' + new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
-      s.classList.add('saved');
-    }
-  }
-}
-
-function scheduleSave(){
-  // Captured now (while the edit that triggered this call is still the
-  // current recipe) rather than inside the timeout — otherwise switching
-  // recipes within the debounce window would save whatever recipe happens
-  // to be open 400ms later instead of the one actually edited.
-  const r = getCurrent();
-  const status = document.getElementById('saveStatus');
-  if(status){ status.textContent = 'Saving...'; status.classList.remove('saved'); }
-  clearTimeout(saveTimer);
-  saveTimer = setTimeout(() => performSave(r), 400);
-  if(r) scheduleVersionCheckpoint(r);
-}
-
-// Shared by every path that should leave a Version History entry (manual
-// Save, the 1-minute idle auto-checkpoint, and "Save Current as Version" in
-// the modal) — same snapshot shape, same 5-version cap, one place to change.
-function pushVersionCheckpoint(r, label){
-  if(!Array.isArray(r.versions)) r.versions = [];
-  r.versions.push({ id: uid(), label, savedAt: Date.now(), snapshot: snapshotRecipeCore(r) });
-  if(r.versions.length > 5) r.versions = r.versions.slice(r.versions.length - 5);
-}
-
-// Manual Save button — flushes the pending debounced save immediately,
-// cancels this recipe's pending idle auto-checkpoint (redundant now that
-// we're checkpointing right here), takes its own Version History
-// checkpoint — so clicking Save is enough on its own; there's no separate
-// "Save Current as Version" step needed for a plain save to be revertible
-// — and locks the recipe back to read-only view, the same way finishing an
-// edit and stepping away from it should feel: Save = "I'm done for now."
-function saveNow(){
-  const r = getCurrent();
-  if(!r) return;
-  clearTimeout(saveTimer);
-  cancelVersionCheckpoint(r);
-  pushVersionCheckpoint(r, 'Saved');
-  performSave(r);
-  logActivityEvent('updated', 'recipe', r.name || 'Untitled recipe', diffMainFields(recipeEditSnapshotBefore, r, RECIPE_DIFF_FIELDS));
-  recipeEditSnapshotBefore = null;
-  if(versionsModalRecipe === r) renderVersionsList(r);
-  unlockedRecipeId = null;
-  renderMain();
-}
-
-// Idle auto-checkpoint: if a recipe has an edit sitting for 60s with no
-// manual Save click, snapshot it into Version History so that auto-save is
-// always revertible, then arms again on the next edit — so a long
-// uninterrupted editing session still gets a checkpoint roughly once a
-// minute, not just once total.
-function scheduleVersionCheckpoint(r){
-  let entry = versionCheckpointTimers.get(r.id);
-  if(!entry){
-    entry = { timer: null, dirty: false };
-    versionCheckpointTimers.set(r.id, entry);
-  }
-  entry.dirty = true;
-  if(entry.timer) return;
-  entry.timer = setTimeout(() => {
-    entry.timer = null;
-    if(!entry.dirty) return;
-    entry.dirty = false;
-    autoCheckpointVersion(r);
-  }, 60000);
-}
-
-function cancelVersionCheckpoint(r){
-  const entry = versionCheckpointTimers.get(r.id);
-  if(!entry) return;
-  clearTimeout(entry.timer);
-  entry.timer = null;
-  entry.dirty = false;
-}
-
-function autoCheckpointVersion(r){
-  pushVersionCheckpoint(r, 'Auto-saved (unsaved for 1 min)');
-  performSave(r);
-  if(versionsModalRecipe === r) renderVersionsList(r);
-}
 
 /* ---------- Sidebar ---------- */
 const FEATURE_VIEW_BUTTON_IDS = {
@@ -1825,52 +1337,6 @@ const FEATURE_VIEW_BUTTON_IDS = {
   refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
 };
 
-// Shared by the compact sidebar list (shown while a recipe is open) and the
-// full-page Recipes view (shown from the "Recipes" tab) — same cards, same
-// click-to-open behavior, just mounted into whichever container is visible
-// right now so the two never have to duplicate this logic separately.
-function renderRecipeCards(container, query){
-  if(!container) return;
-  const q = (query || '').trim().toLowerCase();
-  const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
-  container.innerHTML = '';
-  sorted.filter(r => !q || (r.name||'Untitled').toLowerCase().includes(q))
-    .forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
-      const allIngredients = allIngredientsInRecipe(r);
-      // % is always weight / totalWeight, so it's exactly 100% by
-      // construction whenever there's any weight at all (ing.percent is now
-      // per-part, so it can't be summed directly to check this).
-      const hasWeight = allIngredients.some(i => (parseFloat(i.weight)||0) > 0);
-      const totalPct = hasWeight ? 100 : 0;
-      const codeDisplay = fullCode(r);
-      div.innerHTML = `
-        <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
-        <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
-      `;
-      div.addEventListener('click', () => guardNavigation(() => {
-        if(r.id !== currentId) unlockedRecipeId = null;
-        currentId = r.id;
-        mainFeatureView = null;
-        renderMain();
-        renderSidebar();
-      }));
-      container.appendChild(div);
-    });
-}
-
-function createNewRecipe(){
-  const r = blankRecipe();
-  recipes.push(r);
-  currentId = r.id;
-  unlockedRecipeId = r.id;
-  mainFeatureView = null;
-  saveRecipeToCloud(r);
-  logActivityEvent('created', 'recipe', r.name || 'Untitled recipe');
-  renderSidebar();
-  renderMain();
-}
 
 export function renderSidebar(){
   Object.entries(FEATURE_VIEW_BUTTON_IDS).forEach(([view, id]) => {
@@ -1885,49 +1351,6 @@ export function renderSidebar(){
   renderRecipeCards(document.getElementById('recipeList'), document.getElementById('searchInput').value);
 }
 
-// The "Recipes" tab's full-page view — browsing recipes without committing
-// to one yet. Opening a specific recipe from here hands off to the compact
-// sidebar list instead (see renderMain()'s hide-recipes-nav toggle), so
-// these two recipe lists are never both on screen at once.
-function mountRecipesListView(){
-  const main = document.getElementById('mainArea');
-  main.classList.remove('main-wide');
-  main.innerHTML = `
-    <div class="main-header">
-      <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
-    </div>
-    <div class="card">
-      <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap;">
-        <button class="btn btn-primary" id="btnNewFromRecipesList">+ New Recipe</button>
-        <button class="btn" id="btnCompareFromRecipesList">${icon('scale')} Compare Recipes</button>
-      </div>
-      <div class="search-box" style="margin:0 0 16px;">
-        <input type="text" id="recipesListSearchInput" placeholder="Search product name...">
-      </div>
-      <div class="recipe-list" id="recipesListGrid"></div>
-    </div>
-  `;
-
-  document.getElementById('btnNewFromRecipesList').addEventListener('click', createNewRecipe);
-  document.getElementById('btnCompareFromRecipesList').addEventListener('click', () => {
-    mainFeatureView = 'compare';
-    renderMain();
-    renderSidebar();
-  });
-  document.getElementById('recipesListSearchInput').addEventListener('input', renderRecipesListGrid);
-
-  renderRecipesListGrid();
-  playContentTransition(main);
-}
-function renderRecipesListGrid(){
-  renderRecipeCards(document.getElementById('recipesListGrid'), document.getElementById('recipesListSearchInput')?.value);
-}
-
-// r.date is always "YYYY-MM-DD" (a <input type="date"> value), so the year
-// is always its first 4 characters — the code format only keeps the last 2.
-function yearPrefix(dateStr){
-  return dateStr && dateStr.length >= 4 ? dateStr.slice(2, 4) : 'YY';
-}
 
 // ISO 3166-1 alpha-2 codes, keyed by lowercased common/short country name.
 // "eu" is included because ISO 3166-1 exceptionally reserves "EU" for the
@@ -2049,7 +1472,7 @@ document.getElementById('worldCountriesDatalist').innerHTML =
 // often carry a parenthetical explainer, e.g. "USA (United States of
 // America)" or "UK (United Kingdom of Great Britain and Northern Ireland)" —
 // stripping that before lookup lets the short label alone resolve correctly.
-function countryToIso2(name){
+export function countryToIso2(name){
   if(!name) return '';
   const stripped = name.replace(/\([^)]*\)/g, '').trim().toLowerCase();
   if(COUNTRY_ISO2[stripped]) return COUNTRY_ISO2[stripped];
@@ -2078,66 +1501,6 @@ export function countryFlagBadgeHtml(name){
   return `<span class="reflist-flag-badge" title="${escapeHtml(iso)}"><img class="reflist-flag-img" data-fallback="${escapeHtml(iso)}" alt="${escapeHtml(iso)}" src="https://cdn.jsdelivr.net/gh/HatScripts/circle-flags/flags/${iso.toLowerCase()}.svg"></span>`;
 }
 
-// The recipe's own Destination Country field was removed in favor of linking
-// a Project (see findProjectForRecipe) — that link is now the single source
-// of truth for where a recipe is headed.
-function recipeDestinationIso2(r){
-  const link = findProjectForRecipe(r.id);
-  return link ? countryToIso2(link.project.destinationCountry) : '';
-}
-
-// Looked up fresh from Reference Lists > Product Types each time (rather
-// than duplicated onto the recipe) so a renamed type's code — always
-// recalculated from its new name, see productTypeCode — stays correct
-// everywhere it's referenced instead of going stale.
-function recipeProductTypeCode(r){
-  const item = metaLists.productTypes.find(x => metaItemName(x) === (r.productType || ''));
-  return item ? (item.code || productTypeCode(metaItemName(item))) : '';
-}
-
-// Auto-assigned recipe sequence number (see codeRecipeSeqDisplay, not
-// manually editable) — one past the highest number already used by this
-// product type. Deliberately max-based rather than count-based: a raw
-// count of same-type recipes collides with an in-use number as soon as one
-// same-type recipe is deleted (e.g. type has 01/02/03, delete 02 → a
-// count-based calc for the next new one gives 03 again, colliding with the
-// existing 03; max-based correctly gives 04).
-function suggestNextRecipeSeq(productTypeName, excludeId){
-  const maxSeq = recipes
-    .filter(x => x.id !== excludeId && (x.productType || '') === productTypeName)
-    .reduce((max, x) => Math.max(max, parseInt(x.recipeSeq, 10) || 0), 0);
-  return String(maxSeq + 1).padStart(2, '0');
-}
-
-export function fullCode(r){
-  const yy = yearPrefix(r.date);
-  const typeCode = recipeProductTypeCode(r);
-  const seq = (r.recipeSeq || '').trim();
-  const trial = (r.code || '').trim();
-  if(yy === 'YY' && !typeCode && !seq && !trial) return '';
-  const iso = recipeDestinationIso2(r);
-  return (iso || '') + yy + '-' + (typeCode || 'XXX') + (seq || 'XX') + '-T' + (trial || 'XX');
-}
-
-/* Product name with the last 2 characters of the recipe code suffix appended,
-   e.g. "Vegan Tartar Sauce - 19" — used anywhere recipes are picked/labeled
-   so near-duplicate names stay distinguishable at a glance. */
-export function recipeDisplayLabel(r){
-  const name = r.name || 'Untitled recipe';
-  const suffix = (r.code || '').trim();
-  return suffix ? `${name} - ${suffix}` : name;
-}
-
-/* Shared by the Compare Recipes info card and the print info card — renders
-   the Description/Concept points (an array) as a small bullet list. */
-export function descriptionListHtml(r){
-  const points = (r.description || []).filter(p => (p||'').trim() !== '');
-  if(points.length === 0) return '<div class="ci-row"><b>Description:</b> -</div>';
-  return `
-    <div class="ci-row"><b>Description:</b></div>
-    <ol class="ci-desc-list">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>
-  `;
-}
 
 export function formatActivityDateTime(ts){
   if(!ts) return null;
@@ -2237,30 +1600,6 @@ function initActivityChangesModal(){
   });
 }
 
-function refreshCodeCountryBadge(r){
-  const row = document.getElementById('codeYearDisplay')?.closest('.code-row');
-  const badge = document.getElementById('codeCountryDisplay');
-  if(!row || !badge) return;
-  const iso = recipeDestinationIso2(r);
-  row.classList.toggle('has-country-badge', !!iso);
-  badge.style.display = iso ? '' : 'none';
-  badge.textContent = iso;
-}
-
-function updateRecipeTitleDisplay(r){
-  const el = document.getElementById('recipeTitleDisplay');
-  if(!el) return;
-  const code = fullCode(r);
-  el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}`;
-
-  const activityEl = document.getElementById('recipeActivityDisplay');
-  if(activityEl){
-    const parts = [];
-    if(r.createdBy) parts.push(`Created by ${r.createdBy}${r.createdAt ? ' · ' + formatActivityDateTime(r.createdAt) : ''}`);
-    if(r.updatedBy) parts.push(`Last edited by ${r.updatedBy}${r.updatedAt ? ' · ' + formatActivityDateTime(r.updatedAt) : ''}`);
-    activityEl.textContent = parts.join('   |   ');
-  }
-}
 
 export function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -3163,8 +2502,7 @@ function openMaterialFromDashboard(materialId){
   renderMaterialTable();
 }
 export function openRecipeFromDashboard(recipeId){
-  if(recipeId !== currentId) unlockedRecipeId = null;
-  currentId = recipeId;
+  openRecipe(recipeId);
   mainFeatureView = null;
   renderMain();
   renderSidebar();
@@ -3584,8 +2922,8 @@ function renderLockState(r){
         'Confirm Identity to Edit',
         `Enter your password to unlock editing for the recipe "${r.name || 'Untitled recipe'}"`,
         () => {
-          unlockedRecipeId = r.id;
-          recipeEditSnapshotBefore = snapshotMainFields(r, RECIPE_DIFF_FIELDS);
+          setUnlockedRecipeId(r.id);
+          setRecipeEditSnapshotBefore(snapshotMainFields(r, RECIPE_DIFF_FIELDS));
           renderMain();
         }
       );
@@ -3602,7 +2940,7 @@ function renderLockState(r){
    of that Part. A top-level Part's % is therefore "% of recipe"; a nested
    Sub-part's % is "% of Part" (its immediate parent), exactly like an
    ingredient's % already is. */
-function recomputeFromWeights(r){
+export function recomputeFromWeights(r){
   // recomputePartPercents(part) assigns .percent to `part`'s own CHILDREN,
   // not to `part` itself — for a nested Sub-part that assignment happens
   // one level up, in its parent's own call. Top-level Parts have no such
@@ -5264,7 +4602,7 @@ function renderDescPhotos(r){
 // Shared by the print view and the Version Preview modal — a process list
 // (title + optional components table + numbered steps) rendered read-only,
 // fed from either the live recipe or a frozen version snapshot.
-function readOnlyProcessesHtml(processes){
+export function readOnlyProcessesHtml(processes){
   const list = (processes || []).filter(p =>
     (p.title||'').trim() !== '' ||
     (p.steps||[]).some(s => (s||'').trim() !== '') ||
@@ -5353,7 +4691,7 @@ function finalizeReadOnlyFlowchartEdges(containerEl, flowchart){
   svg.innerHTML = html;
 }
 
-function renderReadOnlyProcessFlowchart(containerEl, flowchart, processes){
+export function renderReadOnlyProcessFlowchart(containerEl, flowchart, processes){
   containerEl.innerHTML = readOnlyProcessFlowchartHtml(flowchart, processes);
   if(((flowchart && flowchart.nodes) || []).length > 0){
     finalizeReadOnlyFlowchartEdges(containerEl, flowchart);
@@ -5384,7 +4722,7 @@ function withTemporaryVisibility(el, fn){
 // while still visually reading as a tree the way the on-screen elbow-line
 // artwork does. Recursive so nested Sub-parts show up too, not just each
 // top-level Part's direct ingredients.
-function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
+export function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
   const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
   if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
   // The whole Node column is omitted entirely (not just left blank) unless
@@ -5552,8 +4890,8 @@ function duplicateCurrent(){
     oldLink.project.products.push(blankProduct(copy.id));
     scheduleProjectSave(oldLink.project);
   }
-  currentId = copy.id;
-  unlockedRecipeId = copy.id;
+  openRecipe(copy.id);
+  setUnlockedRecipeId(copy.id);
   saveRecipeToCloud(copy);
   logActivityEvent('created', 'recipe', copy.name || 'Untitled recipe');
   renderSidebar();
@@ -5567,9 +4905,8 @@ function deleteCurrent(){
   const r = getCurrent();
   if(!r) return;
   const deletedId = r.id;
-  recipes = recipes.filter(x => x.id !== deletedId);
-  currentId = null;
-  unlockedRecipeId = null;
+  removeRecipe(deletedId);
+  closeRecipe();
   renderSidebar();
   renderMain();
 }
@@ -5686,8 +5023,7 @@ function importFromFile(file){
       });
 
       if(importedRecipes.length){
-        currentId = recipes[recipes.length-1].id;
-        unlockedRecipeId = null;
+        openRecipe(recipes[recipes.length-1].id);
         mainFeatureView = null;
       }
       batch.commit();
@@ -5714,8 +5050,7 @@ document.getElementById('importFile').addEventListener('change', e => {
 });
 document.getElementById('btnLogoutFromApp').addEventListener('click', goToAuth);
 function goHome(){
-  currentId = null;
-  unlockedRecipeId = null;
+  closeRecipe();
   mainFeatureView = null;
   renderMain();
   renderSidebar();
@@ -5923,7 +5258,7 @@ onAuthStateChanged(auth, user => {
     myApprovalStatus = null;
     myModulePermissions = null;
     if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
-    if(unsubscribeRecipes){ unsubscribeRecipes(); unsubscribeRecipes = null; }
+    resetRecipesState();
     resetMaterialsState();
     resetRefListsState();
     resetProjectsState();
@@ -5934,11 +5269,7 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeMyProfile){ unsubscribeMyProfile(); unsubscribeMyProfile = null; }
     myProfile = { displayName: '', photoImage: '' };
     activityEvents = [];
-    recipesLoaded = false;
-    recipes = [];
     loginEvents = [];
-    currentId = null;
-    unlockedRecipeId = null;
     appView = 'auth';
   }
   renderApp();
