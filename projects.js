@@ -510,7 +510,7 @@ export function mountProjectsView(){
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
       <div id="newProjectPanel"></div>
       <div id="projectsDashboard"></div>
-      <div style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
+      <div id="projectsToolbar" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
         <div class="search-box" style="margin:0;flex:1;min-width:200px;position:relative;">
           <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
           <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
@@ -1482,7 +1482,7 @@ export function renderProjectsList(){
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
                 ? ''
-                : `<button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
+                : `<button class="btn btn-sm" data-role="print-project" title="Print this project">${icon('printer')}</button><button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
             </td>
           </tr>
         `;
@@ -1539,7 +1539,6 @@ export function renderProjectsList(){
         const readOnlyRequirementsHtml = `
           <div class="material-detail-notes-label">Requirements</div>
           <dl class="material-detail-list" style="margin-top:4px;">${detailRowsHtml([
-            ['Flavor or Filling', req.flavorFilling],
             ['Cooking Condition', req.cookingCondition],
             ['Certificate', req.certificate]
           ])}</dl>
@@ -1555,9 +1554,8 @@ export function renderProjectsList(){
             </div>
             <div class="project-detail-info">
               <div class="project-detail-title">${escapeHtml(p.name || 'Untitled project')}</div>
-              <dl class="material-detail-list">${readOnlyDetailRowsBefore}</dl>
+              <dl class="material-detail-list">${readOnlyDetailRowsBefore}${readOnlyDetailRowsAfter}</dl>
               ${readOnlyRequirementsHtml}
-              <dl class="material-detail-list" style="margin-top:10px;">${readOnlyDetailRowsAfter}</dl>
               <div class="material-detail-notes-label">Flavor / Filling</div>
               ${readOnlyFlavorsHtml}
               ${allAttachments.length ? `
@@ -1632,37 +1630,6 @@ export function renderProjectsList(){
                   <label>Factory</label>
                   <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                 </div>
-                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <label>Requirements</label>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Flavor or Filling</label>
-                    <input type="text" class="proj-req-flavor-filling" ${ro} value="${escapeHtml(req.flavorFilling)}" placeholder="e.g. Original">
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Composition</label>
-                    <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Recipe</label>
-                    <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Packaging condition</label>
-                    <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Cooking Condition</label>
-                    <input type="text" class="proj-req-cooking-condition" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
-                  </div>
-                  <div class="field" style="margin-bottom:8px;">
-                    <label>Certificate</label>
-                    <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
-                  </div>
-                  <div class="field" style="margin-bottom:0;">
-                    <label>Note</label>
-                    <textarea class="proj-req-note" ${ro} placeholder="Anything else not covered above">${escapeHtml(req.note)}</textarea>
-                  </div>
-                </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Portion Weight</label>
                   <div class="combo-row">
@@ -1695,6 +1662,33 @@ export function renderProjectsList(){
                   <div class="combo-row">
                     <input type="number" class="proj-moq-qty" ${ro} value="${escapeHtml(p.moqQty || '')}" placeholder="e.g. 500" step="any" min="0">
                     <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || 'pcs')}" placeholder="unit">
+                  </div>
+                </div>
+                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
+                  <label>Requirements</label>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Composition</label>
+                    <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Recipe</label>
+                    <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Packaging condition</label>
+                    <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Cooking Condition</label>
+                    <input type="text" class="proj-req-cooking-condition" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Certificate</label>
+                    <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Note</label>
+                    <textarea class="proj-req-note" ${ro} placeholder="Anything else not covered above">${escapeHtml(req.note)}</textarea>
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
@@ -1951,6 +1945,30 @@ export function renderProjectsList(){
       renderProjectsList();
     });
 
+    // Prints the whole expanded project detail (fields, Requirements,
+    // Flavor/Filling table, Products, Activities Updates) as a one-off
+    // read-only page -- expands the row first if it wasn't already, then
+    // scopes @media print (see style.css) to just this project's tbody via
+    // the .printing-project marker, cleaning both up once printing ends.
+    block.querySelector('[data-role="print-project"]')?.addEventListener('click', () => {
+      projectExpandedIds.add(id);
+      renderProjectsList();
+      requestAnimationFrame(() => {
+        const printTarget = document.querySelector(`#projectsList tbody[data-project-id="${id}"]`);
+        if(!printTarget) return;
+        printTarget.classList.add('printing-project');
+        const originalTitle = document.title;
+        document.title = `Project ${p.name || 'Untitled project'} Forge`.replace(/[\\/:*?"<>|]/g, '-');
+        const cleanup = () => {
+          printTarget.classList.remove('printing-project');
+          document.title = originalTitle;
+          window.removeEventListener('afterprint', cleanup);
+        };
+        window.addEventListener('afterprint', cleanup);
+        window.print();
+      });
+    });
+
     if(isEditing){
       editingProjectImage = p.image || '';
       const projImageInput = block.querySelector('.proj-image-input');
@@ -2011,7 +2029,10 @@ export function renderProjectsList(){
         p.moqQty = block.querySelector('.proj-moq-qty').value.trim();
         p.moqUnit = block.querySelector('.proj-moq-unit').value.trim();
         p.requirements = {
-          flavorFilling: block.querySelector('.proj-req-flavor-filling').value.trim(),
+          // No longer an editable field (the "Flavor / Filling" table below
+          // already covers this) -- preserved as-is rather than dropped, in
+          // case older data still has it set.
+          flavorFilling: getRequirements(p).flavorFilling,
           composition: block.querySelector('.proj-req-composition').value.trim(),
           recipe: block.querySelector('.proj-req-recipe').value.trim(),
           packagingCondition: block.querySelector('.proj-req-packaging').value.trim(),

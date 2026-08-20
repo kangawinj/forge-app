@@ -3121,6 +3121,17 @@
        just lay out at full size instead of being clipped. */
     #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
 
+    /* Printing a single Project (see the per-row printer button in
+       projects.js) -- hide the rest of the Projects page chrome, then
+       hide every project's table row except the one marked
+       .printing-project, and within that one hide its own compact
+       summary row so only the expanded read-only detail prints. */
+    #btnAddProject, #newProjectPanel, #projectsDashboard, #projectsToolbar{display:none !important;}
+    #projectsList .proj-overview-table thead{display:none !important;}
+    #projectsList tbody[data-project-id]{display:none !important;}
+    #projectsList tbody[data-project-id].printing-project{display:table-row-group !important;}
+    #projectsList tbody[data-project-id].printing-project .proj-row{display:none !important;}
+
     /* The recipe title always prints as "Name  CODE" on one line. At the
        on-screen 54px/25px sizing this doesn't reliably fit within a
        printed page's content width (~740px after margins) once the name
