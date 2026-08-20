@@ -1510,7 +1510,7 @@ export function renderProjectsList(){
             <td data-col="factorySalesRep">${missingCell(p.factorySalesRep)}</td>
             <td data-col="responsiblePerson">${missingCell(p.responsiblePerson)}</td>
             <td data-col="factoryName">${missingCell(p.factoryName)}</td>
-            <td data-col="requirements">${Object.values(req).some(v => (v||'').trim()) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td data-col="requirements">${Object.entries(req).some(([k, v]) => k === 'cookingCondition' ? (v.method || v.steps.length) : (v || '').trim()) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
