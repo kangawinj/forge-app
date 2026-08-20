@@ -3368,21 +3368,41 @@
 
     /* The Requirements box (Projects) and its Trials-summary equivalent
        both list several fields back to back with no page-break control,
-       so a field heading can land alone at the bottom of a page with its
-       own content pushed to the next one, or a photo/table/list can be
-       cut mid-way. Keep each heading glued to what follows it, and keep
-       each field's own content block from splitting internally -- same
-       break-inside:avoid treatment .card already gets above, just at the
-       level of each field instead of the whole box (the box itself is
-       often taller than one page, so avoiding a break on it as a whole
-       isn't an option). */
-    .requirements-box-title, .trial-project-summary-reqs-title,
-    .material-detail-notes-label{
-      break-after:avoid;
-    }
+       so a photo/table/list/paragraph could get cut mid-way when the box
+       spans a page boundary. break-inside:avoid on each field's own
+       content block stops that -- same treatment .card already gets
+       above, just at the level of each field instead of the whole box
+       (the box itself is often taller than one page, so avoiding a break
+       on it as a whole isn't an option).
+       Deliberately NOT pairing this with break-after:avoid on the field
+       labels: with every label in the box asking not to be the last
+       thing on a page, Chromium's fragmentation fallback (this being
+       inside a taller-than-one-page .card, so *something* has to break)
+       gave up on a break point anywhere inside the box at all and
+       pushed the entire card to the next page, leaving the previous
+       page almost entirely blank -- worse than the mid-content cuts
+       this was meant to fix. */
     .proj-ref-images-grid, .flavor-table-scroll, .cooking-steps-list,
     .material-detail-notes{
       break-inside:avoid;
+    }
+
+    /* Printing a Project (see .printing-project above) puts its whole
+       read-only detail view inside one <tr class="proj-detail-row"> --
+       browsers default to treating a table row as a single unit that
+       shouldn't be split across pages, so a row this tall gets pushed
+       whole onto the next page instead, leaving the previous page (which
+       had almost nothing else on it, since the rest of the table is
+       hidden while printing one project) essentially blank. It's a plain
+       content wrapper here, not a real tabular row that needs to stay
+       intact, so let it break like any other block. break-inside:auto
+       alone isn't reliably honored on display:table-row/table-cell boxes
+       across engines, so drop the table display too -- nothing here
+       depends on real column alignment with the (hidden, while printing
+       one project) rest of the table. */
+    .proj-detail-row, .proj-detail-row > td{
+      display:block !important;
+      break-inside:auto;
     }
   }
 
