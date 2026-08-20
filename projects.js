@@ -337,7 +337,7 @@ function blankRequirements(){
 // with this exact caption pre-filled, since that's what these photos
 // almost always are; still a plain text input afterward, so it can be
 // retyped to whatever the photo actually shows.
-const PROJ_REF_IMAGE_DEFAULT_CAPTION = 'รูปไอเดีย หรือ อ้างอิง';
+const PROJ_REF_IMAGE_DEFAULT_CAPTION = 'Idea / Ref. Photo';
 const PROJ_REF_IMAGE_MAX = 3;
 const PROJ_REF_IMAGE_MAX_DIM = 640;
 async function fileToProjRefImage(file){
