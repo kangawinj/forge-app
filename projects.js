@@ -328,7 +328,38 @@ const REQUIREMENTS_FIELD_DEFS = [
 ];
 
 function blankRequirements(){
-  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'' };
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [] };
+}
+
+// Each entry is { id, dataUrl, caption } -- the "Idea / Reference Images"
+// gallery at the top of the Requirements box (up to 3, see
+// PROJ_REF_IMAGE_MAX / fileToProjRefImage below). A brand new image starts
+// with this exact caption pre-filled, since that's what these photos
+// almost always are; still a plain text input afterward, so it can be
+// retyped to whatever the photo actually shows.
+const PROJ_REF_IMAGE_DEFAULT_CAPTION = 'รูปไอเดีย หรือ อ้างอิง';
+const PROJ_REF_IMAGE_MAX = 3;
+const PROJ_REF_IMAGE_MAX_DIM = 640;
+async function fileToProjRefImage(file){
+  const dataUrl = await resizeImageFile(file, PROJ_REF_IMAGE_MAX_DIM);
+  return { id: uid(), dataUrl, caption: PROJ_REF_IMAGE_DEFAULT_CAPTION };
+}
+// Shared by the read-only card and the editable draft -- `isEditing`
+// controls whether each photo gets a remove (x) button and its caption
+// renders as a text input instead of plain text.
+function projRefImagesHtml(images, isEditing){
+  if(!images || !images.length) return '';
+  return `<div class="proj-ref-images-grid">${images.map(img => `
+    <div class="proj-ref-image-item">
+      <div class="proj-ref-image-thumb-wrap">
+        <img src="${escapeHtml(img.dataUrl)}" class="proj-ref-image-thumb" alt="${escapeHtml(img.caption || 'Reference image')}">
+        ${isEditing ? `<button type="button" class="proj-ref-image-remove" data-role="remove-ref-image" data-ref-image-id="${escapeHtml(img.id)}" title="Remove">${icon('x', 12)}</button>` : ''}
+      </div>
+      ${isEditing
+        ? `<input type="text" class="proj-ref-image-caption-input" data-ref-image-id="${escapeHtml(img.id)}" value="${escapeHtml(img.caption || '')}" placeholder="Caption">`
+        : (img.caption ? `<div class="proj-ref-image-caption">${escapeHtml(img.caption)}</div>` : '')}
+    </div>
+  `).join('')}</div>`;
 }
 
 function blankCookingCondition(){
@@ -389,6 +420,7 @@ function getRequirements(p){
   const req = p.requirements;
   const result = (req && typeof req === 'object') ? { ...blankRequirements(), ...req } : parseLegacyRequirements(req);
   result.cookingCondition = getCookingCondition(result.cookingCondition);
+  result.referenceImages = Array.isArray(result.referenceImages) ? result.referenceImages : [];
   return result;
 }
 
@@ -601,6 +633,9 @@ let projectEditingId = null;
 // Flavor/Filling rows use.
 let cookingStepsEditing = [];
 let cookingMethodEditing = '';
+// Same deferred-edit reasoning, for the Requirements box's Idea / Reference
+// Images gallery.
+let referenceImagesEditing = [];
 let monthlyUpdateEditingId = null;
 let monthlyUpdateAddOpen = false;
 // Staged attachments for whichever Activities Updates inline form (add or
@@ -1510,7 +1545,11 @@ export function renderProjectsList(){
             <td data-col="factorySalesRep">${missingCell(p.factorySalesRep)}</td>
             <td data-col="responsiblePerson">${missingCell(p.responsiblePerson)}</td>
             <td data-col="factoryName">${missingCell(p.factoryName)}</td>
-            <td data-col="requirements">${Object.entries(req).some(([k, v]) => k === 'cookingCondition' ? (v.method || v.steps.length) : (v || '').trim()) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td data-col="requirements">${Object.entries(req).some(([k, v]) => {
+              if(k === 'cookingCondition') return v.method || v.steps.length;
+              if(k === 'referenceImages') return v.length > 0;
+              return (v || '').trim();
+            }) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
@@ -1572,6 +1611,7 @@ export function renderProjectsList(){
         const readOnlyRequirementsHtml = `
           <div class="requirements-box">
             <div class="requirements-box-title">Requirements</div>
+            ${projRefImagesHtml(req.referenceImages, false)}
             <div class="material-detail-notes-label">Flavor / Filling</div>
             ${readOnlyFlavorsHtml}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
@@ -1705,6 +1745,11 @@ export function renderProjectsList(){
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
                   <div class="requirements-box">
                     <div class="requirements-box-title">Requirements</div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Idea / Reference Images (optional, up to ${PROJ_REF_IMAGE_MAX})</label>
+                      ${projRefImagesHtml(referenceImagesEditing, true)}
+                      ${isEditing && referenceImagesEditing.length < PROJ_REF_IMAGE_MAX ? `<input type="file" class="proj-ref-image-input" accept="image/*">` : ''}
+                    </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Flavor / Filling</label>
                       <div class="flavor-table-scroll">
@@ -2074,6 +2119,31 @@ export function renderProjectsList(){
         inp.addEventListener('change', () => { cookingStepsEditing[idx] = inp.value.trim(); });
       });
 
+      block.querySelector('.proj-ref-image-input')?.addEventListener('change', async e => {
+        const file = e.target.files[0];
+        e.target.value = '';
+        if(!file || referenceImagesEditing.length >= PROJ_REF_IMAGE_MAX) return;
+        try{
+          referenceImagesEditing.push(await fileToProjRefImage(file));
+          renderProjectsList();
+        }catch(err){
+          alert(err.message || 'Could not read that image file');
+        }
+      });
+      block.querySelectorAll('[data-role="remove-ref-image"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = referenceImagesEditing.findIndex(img => img.id === btn.dataset.refImageId);
+          if(idx !== -1) referenceImagesEditing.splice(idx, 1);
+          renderProjectsList();
+        });
+      });
+      block.querySelectorAll('.proj-ref-image-caption-input').forEach(inp => {
+        inp.addEventListener('change', () => {
+          const img = referenceImagesEditing.find(x => x.id === inp.dataset.refImageId);
+          if(img) img.caption = inp.value.trim();
+        });
+      });
+
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
         p.name = block.querySelector('.proj-name').value.trim();
         p.image = editingProjectImage;
@@ -2111,7 +2181,8 @@ export function renderProjectsList(){
             steps: [...block.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
           },
           certificate: block.querySelector('.proj-req-certificate').value.trim(),
-          note: block.querySelector('.proj-req-note').value.trim()
+          note: block.querySelector('.proj-req-note').value.trim(),
+          referenceImages: referenceImagesEditing
         };
         // Also picks up a Monthly Update draft — otherwise clicking Save
         // (top-right, for the header fields) while text sits in the
@@ -2124,6 +2195,7 @@ export function renderProjectsList(){
         monthlyUpdateAddOpen = false;
         cookingMethodEditing = '';
         cookingStepsEditing = [];
+        referenceImagesEditing = [];
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
@@ -2147,6 +2219,7 @@ export function renderProjectsList(){
         projectEditSnapshotBefore = null;
         cookingMethodEditing = '';
         cookingStepsEditing = [];
+        referenceImagesEditing = [];
         projectExpandedIds.add(p.id);
         renderProjectsList();
       });
@@ -2273,6 +2346,7 @@ export function renderProjectsList(){
         const cc = getRequirements(p).cookingCondition;
         cookingMethodEditing = cc.method;
         cookingStepsEditing = [...cc.steps];
+        referenceImagesEditing = getRequirements(p).referenceImages.map(img => ({...img}));
         renderProjectsList();
       });
     }
