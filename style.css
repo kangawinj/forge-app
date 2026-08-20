@@ -568,7 +568,10 @@
     cursor:default;
   }
   input[readonly]:focus{box-shadow:none;border-color:var(--border);}
-  textarea{resize:vertical;min-height:60px;}
+  /* Height is managed by the auto-grow script in app.js instead (grows to
+     fit content, no scrollbar) -- resize:none and overflow:hidden so the
+     drag handle and scrollbar this used to have don't fight with that. */
+  textarea{resize:none;min-height:60px;overflow:hidden;}
   .grid-2{
     display:grid;
     grid-template-columns:minmax(0,2fr) minmax(0,1fr);

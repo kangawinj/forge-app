@@ -328,7 +328,7 @@ const REQUIREMENTS_FIELD_DEFS = [
 ];
 
 function blankRequirements(){
-  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [] };
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [], recipeAttachments: [] };
 }
 
 // Each entry is { id, dataUrl, caption } -- the "Idea / Reference Images"
@@ -421,6 +421,7 @@ function getRequirements(p){
   const result = (req && typeof req === 'object') ? { ...blankRequirements(), ...req } : parseLegacyRequirements(req);
   result.cookingCondition = getCookingCondition(result.cookingCondition);
   result.referenceImages = Array.isArray(result.referenceImages) ? result.referenceImages : [];
+  result.recipeAttachments = Array.isArray(result.recipeAttachments) ? result.recipeAttachments : [];
   return result;
 }
 
@@ -636,6 +637,10 @@ let cookingMethodEditing = '';
 // Same deferred-edit reasoning, for the Requirements box's Idea / Reference
 // Images gallery.
 let referenceImagesEditing = [];
+// ...and for the Recipe field's file/photo attachments (see
+// fileToMuAttachment / wireMuAttachmentEditor -- same shared attachment
+// system Activities Updates already uses, just a different staged array).
+let recipeAttachmentsEditing = [];
 let monthlyUpdateEditingId = null;
 let monthlyUpdateAddOpen = false;
 // Staged attachments for whichever Activities Updates inline form (add or
@@ -1547,7 +1552,7 @@ export function renderProjectsList(){
             <td data-col="factoryName">${missingCell(p.factoryName)}</td>
             <td data-col="requirements">${Object.entries(req).some(([k, v]) => {
               if(k === 'cookingCondition') return v.method || v.steps.length;
-              if(k === 'referenceImages') return v.length > 0;
+              if(k === 'referenceImages' || k === 'recipeAttachments') return v.length > 0;
               return (v || '').trim();
             }) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
@@ -1615,7 +1620,11 @@ export function renderProjectsList(){
             <div class="material-detail-notes-label">Flavor / Filling</div>
             ${readOnlyFlavorsHtml}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
-            ${req.recipe ? `<div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
+            ${(req.recipe || req.recipeAttachments.length) ? `
+              <div class="material-detail-notes-label">Recipe</div>
+              ${req.recipe ? `<div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
+              ${req.recipeAttachments.length ? `<div class="mu-entry-extras" style="margin-top:6px;">${muAttachmentChipsHtml(req.recipeAttachments, false)}</div>` : ''}
+            ` : ''}
             ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
               <div class="material-detail-notes-label">Cooking Condition${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
               ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
@@ -1778,6 +1787,12 @@ export function renderProjectsList(){
                     <div class="field" style="margin-bottom:8px;">
                       <label>Recipe</label>
                       <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
+                      ${isEditing ? `
+                      <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
+                        <div class="mu-attachments-chiplist"></div>
+                        <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                      </div>
+                      ` : ''}
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
                       <label>Cooking Condition</label>
@@ -2182,7 +2197,8 @@ export function renderProjectsList(){
           },
           certificate: block.querySelector('.proj-req-certificate').value.trim(),
           note: block.querySelector('.proj-req-note').value.trim(),
-          referenceImages: referenceImagesEditing
+          referenceImages: referenceImagesEditing,
+          recipeAttachments: recipeAttachmentsEditing
         };
         // Also picks up a Monthly Update draft — otherwise clicking Save
         // (top-right, for the header fields) while text sits in the
@@ -2196,6 +2212,7 @@ export function renderProjectsList(){
         cookingMethodEditing = '';
         cookingStepsEditing = [];
         referenceImagesEditing = [];
+        recipeAttachmentsEditing = [];
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
@@ -2220,6 +2237,7 @@ export function renderProjectsList(){
         cookingMethodEditing = '';
         cookingStepsEditing = [];
         referenceImagesEditing = [];
+        recipeAttachmentsEditing = [];
         projectExpandedIds.add(p.id);
         renderProjectsList();
       });
@@ -2236,10 +2254,15 @@ export function renderProjectsList(){
       });
       // Whichever of the Add-Update panel or an Edit-entry popup is
       // currently open (only one at a time), wire up its Plan/Action
-      // Taken/Next Action translate buttons and its attachment editor.
+      // Taken/Next Action translate buttons and its attachment editor. The
+      // Recipe field's own attachment editor (below) is always present
+      // while editing, independent of that -- excluded here so this
+      // selector can't grab the wrong one when both are on screen at once.
       block.querySelectorAll('.mu-field-with-translate').forEach(wireMuTranslateButton);
-      const muAttachEditorEl = block.querySelector('.mu-attachments-editor');
+      const muAttachEditorEl = block.querySelector('.mu-attachments-editor:not(.proj-recipe-attachments)');
       if(muAttachEditorEl) wireMuAttachmentEditor(muAttachEditorEl, () => monthlyUpdateDraftAttachments);
+      const recipeAttachEditorEl = block.querySelector('.proj-recipe-attachments');
+      if(recipeAttachEditorEl) wireMuAttachmentEditor(recipeAttachEditorEl, () => recipeAttachmentsEditing);
       wireWhereLocationPicker(
         block.querySelector('.proj-mu-where, .proj-mu-edit-where'),
         block.querySelector('.proj-mu-where-location, .proj-mu-edit-where-location')
@@ -2347,6 +2370,7 @@ export function renderProjectsList(){
         cookingMethodEditing = cc.method;
         cookingStepsEditing = [...cc.steps];
         referenceImagesEditing = getRequirements(p).referenceImages.map(img => ({...img}));
+        recipeAttachmentsEditing = getRequirements(p).recipeAttachments.map(a => ({...a}));
         renderProjectsList();
       });
     }

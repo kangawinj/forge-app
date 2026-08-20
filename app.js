@@ -2879,6 +2879,44 @@ document.addEventListener('click', () => {
 
 window.addEventListener('resize', () => { activeProjScrollbarProxySync?.(); });
 
+// Every textarea in the app grows to fit its content instead of scrolling
+// (see the resize:none/overflow:hidden pair in style.css) -- two hooks
+// cover the two ways a textarea ends up with text in it: typing (the
+// delegated 'input' listener) and a re-render dropping one in already
+// filled with a saved value (the MutationObserver below).
+function autoGrowTextarea(el){
+  el.style.height = 'auto';
+  el.style.height = (el.scrollHeight + 2) + 'px';
+}
+document.addEventListener('input', e => {
+  if(e.target.tagName === 'TEXTAREA') autoGrowTextarea(e.target);
+});
+new MutationObserver(mutations => {
+  for(const m of mutations){
+    for(const node of m.addedNodes){
+      if(node.nodeType !== 1) continue;
+      if(node.tagName === 'TEXTAREA') autoGrowTextarea(node);
+      else node.querySelectorAll?.('textarea').forEach(autoGrowTextarea);
+    }
+  }
+}).observe(document.body, { childList: true, subtree: true });
+
+// Every "dropdown" in this app (Customer, Destination, Sales Rep, Cooking
+// Method, etc.) is really a plain text input backed by a <datalist> -- see
+// the many list="...Datalist" attributes across projects.js/reflists.js/
+// trials.js. The browser only reopens that suggestion popup reliably once
+// the field is empty or actively being typed into, so clicking a field
+// that already has a value picked doesn't bring the list back up; the
+// user would have to delete the existing text first just to see the
+// options again. showPicker() force-opens the same native popup without
+// touching the field's value, so a click always offers every option.
+document.addEventListener('click', e => {
+  const el = e.target;
+  if(el.tagName === 'INPUT' && el.hasAttribute('list') && !el.readOnly && !el.disabled && typeof el.showPicker === 'function'){
+    try{ el.showPicker(); }catch(err){}
+  }
+});
+
 // The handful of icon spots that live in the page's static HTML (outside
 // any JS-rendered template) rather than being generated fresh each render —
 // those can just call icon() directly in their template string, these can't,
