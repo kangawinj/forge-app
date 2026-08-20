@@ -1230,6 +1230,11 @@ export let currentId = null;
 // so closing the feature naturally resumes that recipe instead of bouncing
 // to home.
 export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
+// Lets a split module (e.g. projects.js's own nav-button wiring) change
+// mainFeatureView from outside app.js — a plain `mainFeatureView = ...`
+// assignment in an importing module isn't possible, since ES modules
+// can't reassign a sibling module's imported `let` binding.
+export function setMainFeatureView(v){ mainFeatureView = v; }
 let saveTimer = null;
 // One entry per recipe with a pending "haven't clicked Save in a while"
 // checkpoint — keyed by id (not a single global timer) so editing recipe A
@@ -1867,7 +1872,7 @@ function createNewRecipe(){
   renderMain();
 }
 
-function renderSidebar(){
+export function renderSidebar(){
   Object.entries(FEATURE_VIEW_BUTTON_IDS).forEach(([view, id]) => {
     document.getElementById(id)?.classList.toggle('active', mainFeatureView === view);
   });

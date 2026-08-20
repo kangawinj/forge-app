@@ -1,9 +1,9 @@
 import {
   escapeHtml, icon, resizeImageFile, requestAuthConfirm, playContentTransition,
   formatActivityDateTime, formatDateLong, formatTimeOnly, currentUser, uid,
-  mainFeatureView, recipesLoaded, currentId, renderMain, recipes, recipeDisplayLabel,
-  fullCode, logActivityEvent, diffMainFields, snapshotMainFields, renderBarList,
-  openRecipeFromDashboard, metaLists, metaItemName, projectsCol
+  mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
+  recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
+  renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc
@@ -2318,7 +2318,7 @@ function saveMuEditModal(){
 // keep small utility dialogs as popups).
 export function initProjectsModal(){
   document.getElementById('btnOpenProjects').addEventListener('click', () => guardNavigation(() => {
-    mainFeatureView = 'projects';
+    setMainFeatureView('projects');
     renderMain();
     renderSidebar();
   }));
