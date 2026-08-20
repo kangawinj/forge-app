@@ -4,7 +4,7 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError
+  showCloudError, trialStringListHtml
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc
@@ -328,7 +328,25 @@ const REQUIREMENTS_FIELD_DEFS = [
 ];
 
 function blankRequirements(){
-  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition:'', certificate:'', note:'' };
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'' };
+}
+
+function blankCookingCondition(){
+  return { method: '', steps: [] };
+}
+
+// Normalizes cookingCondition into {method, steps}, whatever shape it
+// currently is in -- already-structured (new projects, or ones already
+// saved once under this shape), or a legacy plain string (either
+// newline-joined, from parseLegacyRequirements' old free-text parsing, or
+// arrow-joined, from an earlier iteration of the Cooking Condition
+// autofill that stored one flat string). Never drops data: any string
+// input becomes `steps` with no `method`, since a bare method name was
+// never recoverable from either legacy format.
+function getCookingCondition(cc){
+  if(cc && typeof cc === 'object') return { method: cc.method || '', steps: Array.isArray(cc.steps) ? cc.steps : [] };
+  const text = (cc || '').trim();
+  return { method: '', steps: text ? text.split(/\n|→/).map(s => s.trim()).filter(Boolean) : [] };
 }
 
 // Parses the free-text `requirements` blob that older/unedited projects
@@ -369,8 +387,9 @@ function parseLegacyRequirements(text){
 // by migrateMonthlyUpdate above.
 function getRequirements(p){
   const req = p.requirements;
-  if(req && typeof req === 'object') return { ...blankRequirements(), ...req };
-  return parseLegacyRequirements(req);
+  const result = (req && typeof req === 'object') ? { ...blankRequirements(), ...req } : parseLegacyRequirements(req);
+  result.cookingCondition = getCookingCondition(result.cookingCondition);
+  return result;
 }
 
 function blankProject(){
@@ -575,6 +594,13 @@ export function mountProjectsView(){
 }
 
 let projectEditingId = null;
+// Staged, uncommitted edits for the currently-open Cooking Condition steps
+// list -- kept separate from p.requirements itself (same reasoning as
+// Reference Lists' refListEditingSteps) so Cancel discards them like every
+// other Requirements field does, instead of the live-save behavior
+// Flavor/Filling rows use.
+let cookingStepsEditing = [];
+let cookingMethodEditing = '';
 let monthlyUpdateEditingId = null;
 let monthlyUpdateAddOpen = false;
 // Staged attachments for whichever Activities Updates inline form (add or
@@ -1003,7 +1029,14 @@ function renderNewProjectPanel(){
       composition: document.getElementById('newProjReqComposition').value.trim(),
       recipe: document.getElementById('newProjReqRecipe').value.trim(),
       packagingCondition: document.getElementById('newProjReqPackaging').value.trim(),
-      cookingCondition: document.getElementById('newProjReqCookingCondition').value.trim(),
+      // Quick-create keeps a single plain field for speed -- the full
+      // method+steps editor (see the main edit form) is available once the
+      // project is opened, same "start simple, refine later" tradeoff the
+      // rest of this modal already makes.
+      cookingCondition: (() => {
+        const v = document.getElementById('newProjReqCookingCondition').value.trim();
+        return { method: '', steps: v ? [v] : [] };
+      })(),
       certificate: document.getElementById('newProjReqCertificate').value.trim(),
       note: document.getElementById('newProjReqNote').value.trim()
     };
@@ -1543,10 +1576,11 @@ export function renderProjectsList(){
             ${readOnlyFlavorsHtml}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
             ${req.recipe ? `<div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
-            <dl class="material-detail-list requirements-box-divider-below">${detailRowsHtml([
-              ['Cooking Condition', req.cookingCondition]
-            ])}</dl>
-            ${req.packagingCondition ? `<div class="material-detail-notes-label" style="margin-top:0;">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
+            ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
+              <div class="material-detail-notes-label">Cooking Condition${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
+              ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+            ` : ''}
+            ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
             ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
             <dl class="material-detail-list requirements-box-divider">${detailRowsHtml([
               ['Certificate', req.certificate]
@@ -1702,7 +1736,10 @@ export function renderProjectsList(){
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
                       <label>Cooking Condition</label>
-                      <input type="text" class="proj-req-cooking-condition" list="cookingMethodDatalist" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
+                      <input type="text" class="proj-req-cooking-method" list="cookingMethodDatalist" ${ro} value="${escapeHtml(isEditing ? cookingMethodEditing : req.cookingCondition.method)}" placeholder="e.g. Microwave">
+                      <div style="margin-top:8px;">
+                        ${trialStringListHtml(isEditing ? cookingStepsEditing : req.cookingCondition.steps, isEditing, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
+                      </div>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Packaging condition</label>
@@ -2011,14 +2048,30 @@ export function renderProjectsList(){
       });
 
       // Picking a Cooking Method that has Steps on file (see Reference
-      // Lists) pulls them in as a starting point -- still a plain text
-      // field afterward, so it can be trimmed/edited freely rather than
-      // staying locked to whatever the reference list says.
-      block.querySelector('.proj-req-cooking-condition').addEventListener('change', e => {
-        const match = metaLists.cookingMethods.find(m => metaItemName(m) === e.target.value.trim());
+      // Lists) pulls them in as a starting point -- still a plain editable
+      // step list afterward, not locked to whatever the reference list
+      // says (see the add/remove/edit wiring below).
+      block.querySelector('.proj-req-cooking-method').addEventListener('change', e => {
+        cookingMethodEditing = e.target.value.trim();
+        const match = metaLists.cookingMethods.find(m => metaItemName(m) === cookingMethodEditing);
         if(match && (match.steps || []).length){
-          e.target.value = match.steps.join(' → ');
+          cookingStepsEditing = [...match.steps];
         }
+        renderProjectsList();
+      });
+      block.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
+        cookingStepsEditing.push('');
+        renderProjectsList();
+      });
+      block.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.dataset.idx, 10);
+          cookingStepsEditing.splice(idx, 1);
+          renderProjectsList();
+        });
+      });
+      block.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
+        inp.addEventListener('change', () => { cookingStepsEditing[idx] = inp.value.trim(); });
       });
 
       block.querySelector('[data-role="save-project"]').addEventListener('click', () => {
@@ -2053,7 +2106,10 @@ export function renderProjectsList(){
           composition: block.querySelector('.proj-req-composition').value.trim(),
           recipe: block.querySelector('.proj-req-recipe').value.trim(),
           packagingCondition: block.querySelector('.proj-req-packaging').value.trim(),
-          cookingCondition: block.querySelector('.proj-req-cooking-condition').value.trim(),
+          cookingCondition: {
+            method: block.querySelector('.proj-req-cooking-method').value.trim(),
+            steps: [...block.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+          },
           certificate: block.querySelector('.proj-req-certificate').value.trim(),
           note: block.querySelector('.proj-req-note').value.trim()
         };
@@ -2066,6 +2122,8 @@ export function renderProjectsList(){
         projectEditingId = null;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
+        cookingMethodEditing = '';
+        cookingStepsEditing = [];
         projectExpandedIds.delete(p.id);
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
@@ -2087,6 +2145,8 @@ export function renderProjectsList(){
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
         projectEditSnapshotBefore = null;
+        cookingMethodEditing = '';
+        cookingStepsEditing = [];
         projectExpandedIds.add(p.id);
         renderProjectsList();
       });
@@ -2210,6 +2270,9 @@ export function renderProjectsList(){
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
         projectEditSnapshotBefore = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
+        const cc = getRequirements(p).cookingCondition;
+        cookingMethodEditing = cc.method;
+        cookingStepsEditing = [...cc.steps];
         renderProjectsList();
       });
     }

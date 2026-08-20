@@ -1597,6 +1597,18 @@
     padding-bottom:12px;
     border-bottom:1px solid var(--border);
   }
+  /* Read-only Cooking Condition -- split on the " -> " the Cooking Method
+     autofill joins its Steps with (see projects.js), so a filled-in method
+     reads as the same numbered list Reference Lists shows it as, instead
+     of one long arrow-joined line. Free-typed text with no arrows just
+     shows as a single-item list, which still reads fine. */
+  .cooking-steps-list{
+    font-size:13px;
+    margin:0;
+    padding-left:20px;
+  }
+  .cooking-steps-list li{margin-bottom:2px;}
+  .cooking-steps-list li:last-child{margin-bottom:0;}
   .material-detail-activity{
     margin-top:16px;
     padding-top:12px;
