@@ -10,7 +10,9 @@
       "_headers",
       "firestore.rules",
       "**/.*",
-      "**/node_modules/**"
+      "**/node_modules/**",
+      "Open Forge.cmd",
+      "forge-local-server.mjs"
     ],
     "headers": [
       {
