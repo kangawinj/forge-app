@@ -3365,6 +3365,25 @@
     #trialsList > .part-block:not(.printing-only){display:none !important;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
+
+    /* The Requirements box (Projects) and its Trials-summary equivalent
+       both list several fields back to back with no page-break control,
+       so a field heading can land alone at the bottom of a page with its
+       own content pushed to the next one, or a photo/table/list can be
+       cut mid-way. Keep each heading glued to what follows it, and keep
+       each field's own content block from splitting internally -- same
+       break-inside:avoid treatment .card already gets above, just at the
+       level of each field instead of the whole box (the box itself is
+       often taller than one page, so avoiding a break on it as a whole
+       isn't an option). */
+    .requirements-box-title, .trial-project-summary-reqs-title,
+    .material-detail-notes-label{
+      break-after:avoid;
+    }
+    .proj-ref-images-grid, .flavor-table-scroll, .cooking-steps-list,
+    .material-detail-notes{
+      break-inside:avoid;
+    }
   }
 
   @media (max-width:1024px){

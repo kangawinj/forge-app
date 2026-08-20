@@ -36,6 +36,7 @@ function blankTrial(){
     samplePreparedBy: '',
     testParticipants: [],
     testDate: '',
+    testLocation: '',
     cookingMethod: '',
     cookingMethodSteps: [],
     productData: {},
@@ -58,6 +59,7 @@ function migrateTrial(t){
     samplePreparedBy: t.samplePreparedBy || '',
     testParticipants: Array.isArray(t.testParticipants) ? t.testParticipants : [],
     testDate: t.testDate || '',
+    testLocation: t.testLocation || '',
     cookingMethod: t.cookingMethod || '',
     cookingMethodSteps: Array.isArray(t.cookingMethodSteps) ? t.cookingMethodSteps : [],
     productData: (t.productData && typeof t.productData === 'object') ? t.productData : {}
@@ -421,7 +423,7 @@ export function renderTrialsList(){
               <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
               <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
             </div>
-            ${(req.composition || req.recipe || req.cookingCondition.method || req.cookingCondition.steps.length || req.packagingCondition) ? `
+            ${(req.composition || req.recipe || req.cookingCondition.method || req.cookingCondition.steps.length || req.packagingCondition || req.certificate) ? `
             <div class="trial-project-summary-reqs">
               <div class="trial-project-summary-reqs-title">Requirements</div>
               ${req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : ''}
@@ -433,6 +435,7 @@ export function renderTrialsList(){
               </div>
               ` : ''}
               ${req.packagingCondition ? `<div><div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div></div>` : ''}
+              ${req.certificate ? `<div><div class="material-detail-notes-label">Certificate</div><div class="material-detail-notes">${escapeHtml(req.certificate)}</div></div>` : ''}
             </div>
             ` : ''}
           </div>
@@ -447,6 +450,10 @@ export function renderTrialsList(){
               <label>Test Date</label>
               <input type="date" class="trial-test-date" value="${escapeHtml(mt.testDate)}" ${isEditing ? '' : 'readonly'}>
             </div>
+          </div>
+          <div class="field" style="margin-bottom:0;margin-top:12px;">
+            <label>Test Location</label>
+            <input type="text" class="trial-test-location" list="customerDatalist" value="${escapeHtml(mt.testLocation)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
           </div>
           <div class="field" style="margin-bottom:0;margin-top:12px;">
             <label>Test Participants</label>
@@ -626,6 +633,7 @@ export function renderTrialsList(){
       });
       block.querySelector('.trial-sample-prepared-by')?.addEventListener('change', e => { t.samplePreparedBy = e.target.value.trim(); scheduleTrialSave(t); });
       block.querySelector('.trial-test-date')?.addEventListener('change', e => { t.testDate = e.target.value; scheduleTrialSave(t); });
+      block.querySelector('.trial-test-location')?.addEventListener('change', e => { t.testLocation = e.target.value.trim(); scheduleTrialSave(t); });
 
       // Picking a Cooking Method that has Steps on file (see Reference
       // Lists) pulls them in as a starting point — same autofill as
