@@ -314,6 +314,65 @@ function captureMonthlyUpdateDraft(p, block){
   return mu;
 }
 
+// The 6 field-name prefixes recognized in legacy free-text `requirements`
+// blobs (see parseLegacyRequirements) -- the exact labels already typed by
+// hand across existing projects, e.g. "Packaging condition: Microwaveable
+// black plastic tray".
+const REQUIREMENTS_FIELD_DEFS = [
+  { key: 'flavorFilling',      re: /^\s*flavor\s+or\s+filling\s*:/i },
+  { key: 'composition',        re: /^\s*composition\s*:/i },
+  { key: 'recipe',             re: /^\s*recipe\s*:/i },
+  { key: 'packagingCondition', re: /^\s*packaging\s+condition\s*:/i },
+  { key: 'cookingCondition',   re: /^\s*cooking\s+condition\s*:/i },
+  { key: 'certificate',        re: /^\s*certificate\s*:/i }
+];
+
+function blankRequirements(){
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition:'', certificate:'', note:'' };
+}
+
+// Parses the free-text `requirements` blob that older/unedited projects
+// still have in Firestore into the 6 structured fields, plus a `note`
+// catch-all for anything that doesn't match a known "Label:" prefix (a
+// leading preamble, a typo'd label, etc.) so nothing is ever silently
+// dropped. A field's content can span multiple following lines -- each
+// line is tested against every known prefix; a non-matching line is
+// treated as a continuation of whichever field is currently "open" (or
+// falls into `note` if no field is open yet).
+function parseLegacyRequirements(text){
+  const result = blankRequirements();
+  if(!text) return result;
+  const buffers = { flavorFilling:[], composition:[], recipe:[], packagingCondition:[], cookingCondition:[], certificate:[], note:[] };
+  let currentKey = null;
+  String(text).split(/\r\n|\r|\n/).forEach(rawLine => {
+    const line = rawLine.trim();
+    if(line === '') return;
+    const match = REQUIREMENTS_FIELD_DEFS.find(def => def.re.test(rawLine));
+    if(match){
+      currentKey = match.key;
+      const inline = rawLine.replace(match.re, '').trim();
+      if(inline) buffers[currentKey].push(inline);
+    } else {
+      buffers[currentKey || 'note'].push(line);
+    }
+  });
+  REQUIREMENTS_FIELD_DEFS.forEach(def => { result[def.key] = buffers[def.key].join('\n'); });
+  result.note = buffers.note.join('\n');
+  return result;
+}
+
+// Returns p.requirements as the structured object, parsing on the fly if
+// it's still the legacy string (or defaulting if missing/blank). Never
+// mutates `p` -- called at render time only; the object shape only gets
+// persisted to Firestore once the project is next saved (see the save
+// handler further down), same deferred-migration approach already used
+// by migrateMonthlyUpdate above.
+function getRequirements(p){
+  const req = p.requirements;
+  if(req && typeof req === 'object') return { ...blankRequirements(), ...req };
+  return parseLegacyRequirements(req);
+}
+
 function blankProject(){
   return {
     id: uid(),
@@ -330,7 +389,7 @@ function blankProject(){
     responsiblePerson: "",
     factoryName: "",
     flavors: [],
-    requirements: "",
+    requirements: blankRequirements(),
     portionWeightQty: "",
     portionWeightUnit: "g",
     portionPerUnit: "pcs",
@@ -837,8 +896,35 @@ function renderNewProjectPanel(){
           </div>
         </div>
         <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-          <label>Requirements / Certifications</label>
-          <textarea id="newProjRequirements" placeholder="e.g. Halal certified, no MSG, shelf-life 12 months"></textarea>
+          <label>Requirements</label>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Flavor or Filling</label>
+            <input type="text" id="newProjReqFlavorFilling" placeholder="e.g. Original">
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Composition</label>
+            <textarea id="newProjReqComposition" placeholder="e.g. Takoyaki: 20g x 4 pieces"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Recipe</label>
+            <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Packaging condition</label>
+            <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Cooking Condition</label>
+            <input type="text" id="newProjReqCookingCondition" placeholder="e.g. N/A">
+          </div>
+          <div class="field" style="margin-bottom:8px;">
+            <label>Certificate</label>
+            <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Note</label>
+            <textarea id="newProjReqNote" placeholder="Anything else not covered above"></textarea>
+          </div>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -912,7 +998,15 @@ function renderNewProjectPanel(){
     p.outerPackContainerUnit = document.getElementById('newProjOuterContainerUnit').value.trim();
     p.moqQty = document.getElementById('newProjMoqQty').value.trim();
     p.moqUnit = document.getElementById('newProjMoqUnit').value.trim();
-    p.requirements = document.getElementById('newProjRequirements').value.trim();
+    p.requirements = {
+      flavorFilling: document.getElementById('newProjReqFlavorFilling').value.trim(),
+      composition: document.getElementById('newProjReqComposition').value.trim(),
+      recipe: document.getElementById('newProjReqRecipe').value.trim(),
+      packagingCondition: document.getElementById('newProjReqPackaging').value.trim(),
+      cookingCondition: document.getElementById('newProjReqCookingCondition').value.trim(),
+      certificate: document.getElementById('newProjReqCertificate').value.trim(),
+      note: document.getElementById('newProjReqNote').value.trim()
+    };
     projects.push(p);
     saveProjectToCloud(p);
     logActivityEvent('created', 'project', p.name || 'Untitled project');
@@ -1194,6 +1288,7 @@ export function renderProjectsList(){
         }).join('');
 
         const productCount = p.products.length;
+        const req = getRequirements(p);
 
         // Append-only activity timeline (Plan / Action Taken / Next Action
         // per entry) — separate from the per-product progress log, since
@@ -1382,7 +1477,7 @@ export function renderProjectsList(){
             <td data-col="factorySalesRep">${missingCell(p.factorySalesRep)}</td>
             <td data-col="responsiblePerson">${missingCell(p.responsiblePerson)}</td>
             <td data-col="factoryName">${missingCell(p.factoryName)}</td>
-            <td data-col="requirements">${p.requirements ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
+            <td data-col="requirements">${Object.values(req).some(v => (v||'').trim()) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
@@ -1441,6 +1536,18 @@ export function renderProjectsList(){
           </div>
         ` : '<div class="overview-empty">No flavors yet</div>';
         const allAttachments = allProjectAttachments(p);
+        const readOnlyRequirementsHtml = `
+          <div class="material-detail-notes-label">Requirements</div>
+          <dl class="material-detail-list" style="margin-top:4px;">${detailRowsHtml([
+            ['Flavor or Filling', req.flavorFilling],
+            ['Cooking Condition', req.cookingCondition],
+            ['Certificate', req.certificate]
+          ])}</dl>
+          ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
+          ${req.recipe ? `<div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
+          ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
+          ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
+        `;
         const readOnlyDetailView = `
           <div class="project-detail-view">
             <div class="project-detail-photo">
@@ -1449,11 +1556,10 @@ export function renderProjectsList(){
             <div class="project-detail-info">
               <div class="project-detail-title">${escapeHtml(p.name || 'Untitled project')}</div>
               <dl class="material-detail-list">${readOnlyDetailRowsBefore}</dl>
+              ${readOnlyRequirementsHtml}
+              <dl class="material-detail-list" style="margin-top:10px;">${readOnlyDetailRowsAfter}</dl>
               <div class="material-detail-notes-label">Flavor / Filling</div>
               ${readOnlyFlavorsHtml}
-              <dl class="material-detail-list" style="margin-top:10px;">${readOnlyDetailRowsAfter}</dl>
-              <div class="material-detail-notes-label">Requirements / Certifications</div>
-              <div class="material-detail-notes">${escapeHtml(p.requirements || '-')}</div>
               ${allAttachments.length ? `
               <div class="material-detail-notes-label">Attachments (${allAttachments.length})</div>
               <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
@@ -1527,25 +1633,35 @@ export function renderProjectsList(){
                   <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <label>Flavor / Filling</label>
-                  <div class="flavor-table-scroll">
-                  <table class="flavor-table flavor-table-edit">
-                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
-                    <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
-                      <tr data-flavor-id="${escapeHtml(f.id)}">
-                        <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
-                        <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
-                        <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
-                        <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
-                        <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
-                        <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
-                        <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
-                        <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
-                      </tr>
-                    `).join('')}</tbody>
-                  </table>
+                  <label>Requirements</label>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Flavor or Filling</label>
+                    <input type="text" class="proj-req-flavor-filling" ${ro} value="${escapeHtml(req.flavorFilling)}" placeholder="e.g. Original">
                   </div>
-                  ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Composition</label>
+                    <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Recipe</label>
+                    <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Packaging condition</label>
+                    <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Cooking Condition</label>
+                    <input type="text" class="proj-req-cooking-condition" ${ro} value="${escapeHtml(req.cookingCondition)}" placeholder="e.g. N/A">
+                  </div>
+                  <div class="field" style="margin-bottom:8px;">
+                    <label>Certificate</label>
+                    <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Note</label>
+                    <textarea class="proj-req-note" ${ro} placeholder="Anything else not covered above">${escapeHtml(req.note)}</textarea>
+                  </div>
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Portion Weight</label>
@@ -1582,8 +1698,25 @@ export function renderProjectsList(){
                   </div>
                 </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <label>Requirements / Certifications</label>
-                  <textarea class="proj-requirements" ${ro} placeholder="e.g. Halal certified, no MSG, shelf-life 12 months">${escapeHtml(p.requirements)}</textarea>
+                  <label>Flavor / Filling</label>
+                  <div class="flavor-table-scroll">
+                  <table class="flavor-table flavor-table-edit">
+                    <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                    <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
+                      <tr data-flavor-id="${escapeHtml(f.id)}">
+                        <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                        <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+                        <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+                        <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                        <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
+                        <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+                        <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                        <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
+                      </tr>
+                    `).join('')}</tbody>
+                  </table>
+                  </div>
+                  ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
                 </div>
               </div>
               ` : readOnlyDetailView}
@@ -1877,7 +2010,15 @@ export function renderProjectsList(){
         p.outerPackContainerUnit = block.querySelector('.proj-outer-container-unit').value.trim();
         p.moqQty = block.querySelector('.proj-moq-qty').value.trim();
         p.moqUnit = block.querySelector('.proj-moq-unit').value.trim();
-        p.requirements = block.querySelector('.proj-requirements').value.trim();
+        p.requirements = {
+          flavorFilling: block.querySelector('.proj-req-flavor-filling').value.trim(),
+          composition: block.querySelector('.proj-req-composition').value.trim(),
+          recipe: block.querySelector('.proj-req-recipe').value.trim(),
+          packagingCondition: block.querySelector('.proj-req-packaging').value.trim(),
+          cookingCondition: block.querySelector('.proj-req-cooking-condition').value.trim(),
+          certificate: block.querySelector('.proj-req-certificate').value.trim(),
+          note: block.querySelector('.proj-req-note').value.trim()
+        };
         // Also picks up a Monthly Update draft — otherwise clicking Save
         // (top-right, for the header fields) while text sits in the
         // date/results/next-plan boxes silently throws that text away,
@@ -2393,7 +2534,7 @@ const PROJECT_DIFF_FIELDS = {
   portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
   innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
   outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',
-  moqQty: 'MOQ Qty', moqUnit: 'MOQ Unit', requirements: 'Requirements / Certifications'
+  moqQty: 'MOQ Qty', moqUnit: 'MOQ Unit'
 };
 
 // An Activities Update entry's own main fields — linkedRecipeId/attachments
