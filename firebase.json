@@ -11,9 +11,7 @@
       "firestore.rules",
       "**/.*",
       "**/node_modules/**",
-      "Open Forge.cmd",
-      "forge-local-server.mjs",
-      "forge_icon.ico"
+      "dev/**"
     ],
     "headers": [
       {

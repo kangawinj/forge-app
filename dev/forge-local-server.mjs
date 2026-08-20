@@ -4,7 +4,9 @@ import path from "node:path";
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
-const root = path.dirname(fileURLToPath(import.meta.url));
+// This file lives in dev/, but it serves the app one level up (the actual
+// Firebase Hosting root), so root points at the parent directory.
+const root = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
 const candidatePorts = [8765, 8766, 8767, 8768, 8769];
 const contentTypes = {
   ".css": "text/css; charset=utf-8",
