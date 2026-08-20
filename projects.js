@@ -2791,8 +2791,13 @@ function logMuAddedEvent(p, mu){
 // through the same resize/compress used for photos so they stay small;
 // non-image files (PDF/Word/Excel) can't be resized, so they're capped
 // instead — the whole project document (name, products, every update, every
-// attachment) has to fit Firestore's 1MB document limit.
-const MU_ATTACHMENT_MAX_BYTES = 300 * 1024;
+// attachment) has to fit Firestore's 1MB document limit. Raised from
+// 300KB after that turned out too tight for real attachments (a 489KB
+// .xlsx) -- worth remembering base64 inflates the stored size by ~1.37x,
+// so this 700KB cap is really ~960KB inside the document once encoded,
+// i.e. most of the whole 1MB budget for a single file. Don't raise this
+// further without also reconsidering the per-document budget as a whole.
+const MU_ATTACHMENT_MAX_BYTES = 700 * 1024;
 const MU_ATTACHMENT_IMAGE_MAX_DIM = 640;
 function readFileAsDataUrl(file){
   return new Promise((resolve, reject) => {
