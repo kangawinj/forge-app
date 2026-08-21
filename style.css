@@ -3202,6 +3202,90 @@
        get in the way. */
     .cal-event-tooltip{display:none !important;}
   }
+  /* Day / Week / Month / Year switcher, left of Today/‹/›. Same segmented-
+     control look as .view-mode-toggle elsewhere in the app (grouped
+     buttons, active one filled), just a smaller local instance since this
+     needs to share the header bar with the nav controls too. */
+  .cal-view-switch{display:flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;}
+  .cal-view-btn{
+    background:var(--panel);
+    border:none;
+    border-left:1px solid var(--border);
+    padding:4px 10px;
+    font-size:12px;
+    font-weight:600;
+    color:var(--text-dim);
+    cursor:pointer;
+  }
+  .cal-view-btn:first-child{border-left:none;}
+  .cal-view-btn:hover{background:var(--bg);}
+  .cal-view-btn.active{background:var(--primary);color:#fff;}
+  /* Week view reuses Month view's .cal-cell/.cal-event markup (see
+     renderCalWeekGrid) via a modifier class -- one row instead of six, so
+     each day gets much more vertical room to show its events without
+     truncating as hard. */
+  .cal-grid-week .cal-cell{min-height:260px;}
+  /* Day view is a plain agenda list, not a grid -- there's only one day's
+     worth of events to lay out, so full project name + text both fit on
+     one row without needing Month/Week's hover tooltip. */
+  .cal-day-agenda{display:flex;flex-direction:column;gap:6px;}
+  .cal-day-agenda-empty{padding:24px 0;text-align:center;color:var(--text-dim);font-size:13px;}
+  .cal-day-event{
+    display:flex;
+    align-items:baseline;
+    gap:10px;
+    width:100%;
+    text-align:left;
+    border:none;
+    border-left:4px solid transparent;
+    border-radius:6px;
+    background:var(--bg);
+    padding:8px 12px;
+    cursor:pointer;
+  }
+  .cal-day-event:hover{background:var(--accent-light);}
+  .cal-day-event-project{font-size:13px;font-weight:700;color:var(--primary-dark);flex-shrink:0;}
+  .cal-day-event-text{font-size:13px;color:var(--text);}
+  .cal-day-event-overdue{border-left-color:#dc2626;}
+  .cal-day-event-today{border-left-color:#f59e0b;}
+  .cal-day-event-upcoming{border-left-color:#2563eb;}
+  .cal-day-event-nodate{border-left-color:#64748b;}
+  .cal-day-event-completed{border-left-color:var(--ok);}
+  /* Year view: 12 read-only mini-months, click one to jump into Month
+     view for it. Far too small to show event text at this scale, so a
+     day just gets a dot underneath its number when something's due
+     (see .cal-mini-cell-has-events) rather than a real chip. */
+  .cal-year-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;}
+  .cal-mini-month{
+    border:1px solid var(--border);
+    border-radius:8px;
+    background:var(--panel);
+    padding:10px;
+    text-align:left;
+    cursor:pointer;
+  }
+  .cal-mini-month:hover{border-color:var(--primary);}
+  .cal-mini-month-title{font-size:12px;font-weight:700;color:var(--primary-dark);margin-bottom:6px;}
+  .cal-mini-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;}
+  .cal-mini-cell{
+    position:relative;
+    font-size:9px;
+    color:var(--text-dim);
+    text-align:center;
+    padding:2px 0;
+  }
+  .cal-mini-cell-outmonth{visibility:hidden;}
+  .cal-mini-cell-has-events::after{
+    content:"";
+    position:absolute;
+    left:50%;
+    bottom:0;
+    transform:translateX(-50%);
+    width:3px;
+    height:3px;
+    border-radius:50%;
+    background:var(--primary);
+  }
   .task-tracking-thumb{
     width:28px;
     height:28px;

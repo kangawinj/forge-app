@@ -1876,12 +1876,16 @@ function computeTaskTracking(){
   return { overdue, dueToday, dueSoon, completedToday };
 }
 
-// Tracks which month the Home dashboard's Activities Calendar is currently
-// showing — any date within that month works, only year/month are read.
-// Reset to the real current month by the Today button; otherwise carried
-// forward across re-renders so paging doesn't snap back to the current
-// month every time something else on the dashboard changes.
+// Tracks which date the Home dashboard's Activities Calendar is currently
+// showing — which fields of it matter depends on homeCalendarViewMode
+// (e.g. Month view only reads year/month, Day view reads the full date).
+// Reset to today by the Today button; otherwise carried forward across
+// re-renders so paging doesn't snap back to the current period every time
+// something else on the dashboard changes.
 let homeCalendarViewDate = new Date();
+// One of 'day' | 'week' | 'month' | 'year' — same carry-forward-across-
+// re-renders treatment as homeCalendarViewDate, right above.
+let homeCalendarViewMode = 'month';
 
 // Task Tracking's Who filter — a Set of names (empty Set means "all"),
 // since more than one person can be selected at once. Carried forward
@@ -1926,22 +1930,59 @@ function calGridDateStr(d){
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 const CAL_DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-function renderCalendarCardHtml(viewDate, events){
+const CAL_VIEW_MODES = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
+function calWeekStart(d){
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
+}
+// Prev/Next steps by a whole period at once — which one depends on
+// whatever view is currently showing, so Month view still pages by
+// month, Week view by week, etc.
+function calStepView(date, mode, dir){
+  const d = new Date(date);
+  if(mode === 'day') d.setDate(d.getDate() + dir);
+  else if(mode === 'week') d.setDate(d.getDate() + dir * 7);
+  else if(mode === 'year') d.setFullYear(d.getFullYear() + dir);
+  else d.setMonth(d.getMonth() + dir);
+  return d;
+}
+function calHeaderLabel(viewDate, mode){
+  if(mode === 'day') return viewDate.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+  if(mode === 'year') return String(viewDate.getFullYear());
+  if(mode === 'week'){
+    const start = calWeekStart(viewDate);
+    const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+    const sameMonth = start.getMonth() === end.getMonth();
+    const startLabel = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+    // toLocaleDateString with {day, year} but no month isn't a reliably
+    // supported Intl combination (some ICU builds return garbled output
+    // for it) -- build the same-month "22, 2026" tail by hand instead.
+    const endLabel = sameMonth
+      ? `${end.getDate()}, ${end.getFullYear()}`
+      : end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    return `${startLabel} – ${endLabel}`;
+  }
+  return viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+}
+// Shared by Month/Week views -- one day's worth of event chips, each
+// opening the project's Activities Updates on click, with a hover
+// tooltip carrying the full project name + text (see .cal-event-tooltip)
+// since the chip itself truncates to fit the cell.
+function calEventChipHtml(ev, todayStr){
+  const status = getTaskStatus(ev.mu, todayStr);
+  return `
+    <div class="cal-event-wrap">
+      <button type="button" class="cal-event cal-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">${escapeHtml(ev.text)}</button>
+      <div class="cal-event-tooltip"><b>${escapeHtml(ev.projectName)}</b><br>${escapeHtml(ev.text)}</div>
+    </div>
+  `;
+}
+function renderCalMonthGrid(viewDate, eventsByDate, todayStr){
   const year = viewDate.getFullYear(), month = viewDate.getMonth();
-  // Matches the rest of the app's existing (if imperfect in far-west
-  // timezones) "today" convention — see getTaskStatus/computeTaskTracking
-  // — so a task the calendar colors as overdue agrees with Task Tracking.
-  const todayStr = new Date().toISOString().slice(0, 10);
   const firstOfMonth = new Date(year, month, 1);
   const startDow = firstOfMonth.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
   const gridStart = new Date(year, month, 1 - startDow);
-
-  const eventsByDate = {};
-  events.forEach(ev => {
-    (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
-  });
 
   let cellsHtml = '';
   for(let i = 0; i < totalCells; i++){
@@ -1956,34 +1997,119 @@ function renderCalendarCardHtml(viewDate, events){
     cellsHtml += `
       <div class="cal-cell${inMonth ? '' : ' cal-cell-outmonth'}${isToday ? ' cal-cell-today' : ''}">
         <div class="cal-cell-date">${escapeHtml(dayLabel)}</div>
-        <div class="cal-cell-events">
-          ${dayEvents.map(ev => {
-            const status = getTaskStatus(ev.mu, todayStr);
-            return `
-              <div class="cal-event-wrap">
-                <button type="button" class="cal-event cal-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">${escapeHtml(ev.text)}</button>
-                <div class="cal-event-tooltip"><b>${escapeHtml(ev.projectName)}</b><br>${escapeHtml(ev.text)}</div>
-              </div>
-            `;
-          }).join('')}
-        </div>
+        <div class="cal-cell-events">${dayEvents.map(ev => calEventChipHtml(ev, todayStr)).join('')}</div>
       </div>
     `;
   }
+  return `
+    <div class="cal-dow-row">${CAL_DOW_NAMES.map(n => `<div class="cal-dow">${n}</div>`).join('')}</div>
+    <div class="cal-grid">${cellsHtml}</div>
+  `;
+}
+// One row, one week -- same cell markup as Month view (taller, via
+// .cal-grid-week) so a busier week has more room per day to show text
+// instead of truncating as aggressively.
+function renderCalWeekGrid(viewDate, eventsByDate, todayStr){
+  const start = calWeekStart(viewDate);
+  let cellsHtml = '';
+  for(let i = 0; i < 7; i++){
+    const cellDate = new Date(start.getFullYear(), start.getMonth(), start.getDate() + i);
+    const dStr = calGridDateStr(cellDate);
+    const isToday = dStr === todayStr;
+    const dayEvents = (eventsByDate[dStr] || []).sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
+    cellsHtml += `
+      <div class="cal-cell${isToday ? ' cal-cell-today' : ''}">
+        <div class="cal-cell-date">${escapeHtml(cellDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</div>
+        <div class="cal-cell-events">${dayEvents.map(ev => calEventChipHtml(ev, todayStr)).join('')}</div>
+      </div>
+    `;
+  }
+  return `
+    <div class="cal-dow-row">${CAL_DOW_NAMES.map(n => `<div class="cal-dow">${n}</div>`).join('')}</div>
+    <div class="cal-grid cal-grid-week">${cellsHtml}</div>
+  `;
+}
+// A single day's events as a plain agenda list -- there's only one day's
+// worth of room to fill, so full project name + text both show without
+// needing the Month/Week chip's hover tooltip.
+function renderCalDayAgenda(viewDate, eventsByDate, todayStr){
+  const dStr = calGridDateStr(viewDate);
+  const dayEvents = (eventsByDate[dStr] || []).sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
+  if(!dayEvents.length) return `<div class="cal-day-agenda-empty">No activities on this day</div>`;
+  return `
+    <div class="cal-day-agenda">
+      ${dayEvents.map(ev => {
+        const status = getTaskStatus(ev.mu, todayStr);
+        return `
+          <button type="button" class="cal-day-event cal-day-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">
+            <span class="cal-day-event-project">${escapeHtml(ev.projectName)}</span>
+            <span class="cal-day-event-text">${escapeHtml(ev.text)}</span>
+          </button>
+        `;
+      }).join('')}
+    </div>
+  `;
+}
+// 12 read-only mini-months, each day just a dot for "something's due"
+// rather than real event chips (nowhere near enough room to show text at
+// this scale) -- click a month to jump into Month view for it.
+function renderCalYearGrid(viewDate, eventsByDate){
+  const year = viewDate.getFullYear();
+  let monthsHtml = '';
+  for(let m = 0; m < 12; m++){
+    const firstOfMonth = new Date(year, m, 1);
+    const startDow = firstOfMonth.getDay();
+    const daysInMonth = new Date(year, m + 1, 0).getDate();
+    const totalCells = Math.ceil((startDow + daysInMonth) / 7) * 7;
+    const gridStart = new Date(year, m, 1 - startDow);
+    let dayCellsHtml = '';
+    for(let i = 0; i < totalCells; i++){
+      const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + i);
+      const inMonth = cellDate.getMonth() === m;
+      const hasEvents = inMonth && (eventsByDate[calGridDateStr(cellDate)] || []).length > 0;
+      dayCellsHtml += `<div class="cal-mini-cell${inMonth ? '' : ' cal-mini-cell-outmonth'}${hasEvents ? ' cal-mini-cell-has-events' : ''}">${inMonth ? cellDate.getDate() : ''}</div>`;
+    }
+    monthsHtml += `
+      <button type="button" class="cal-mini-month" data-cal-jump-month="${m}">
+        <div class="cal-mini-month-title">${escapeHtml(firstOfMonth.toLocaleDateString('en-US', { month: 'long' }))}</div>
+        <div class="cal-mini-grid">${dayCellsHtml}</div>
+      </button>
+    `;
+  }
+  return `<div class="cal-year-grid">${monthsHtml}</div>`;
+}
+function renderCalendarCardHtml(viewDate, events){
+  // Matches the rest of the app's existing (if imperfect in far-west
+  // timezones) "today" convention — see getTaskStatus/computeTaskTracking
+  // — so a task the calendar colors as overdue agrees with Task Tracking.
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const mode = homeCalendarViewMode;
+
+  const eventsByDate = {};
+  events.forEach(ev => {
+    (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
+  });
+
+  const bodyHtml = mode === 'day' ? renderCalDayAgenda(viewDate, eventsByDate, todayStr)
+    : mode === 'week' ? renderCalWeekGrid(viewDate, eventsByDate, todayStr)
+    : mode === 'year' ? renderCalYearGrid(viewDate, eventsByDate)
+    : renderCalMonthGrid(viewDate, eventsByDate, todayStr);
 
   return `
     <div class="dash-card" id="activitiesCalendarCard" style="margin-bottom:14px;">
       <div class="cal-header-bar">
         <div class="dash-card-title" style="margin-bottom:0;">Activities Calendar</div>
         <div class="cal-nav">
+          <div class="cal-view-switch">
+            ${CAL_VIEW_MODES.map(([key, label]) => `<button type="button" class="cal-view-btn${mode === key ? ' active' : ''}" data-cal-view="${key}">${label}</button>`).join('')}
+          </div>
           <button type="button" class="btn btn-sm" id="calToday">Today</button>
-          <button type="button" class="icon-btn" id="calPrevMonth" title="Previous month">‹</button>
-          <span class="cal-month-label">${escapeHtml(viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' }))}</span>
-          <button type="button" class="icon-btn" id="calNextMonth" title="Next month">›</button>
+          <button type="button" class="icon-btn" id="calPrevPeriod" title="Previous">‹</button>
+          <span class="cal-month-label">${escapeHtml(calHeaderLabel(viewDate, mode))}</span>
+          <button type="button" class="icon-btn" id="calNextPeriod" title="Next">›</button>
         </div>
       </div>
-      <div class="cal-dow-row">${CAL_DOW_NAMES.map(n => `<div class="cal-dow">${n}</div>`).join('')}</div>
-      <div class="cal-grid">${cellsHtml}</div>
+      ${bodyHtml}
     </div>
   `;
 }
@@ -2307,13 +2433,26 @@ function wireDashboardHome(){
     homeCalendarViewDate = new Date();
     refreshDashboardHome();
   });
-  document.getElementById('calPrevMonth')?.addEventListener('click', () => {
-    homeCalendarViewDate = new Date(homeCalendarViewDate.getFullYear(), homeCalendarViewDate.getMonth() - 1, 1);
+  document.getElementById('calPrevPeriod')?.addEventListener('click', () => {
+    homeCalendarViewDate = calStepView(homeCalendarViewDate, homeCalendarViewMode, -1);
     refreshDashboardHome();
   });
-  document.getElementById('calNextMonth')?.addEventListener('click', () => {
-    homeCalendarViewDate = new Date(homeCalendarViewDate.getFullYear(), homeCalendarViewDate.getMonth() + 1, 1);
+  document.getElementById('calNextPeriod')?.addEventListener('click', () => {
+    homeCalendarViewDate = calStepView(homeCalendarViewDate, homeCalendarViewMode, 1);
     refreshDashboardHome();
+  });
+  document.querySelectorAll('[data-cal-view]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      homeCalendarViewMode = btn.dataset.calView;
+      refreshDashboardHome();
+    });
+  });
+  document.querySelectorAll('[data-cal-jump-month]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      homeCalendarViewDate = new Date(homeCalendarViewDate.getFullYear(), parseInt(btn.dataset.calJumpMonth, 10), 1);
+      homeCalendarViewMode = 'month';
+      refreshDashboardHome();
+    });
   });
 
   document.getElementById('taskTrackingWhoTrigger')?.addEventListener('click', e => {
