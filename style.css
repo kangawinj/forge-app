@@ -3286,6 +3286,34 @@
     border-radius:50%;
     background:var(--primary);
   }
+  /* Side-by-side calendar windows (see homeCalendarPanes) -- auto-fit
+     wraps them onto new rows as more get added, and with just the one
+     default pane it stretches to fill the full width, so this reads
+     identically to the pre-multi-pane single calendar until +Add window
+     is actually used. */
+  .cal-panes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:4px;}
+  .cal-pane{border:1px solid var(--border);border-radius:8px;padding:10px;min-width:0;}
+  .cal-pane-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
+  .cal-pane-who-select{
+    flex:1;
+    min-width:0;
+    padding:4px 8px;
+    font-size:12px;
+    font-weight:600;
+    color:var(--primary-dark);
+    border:1px solid var(--border);
+    border-radius:6px;
+    background:var(--panel);
+  }
+  .cal-pane-remove{flex-shrink:0;}
+  .cal-add-pane-btn{margin-top:12px;}
+  /* A pane is a lot narrower than the old full-width calendar, so its day
+     cells need to be more compact than the default 84px -- same size
+     Month/Week already drop to at the app's own mobile breakpoint (see
+     @media (max-width:900px) below), reused here since "a narrow column"
+     is the same problem regardless of why the column is narrow. */
+  .cal-pane .cal-cell{min-height:60px;padding:3px 4px;}
+  .cal-pane .cal-dow{font-size:9px;padding:3px 4px;}
   .task-tracking-thumb{
     width:28px;
     height:28px;

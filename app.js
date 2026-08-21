@@ -1894,6 +1894,23 @@ let homeCalendarViewMode = 'month';
 // also filter the Task Tracking lists, or vice versa.
 let homeCalendarWhoFilters = new Set();
 let homeCalendarWhoMenuOpen = false;
+// Stand-in for '' (no planWho) in the Who filter's Set/checkbox values --
+// an actual empty string is awkward to carry through a checkbox's value
+// attribute and back reliably, and doubles as a value CAL_WHO_UNASSIGNED
+// itself would never collide with a real person's name.
+const CAL_WHO_UNASSIGNED = '__unassigned__';
+// A pane's "show everyone" <select> value -- same reasoning as
+// CAL_WHO_UNASSIGNED above (an empty <option value=""> is easy to
+// mishandle), kept as a separate sentinel from it since they mean
+// opposite things (all vs. specifically nobody).
+const CAL_PANE_ALL = '__all__';
+// Side-by-side calendar "windows", each independently showing one
+// person's events (or everyone's) so a few people can be monitored at a
+// glance -- they all share the same nav (homeCalendarViewDate) and view
+// mode (homeCalendarViewMode) above, only the person shown differs per
+// pane. Starts with a single All pane, which alone renders identically
+// to the old single-calendar layout; +Add window appends more.
+let homeCalendarPanes = [{ id: 'cal-pane-default', who: CAL_PANE_ALL }];
 
 // Task Tracking's Who filter — a Set of names (empty Set means "all"),
 // since more than one person can be selected at once. Carried forward
@@ -1940,11 +1957,6 @@ function calGridDateStr(d){
 }
 const CAL_DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const CAL_VIEW_MODES = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
-// Stand-in for '' (no planWho) in the Who filter's Set/checkbox values --
-// an actual empty string is awkward to carry through a checkbox's value
-// attribute and back reliably, and doubles as the value CAL_WHO_UNASSIGNED
-// itself would never collide with a real person's name.
-const CAL_WHO_UNASSIGNED = '__unassigned__';
 function calWeekStart(d){
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
 }
@@ -2092,6 +2104,43 @@ function renderCalYearGrid(viewDate, eventsByDate){
   }
   return `<div class="cal-year-grid">${monthsHtml}</div>`;
 }
+// One pane's <select> options: All, then every named person, then
+// Unassigned if there's anyone to show there -- same three-way split
+// renderCalendarCardHtml's Who filter already uses.
+function renderCalPaneWhoOptionsHtml(selected, namedWhoOptions, hasUnassignedEvents){
+  return `
+    <option value="${CAL_PANE_ALL}" ${selected === CAL_PANE_ALL ? 'selected' : ''}>All</option>
+    ${namedWhoOptions.map(w => `<option value="${escapeHtml(w)}" ${selected === w ? 'selected' : ''}>${escapeHtml(w)}</option>`).join('')}
+    ${hasUnassignedEvents ? `<option value="${CAL_WHO_UNASSIGNED}" ${selected === CAL_WHO_UNASSIGNED ? 'selected' : ''}>Unassigned</option>` : ''}
+  `;
+}
+// filteredEvents has already been through the shared Who checklist filter
+// above -- a pane just narrows that further to the one person (or
+// Unassigned, or nobody further narrowed at all for All) it's set to.
+function renderCalPaneHtml(pane, viewDate, filteredEvents, mode, todayStr, namedWhoOptions, hasUnassignedEvents, canRemove){
+  const paneEvents = pane.who === CAL_PANE_ALL
+    ? filteredEvents
+    : filteredEvents.filter(ev => (ev.who || CAL_WHO_UNASSIGNED) === pane.who);
+  const eventsByDate = {};
+  paneEvents.forEach(ev => {
+    (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
+  });
+  const bodyHtml = mode === 'day' ? renderCalDayAgenda(viewDate, eventsByDate, todayStr)
+    : mode === 'week' ? renderCalWeekGrid(viewDate, eventsByDate, todayStr)
+    : mode === 'year' ? renderCalYearGrid(viewDate, eventsByDate)
+    : renderCalMonthGrid(viewDate, eventsByDate, todayStr);
+  return `
+    <div class="cal-pane">
+      <div class="cal-pane-header">
+        <select class="cal-pane-who-select" data-cal-pane-id="${escapeHtml(pane.id)}">
+          ${renderCalPaneWhoOptionsHtml(pane.who, namedWhoOptions, hasUnassignedEvents)}
+        </select>
+        ${canRemove ? `<button type="button" class="icon-btn cal-pane-remove" data-cal-pane-id="${escapeHtml(pane.id)}" title="Remove this window">${icon('x', 14)}</button>` : ''}
+      </div>
+      ${bodyHtml}
+    </div>
+  `;
+}
 function renderCalendarCardHtml(viewDate, events){
   // Matches the rest of the app's existing (if imperfect in far-west
   // timezones) "today" convention — see getTaskStatus/computeTaskTracking
@@ -2113,15 +2162,9 @@ function renderCalendarCardHtml(viewDate, events){
     ? events.filter(ev => homeCalendarWhoFilters.has(ev.who || CAL_WHO_UNASSIGNED))
     : events;
 
-  const eventsByDate = {};
-  filteredEvents.forEach(ev => {
-    (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
-  });
-
-  const bodyHtml = mode === 'day' ? renderCalDayAgenda(viewDate, eventsByDate, todayStr)
-    : mode === 'week' ? renderCalWeekGrid(viewDate, eventsByDate, todayStr)
-    : mode === 'year' ? renderCalYearGrid(viewDate, eventsByDate)
-    : renderCalMonthGrid(viewDate, eventsByDate, todayStr);
+  const panesHtml = homeCalendarPanes.map(pane =>
+    renderCalPaneHtml(pane, viewDate, filteredEvents, mode, todayStr, namedWhoOptions, hasUnassignedEvents, homeCalendarPanes.length > 1)
+  ).join('');
 
   return `
     <div class="dash-card" id="activitiesCalendarCard" style="margin-bottom:14px;">
@@ -2165,7 +2208,8 @@ function renderCalendarCardHtml(viewDate, events){
           <button type="button" class="icon-btn" id="calNextPeriod" title="Next">›</button>
         </div>
       </div>
-      ${bodyHtml}
+      <div class="cal-panes-grid">${panesHtml}</div>
+      <button type="button" class="btn btn-sm cal-add-pane-btn" id="calAddPane">${icon('plus', 14)} Add window</button>
     </div>
   `;
 }
@@ -2535,6 +2579,23 @@ function wireDashboardHome(){
   });
   document.getElementById('calClearWhoFilters')?.addEventListener('click', () => {
     homeCalendarWhoFilters.clear();
+    refreshDashboardHome();
+  });
+  main.querySelectorAll('.cal-pane-who-select').forEach(sel => {
+    sel.addEventListener('change', () => {
+      const pane = homeCalendarPanes.find(p => p.id === sel.dataset.calPaneId);
+      if(pane) pane.who = sel.value;
+      refreshDashboardHome();
+    });
+  });
+  main.querySelectorAll('.cal-pane-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      homeCalendarPanes = homeCalendarPanes.filter(p => p.id !== btn.dataset.calPaneId);
+      refreshDashboardHome();
+    });
+  });
+  document.getElementById('calAddPane')?.addEventListener('click', () => {
+    homeCalendarPanes.push({ id: uid(), who: CAL_PANE_ALL });
     refreshDashboardHome();
   });
 
