@@ -3286,12 +3286,15 @@
     border-radius:50%;
     background:var(--primary);
   }
-  /* Side-by-side calendar windows (see homeCalendarPanes) -- auto-fit
-     wraps them onto new rows as more get added, and with just the one
-     default pane it stretches to fill the full width, so this reads
-     identically to the pre-multi-pane single calendar until +Add window
-     is actually used. */
-  .cal-panes-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;margin-top:4px;}
+  /* Side-by-side calendar windows (see homeCalendarPanes) -- always
+     exactly 2 per row (a 5th pane wraps onto its own new row on its
+     own, same as any grid), except the single-pane state, which gets
+     the -single modifier (see renderCalendarCardHtml) so it stretches
+     to fill the full width instead of sitting in a half-width column --
+     that's what makes the default, pre-+Add-window state read
+     identically to the old single-calendar layout. */
+  .cal-panes-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-top:4px;}
+  .cal-panes-grid.cal-panes-grid-single{grid-template-columns:minmax(0,1fr);}
   .cal-pane{border:1px solid var(--border);border-radius:8px;padding:10px;min-width:0;}
   .cal-pane-header{display:flex;align-items:center;gap:8px;margin-bottom:8px;}
   .cal-pane-who-select{
@@ -3573,7 +3576,8 @@
        viewport instead of wrapping/scrolling within its own box. Same fix
        as .components-process-grid above. */
     .grid-2,.grid-3,
-    .compare-info-grid,.compare-steps-grid,.compare-pickers{grid-template-columns:minmax(0,1fr);}
+    .compare-info-grid,.compare-steps-grid,.compare-pickers,
+    .cal-panes-grid{grid-template-columns:minmax(0,1fr);}
     /* Trials sets .compare-info-grid's columns via an inline style (one
        track per product being compared, see trials.js) -- inline styles
        beat a plain class rule regardless of media query, so without

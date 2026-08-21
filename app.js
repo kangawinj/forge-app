@@ -2208,7 +2208,7 @@ function renderCalendarCardHtml(viewDate, events){
           <button type="button" class="icon-btn" id="calNextPeriod" title="Next">›</button>
         </div>
       </div>
-      <div class="cal-panes-grid">${panesHtml}</div>
+      <div class="cal-panes-grid${homeCalendarPanes.length === 1 ? ' cal-panes-grid-single' : ''}">${panesHtml}</div>
       <button type="button" class="btn btn-sm cal-add-pane-btn" id="calAddPane">${icon('plus', 14)} Add window</button>
     </div>
   `;
