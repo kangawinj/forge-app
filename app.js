@@ -2130,11 +2130,12 @@ function renderCalPaneHtml(pane, viewDate, filteredEvents, mode, todayStr, named
     : mode === 'year' ? renderCalYearGrid(viewDate, eventsByDate)
     : renderCalMonthGrid(viewDate, eventsByDate, todayStr);
   return `
-    <div class="cal-pane">
+    <div class="cal-pane${pane.expanded ? ' cal-pane-expanded' : ''}">
       <div class="cal-pane-header">
         <select class="cal-pane-who-select" data-cal-pane-id="${escapeHtml(pane.id)}">
           ${renderCalPaneWhoOptionsHtml(pane.who, namedWhoOptions, hasUnassignedEvents)}
         </select>
+        <button type="button" class="icon-btn cal-pane-expand-toggle" data-cal-pane-id="${escapeHtml(pane.id)}" title="${pane.expanded ? 'Restore to half width' : 'Expand to full width'}">${pane.expanded ? '⤡' : '⤢'}</button>
         ${canRemove ? `<button type="button" class="icon-btn cal-pane-remove" data-cal-pane-id="${escapeHtml(pane.id)}" title="Remove this window">${icon('x', 14)}</button>` : ''}
       </div>
       ${bodyHtml}
@@ -2591,6 +2592,13 @@ function wireDashboardHome(){
   main.querySelectorAll('.cal-pane-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       homeCalendarPanes = homeCalendarPanes.filter(p => p.id !== btn.dataset.calPaneId);
+      refreshDashboardHome();
+    });
+  });
+  main.querySelectorAll('.cal-pane-expand-toggle').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const pane = homeCalendarPanes.find(p => p.id === btn.dataset.calPaneId);
+      if(pane) pane.expanded = !pane.expanded;
       refreshDashboardHome();
     });
   });

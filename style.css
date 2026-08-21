@@ -3310,13 +3310,24 @@
   }
   .cal-pane-remove{flex-shrink:0;}
   .cal-add-pane-btn{margin-top:12px;}
-  /* A pane is a lot narrower than the old full-width calendar, so its day
-     cells need to be more compact than the default 84px -- same size
-     Month/Week already drop to at the app's own mobile breakpoint (see
-     @media (max-width:900px) below), reused here since "a narrow column"
-     is the same problem regardless of why the column is narrow. */
+  /* A half-width pane is a lot narrower than the old full-width calendar,
+     so its day cells need to be more compact than the default 84px --
+     same size Month/Week already drop to at the app's own mobile
+     breakpoint (see @media (max-width:900px) below), reused here since
+     "a narrow column" is the same problem regardless of why the column
+     is narrow. Full size (the plain, unscoped .cal-cell/.cal-dow rules
+     above) is restored for the two cases where a pane is actually as
+     wide as the old single calendar was: the lone default pane
+     (.cal-panes-grid-single, see renderCalendarCardHtml) and any pane
+     the person has explicitly expanded to full width (.cal-pane-expand-
+     toggle, "⤢"/"⤡" in its header). */
   .cal-pane .cal-cell{min-height:60px;padding:3px 4px;}
   .cal-pane .cal-dow{font-size:9px;padding:3px 4px;}
+  .cal-panes-grid-single .cal-pane .cal-cell,
+  .cal-pane-expanded .cal-cell{min-height:84px;padding:4px 5px;}
+  .cal-panes-grid-single .cal-pane .cal-dow,
+  .cal-pane-expanded .cal-dow{font-size:11px;padding:4px 6px;}
+  .cal-pane-expanded{grid-column:1/-1;}
   .task-tracking-thumb{
     width:28px;
     height:28px;
