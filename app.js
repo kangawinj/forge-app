@@ -1940,6 +1940,11 @@ function calGridDateStr(d){
 }
 const CAL_DOW_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 const CAL_VIEW_MODES = [['day', 'Day'], ['week', 'Week'], ['month', 'Month'], ['year', 'Year']];
+// Stand-in for '' (no planWho) in the Who filter's Set/checkbox values --
+// an actual empty string is awkward to carry through a checkbox's value
+// attribute and back reliably, and doubles as the value CAL_WHO_UNASSIGNED
+// itself would never collide with a real person's name.
+const CAL_WHO_UNASSIGNED = '__unassigned__';
 function calWeekStart(d){
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
 }
@@ -2095,9 +2100,18 @@ function renderCalendarCardHtml(viewDate, events){
   const mode = homeCalendarViewMode;
   // Options list comes from *every* event, before filtering -- same as
   // Task Tracking's Who options -- so picking one person doesn't make
-  // the others disappear from the list.
-  const whoOptions = [...new Set(events.map(ev => ev.who).filter(Boolean))].sort((a, b) => a.localeCompare(b));
-  const filteredEvents = homeCalendarWhoFilters.size ? events.filter(ev => homeCalendarWhoFilters.has(ev.who)) : events;
+  // the others disappear from the list. Events with no assignee get their
+  // own checkbox too (CAL_WHO_UNASSIGNED stands in for '' as the Set
+  // member/checkbox value, since an empty checkbox value is awkward to
+  // read back reliably) rather than just being dropped from the filter
+  // entirely.
+  const namedWhoOptions = [...new Set(events.map(ev => ev.who).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const hasUnassignedEvents = events.some(ev => !ev.who);
+  const allWhoValues = hasUnassignedEvents ? [...namedWhoOptions, CAL_WHO_UNASSIGNED] : namedWhoOptions;
+  const allWhoSelected = allWhoValues.length > 0 && allWhoValues.every(v => homeCalendarWhoFilters.has(v));
+  const filteredEvents = homeCalendarWhoFilters.size
+    ? events.filter(ev => homeCalendarWhoFilters.has(ev.who || CAL_WHO_UNASSIGNED))
+    : events;
 
   const eventsByDate = {};
   filteredEvents.forEach(ev => {
@@ -2119,14 +2133,24 @@ function renderCalendarCardHtml(viewDate, events){
               Who${homeCalendarWhoFilters.size ? ` (${homeCalendarWhoFilters.size})` : ''} ${icon('chevron-down', 12)}
             </button>
             <div class="proj-col-filter-menu${homeCalendarWhoMenuOpen ? ' open' : ''}" id="calWhoMenu">
-              ${whoOptions.length ? `
+              ${allWhoValues.length ? `
+              <label class="proj-col-filter-item proj-col-filter-selectall">
+                <input type="checkbox" id="calWhoSelectAll" ${allWhoSelected ? 'checked' : ''}>
+                <b>(Select All)</b>
+              </label>
               <div class="proj-col-filter-values">
-                ${whoOptions.map(w => `
+                ${namedWhoOptions.map(w => `
                   <label class="proj-col-filter-item">
                     <input type="checkbox" class="cal-who-cb" value="${escapeHtml(w)}" ${homeCalendarWhoFilters.has(w) ? 'checked' : ''}>
                     ${escapeHtml(w)}
                   </label>
                 `).join('')}
+                ${hasUnassignedEvents ? `
+                  <label class="proj-col-filter-item">
+                    <input type="checkbox" class="cal-who-cb" value="${CAL_WHO_UNASSIGNED}" ${homeCalendarWhoFilters.has(CAL_WHO_UNASSIGNED) ? 'checked' : ''}>
+                    Unassigned
+                  </label>
+                ` : ''}
               </div>
               ${homeCalendarWhoFilters.size ? `<button type="button" class="btn btn-sm" id="calClearWhoFilters" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
               ` : `<div class="dash-empty" style="padding:4px;">No one assigned yet</div>`}
@@ -2498,6 +2522,16 @@ function wireDashboardHome(){
       else homeCalendarWhoFilters.delete(cb.value);
       refreshDashboardHome();
     });
+  });
+  document.getElementById('calWhoSelectAll')?.addEventListener('change', e => {
+    // Reads the checkboxes already on the page (== allWhoValues) rather
+    // than recomputing that list here -- same set either way, but this
+    // way there's only one place (renderCalendarCardHtml) that decides
+    // what counts as "everyone".
+    const allValues = [...main.querySelectorAll('.cal-who-cb')].map(cb => cb.value);
+    if(e.target.checked) allValues.forEach(v => homeCalendarWhoFilters.add(v));
+    else homeCalendarWhoFilters.clear();
+    refreshDashboardHome();
   });
   document.getElementById('calClearWhoFilters')?.addEventListener('click', () => {
     homeCalendarWhoFilters.clear();
