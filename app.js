@@ -2586,12 +2586,14 @@ function wireDashboardHome(){
     sel.addEventListener('change', () => {
       const pane = homeCalendarPanes.find(p => p.id === sel.dataset.calPaneId);
       if(pane) pane.who = sel.value;
+      saveCalendarPanes();
       refreshDashboardHome();
     });
   });
   main.querySelectorAll('.cal-pane-remove').forEach(btn => {
     btn.addEventListener('click', () => {
       homeCalendarPanes = homeCalendarPanes.filter(p => p.id !== btn.dataset.calPaneId);
+      saveCalendarPanes();
       refreshDashboardHome();
     });
   });
@@ -2599,11 +2601,13 @@ function wireDashboardHome(){
     btn.addEventListener('click', () => {
       const pane = homeCalendarPanes.find(p => p.id === btn.dataset.calPaneId);
       if(pane) pane.expanded = !pane.expanded;
+      saveCalendarPanes();
       refreshDashboardHome();
     });
   });
   document.getElementById('calAddPane')?.addEventListener('click', () => {
     homeCalendarPanes.push({ id: uid(), who: CAL_PANE_ALL });
+    saveCalendarPanes();
     refreshDashboardHome();
   });
 
@@ -3308,10 +3312,34 @@ function attachMyProfileListener(){
   unsubscribeMyProfile = onSnapshot(doc(userProfilesCol, currentUser.uid), snap => {
     const data = snap.data();
     myProfile = { displayName: data?.displayName || '', photoImage: data?.photoImage || '' };
+    // The Home dashboard's Activities Calendar windows (see
+    // homeCalendarPanes/saveCalendarPanes) -- who's watching which window
+    // is a per-account layout choice, same document as the rest of this
+    // account's own settings. Only overwrite the in-memory default if
+    // this account actually has something saved; sanitized defensively
+    // in case an older/malformed shape ever ends up in there.
+    if(Array.isArray(data?.calendarPanes) && data.calendarPanes.length){
+      homeCalendarPanes = data.calendarPanes.map(p => ({
+        id: p?.id || uid(),
+        who: typeof p?.who === 'string' && p.who ? p.who : CAL_PANE_ALL,
+        expanded: !!p?.expanded
+      }));
+    }
     renderApp();
   }, err => {
     console.error('Forge: profile listener error', err);
   });
+}
+// Persists homeCalendarPanes to this account's own My Profile doc --
+// called after every add/remove/who-change/expand-toggle so the layout
+// survives a refresh or switching devices, same document
+// attachMyProfileListener reads it back from. Silently a no-op while
+// signed out (shouldn't happen in practice, since the calendar only
+// renders once signed in, but cheap to guard anyway).
+function saveCalendarPanes(){
+  if(!currentUser) return;
+  setDoc(doc(userProfilesCol, currentUser.uid), { calendarPanes: homeCalendarPanes }, { merge: true })
+    .catch(err => console.error('Forge: failed to save calendar panes', err));
 }
 
 function unlockAppAfterApproval(){
