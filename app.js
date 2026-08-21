@@ -1886,6 +1886,14 @@ let homeCalendarViewDate = new Date();
 // One of 'day' | 'week' | 'month' | 'year' — same carry-forward-across-
 // re-renders treatment as homeCalendarViewDate, right above.
 let homeCalendarViewMode = 'month';
+// Which people's events the calendar shows — a Set of mu.planWho values,
+// empty meaning "everyone" — plus whether its checklist popover is open.
+// Same pattern (and carry-forward treatment) as Task Tracking's own Who
+// filter (taskTrackingWhoFilters/taskTrackingWhoMenuOpen below); kept as
+// a separate Set since filtering the calendar to one person shouldn't
+// also filter the Task Tracking lists, or vice versa.
+let homeCalendarWhoFilters = new Set();
+let homeCalendarWhoMenuOpen = false;
 
 // Task Tracking's Who filter — a Set of names (empty Set means "all"),
 // since more than one person can be selected at once. Carried forward
@@ -1914,6 +1922,7 @@ function computeCalendarEvents(){
         projectName: p.name || 'Untitled project',
         text: muPlanSummaryLine(mu) || mu.actionTaken || 'Untitled task',
         date: mu.date,
+        who: mu.planWho || '',
         mu
       });
     });
@@ -2084,9 +2093,14 @@ function renderCalendarCardHtml(viewDate, events){
   // — so a task the calendar colors as overdue agrees with Task Tracking.
   const todayStr = new Date().toISOString().slice(0, 10);
   const mode = homeCalendarViewMode;
+  // Options list comes from *every* event, before filtering -- same as
+  // Task Tracking's Who options -- so picking one person doesn't make
+  // the others disappear from the list.
+  const whoOptions = [...new Set(events.map(ev => ev.who).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const filteredEvents = homeCalendarWhoFilters.size ? events.filter(ev => homeCalendarWhoFilters.has(ev.who)) : events;
 
   const eventsByDate = {};
-  events.forEach(ev => {
+  filteredEvents.forEach(ev => {
     (eventsByDate[ev.date] || (eventsByDate[ev.date] = [])).push(ev);
   });
 
@@ -2100,6 +2114,24 @@ function renderCalendarCardHtml(viewDate, events){
       <div class="cal-header-bar">
         <div class="dash-card-title" style="margin-bottom:0;">Activities Calendar</div>
         <div class="cal-nav">
+          <div class="task-tracking-who-filter-wrap">
+            <button type="button" class="btn btn-sm${homeCalendarWhoFilters.size ? ' active' : ''}" id="calWhoTrigger">
+              Who${homeCalendarWhoFilters.size ? ` (${homeCalendarWhoFilters.size})` : ''} ${icon('chevron-down', 12)}
+            </button>
+            <div class="proj-col-filter-menu${homeCalendarWhoMenuOpen ? ' open' : ''}" id="calWhoMenu">
+              ${whoOptions.length ? `
+              <div class="proj-col-filter-values">
+                ${whoOptions.map(w => `
+                  <label class="proj-col-filter-item">
+                    <input type="checkbox" class="cal-who-cb" value="${escapeHtml(w)}" ${homeCalendarWhoFilters.has(w) ? 'checked' : ''}>
+                    ${escapeHtml(w)}
+                  </label>
+                `).join('')}
+              </div>
+              ${homeCalendarWhoFilters.size ? `<button type="button" class="btn btn-sm" id="calClearWhoFilters" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
+              ` : `<div class="dash-empty" style="padding:4px;">No one assigned yet</div>`}
+            </div>
+          </div>
           <div class="cal-view-switch">
             ${CAL_VIEW_MODES.map(([key, label]) => `<button type="button" class="cal-view-btn${mode === key ? ' active' : ''}" data-cal-view="${key}">${label}</button>`).join('')}
           </div>
@@ -2453,6 +2485,23 @@ function wireDashboardHome(){
       homeCalendarViewMode = 'month';
       refreshDashboardHome();
     });
+  });
+  document.getElementById('calWhoTrigger')?.addEventListener('click', e => {
+    e.stopPropagation();
+    homeCalendarWhoMenuOpen = !homeCalendarWhoMenuOpen;
+    refreshDashboardHome();
+  });
+  document.getElementById('calWhoMenu')?.addEventListener('click', e => e.stopPropagation());
+  main.querySelectorAll('.cal-who-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if(cb.checked) homeCalendarWhoFilters.add(cb.value);
+      else homeCalendarWhoFilters.delete(cb.value);
+      refreshDashboardHome();
+    });
+  });
+  document.getElementById('calClearWhoFilters')?.addEventListener('click', () => {
+    homeCalendarWhoFilters.clear();
+    refreshDashboardHome();
   });
 
   document.getElementById('taskTrackingWhoTrigger')?.addEventListener('click', e => {
@@ -3013,6 +3062,10 @@ document.addEventListener('click', () => {
   if(taskTrackingWhoMenuOpen){
     taskTrackingWhoMenuOpen = false;
     document.getElementById('taskTrackingWhoMenu')?.classList.remove('open');
+  }
+  if(homeCalendarWhoMenuOpen){
+    homeCalendarWhoMenuOpen = false;
+    document.getElementById('calWhoMenu')?.classList.remove('open');
   }
 });
 
