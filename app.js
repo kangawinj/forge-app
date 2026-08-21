@@ -3324,6 +3324,20 @@ function attachMyProfileListener(){
         who: typeof p?.who === 'string' && p.who ? p.who : CAL_PANE_ALL,
         expanded: !!p?.expanded
       }));
+      // renderApp() below only touches navbar chrome (avatar/name/module
+      // visibility) -- it never re-renders #mainArea, so on its own this
+      // update would sit correctly in memory but stay invisible until
+      // something else happened to trigger a real re-render (this bit
+      // the very first time: refreshing showed the old default pane,
+      // and it wasn't until *clicking Add* -- which does call
+      // refreshDashboardHome() -- that the actually-already-loaded saved
+      // panes suddenly appeared alongside the new one). Only refresh the
+      // dashboard here, and only when it's actually the visible view --
+      // same guard renderMain() itself uses to decide "we're on Home" --
+      // so this can't disrupt someone mid-edit on a different page.
+      if(appView === 'app' && !mainFeatureView && !getCurrent()){
+        refreshDashboardHome();
+      }
     }
     renderApp();
   }, err => {
