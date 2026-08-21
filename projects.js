@@ -1294,7 +1294,26 @@ export function renderProjectsList(){
   if(sorted.length === 0){
     const q = document.getElementById('projectSearchInput').value.trim();
     const label = q ? `No projects match "${escapeHtml(q)}"` : 'No projects match the selected filters';
-    container.innerHTML = `<div class="overview-empty">${label}</div>`;
+    const hasColumnFilters = Object.keys(projectColumnFilters).length > 0;
+    // Zero matches means the table (and with it, every column's own "▾"
+    // filter button, the only other place a filter can be cleared from)
+    // doesn't render at all -- with no active filters left visible
+    // anywhere, there was no way back to a non-empty view short of
+    // reloading the page. A blanket "Clear filters" right here covers
+    // both filter kinds (column filters and the search box) at once.
+    container.innerHTML = `
+      <div class="overview-empty">
+        ${label}
+        ${(q || hasColumnFilters) ? `<div style="margin-top:10px;"><button type="button" class="btn btn-sm" id="btnClearAllProjectFilters">Clear filters</button></div>` : ''}
+      </div>
+    `;
+    document.getElementById('btnClearAllProjectFilters')?.addEventListener('click', () => {
+      projectColumnFilters = {};
+      const searchInput = document.getElementById('projectSearchInput');
+      searchInput.value = '';
+      document.getElementById('btnClearProjectSearch').style.display = 'none';
+      renderProjectsList();
+    });
     return;
   }
 
