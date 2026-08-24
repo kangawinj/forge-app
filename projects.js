@@ -4,7 +4,7 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml
+  showCloudError, trialStringListHtml, wireModalOverlayClose
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc
@@ -2699,9 +2699,7 @@ export function initProjectsModal(){
   }));
 
   document.getElementById('btnCloseProductLogModal').addEventListener('click', closeProductLogModal);
-  document.getElementById('productLogModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'productLogModalOverlay') closeProductLogModal();
-  });
+  wireModalOverlayClose('productLogModalOverlay', closeProductLogModal);
   document.getElementById('btnAddProductLogEntry').addEventListener('click', () => {
     const product = getProductLogTarget();
     if(!product) return;
@@ -2716,9 +2714,7 @@ export function initProjectsModal(){
 
   document.getElementById('btnCloseMuEditModal').addEventListener('click', closeMuEditModal);
   document.getElementById('btnCancelMuEditModal').addEventListener('click', closeMuEditModal);
-  document.getElementById('muEditModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'muEditModalOverlay') closeMuEditModal();
-  });
+  wireModalOverlayClose('muEditModalOverlay', closeMuEditModal);
   document.getElementById('btnSaveMuEditModal').addEventListener('click', saveMuEditModal);
   document.querySelectorAll('#muEditModalOverlay .mu-field-with-translate').forEach(wireMuTranslateButton);
   wireWhereLocationPicker(document.getElementById('muEditModalWhere'), document.getElementById('muEditModalWhereLocation'));
@@ -2993,9 +2989,7 @@ function muAttachmentPreviewStep(delta){
 }
 export function initMuAttachmentPreviewModal(){
   document.getElementById('btnCloseMuAttachmentPreview').addEventListener('click', closeMuAttachmentPreview);
-  document.getElementById('muAttachmentPreviewModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'muAttachmentPreviewModalOverlay') closeMuAttachmentPreview();
-  });
+  wireModalOverlayClose('muAttachmentPreviewModalOverlay', closeMuAttachmentPreview);
   document.getElementById('btnMuAttachmentPreviewPrev').addEventListener('click', () => muAttachmentPreviewStep(-1));
   document.getElementById('btnMuAttachmentPreviewNext').addEventListener('click', () => muAttachmentPreviewStep(1));
 }

@@ -8,7 +8,7 @@ import {
   renderReadOnlyProcessFlowchart, renderMain,
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
-  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile
+  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -150,9 +150,7 @@ export function closeVersionPreview(){
 export function initVersionPreviewModal(){
   document.getElementById('btnCloseVersionPreviewModal').addEventListener('click', closeVersionPreview);
   document.getElementById('btnCloseVersionPreviewModal2').addEventListener('click', closeVersionPreview);
-  document.getElementById('versionPreviewModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'versionPreviewModalOverlay') closeVersionPreview();
-  });
+  wireModalOverlayClose('versionPreviewModalOverlay', closeVersionPreview);
   document.getElementById('btnRestoreFromPreview').addEventListener('click', () => {
     if(!versionPreviewContext) return;
     restoreVersion(versionPreviewContext.recipe, versionPreviewContext.version);
@@ -161,9 +159,7 @@ export function initVersionPreviewModal(){
 
 export function initVersionsModal(){
   document.getElementById('btnCloseVersionsModal').addEventListener('click', closeVersionsModal);
-  document.getElementById('versionsModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'versionsModalOverlay') closeVersionsModal();
-  });
+  wireModalOverlayClose('versionsModalOverlay', closeVersionsModal);
   document.getElementById('btnSaveVersion').addEventListener('click', () => {
     const r = versionsModalRecipe;
     if(!r) return;

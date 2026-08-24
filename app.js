@@ -729,9 +729,7 @@ function setAuthConfirmPasswordVisible(visible){
 
 function initAuthConfirmModal(){
   document.getElementById('btnCloseAuthConfirm').addEventListener('click', closeAuthConfirm);
-  document.getElementById('authConfirmModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'authConfirmModalOverlay') closeAuthConfirm();
-  });
+  wireModalOverlayClose('authConfirmModalOverlay', closeAuthConfirm);
   document.getElementById('btnToggleAuthConfirmPassword').addEventListener('click', () => {
     setAuthConfirmPasswordVisible(document.getElementById('authConfirmPassword').type === 'password');
   });
@@ -969,9 +967,7 @@ function initMyProfileModal(){
   document.getElementById('btnOpenMyProfile').addEventListener('click', openMyProfileModal);
   document.getElementById('btnCloseMyProfile').addEventListener('click', closeMyProfileModal);
   document.getElementById('btnCancelMyProfile').addEventListener('click', closeMyProfileModal);
-  document.getElementById('myProfileModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'myProfileModalOverlay') closeMyProfileModal();
-  });
+  wireModalOverlayClose('myProfileModalOverlay', closeMyProfileModal);
 
   imageInput.addEventListener('change', async e => {
     const file = e.target.files[0];
@@ -1027,9 +1023,7 @@ function initSecurityModal(){
 
   document.getElementById('btnOpenSecurity').addEventListener('click', openSecurityModal);
   document.getElementById('btnCloseSecurity').addEventListener('click', closeSecurityModal);
-  document.getElementById('securityModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'securityModalOverlay') closeSecurityModal();
-  });
+  wireModalOverlayClose('securityModalOverlay', closeSecurityModal);
 
   form.addEventListener('submit', e => {
     e.preventDefault();
@@ -1068,9 +1062,7 @@ function initDataManagementModal(){
   }
   document.getElementById('btnOpenDataManagement').addEventListener('click', openDataManagementModal);
   document.getElementById('btnCloseDataManagement').addEventListener('click', closeDataManagementModal);
-  document.getElementById('dataManagementModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'dataManagementModalOverlay') closeDataManagementModal();
-  });
+  wireModalOverlayClose('dataManagementModalOverlay', closeDataManagementModal);
 }
 
 
@@ -1279,9 +1271,7 @@ function initMaterialLibrary(){
   };
   document.getElementById('btnOpenMaterialLibSidebar').addEventListener('click', () => guardNavigation(openMaterialsView));
   document.getElementById('btnCloseMaterialDetail').addEventListener('click', closeMaterialDetail);
-  document.getElementById('materialDetailModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'materialDetailModalOverlay') closeMaterialDetail();
-  });
+  wireModalOverlayClose('materialDetailModalOverlay', closeMaterialDetail);
 }
 
 
@@ -1557,6 +1547,29 @@ function initActivityChangesModal(){
 
 export function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// Every modal closes on a click that lands on its own backdrop overlay --
+// used to be wired as a plain `overlay.addEventListener('click', e => {
+// if(e.target.id === overlayId) close(); })` at each of the app's ~10
+// modals. That's one native `click` check, and a browser fires `click`
+// based on where the mouseup lands, regardless of where the mousedown
+// started -- so selecting/dragging text inside a field (e.g. a long
+// Activities Update note) that overshoots past the modal's edge ends
+// the drag on the backdrop, fires a `click` there, and silently closes
+// the modal -- discarding whatever was being typed, with the drag never
+// having been an attempt to close anything. Requiring the mousedown to
+// *also* have started on the backdrop (not just the eventual mouseup/
+// click) is the standard fix -- a real "click the backdrop to close"
+// still starts and ends there, a drag that merely ends there doesn't.
+export function wireModalOverlayClose(overlayId, closeFn){
+  const overlay = document.getElementById(overlayId);
+  let mousedownOnOverlay = false;
+  overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target.id === overlayId; });
+  overlay.addEventListener('click', e => {
+    if(mousedownOnOverlay && e.target.id === overlayId) closeFn();
+    mousedownOnOverlay = false;
+  });
 }
 
 // Inline Lucide icons (https://lucide.dev, ISC license) — embedded as raw
