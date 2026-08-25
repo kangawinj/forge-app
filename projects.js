@@ -503,17 +503,27 @@ export function blankProduct(recipeId){
 // Packaging spec display strings — "-" when the quantity hasn't been filled
 // in yet, same convention as every other optional field in the read-only
 // summary (see readOnlyDetailRows).
+// None of these fall back to a guessed unit (g/pcs/pack/carton) when one
+// hasn't actually been entered -- a blank unit just doesn't appear, rather
+// than silently implying a value nobody chose.
 function formatPortionWeight(p){
-  return p.portionWeightQty ? `${p.portionWeightQty} ${p.portionWeightUnit || 'g'} / ${p.portionPerUnit || 'pcs'}` : '-';
+  if(!p.portionWeightQty) return '-';
+  const qty = [p.portionWeightQty, p.portionWeightUnit].filter(Boolean).join(' ');
+  return p.portionPerUnit ? `${qty} / ${p.portionPerUnit}` : qty;
 }
 function formatInnerPacking(p){
-  return p.innerPackQty ? `${p.innerPackQty} ${p.innerPackWeightUnit || 'g'} / ${p.innerPackUnit || 'pack'}` : '-';
+  if(!p.innerPackQty) return '-';
+  const qty = [p.innerPackQty, p.innerPackWeightUnit].filter(Boolean).join(' ');
+  return p.innerPackUnit ? `${qty} / ${p.innerPackUnit}` : qty;
 }
 function formatOuterPacking(p){
-  return p.outerPackQty ? `${p.outerPackQty} ${p.outerPackUnit || 'pack'} / ${p.outerPackContainerUnit || 'carton'}` : '-';
+  if(!p.outerPackQty) return '-';
+  const qty = [p.outerPackQty, p.outerPackUnit].filter(Boolean).join(' ');
+  return p.outerPackContainerUnit ? `${qty} / ${p.outerPackContainerUnit}` : qty;
 }
 function formatProjectMoq(p){
-  return p.moqQty ? `${p.moqQty} ${p.moqUnit || 'pcs'}` : '-';
+  if(!p.moqQty) return '-';
+  return [p.moqQty, p.moqUnit].filter(Boolean).join(' ');
 }
 
 // Copies the template-like fields (name, photo, customer/destination/owner,
@@ -1140,34 +1150,34 @@ function renderNewProjectPanel(){
             <label>Portion Weight</label>
             <div class="combo-row">
               <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
-              <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
+              <input type="text" id="newProjPortionUnit" list="unitsDatalist" placeholder="e.g. g">
               <span>/</span>
-              <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
+              <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" placeholder="e.g. pcs">
             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Inner Packing</label>
             <div class="combo-row">
               <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
-              <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
+              <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" placeholder="e.g. g">
               <span>/</span>
-              <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+              <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" placeholder="e.g. pack">
             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Outer Packing</label>
             <div class="combo-row">
               <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
-              <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+              <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" placeholder="e.g. pack">
               <span>/</span>
-              <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
+              <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" placeholder="e.g. carton">
             </div>
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>MOQ</label>
             <div class="combo-row">
               <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
-              <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
+              <input type="text" id="newProjMoqUnit" list="unitsDatalist" placeholder="e.g. pcs">
             </div>
           </div>
         </div>
@@ -2199,34 +2209,34 @@ export function renderProjectsList(){
                         <label>Portion Weight</label>
                         <div class="combo-row">
                           <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 20" step="any" min="0">
-                          <input type="text" class="proj-portion-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionWeightUnit || 'g')}" placeholder="unit">
+                          <input type="text" class="proj-portion-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionWeightUnit || '')}" placeholder="e.g. g">
                           <span>/</span>
-                          <input type="text" class="proj-portion-per-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionPerUnit || 'pcs')}" placeholder="per">
+                          <input type="text" class="proj-portion-per-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionPerUnit || '')}" placeholder="e.g. pcs">
                         </div>
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>Inner Packing</label>
                         <div class="combo-row">
                           <input type="number" class="proj-inner-qty" ${ro} value="${escapeHtml(p.innerPackQty || '')}" placeholder="e.g. 30" step="any" min="0">
-                          <input type="text" class="proj-inner-weight-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackWeightUnit || 'g')}" placeholder="unit">
+                          <input type="text" class="proj-inner-weight-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackWeightUnit || '')}" placeholder="e.g. g">
                           <span>/</span>
-                          <input type="text" class="proj-inner-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackUnit || 'pack')}" placeholder="pack unit">
+                          <input type="text" class="proj-inner-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackUnit || '')}" placeholder="e.g. pack">
                         </div>
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>Outer Packing</label>
                         <div class="combo-row">
                           <input type="number" class="proj-outer-qty" ${ro} value="${escapeHtml(p.outerPackQty || '')}" placeholder="e.g. 24" step="any" min="0">
-                          <input type="text" class="proj-outer-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackUnit || 'pack')}" placeholder="pack unit">
+                          <input type="text" class="proj-outer-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackUnit || '')}" placeholder="e.g. pack">
                           <span>/</span>
-                          <input type="text" class="proj-outer-container-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackContainerUnit || 'carton')}" placeholder="container">
+                          <input type="text" class="proj-outer-container-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackContainerUnit || '')}" placeholder="e.g. carton">
                         </div>
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>MOQ</label>
                         <div class="combo-row">
                           <input type="number" class="proj-moq-qty" ${ro} value="${escapeHtml(p.moqQty || '')}" placeholder="e.g. 500" step="any" min="0">
-                          <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || 'pcs')}" placeholder="unit">
+                          <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || '')}" placeholder="e.g. pcs">
                         </div>
                       </div>
                     </div>
