@@ -1094,7 +1094,7 @@ function renderNewProjectPanel(){
           <label>Product</label>
           <div class="flavor-table-scroll">
           <table class="flavor-table flavor-table-edit">
-            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
             <tbody class="proj-flavors-tbody">${newProjectFlavors.map(f => `
               <tr data-flavor-id="${escapeHtml(f.id)}">
                 <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
@@ -1994,7 +1994,7 @@ export function renderProjectsList(){
         const readOnlyFlavorsHtml = flavors.length ? `
           <div class="flavor-table-scroll">
           <table class="flavor-table">
-            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
+            <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
             <tbody>${flavors.map(f => `
               <tr>
                 <td>${escapeHtml(f.name || 'Untitled flavor')}</td>
@@ -2127,7 +2127,7 @@ export function renderProjectsList(){
                       <label>Product</label>
                       <div class="flavor-table-scroll">
                       <table class="flavor-table flavor-table-edit">
-                        <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                        <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
                         <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
                           <tr data-flavor-id="${escapeHtml(f.id)}">
                             <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
