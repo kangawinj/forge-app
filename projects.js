@@ -902,6 +902,7 @@ function renderSubmissionReviewForm(){
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button class="btn btn-sm" id="btnSaveSubmissionReview">${icon('save')} Save</button>
         <button class="btn btn-sm proj-action-cancel" id="btnCancelSubmissionReview">${icon('undo-2')} Cancel</button>
+        <button class="btn btn-sm btn-danger" id="btnDeleteSubmission">${icon('x')} Delete</button>
         <button class="btn btn-primary btn-sm" id="btnImportSubmission" style="margin-left:auto;">Import as Project</button>
       </div>
     </div>
@@ -912,7 +913,23 @@ function renderSubmissionReviewForm(){
     reviewingSubmission = null;
     renderPendingSubmissionsPanel();
   });
+  document.getElementById('btnDeleteSubmission').addEventListener('click', deleteSubmission);
   document.getElementById('btnImportSubmission').addEventListener('click', importSubmission);
+}
+async function deleteSubmission(){
+  const sub = reviewingSubmission;
+  if(!confirm(`Delete this submission${sub.name ? ` ("${sub.name}")` : ''}? This cannot be undone.`)) return;
+  const btn = document.getElementById('btnDeleteSubmission');
+  btn.disabled = true;
+  try{
+    await deleteDoc(doc(pendingSubmissionsCol, sub.id));
+    reviewingSubmission = null;
+    pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
+    renderPendingSubmissionsPanel();
+  }catch(err){
+    alert('Could not delete: ' + (err.message || err));
+    btn.disabled = false;
+  }
 }
 function wireReviewStepsList(){
   const root = document.getElementById('reviewStepsListRoot');

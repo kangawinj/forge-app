@@ -103,7 +103,12 @@ service cloud.firestore {
       allow create: if request.resource.data.submissionStatus == 'pending';
       allow update: if isAllowedUser()
         || (resource.data.submissionStatus == 'pending' && request.resource.data.submissionStatus == 'pending');
-      allow delete: if isAdmin();
+      // Any approved team member can delete a submission (e.g. junk/spam
+      // requests) from the Reviewing Submission panel -- same access
+      // level as reviewing/importing one, not restricted to the admin
+      // the way deleting a real /projects doc is, since this is just a
+      // draft request that never became company data.
+      allow delete: if isAllowedUser();
     }
   }
 }
