@@ -85,5 +85,25 @@ service cloud.firestore {
       allow create: if isAllowedUser() && request.resource.data.by == request.auth.token.email;
       allow update, delete: if false;
     }
+    // Draft project submissions from the public, no-login "share a link"
+    // intake page (see submit.html) — each doc is keyed by a long random
+    // token generated client-side (192 bits, not derivable or enumerable),
+    // so read/write access here is deliberately NOT gated on request.auth
+    // at all; the token itself, not a login, is what proves someone has
+    // the right to touch a given submission. Kept in its own collection
+    // (never merged into /projects) so this open-by-design write path can
+    // never reach real company project data — a submission only becomes a
+    // real project when a signed-in team member reviews and imports it
+    // from inside the app. submissionStatus can only ever be flipped to
+    // 'imported' by a signed-in team member (isAllowedUser()), not by the
+    // public submitter, so a link can't be used to un-lock itself after
+    // the app has already locked it.
+    match /pendingSubmissions/{token} {
+      allow read: if true;
+      allow create: if request.resource.data.submissionStatus == 'pending';
+      allow update: if isAllowedUser()
+        || (resource.data.submissionStatus == 'pending' && request.resource.data.submissionStatus == 'pending');
+      allow delete: if isAdmin();
+    }
   }
 }

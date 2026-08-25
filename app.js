@@ -84,6 +84,12 @@ export const recipesCol = collection(db, "recipes");
 export const materialsCol = collection(db, "ingredientMaster");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
+// Draft project submissions from the public, no-login "share a link"
+// intake page (submit.html) — see the /pendingSubmissions rule in
+// firestore.rules for how a random per-link token (not auth) scopes
+// access there. Only ever read/written from inside the app by an
+// approved team member reviewing and importing a submission.
+export const pendingSubmissionsCol = collection(db, "pendingSubmissions");
 // Append-only audit log of sign-ins — who, and when. Read by everyone on the
 // team (via the notification bell), written once per successful login/signup
 // by that same user (see the Firestore rule: create is allowed only when the

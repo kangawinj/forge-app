@@ -4,10 +4,11 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject
+  showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject,
+  pendingSubmissionsCol
 } from './app.js';
 import {
-  onSnapshot, setDoc, deleteDoc, doc
+  onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // since ¥ alone is ambiguous between JPY and CNY. Unlike the physical
@@ -617,6 +618,201 @@ function addProductLogEntry(product, stage, note){
   product.updatedAt = Date.now();
 }
 
+// ---------- Share Link: public, no-login project intake (submit.html) ----------
+// A team member generates a link here; whoever has it fills in a project's
+// details at submit.html without ever logging in (see that page's own
+// comment, and the /pendingSubmissions rule in firestore.rules, for how a
+// random per-link token rather than a login scopes what they can touch).
+// It only ever becomes a real project once someone on the team reviews and
+// imports it from the panel below -- nothing from the public page reaches
+// /projects directly.
+let shareLinkOpen = false;
+let shareLinkUrl = '';
+let pendingSubmissionsOpen = false;
+let pendingSubmissionsList = null; // null = not fetched yet this time it's opened
+// 192 bits from the browser's CSPRNG -- long and random enough that
+// finding a live token by guessing isn't a realistic attack, which is the
+// entire access-control model for the public intake page (see
+// firestore.rules: read/write there isn't gated on auth at all, just on
+// knowing this exact string).
+function generateSubmissionToken(){
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+function blankSubmissionDoc(){
+  return {
+    submissionStatus: 'pending', createdAt: Date.now(), updatedAt: Date.now(),
+    name: '', status: PROJECT_STATUSES[0], requestDate: '', startDate: '', targetEndDate: '',
+    customerName: '', destinationCountry: '',
+    ownerSalesRep: '', factorySalesRep: '', responsiblePerson: '', factoryName: '',
+    portionWeightQty: '', portionWeightUnit: '', portionPerUnit: '',
+    innerPackQty: '', innerPackWeightUnit: '', innerPackUnit: '',
+    outerPackQty: '', outerPackUnit: '', outerPackContainerUnit: '',
+    moqQty: '', moqUnit: '',
+    requirements: {
+      packagingCondition: '', storageCondition: '', shelfLife: '',
+      composition: '', recipe: '', cookingCondition: { method: '', steps: [] },
+      note: '', certificate: ''
+    }
+  };
+}
+async function createShareLink(){
+  const btn = document.getElementById('btnShareLink');
+  btn.disabled = true;
+  try{
+    const token = generateSubmissionToken();
+    await setDoc(doc(pendingSubmissionsCol, token), blankSubmissionDoc());
+    shareLinkUrl = `${location.origin}/submit.html?token=${token}`;
+    shareLinkOpen = true;
+    renderSharePanel();
+  }catch(err){
+    alert('Could not create the link: ' + (err.message || err));
+  }finally{
+    btn.disabled = false;
+  }
+}
+function renderSharePanel(){
+  const panel = document.getElementById('shareLinkPanel');
+  if(!panel) return;
+  if(!shareLinkOpen){ panel.innerHTML = ''; return; }
+  panel.innerHTML = `
+    <div class="card" style="margin:0 0 16px;background:var(--bg);">
+      <div class="field" style="margin-bottom:8px;">
+        <label>Share this link with anyone — no Forge account or login needed. They'll only ever see this one form.</label>
+        <div style="display:flex;gap:8px;">
+          <input type="text" id="shareLinkInput" readonly value="${escapeHtml(shareLinkUrl)}" style="flex:1;">
+          <button type="button" class="btn btn-sm" id="btnCopyShareLink">Copy</button>
+        </div>
+      </div>
+      <button type="button" class="btn btn-sm proj-action-cancel" id="btnCloseSharePanel">Close</button>
+    </div>
+  `;
+  document.getElementById('btnCopyShareLink').addEventListener('click', async () => {
+    const input = document.getElementById('shareLinkInput');
+    input.select();
+    try{
+      await navigator.clipboard.writeText(shareLinkUrl);
+      document.getElementById('btnCopyShareLink').textContent = 'Copied!';
+      setTimeout(() => { const b = document.getElementById('btnCopyShareLink'); if(b) b.textContent = 'Copy'; }, 1500);
+    }catch{
+      // Clipboard API can be blocked (permissions, non-HTTPS context) --
+      // the input is already selected above as a manual fallback.
+    }
+  });
+  document.getElementById('btnCloseSharePanel').addEventListener('click', () => {
+    shareLinkOpen = false;
+    renderSharePanel();
+  });
+}
+
+async function togglePendingSubmissionsPanel(){
+  pendingSubmissionsOpen = !pendingSubmissionsOpen;
+  if(pendingSubmissionsOpen && !pendingSubmissionsList){
+    await refreshPendingSubmissions();
+  }else{
+    renderPendingSubmissionsPanel();
+  }
+}
+async function refreshPendingSubmissions(){
+  const panel = document.getElementById('pendingSubmissionsPanel');
+  if(panel) panel.innerHTML = '<div class="card" style="margin:0 0 16px;"><div class="overview-empty">Loading…</div></div>';
+  try{
+    const snap = await getDocs(query(pendingSubmissionsCol, where('submissionStatus', '==', 'pending')));
+    pendingSubmissionsList = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  }catch(err){
+    pendingSubmissionsList = [];
+    alert('Could not load pending submissions: ' + (err.message || err));
+  }
+  renderPendingSubmissionsPanel();
+}
+function renderPendingSubmissionsPanel(){
+  const panel = document.getElementById('pendingSubmissionsPanel');
+  if(!panel) return;
+  if(!pendingSubmissionsOpen){ panel.innerHTML = ''; return; }
+  const list = pendingSubmissionsList || [];
+  panel.innerHTML = `
+    <div class="card" style="margin:0 0 16px;background:var(--bg);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+        <div class="dash-card-title" style="margin-bottom:0;">Pending Submissions${list.length ? ` (${list.length})` : ''}</div>
+        <button type="button" class="btn btn-sm" id="btnRefreshPendingSubmissions">Refresh</button>
+      </div>
+      ${list.length ? list.map(sub => `
+        <div class="user-admin-row" data-submission-id="${escapeHtml(sub.id)}">
+          <div class="user-admin-row-main">
+            <div class="user-admin-row-email">${escapeHtml(sub.name || '(no project name yet)')}</div>
+            <div class="user-admin-row-meta">${escapeHtml(sub.customerName || '')}${sub.customerName && sub.updatedAt ? ' · ' : ''}${sub.updatedAt ? 'Last updated ' + escapeHtml(formatActivityDateTime(sub.updatedAt) || '') : ''}</div>
+          </div>
+          <div class="user-admin-row-actions">
+            <button class="btn btn-sm btn-primary" data-role="import-submission" data-submission-id="${escapeHtml(sub.id)}">Import as New Project</button>
+          </div>
+        </div>
+      `).join('') : '<div class="overview-empty">No pending submissions right now</div>'}
+    </div>
+  `;
+  document.getElementById('btnRefreshPendingSubmissions').addEventListener('click', refreshPendingSubmissions);
+  panel.querySelectorAll('[data-role="import-submission"]').forEach(btn => {
+    btn.addEventListener('click', () => importPendingSubmission(btn.dataset.submissionId));
+  });
+}
+async function importPendingSubmission(submissionId){
+  const sub = (pendingSubmissionsList || []).find(s => s.id === submissionId);
+  if(!sub) return;
+  newProjectOpen = true;
+  newProjectImage = '';
+  referenceImagesEditing = [];
+  recipeAttachmentsEditing = [];
+  newProjectFlavors = [];
+  cookingMethodEditing = sub.requirements?.cookingCondition?.method || '';
+  cookingStepsEditing = [...(sub.requirements?.cookingCondition?.steps || [])];
+  renderNewProjectPanel();
+  const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ''; };
+  setVal('newProjName', sub.name);
+  setVal('newProjStatus', sub.status);
+  setVal('newProjRequestDate', sub.requestDate);
+  setVal('newProjStartDate', sub.startDate);
+  setVal('newProjTargetEndDate', sub.targetEndDate);
+  setVal('newProjCustomer', sub.customerName);
+  setVal('newProjDestination', sub.destinationCountry);
+  setVal('newProjOwner', sub.ownerSalesRep);
+  setVal('newProjFactoryRep', sub.factorySalesRep);
+  setVal('newProjResponsible', sub.responsiblePerson);
+  setVal('newProjFactory', sub.factoryName);
+  setVal('newProjPortionQty', sub.portionWeightQty);
+  setVal('newProjPortionUnit', sub.portionWeightUnit);
+  setVal('newProjPortionPerUnit', sub.portionPerUnit);
+  setVal('newProjInnerQty', sub.innerPackQty);
+  setVal('newProjInnerWeightUnit', sub.innerPackWeightUnit);
+  setVal('newProjInnerPackUnit', sub.innerPackUnit);
+  setVal('newProjOuterQty', sub.outerPackQty);
+  setVal('newProjOuterPackUnit', sub.outerPackUnit);
+  setVal('newProjOuterContainerUnit', sub.outerPackContainerUnit);
+  setVal('newProjMoqQty', sub.moqQty);
+  setVal('newProjMoqUnit', sub.moqUnit);
+  setVal('newProjReqPackaging', sub.requirements?.packagingCondition);
+  setVal('newProjReqStorageCondition', sub.requirements?.storageCondition);
+  setVal('newProjReqShelfLife', sub.requirements?.shelfLife);
+  setVal('newProjReqComposition', sub.requirements?.composition);
+  setVal('newProjReqRecipe', sub.requirements?.recipe);
+  setVal('newProjReqCookingCondition', sub.requirements?.cookingCondition?.method);
+  setVal('newProjReqNote', sub.requirements?.note);
+  setVal('newProjReqCertificate', sub.requirements?.certificate);
+  // Marked imported immediately (not deferred to the New Project Save
+  // click) so re-opening this same submission link tells the outside
+  // submitter it's already been picked up, even if the team member who
+  // imported it ends up cancelling the New Project form instead of
+  // saving -- better than leaving it "pending" forever with no one
+  // aware it was already looked at.
+  try{
+    await setDoc(doc(pendingSubmissionsCol, submissionId), { submissionStatus: 'imported', updatedAt: Date.now() }, { merge: true });
+  }catch(err){
+    alert('Imported into the form below, but could not mark the submission as handled: ' + (err.message || err));
+  }
+  pendingSubmissionsList = pendingSubmissionsList.filter(s => s.id !== submissionId);
+  renderPendingSubmissionsPanel();
+  document.getElementById('newProjectPanel')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 export function mountProjectsView(){
   const main = document.getElementById('mainArea');
   main.classList.add('main-wide');
@@ -626,6 +822,10 @@ export function mountProjectsView(){
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
+      <button type="button" class="btn btn-sm" id="btnShareLink" style="margin-bottom:16px;margin-left:8px;" title="Get a link anyone can fill in without logging in">Share Link</button>
+      <button type="button" class="btn btn-sm" id="btnTogglePendingSubmissions" style="margin-bottom:16px;margin-left:8px;">Pending Submissions</button>
+      <div id="shareLinkPanel"></div>
+      <div id="pendingSubmissionsPanel"></div>
       <div id="newProjectPanel"></div>
       <div id="projectsDashboard"></div>
       <div id="projectsToolbar" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
@@ -674,6 +874,8 @@ export function mountProjectsView(){
     newProjectFlavors = [];
     renderNewProjectPanel();
   });
+  document.getElementById('btnShareLink').addEventListener('click', createShareLink);
+  document.getElementById('btnTogglePendingSubmissions').addEventListener('click', togglePendingSubmissionsPanel);
   renderNewProjectPanel();
   const projectSearchInputEl = document.getElementById('projectSearchInput');
   const clearProjectSearchBtn = document.getElementById('btnClearProjectSearch');
