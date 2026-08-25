@@ -648,6 +648,20 @@ export function mountProjectsView(){
   document.getElementById('btnAddProject').addEventListener('click', () => {
     newProjectOpen = true;
     newProjectImage = '';
+    // Reuses the same staged-edit variables an existing project's own
+    // Requirements editor uses (referenceImagesEditing/cookingStepsEditing/
+    // cookingMethodEditing/recipeAttachmentsEditing) so the New Project
+    // panel can render the identical Reference Images / Recipe attachment /
+    // Cooking Guidelines steps UI -- reset here since a previous session
+    // (or a cancelled edit elsewhere) could otherwise leak stale staged
+    // values into a fresh new-project draft. newProjectFlavors is the one
+    // genuinely new piece of state, standing in for p.flavors since there's
+    // no real project yet for that array to live on.
+    referenceImagesEditing = [];
+    cookingStepsEditing = [];
+    cookingMethodEditing = '';
+    recipeAttachmentsEditing = [];
+    newProjectFlavors = [];
     renderNewProjectPanel();
   });
   renderNewProjectPanel();
@@ -725,6 +739,11 @@ let projectExpandedIds = new Set();
 let editingProjectImage = ''; // staged photo as a data URL for whichever project is being edited
 let newProjectOpen = false; // whether the "+ New Project" entry panel is showing, below the button
 let newProjectImage = ''; // staged photo as a data URL for the not-yet-saved new-project draft
+// Staged Flavor / Filling rows for the not-yet-saved new-project draft --
+// mirrors p.flavors (see blankFlavor), just with nowhere to live yet since
+// there's no real project until Save. Reset alongside the other New
+// Project staged-edit variables in btnAddProject's click handler.
+let newProjectFlavors = [];
 // Non-admins land on "mine" every fresh login/page load (this is a plain
 // module-level let, so it naturally resets whenever the app itself
 // reloads) but can switch to "all" to browse everyone else's projects
@@ -1067,8 +1086,30 @@ function renderNewProjectPanel(){
       <div class="requirements-box">
         <div class="requirements-box-title">Requirements</div>
         <div class="field" style="margin-bottom:8px;">
-          <label>Product</label>
-          <input type="text" id="newProjReqFlavorFilling" placeholder="e.g. Original">
+          <label>Idea / Reference Images (optional, up to ${PROJ_REF_IMAGE_MAX})</label>
+          ${projRefImagesHtml(referenceImagesEditing, true)}
+          ${referenceImagesEditing.length < PROJ_REF_IMAGE_MAX ? `<input type="file" class="proj-ref-image-input" accept="image/*">` : ''}
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Flavor / Filling</label>
+          <div class="flavor-table-scroll">
+          <table class="flavor-table flavor-table-edit">
+            <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+            <tbody class="proj-flavors-tbody">${newProjectFlavors.map(f => `
+              <tr data-flavor-id="${escapeHtml(f.id)}">
+                <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+                <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+                <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
+                <td><select class="proj-select flavor-currency">${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+                <td><input type="text" class="flavor-unit" list="unitsDatalist" value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                <td><button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button></td>
+              </tr>
+            `).join('')}</tbody>
+          </table>
+          </div>
+          <button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Composition</label>
@@ -1077,10 +1118,10 @@ function renderNewProjectPanel(){
         <div class="field" style="margin-bottom:8px;">
           <label>Recipe</label>
           <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
-        </div>
-        <div class="field" style="margin-bottom:8px;">
-          <label>Packaging condition</label>
-          <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
+          <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
+            <div class="mu-attachments-chiplist"></div>
+            <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+          </div>
         </div>
         <div class="project-header-grid" style="margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
@@ -1118,17 +1159,24 @@ function renderNewProjectPanel(){
             </div>
           </div>
         </div>
-        <div class="field" style="margin-bottom:8px;">
+        <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
           <label>Cooking Guidelines</label>
-          <input type="text" id="newProjReqCookingCondition" placeholder="e.g. N/A">
+          <input type="text" id="newProjReqCookingCondition" list="cookingMethodDatalist" value="${escapeHtml(cookingMethodEditing)}" placeholder="e.g. Microwave">
+          <div style="margin-top:8px;">
+            ${trialStringListHtml(cookingStepsEditing, true, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
+          </div>
         </div>
         <div class="field" style="margin-bottom:8px;">
-          <label>Certificate</label>
-          <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
+          <label>Packaging condition</label>
+          <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
         </div>
-        <div class="field" style="margin-bottom:0;">
+        <div class="field" style="margin-bottom:8px;">
           <label>Note</label>
           <textarea id="newProjReqNote" placeholder="Anything else not covered above"></textarea>
+        </div>
+        <div class="field requirements-box-divider" style="margin-bottom:0;">
+          <label>Certificate</label>
+          <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -1171,9 +1219,101 @@ function renderNewProjectPanel(){
     }
   });
 
+  // Cooking Guidelines: same generic add/remove/edit-step wiring the main
+  // edit form uses (see the [data-role="add-cooking-step"] block on the
+  // per-project row below), scoped to this panel instead. Picking a
+  // Cooking Method that has Steps on file pulls them in as a starting
+  // point, same as the main form.
+  panel.querySelector('#newProjReqCookingCondition').addEventListener('change', e => {
+    cookingMethodEditing = e.target.value.trim();
+    const match = metaLists.cookingMethods.find(m => metaItemName(m) === cookingMethodEditing);
+    if(match && (match.steps || []).length){
+      cookingStepsEditing = [...match.steps];
+    }
+    renderNewProjectPanel();
+  });
+  panel.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
+    cookingStepsEditing.push('');
+    renderNewProjectPanel();
+  });
+  panel.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = parseInt(btn.dataset.idx, 10);
+      cookingStepsEditing.splice(idx, 1);
+      renderNewProjectPanel();
+    });
+  });
+  panel.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
+    inp.addEventListener('change', () => { cookingStepsEditing[idx] = inp.value.trim(); });
+  });
+
+  // Idea / Reference Images -- same upload/remove/caption wiring as the
+  // main edit form, scoped to this panel and sharing the same
+  // referenceImagesEditing staged array.
+  panel.querySelector('.proj-ref-image-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file || referenceImagesEditing.length >= PROJ_REF_IMAGE_MAX) return;
+    try{
+      referenceImagesEditing.push(await fileToProjRefImage(file));
+      renderNewProjectPanel();
+    }catch(err){
+      alert(err.message || 'Could not read that image file');
+    }
+  });
+  panel.querySelectorAll('[data-role="remove-ref-image"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = referenceImagesEditing.findIndex(img => img.id === btn.dataset.refImageId);
+      if(idx !== -1) referenceImagesEditing.splice(idx, 1);
+      renderNewProjectPanel();
+    });
+  });
+  panel.querySelectorAll('.proj-ref-image-caption-input').forEach(inp => {
+    inp.addEventListener('change', () => {
+      const img = referenceImagesEditing.find(x => x.id === inp.dataset.refImageId);
+      if(img) img.caption = inp.value.trim();
+    });
+  });
+
+  // Recipe attachments -- the same generic editor the main edit form's
+  // Recipe field uses, pointed at the same staged recipeAttachmentsEditing
+  // array so it survives this panel re-rendering (upload/remove) without
+  // needing its own bespoke storage.
+  const recipeAttachEditorEl = panel.querySelector('.proj-recipe-attachments');
+  if(recipeAttachEditorEl) wireMuAttachmentEditor(recipeAttachEditorEl, () => recipeAttachmentsEditing);
+
+  // Flavor / Filling table -- same fields/columns as the main edit form,
+  // just against newProjectFlavors (no scheduleProjectSave -- there's no
+  // real project to save until the Save button below creates one).
+  panel.querySelectorAll('.proj-flavors-tbody tr[data-flavor-id]').forEach(row => {
+    const flavorId = row.dataset.flavorId;
+    const flavor = newProjectFlavors.find(x => x.id === flavorId);
+    if(!flavor) return;
+    row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
+    row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); });
+    row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); });
+    row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; });
+    row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); });
+    row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
+      newProjectFlavors = newProjectFlavors.filter(x => x.id !== flavorId);
+      renderNewProjectPanel();
+    });
+  });
+  panel.querySelector('[data-role="add-flavor"]')?.addEventListener('click', () => {
+    newProjectFlavors.push(blankFlavor());
+    renderNewProjectPanel();
+  });
+
   document.getElementById('btnCancelNewProject').addEventListener('click', () => {
     newProjectOpen = false;
     newProjectImage = '';
+    cookingMethodEditing = '';
+    cookingStepsEditing = [];
+    referenceImagesEditing = [];
+    recipeAttachmentsEditing = [];
+    newProjectFlavors = [];
     renderNewProjectPanel();
   });
 
@@ -1202,27 +1342,35 @@ function renderNewProjectPanel(){
     p.outerPackContainerUnit = document.getElementById('newProjOuterContainerUnit').value.trim();
     p.moqQty = document.getElementById('newProjMoqQty').value.trim();
     p.moqUnit = document.getElementById('newProjMoqUnit').value.trim();
+    p.flavors = newProjectFlavors;
     p.requirements = {
-      flavorFilling: document.getElementById('newProjReqFlavorFilling').value.trim(),
+      // No longer an editable field on this panel either (the Flavor /
+      // Filling table above now covers this, same as the main edit form) --
+      // left blank rather than removed from the data shape, matching how
+      // the main edit form preserves an existing project's old value.
+      flavorFilling: '',
       composition: document.getElementById('newProjReqComposition').value.trim(),
       recipe: document.getElementById('newProjReqRecipe').value.trim(),
       packagingCondition: document.getElementById('newProjReqPackaging').value.trim(),
-      // Quick-create keeps a single plain field for speed -- the full
-      // method+steps editor (see the main edit form) is available once the
-      // project is opened, same "start simple, refine later" tradeoff the
-      // rest of this modal already makes.
-      cookingCondition: (() => {
-        const v = document.getElementById('newProjReqCookingCondition').value.trim();
-        return { method: '', steps: v ? [v] : [] };
-      })(),
+      cookingCondition: {
+        method: document.getElementById('newProjReqCookingCondition').value.trim(),
+        steps: [...panel.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+      },
       certificate: document.getElementById('newProjReqCertificate').value.trim(),
-      note: document.getElementById('newProjReqNote').value.trim()
+      note: document.getElementById('newProjReqNote').value.trim(),
+      referenceImages: referenceImagesEditing,
+      recipeAttachments: recipeAttachmentsEditing
     };
     projects.push(p);
     saveProjectToCloud(p);
     logActivityEvent('created', 'project', p.name || 'Untitled project');
     newProjectOpen = false;
     newProjectImage = '';
+    cookingMethodEditing = '';
+    cookingStepsEditing = [];
+    referenceImagesEditing = [];
+    recipeAttachmentsEditing = [];
+    newProjectFlavors = [];
     projectEditingId = p.id;
     projectExpandedIds.add(p.id);
     renderNewProjectPanel();
