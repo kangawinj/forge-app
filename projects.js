@@ -723,6 +723,18 @@ let projectColumnFilters = {};
 // visibly close after every single checkbox click instead of staying open
 // while you check off several values in a row.
 let openProjectFilterMenuKey = null;
+// Which statuses count toward the "Projects by Responsible Person (PD)"
+// workload card — a Set of PROJECT_STATUSES values, empty meaning "every
+// status" (so Completed/Cancelled projects still weigh down someone's
+// count unless explicitly narrowed down, e.g. to just the active ones).
+// Deliberately separate from projectColumnFilters.status: that filters
+// the table itself, this only narrows what this one card tallies — same
+// "dashboard summary ignores the table's own filters" split the rest of
+// this dashboard already has. Its open/close state piggybacks on
+// openProjectFilterMenuKey above (via the 'pdWorkloadStatus' key) so it
+// gets the same stay-open-across-re-renders and click-outside-to-close
+// behavior as every other filter popover on this page for free.
+let responsibleStatusFilters = new Set();
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -854,6 +866,34 @@ function projectColumnFilterMenuHtml(key){
         `).join('')}
       </div>
       ${activeFilter ? `<button type="button" class="btn btn-sm proj-col-filter-clear" data-clear-filter="${key}" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
+    </div>
+  `;
+}
+// Same popover shell as projectColumnFilterMenuHtml above (reuses its
+// data-filter-menu="pdWorkloadStatus" key so it gets the exact same
+// open/close/reopen-after-render behavior for free), but backed by
+// responsibleStatusFilters instead of projectColumnFilters -- see that
+// state's own comment for why it's kept separate from the table's status
+// column filter. Wired by its own dedicated handlers (not the generic
+// PROJECT_FILTER_ACCESSORS-driven loop) since there's no table column
+// behind this one.
+function pdWorkloadStatusFilterMenuHtml(){
+  const isChecked = s => !responsibleStatusFilters.size || responsibleStatusFilters.has(s);
+  return `
+    <div class="proj-col-filter-menu" data-filter-menu="pdWorkloadStatus">
+      <label class="proj-col-filter-item proj-col-filter-selectall">
+        <input type="checkbox" class="pd-status-select-all" ${!responsibleStatusFilters.size ? 'checked' : ''}>
+        <b>(Select All)</b>
+      </label>
+      <div class="proj-col-filter-values">
+        ${PROJECT_STATUSES.map(s => `
+          <label class="proj-col-filter-item">
+            <input type="checkbox" class="pd-status-cb" value="${escapeHtml(s)}" ${isChecked(s) ? 'checked' : ''}>
+            ${escapeHtml(s)}
+          </label>
+        `).join('')}
+      </div>
+      ${responsibleStatusFilters.size ? `<button type="button" class="btn btn-sm" id="pdWorkloadStatusClear" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
     </div>
   `;
 }
@@ -1177,6 +1217,45 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       document.getElementById('projectsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+  // "Status" popover on the Responsible Person (PD) card — which
+  // statuses count toward each person's workload total. Same
+  // open/close/stay-open-across-re-renders wiring as the table's own
+  // column filters (see the [data-filter-trigger]/[data-filter-menu]
+  // loops above), just against responsibleStatusFilters instead of
+  // projectColumnFilters since there's no table column behind it.
+  dashboardContainer.querySelectorAll('[data-filter-trigger]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const key = btn.dataset.filterTrigger;
+      openProjectFilterMenuKey = openProjectFilterMenuKey === key ? null : key;
+      dashboardContainer.querySelectorAll('[data-filter-menu]').forEach(m => {
+        m.classList.toggle('open', m.dataset.filterMenu === openProjectFilterMenuKey);
+      });
+    });
+  });
+  const pdStatusMenu = dashboardContainer.querySelector('[data-filter-menu="pdWorkloadStatus"]');
+  if(pdStatusMenu){
+    if(openProjectFilterMenuKey === 'pdWorkloadStatus') pdStatusMenu.classList.add('open');
+    pdStatusMenu.addEventListener('click', e => e.stopPropagation());
+    const allStatuses = PROJECT_STATUSES;
+    const selectAllCb = pdStatusMenu.querySelector('.pd-status-select-all');
+    selectAllCb.addEventListener('change', () => {
+      responsibleStatusFilters = selectAllCb.checked ? new Set() : new Set(allStatuses);
+      renderProjectsList();
+    });
+    pdStatusMenu.querySelectorAll('.pd-status-cb').forEach(cb => {
+      cb.addEventListener('change', () => {
+        const current = new Set(responsibleStatusFilters.size ? responsibleStatusFilters : allStatuses);
+        if(cb.checked) current.add(cb.value); else current.delete(cb.value);
+        responsibleStatusFilters = current.size === allStatuses.length ? new Set() : current;
+        renderProjectsList();
+      });
+    });
+    pdStatusMenu.querySelector('#pdWorkloadStatusClear')?.addEventListener('click', () => {
+      responsibleStatusFilters = new Set();
+      renderProjectsList();
+    });
+  }
 }
 
 // A horizontal timeline bar per project running from Start Date to Target/
@@ -1328,13 +1407,15 @@ export function renderProjectsList(){
   // filter click below exactly the way PROJECT_FILTER_ACCESSORS.
   // responsiblePerson already treats "no PD" elsewhere in this file.
   const responsibleCounts = new Map();
-  visibleProjects.forEach(p => {
-    // Matches PROJECT_FILTER_ACCESSORS.responsiblePerson exactly (no
-    // trim) so a click-to-filter here lands on the same set of projects
-    // the column filter itself would show.
-    const key = PROJECT_FILTER_ACCESSORS.responsiblePerson(p);
-    responsibleCounts.set(key, (responsibleCounts.get(key) || 0) + 1);
-  });
+  visibleProjects
+    .filter(p => !responsibleStatusFilters.size || responsibleStatusFilters.has(p.status || PROJECT_STATUSES[0]))
+    .forEach(p => {
+      // Matches PROJECT_FILTER_ACCESSORS.responsiblePerson exactly (no
+      // trim) so a click-to-filter here lands on the same set of projects
+      // the column filter itself would show.
+      const key = PROJECT_FILTER_ACCESSORS.responsiblePerson(p);
+      responsibleCounts.set(key, (responsibleCounts.get(key) || 0) + 1);
+    });
   const projectsByResponsible = Array.from(responsibleCounts.entries())
     .map(([key, count]) => ({ key, label: key || '(Not assigned)', count }))
     .sort((a, b) => {
@@ -1358,7 +1439,15 @@ export function renderProjectsList(){
         ${renderStatusBarList(projectsByStatus)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
-        <div class="dash-card-title">Projects by Responsible Person (PD)</div>
+        <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span>Projects by Responsible Person (PD)</span>
+          <div class="task-tracking-who-filter-wrap">
+            <button type="button" class="btn btn-sm${responsibleStatusFilters.size ? ' active' : ''}" data-filter-trigger="pdWorkloadStatus" title="Choose which statuses count toward these totals">
+              Status${responsibleStatusFilters.size ? ` (${responsibleStatusFilters.size})` : ''} ${icon('chevron-down', 12)}
+            </button>
+            ${pdWorkloadStatusFilterMenuHtml()}
+          </div>
+        </div>
         ${renderResponsibleBarList(projectsByResponsible)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
@@ -2124,6 +2213,10 @@ export function renderProjectsList(){
     menu.addEventListener('click', e => e.stopPropagation());
     const key = menu.dataset.filterMenu;
     const accessor = PROJECT_FILTER_ACCESSORS[key];
+    // pdWorkloadStatus (see wireProjectsByStatusCardClicks) has no table
+    // column behind it, so it has no accessor here -- it's wired
+    // separately, this loop is only for real column filters.
+    if(!accessor) return;
     const filterableProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
     const allValues = Array.from(new Set(filterableProjects.map(accessor)));
     const selectAllCb = menu.querySelector('.filter-select-all');
