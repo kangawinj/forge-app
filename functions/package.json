@@ -1,0 +1,11 @@
+{
+  "name": "forge-functions",
+  "private": true,
+  "description": "Cloud Functions for Forge -- currently just the per-person iCalendar (.ics) subscription feed for Activities Update plans.",
+  "engines": { "node": "20" },
+  "main": "index.js",
+  "dependencies": {
+    "firebase-admin": "^12.6.0",
+    "firebase-functions": "^5.1.1"
+  }
+}

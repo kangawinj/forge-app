@@ -2,6 +2,13 @@
   "firestore": {
     "rules": "firestore.rules"
   },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "firebase-debug.log", "firebase-debug.*.log"]
+    }
+  ],
   "hosting": {
     "public": ".",
     "ignore": [
@@ -11,7 +18,11 @@
       "firestore.rules",
       "**/.*",
       "**/node_modules/**",
-      "dev/**"
+      "dev/**",
+      "functions/**"
+    ],
+    "rewrites": [
+      { "source": "/calendarFeed", "function": "calendarFeed" }
     ],
     "headers": [
       {
