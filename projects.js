@@ -1104,12 +1104,12 @@ function renderNewProjectPanel(){
                 <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                 <td><select class="proj-select flavor-currency">${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
                 <td><input type="text" class="flavor-unit" list="unitsDatalist" value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
-                <td><button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button></td>
+                <td><button type="button" class="icon-btn" title="Delete this product" data-role="remove-flavor">${icon('x')}</button></td>
               </tr>
             `).join('')}</tbody>
           </table>
           </div>
-          <button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>
+          <button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Composition</label>
@@ -1997,7 +1997,7 @@ export function renderProjectsList(){
             <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
             <tbody>${flavors.map(f => `
               <tr>
-                <td>${escapeHtml(f.name || 'Untitled flavor')}</td>
+                <td>${escapeHtml(f.name || 'Untitled product')}</td>
                 <td>${formatFlavorPrice(f, f.targetPrice)}</td>
                 <td>${formatFlavorPrice(f, f.actualPrice)}</td>
                 <td>${escapeHtml(f.formulaRefCode || '-')}</td>
@@ -2006,7 +2006,7 @@ export function renderProjectsList(){
             `).join('')}</tbody>
           </table>
           </div>
-        ` : '<div class="overview-empty">No flavors yet</div>';
+        ` : '<div class="overview-empty">No products yet</div>';
         const allAttachments = allProjectAttachments(p);
         const readOnlyRequirementsHtml = `
           <div class="requirements-box">
@@ -2137,12 +2137,12 @@ export function renderProjectsList(){
                             <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                             <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
                             <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
-                            <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this flavor" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
+                            <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this product" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
                           </tr>
                         `).join('')}</tbody>
                       </table>
                       </div>
-                      ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Flavor</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No flavors yet</div>')}
+                      ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No products yet</div>')}
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Composition</label>
