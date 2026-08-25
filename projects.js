@@ -617,6 +617,181 @@ function addProductLogEntry(product, stage, note){
   product.updatedAt = Date.now();
 }
 
+// ---------- Excel export/import for the New Project form ----------
+// Lets someone without Forge access (a factory, a customer) fill in a
+// project's details in Excel and have it imported straight into the New
+// Project form here. SheetJS does the actual .xlsx reading/writing
+// entirely client-side (no backend involved, same "static site talking
+// only to Firebase" shape the rest of the app already has) -- loaded
+// lazily via dynamic import so its ~700KB never costs anything on a
+// session that never touches this feature.
+const XLSX_CDN_URL = 'https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs';
+let xlsxLibPromise = null;
+function loadXlsxLib(){
+  if(!xlsxLibPromise) xlsxLibPromise = import(XLSX_CDN_URL);
+  return xlsxLibPromise;
+}
+
+// [label, elementId] pairs for the "Project" sheet -- read straight off
+// the New Project panel's own inputs on export, written straight back to
+// those same inputs on import. One shared array means export and import
+// can never drift out of sync with each other about field order/labels.
+const PROJECT_TEMPLATE_FIELDS = [
+  ['Project Name', 'newProjName'],
+  [`Status (${PROJECT_STATUSES.join(' / ')})`, 'newProjStatus'],
+  ['Request Date (YYYY-MM-DD)', 'newProjRequestDate'],
+  ['Start Date (YYYY-MM-DD)', 'newProjStartDate'],
+  ['Target / End Date (YYYY-MM-DD)', 'newProjTargetEndDate'],
+  ['Customer Name', 'newProjCustomer'],
+  ['Destination Country', 'newProjDestination'],
+  ['Project Owner', 'newProjOwner'],
+  ['Factory Sales Rep', 'newProjFactoryRep'],
+  ['Responsible Person (PD)', 'newProjResponsible'],
+  ['Factory', 'newProjFactory'],
+  ['Portion Weight Qty', 'newProjPortionQty'],
+  ['Portion Weight Unit', 'newProjPortionUnit'],
+  ['Portion Per Unit', 'newProjPortionPerUnit'],
+  ['Inner Pack Qty', 'newProjInnerQty'],
+  ['Inner Pack Weight Unit', 'newProjInnerWeightUnit'],
+  ['Inner Pack Unit', 'newProjInnerPackUnit'],
+  ['Outer Pack Qty', 'newProjOuterQty'],
+  ['Outer Pack Unit', 'newProjOuterPackUnit'],
+  ['Outer Pack Container', 'newProjOuterContainerUnit'],
+  ['MOQ Qty', 'newProjMoqQty'],
+  ['MOQ Unit', 'newProjMoqUnit'],
+  ['Packaging Condition', 'newProjReqPackaging'],
+  ['Storage Condition', 'newProjReqStorageCondition'],
+  ['Shelf Life (from production date)', 'newProjReqShelfLife'],
+  ['Composition', 'newProjReqComposition'],
+  ['Recipe', 'newProjReqRecipe'],
+  ['Cooking Method', 'newProjReqCookingCondition'],
+  ['Note', 'newProjReqNote'],
+  ['Certificate', 'newProjReqCertificate']
+];
+const PRODUCT_TEMPLATE_COLUMNS = ['Product', 'Sample Qty', 'Sample Request Date (YYYY-MM-DD)', 'Target Price', 'Actual Price', 'Currency', 'Per', 'Formula / Reference No.', 'Note'];
+const PRODUCT_TEMPLATE_BLANK_ROWS = 5;
+const COOKING_STEP_TEMPLATE_BLANK_ROWS = 5;
+
+// Not exported/imported at all: photos, Idea/Reference Images, and Recipe
+// attachments -- there's no reasonable way to represent binary files in
+// spreadsheet cells, and this feature is about someone outside Forge
+// filling in the same text/number/date fields the form already has, not
+// exchanging attachments.
+async function exportProjectTemplate(){
+  const btn = document.getElementById('btnExportProjectTemplate');
+  const originalHtml = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = 'Loading...';
+  try{
+    const XLSX = await loadXlsxLib();
+    // Reads straight off the New Project panel's own inputs when it's
+    // open, so this one button covers both "export a blank template" (
+    // panel closed, or open but empty -- every field just comes back '')
+    // and "export what I've already started filling in".
+    const getVal = id => document.getElementById(id)?.value || '';
+    const projectRows = [['Field', 'Value'], ...PROJECT_TEMPLATE_FIELDS.map(([label, id]) => [label, getVal(id)])];
+    const productRows = [PRODUCT_TEMPLATE_COLUMNS, ...Array.from({ length: PRODUCT_TEMPLATE_BLANK_ROWS }, () => [])];
+    const stepRows = [['Step #', 'Instruction'], ...Array.from({ length: COOKING_STEP_TEMPLATE_BLANK_ROWS }, (_, i) => [i + 1, ''])];
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(projectRows), 'Project');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(productRows), 'Products');
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stepRows), 'Cooking Steps');
+    XLSX.writeFile(wb, `Project Template - ${new Date().toISOString().slice(0, 10)}.xlsx`);
+  }catch(err){
+    alert('Could not build the template file: ' + (err.message || err));
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = originalHtml;
+  }
+}
+
+// Best-effort normalization for a cell that's supposed to hold a date --
+// Excel hands this back as a JS Date if the person let Excel treat the
+// cell as a date, or as plain text if they just typed "2026-08-25" into
+// it (what the template's own column header teaches). Anything that
+// isn't clearly one of those two is left blank rather than guessed at --
+// a wrong guess is worse than an empty date field the person can refill
+// in two seconds once they're looking at the actual form.
+function normalizeImportedDateCell(raw){
+  if(raw instanceof Date && !isNaN(raw)) return raw.toISOString().slice(0, 10);
+  const text = raw == null ? '' : String(raw).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
+}
+
+async function importProjectTemplate(file){
+  const labelEl = document.getElementById('btnImportProjectTemplateLabel');
+  const inputEl = document.getElementById('importProjectTemplateInput');
+  const originalHtml = labelEl.innerHTML;
+  inputEl.disabled = true;
+  labelEl.innerHTML = 'Importing...';
+  try{
+    const XLSX = await loadXlsxLib();
+    const data = await file.arrayBuffer();
+    const wb = XLSX.read(data, { type: 'array' });
+
+    if(!newProjectOpen){
+      newProjectOpen = true;
+      newProjectImage = '';
+      referenceImagesEditing = [];
+      cookingStepsEditing = [];
+      cookingMethodEditing = '';
+      recipeAttachmentsEditing = [];
+      newProjectFlavors = [];
+      renderNewProjectPanel();
+    }
+
+    const projectSheet = wb.Sheets['Project'];
+    if(projectSheet){
+      const rows = XLSX.utils.sheet_to_json(projectSheet, { header: 1 });
+      const byLabel = new Map(rows.slice(1).map(r => [String(r[0] || '').trim(), r[1]]));
+      PROJECT_TEMPLATE_FIELDS.forEach(([label, id]) => {
+        if(!byLabel.has(label)) return;
+        const el = document.getElementById(id);
+        if(!el) return;
+        const raw = byLabel.get(label);
+        el.value = el.type === 'date' ? normalizeImportedDateCell(raw) : (raw == null ? '' : String(raw).trim());
+      });
+    }
+
+    const productSheet = wb.Sheets['Products'];
+    if(productSheet){
+      const rows = XLSX.utils.sheet_to_json(productSheet, { header: 1 }).slice(1)
+        .filter(r => (r || []).some(c => String(c || '').trim()));
+      if(rows.length){
+        newProjectFlavors = rows.map(r => {
+          const f = blankFlavor();
+          f.name = String(r[0] || '').trim();
+          f.sampleQty = String(r[1] || '').trim();
+          f.sampleRequestDate = normalizeImportedDateCell(r[2]);
+          f.targetPrice = String(r[3] || '').trim();
+          f.actualPrice = String(r[4] || '').trim();
+          f.priceCurrency = String(r[5] || '').trim() || 'THB';
+          f.priceUnit = String(r[6] || '').trim() || 'kg';
+          f.formulaRefCode = String(r[7] || '').trim();
+          f.note = String(r[8] || '').trim();
+          return f;
+        });
+      }
+    }
+
+    const stepSheet = wb.Sheets['Cooking Steps'];
+    if(stepSheet){
+      const steps = XLSX.utils.sheet_to_json(stepSheet, { header: 1 }).slice(1)
+        .map(r => String((r || [])[1] || '').trim()).filter(Boolean);
+      if(steps.length) cookingStepsEditing = steps;
+    }
+
+    renderNewProjectPanel();
+    alert('Imported — review the New Project form below, then click Save.');
+  }catch(err){
+    alert('Could not read that file. Make sure it is the exported template (.xlsx). ' + (err.message || err));
+  }finally{
+    inputEl.disabled = false;
+    labelEl.innerHTML = originalHtml;
+  }
+}
+
 export function mountProjectsView(){
   const main = document.getElementById('mainArea');
   main.classList.add('main-wide');
@@ -626,6 +801,11 @@ export function mountProjectsView(){
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddProject" style="margin-bottom:16px;">+ New Project</button>
+      <button type="button" class="btn btn-sm" id="btnExportProjectTemplate" style="margin-bottom:16px;margin-left:8px;" title="Download a spreadsheet someone without Forge access can fill in">${icon('download', 14)} Export Template</button>
+      <label class="btn btn-sm" style="margin-bottom:16px;margin-left:8px;" title="Import a filled-in template back into the New Project form below">
+        <span id="btnImportProjectTemplateLabel">${icon('upload', 14)} Import from Excel</span>
+        <input type="file" id="importProjectTemplateInput" accept=".xlsx,.xls" style="display:none;">
+      </label>
       <div id="newProjectPanel"></div>
       <div id="projectsDashboard"></div>
       <div id="projectsToolbar" style="display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap;">
@@ -673,6 +853,13 @@ export function mountProjectsView(){
     recipeAttachmentsEditing = [];
     newProjectFlavors = [];
     renderNewProjectPanel();
+  });
+  document.getElementById('btnExportProjectTemplate').addEventListener('click', exportProjectTemplate);
+  const importTemplateInput = document.getElementById('importProjectTemplateInput');
+  importTemplateInput.addEventListener('change', () => {
+    const file = importTemplateInput.files[0];
+    importTemplateInput.value = '';
+    if(file) importProjectTemplate(file);
   });
   renderNewProjectPanel();
   const projectSearchInputEl = document.getElementById('projectSearchInput');
