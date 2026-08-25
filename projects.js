@@ -916,20 +916,27 @@ function renderSubmissionReviewForm(){
   document.getElementById('btnDeleteSubmission').addEventListener('click', deleteSubmission);
   document.getElementById('btnImportSubmission').addEventListener('click', importSubmission);
 }
-async function deleteSubmission(){
+function deleteSubmission(){
   const sub = reviewingSubmission;
-  if(!confirm(`Delete this submission${sub.name ? ` ("${sub.name}")` : ''}? This cannot be undone.`)) return;
-  const btn = document.getElementById('btnDeleteSubmission');
-  btn.disabled = true;
-  try{
-    await deleteDoc(doc(pendingSubmissionsCol, sub.id));
-    reviewingSubmission = null;
-    pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
-    renderPendingSubmissionsPanel();
-  }catch(err){
-    alert('Could not delete: ' + (err.message || err));
-    btn.disabled = false;
-  }
+  const label = sub.name ? ` ("${sub.name}")` : '';
+  if(!confirm(`Delete this submission${label}? This cannot be undone.`)) return;
+  requestAuthConfirm(
+    'Confirm Identity to Delete',
+    `Enter your password to delete this submission${label}.`,
+    async () => {
+      const btn = document.getElementById('btnDeleteSubmission');
+      if(btn) btn.disabled = true;
+      try{
+        await deleteDoc(doc(pendingSubmissionsCol, sub.id));
+        reviewingSubmission = null;
+        pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
+        renderPendingSubmissionsPanel();
+      }catch(err){
+        alert('Could not delete: ' + (err.message || err));
+        if(btn) btn.disabled = false;
+      }
+    }
+  );
 }
 function wireReviewStepsList(){
   const root = document.getElementById('reviewStepsListRoot');
