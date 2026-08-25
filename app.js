@@ -2514,6 +2514,7 @@ function renderDashboardHome(){
         <div class="cal-header-bar">
           <div class="dash-card-title" style="margin-bottom:0;">Task Tracking</div>
           <div class="cal-nav">
+            <button type="button" class="btn btn-sm btn-primary" id="taskTrackingAddBtn" title="Add a new task/activity, due today">${icon('plus', 12)} Add Task</button>
             <div class="task-tracking-who-filter-wrap">
               <button type="button" class="btn btn-sm${taskTrackingWhoFilters.size ? ' active' : ''}" id="taskTrackingWhoTrigger">
                 Who${taskTrackingWhoFilters.size ? ` (${taskTrackingWhoFilters.size})` : ''} ${icon('chevron-down', 12)}
@@ -2719,6 +2720,15 @@ function wireDashboardHome(){
     btn.addEventListener('click', () => quickAddCalendarPlan(btn.dataset.calDate));
   });
 
+  // Same quick-add flow as clicking an empty calendar cell (see the
+  // .cal-cell-clickable/.cal-day-add-btn wiring right above) -- a blank
+  // entry on the Unassigned bucket project, dated today since there's no
+  // specific cell to take the date from here, opened straight into the
+  // Update Activity popup to fill in (including moving it off Unassigned
+  // once a project's picked).
+  document.getElementById('taskTrackingAddBtn')?.addEventListener('click', () => {
+    quickAddCalendarPlan(new Date().toISOString().slice(0, 10));
+  });
   document.getElementById('taskTrackingWhoTrigger')?.addEventListener('click', e => {
     e.stopPropagation();
     taskTrackingWhoMenuOpen = !taskTrackingWhoMenuOpen;
