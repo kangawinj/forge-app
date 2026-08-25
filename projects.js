@@ -1067,12 +1067,12 @@ function renderNewProjectPanel(){
       <div class="requirements-box">
         <div class="requirements-box-title">Requirements</div>
         <div class="field" style="margin-bottom:8px;">
-          <label>Flavor or Filling</label>
+          <label>Product</label>
           <input type="text" id="newProjReqFlavorFilling" placeholder="e.g. Original">
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Composition</label>
-          <textarea id="newProjReqComposition" placeholder="e.g. Takoyaki: 20g x 4 pieces"></textarea>
+          <textarea id="newProjReqComposition" placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%"></textarea>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Recipe</label>
@@ -1998,7 +1998,7 @@ export function renderProjectsList(){
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Composition</label>
-                      <textarea class="proj-req-composition" ${ro} placeholder="e.g. Takoyaki: 20g x 4 pieces">${escapeHtml(req.composition)}</textarea>
+                      <textarea class="proj-req-composition" ${ro} placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%">${escapeHtml(req.composition)}</textarea>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Recipe</label>
