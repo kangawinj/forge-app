@@ -623,6 +623,12 @@ export function mountProjectsView(){
           <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
           <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
         </div>
+        ${!isCurrentUserAdmin() ? `
+        <div class="view-mode-toggle" id="projectVisibilityToggle" style="margin-left:0;">
+          <button type="button" class="btn btn-sm view-mode-btn${projectVisibilityScope === 'mine' ? ' active' : ''}" data-visibility-scope="mine">My Projects</button>
+          <button type="button" class="btn btn-sm view-mode-btn${projectVisibilityScope === 'all' ? ' active' : ''}" data-visibility-scope="all">All Projects</button>
+        </div>
+        ` : ''}
         <div class="col-toggle-wrap">
           <button type="button" class="btn btn-sm" id="btnProjectColumns">${icon('sliders-horizontal', 14)} Columns</button>
           <div class="col-toggle-menu" id="projectColumnsMenu">
@@ -660,6 +666,16 @@ export function mountProjectsView(){
     updateClearProjectSearchBtn();
     projectSearchInputEl.focus();
     renderProjectsList();
+  });
+  document.getElementById('projectVisibilityToggle')?.querySelectorAll('[data-visibility-scope]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(projectVisibilityScope === btn.dataset.visibilityScope) return;
+      projectVisibilityScope = btn.dataset.visibilityScope;
+      document.querySelectorAll('#projectVisibilityToggle [data-visibility-scope]').forEach(b => {
+        b.classList.toggle('active', b.dataset.visibilityScope === projectVisibilityScope);
+      });
+      renderProjectsList();
+    });
   });
   const columnsMenu = document.getElementById('projectColumnsMenu');
   document.getElementById('btnProjectColumns').addEventListener('click', e => {
@@ -709,6 +725,26 @@ let projectExpandedIds = new Set();
 let editingProjectImage = ''; // staged photo as a data URL for whichever project is being edited
 let newProjectOpen = false; // whether the "+ New Project" entry panel is showing, below the button
 let newProjectImage = ''; // staged photo as a data URL for the not-yet-saved new-project draft
+// Non-admins land on "mine" every fresh login/page load (this is a plain
+// module-level let, so it naturally resets whenever the app itself
+// reloads) but can switch to "all" to browse everyone else's projects
+// too -- switching back and forth within the same session (navigating
+// away from Projects and back) keeps whichever they last picked, since
+// mountProjectsView() reads this current value rather than hardcoding
+// "mine" every time it rebuilds the toolbar. Meaningless for admins (who
+// already see everything unconditionally via isCurrentUserAdmin()), so
+// the toggle itself is hidden for them -- see mountProjectsView.
+let projectVisibilityScope = 'mine'; // 'mine' | 'all'
+// Single source of truth for "can the signed-in person currently see this
+// project" -- admins always can, everyone else can too once they've
+// switched to "All Projects" (projectVisibilityScope), otherwise it's
+// isMyProject's usual name-match. Used everywhere a project might be
+// shown outside the main table (status/PD galleries, the Gantt chart,
+// column filter value lists) so the "All Projects" toggle actually
+// reveals everything consistently instead of just the table rows.
+function isProjectCurrentlyVisible(p){
+  return isCurrentUserAdmin() || projectVisibilityScope === 'all' || isMyProject(p);
+}
 // Excel-style per-column value filters for the projects table — see the "▾"
 // button sortableProjectHeader() adds to every sortable column. Keyed by
 // the same field key as PROJECT_SORT_ACCESSORS/PROJECT_FILTER_ACCESSORS; a
@@ -844,7 +880,7 @@ const PROJECT_FILTER_ACCESSORS = {
 // own "(Blank)" entry rather than being silently dropped from the list.
 function projectColumnFilterMenuHtml(key){
   const accessor = PROJECT_FILTER_ACCESSORS[key];
-  const filterableProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+  const filterableProjects = projects.filter(isProjectCurrentlyVisible);
   const allValues = Array.from(new Set(filterableProjects.map(accessor))).sort((a, b) => {
     return key === 'productCount' ? Number(a) - Number(b) : a.localeCompare(b);
   });
@@ -1269,7 +1305,7 @@ function renderProjectGanttChart(){
   const container = document.getElementById('projectGanttChart');
   if(!container) return;
   const withDates = projects
-    .filter(p => p.startDate && p.targetEndDate && (isCurrentUserAdmin() || isMyProject(p)))
+    .filter(p => p.startDate && p.targetEndDate && isProjectCurrentlyVisible(p))
     .sort((a, b) => a.startDate.localeCompare(b.startDate));
   if(!withDates.length){
     container.innerHTML = `
@@ -1353,11 +1389,14 @@ export function renderProjectsList(){
   const container = document.getElementById('projectsList');
   const dashboardContainer = document.getElementById('projectsDashboard');
   if(!container) return;
-  // Non-admins only see projects they're actually attached to (by name
-  // match against Owner/Factory Rep/Responsible Person/product Sales Rep/
-  // Activities Updates Who fields) plus the Unassigned bucket, which
-  // always stays visible to everyone — see isMyProject in app.js.
-  const visibleProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+  // Non-admins default to only their own projects (by name match against
+  // Owner/Factory Rep/Responsible Person/product Sales Rep/Activities
+  // Updates Who fields) plus the Unassigned bucket, which always stays
+  // visible to everyone — see isMyProject in app.js. The "All Projects"
+  // toggle (projectVisibilityScope, see mountProjectsView) lets them
+  // browse everyone else's too within the same session, without changing
+  // what a fresh login defaults back to.
+  const visibleProjects = projects.filter(isProjectCurrentlyVisible);
   if(visibleProjects.length === 0){
     if(dashboardContainer) dashboardContainer.innerHTML = '';
     container.innerHTML = '<div class="overview-empty">No projects yet — click "+ New Project" above to start one</div>';
@@ -2217,7 +2256,7 @@ export function renderProjectsList(){
     // column behind it, so it has no accessor here -- it's wired
     // separately, this loop is only for real column filters.
     if(!accessor) return;
-    const filterableProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+    const filterableProjects = projects.filter(isProjectCurrentlyVisible);
     const allValues = Array.from(new Set(filterableProjects.map(accessor)));
     const selectAllCb = menu.querySelector('.filter-select-all');
     selectAllCb.addEventListener('change', () => {
@@ -3236,7 +3275,7 @@ function renderStatusBarList(groups){
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && (isCurrentUserAdmin() || isMyProject(p)));
+    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p));
     const photosHtml = projectsForStatus.length ? `
       <div class="proj-gallery-grid" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
