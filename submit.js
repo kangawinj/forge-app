@@ -66,7 +66,15 @@ function blankSubmission(){
   };
 }
 
-const token = new URLSearchParams(location.search).get('token') || '';
+// This page is meant to be shared as ONE fixed, permanent URL (no token)
+// -- whoever opens it clicks "+ Add Request Project" themselves, which
+// generates a fresh random token client-side and quietly rewrites the URL
+// to include it (see startNewRequest below), rather than a team member
+// having to hand out a freshly-generated link every single time someone
+// new needs to submit something. A token in the URL from the start just
+// means someone's returning to a request they (or someone else) already
+// started -- same page, same behavior either way from here on.
+let token = new URLSearchParams(location.search).get('token') || '';
 const bannerEl = document.getElementById('submitStatusBanner');
 const rootEl = document.getElementById('submitFormRoot');
 function showBanner(html, kind){
@@ -78,6 +86,10 @@ function showBanner(html, kind){
   }
   bannerEl.innerHTML = html;
 }
+function clearBanner(){
+  bannerEl.style.display = 'none';
+  bannerEl.innerHTML = '';
+}
 
 // Cooking Guidelines' steps list is edited as plain state here, same
 // "staged array, re-rendered on every change" pattern the main app uses
@@ -86,9 +98,56 @@ let cookingSteps = [];
 
 async function init(){
   if(!token){
-    showBanner('This link is missing its token — please ask for the share link again.', 'error');
+    renderLanding();
     return;
   }
+  await loadAndRenderToken();
+}
+
+function renderLanding(){
+  clearBanner();
+  rootEl.innerHTML = `
+    <div class="card" style="text-align:center;padding:48px 20px;">
+      <p style="margin-bottom:16px;color:var(--text-dim);">Click below to submit a new project request.</p>
+      <button class="btn btn-primary btn-sm" id="btnStartRequest">+ Add Request Project</button>
+      <p id="startRequestFeedback" style="margin-top:12px;font-size:13px;color:var(--danger);"></p>
+    </div>
+  `;
+  document.getElementById('btnStartRequest').addEventListener('click', startNewRequest);
+}
+
+// Same 192-bit CSPRNG token generation as the authenticated app's own
+// Share Link feature (see generateSubmissionToken in projects.js) -- this
+// page generates its own rather than needing one handed to it, since the
+// whole point of the fixed link is that nobody has to do that per
+// submitter anymore.
+function generateToken(){
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+
+async function startNewRequest(){
+  const btn = document.getElementById('btnStartRequest');
+  const feedback = document.getElementById('startRequestFeedback');
+  btn.disabled = true;
+  feedback.textContent = '';
+  try{
+    const newToken = generateToken();
+    await setDoc(doc(db, 'pendingSubmissions', newToken), blankSubmission());
+    token = newToken;
+    // Swaps the URL in place (no reload) so refreshing or bookmarking
+    // from here on returns to this exact request, without ever leaving
+    // the landing page's blank state behind in browser history.
+    history.replaceState(null, '', `?token=${newToken}`);
+    cookingSteps = [];
+    render(blankSubmission());
+  }catch(err){
+    feedback.textContent = 'Could not start a new request: ' + (err.message || err);
+    btn.disabled = false;
+  }
+}
+
+async function loadAndRenderToken(){
   let data;
   try{
     const snap = await getDoc(doc(db, 'pendingSubmissions', token));
