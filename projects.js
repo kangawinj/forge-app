@@ -5,7 +5,7 @@ import {
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
   showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject,
-  pendingSubmissionsCol, myProfile
+  pendingSubmissionsCol, myProfile, activityEventsCol
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -692,6 +692,11 @@ function attachPendingSubmissionsListener(){
 
 let pendingSubmissionsOpen = false;
 let pendingSubmissionsList = null; // null = not fetched yet this time it's opened
+// Which sub-view the panel shows when it's open and nothing's being
+// reviewed: the live 'pending' queue, or the read-only 'history' of past
+// Import/Reject/Delete decisions (see submissionHistory below).
+let pendingSubmissionsView = 'pending';
+let submissionHistory = null; // null = not fetched yet this time History was opened
 // The submission currently open for review/edit (a plain staged copy, id
 // included) -- non-null switches the panel from the list to the review
 // form. Its own Cooking Guidelines steps are staged separately, same
@@ -699,11 +704,14 @@ let pendingSubmissionsList = null; // null = not fetched yet this time it's open
 // Project panel already uses for the same field.
 let reviewingSubmission = null;
 let reviewingCookingSteps = [];
+const SUBMISSION_HISTORY_VERB_LABELS = { imported: 'Imported as Project', rejected: 'Rejected', deleted: 'Deleted' };
 
 async function togglePendingSubmissionsPanel(){
   pendingSubmissionsOpen = !pendingSubmissionsOpen;
-  if(pendingSubmissionsOpen && !pendingSubmissionsList){
+  if(pendingSubmissionsOpen && pendingSubmissionsView === 'pending' && !pendingSubmissionsList){
     await refreshPendingSubmissions();
+  }else if(pendingSubmissionsOpen && pendingSubmissionsView === 'history' && !submissionHistory){
+    await refreshSubmissionHistory();
   }else{
     renderPendingSubmissionsPanel();
   }
@@ -721,40 +729,103 @@ async function refreshPendingSubmissions(){
   }
   renderPendingSubmissionsPanel();
 }
+// The submission doc itself is deleted (or moved past editing) once
+// decided, so this reads from the app's existing append-only activity
+// log instead -- entityType 'submission' entries are only ever written
+// from importSubmission()/rejectSubmission()/deleteSubmission() below.
+// Filtered client-side (not a composite where+orderBy query) so this
+// never needs its own Firestore index.
+async function refreshSubmissionHistory(){
+  const panel = document.getElementById('pendingSubmissionsPanel');
+  if(panel) panel.innerHTML = '<div class="card" style="margin:0 0 16px;"><div class="overview-empty">Loading…</div></div>';
+  try{
+    const snap = await getDocs(query(activityEventsCol, where('entityType', '==', 'submission')));
+    submissionHistory = snap.docs.map(d => ({ id: d.id, ...d.data() }))
+      .sort((a, b) => (b.at || 0) - (a.at || 0))
+      .slice(0, 100);
+  }catch(err){
+    submissionHistory = [];
+    alert('Could not load submission history: ' + (err.message || err));
+  }
+  renderPendingSubmissionsPanel();
+}
+async function switchPendingSubmissionsView(view){
+  if(pendingSubmissionsView === view) return;
+  pendingSubmissionsView = view;
+  if(view === 'history' && !submissionHistory){
+    await refreshSubmissionHistory();
+  }else if(view === 'pending' && !pendingSubmissionsList){
+    await refreshPendingSubmissions();
+  }else{
+    renderPendingSubmissionsPanel();
+  }
+}
 function renderPendingSubmissionsPanel(){
   const panel = document.getElementById('pendingSubmissionsPanel');
   if(!panel) return;
   if(!pendingSubmissionsOpen){ panel.innerHTML = ''; return; }
   if(reviewingSubmission){ renderSubmissionReviewForm(); return; }
-  const list = pendingSubmissionsList || [];
-  panel.innerHTML = `
-    <div class="card" style="margin:0 0 16px;background:var(--bg);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
-        <div class="dash-card-title" style="margin-bottom:0;">Pending Submissions${list.length ? ` (${list.length})` : ''}</div>
-        <button type="button" class="btn btn-sm" id="btnRefreshPendingSubmissions">Refresh</button>
-      </div>
-      ${list.length ? list.map(sub => `
-        <div class="user-admin-row" data-submission-id="${escapeHtml(sub.id)}">
-          <div class="user-admin-row-main">
-            <div class="user-admin-row-email">${escapeHtml(sub.name || '(no project name yet)')}</div>
-            <div class="user-admin-row-meta">${escapeHtml(sub.customerName || '')}${sub.customerName && sub.updatedAt ? ' · ' : ''}${sub.updatedAt ? 'Last updated ' + escapeHtml(formatActivityDateTime(sub.updatedAt) || '') : ''}</div>
-          </div>
-          <div class="user-admin-row-actions">
-            <button class="btn btn-sm btn-primary" data-role="review-submission" data-submission-id="${escapeHtml(sub.id)}">Review</button>
-          </div>
-        </div>
-      `).join('') : '<div class="overview-empty">No pending submissions right now</div>'}
+  const tabsHtml = `
+    <div style="display:flex;gap:6px;margin-bottom:10px;">
+      <button type="button" class="btn btn-sm${pendingSubmissionsView === 'pending' ? ' btn-primary' : ''}" data-role="pending-view-tab" data-view="pending">Pending</button>
+      <button type="button" class="btn btn-sm${pendingSubmissionsView === 'history' ? ' btn-primary' : ''}" data-role="pending-view-tab" data-view="history">History</button>
     </div>
   `;
-  document.getElementById('btnRefreshPendingSubmissions').addEventListener('click', refreshPendingSubmissions);
-  panel.querySelectorAll('[data-role="review-submission"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const sub = (pendingSubmissionsList || []).find(s => s.id === btn.dataset.submissionId);
-      if(!sub) return;
-      reviewingSubmission = { ...sub };
-      reviewingCookingSteps = [...(sub.requirements?.cookingCondition?.steps || [])];
-      renderPendingSubmissionsPanel();
+  if(pendingSubmissionsView === 'history'){
+    const history = submissionHistory || [];
+    panel.innerHTML = `
+      <div class="card" style="margin:0 0 16px;background:var(--bg);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="dash-card-title" style="margin-bottom:0;">Pending Submissions</div>
+          <button type="button" class="btn btn-sm" id="btnRefreshSubmissionHistory">Refresh</button>
+        </div>
+        ${tabsHtml}
+        ${history.length ? history.map(ev => `
+          <div class="user-admin-row">
+            <div class="user-admin-row-main">
+              <div class="user-admin-row-email">${escapeHtml(ev.entityName || 'Untitled')}</div>
+              <div class="user-admin-row-meta">${escapeHtml(SUBMISSION_HISTORY_VERB_LABELS[ev.type] || ev.type)} by ${escapeHtml(ev.by || 'Unknown')} · ${escapeHtml(formatActivityDateTime(ev.at) || '')}</div>
+            </div>
+          </div>
+        `).join('') : '<div class="overview-empty">No submission history yet</div>'}
+      </div>
+    `;
+    document.getElementById('btnRefreshSubmissionHistory').addEventListener('click', refreshSubmissionHistory);
+  }else{
+    const list = pendingSubmissionsList || [];
+    panel.innerHTML = `
+      <div class="card" style="margin:0 0 16px;background:var(--bg);">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+          <div class="dash-card-title" style="margin-bottom:0;">Pending Submissions${list.length ? ` (${list.length})` : ''}</div>
+          <button type="button" class="btn btn-sm" id="btnRefreshPendingSubmissions">Refresh</button>
+        </div>
+        ${tabsHtml}
+        ${list.length ? list.map(sub => `
+          <div class="user-admin-row" data-submission-id="${escapeHtml(sub.id)}">
+            <div class="user-admin-row-main">
+              <div class="user-admin-row-email">${escapeHtml(sub.name || '(no project name yet)')}</div>
+              <div class="user-admin-row-meta">${escapeHtml(sub.customerName || '')}${sub.customerName && sub.updatedAt ? ' · ' : ''}${sub.updatedAt ? 'Last updated ' + escapeHtml(formatActivityDateTime(sub.updatedAt) || '') : ''}</div>
+            </div>
+            <div class="user-admin-row-actions">
+              <button class="btn btn-sm btn-primary" data-role="review-submission" data-submission-id="${escapeHtml(sub.id)}">Review</button>
+            </div>
+          </div>
+        `).join('') : '<div class="overview-empty">No pending submissions right now</div>'}
+      </div>
+    `;
+    document.getElementById('btnRefreshPendingSubmissions').addEventListener('click', refreshPendingSubmissions);
+    panel.querySelectorAll('[data-role="review-submission"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const sub = (pendingSubmissionsList || []).find(s => s.id === btn.dataset.submissionId);
+        if(!sub) return;
+        reviewingSubmission = { ...sub };
+        reviewingCookingSteps = [...(sub.requirements?.cookingCondition?.steps || [])];
+        renderPendingSubmissionsPanel();
+      });
     });
+  }
+  panel.querySelectorAll('[data-role="pending-view-tab"]').forEach(btn => {
+    btn.addEventListener('click', () => switchPendingSubmissionsView(btn.dataset.view));
   });
 }
 function reviewCookingStepsHtml(){
@@ -937,6 +1008,7 @@ async function rejectSubmission(){
       ...data, submissionStatus: 'rejected', createdAt: sub.createdAt || Date.now(), updatedAt: Date.now(),
       decidedBy: currentUserDisplayLabel(), decidedAt: Date.now()
     });
+    logActivityEvent('rejected', 'submission', data.name || sub.name || 'Untitled submission');
     reviewingSubmission = null;
     pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
     renderPendingSubmissionsPanel();
@@ -957,6 +1029,7 @@ function deleteSubmission(){
       if(btn) btn.disabled = true;
       try{
         await deleteDoc(doc(pendingSubmissionsCol, sub.id));
+        logActivityEvent('deleted', 'submission', sub.name || 'Untitled submission');
         reviewingSubmission = null;
         pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
         renderPendingSubmissionsPanel();
@@ -1036,6 +1109,7 @@ async function importSubmission(){
       ...data, submissionStatus: 'imported', createdAt: reviewingSubmission.createdAt || Date.now(), updatedAt: Date.now(),
       decidedBy: currentUserDisplayLabel(), decidedAt: Date.now()
     });
+    logActivityEvent('imported', 'submission', data.name || 'Untitled submission');
   }catch(err){
     alert('Could not lock this submission as imported: ' + (err.message || err));
     btn.disabled = false;

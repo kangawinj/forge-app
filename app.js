@@ -102,7 +102,7 @@ const loginEventsCol = collection(db, "loginEvents");
 // once per Save/lock action, not per autosave tick — recipes/projects
 // autosave on nearly every keystroke, so logging that directly would bury
 // the feed in noise instead of surfacing anything useful.
-const activityEventsCol = collection(db, "activityEvents");
+export const activityEventsCol = collection(db, "activityEvents");
 // One doc per Firebase Auth account (keyed by uid), tracking whether an
 // admin has approved that sign-up to actually use the app — see
 // firestore.rules for the matching server-side enforcement (isApproved()).
@@ -1545,8 +1545,8 @@ export function formatTimeOnly(ts){
 // just a lightweight badge count, not something that needs to sync across
 // devices.
 const LOGIN_EVENTS_LAST_SEEN_KEY = 'forgeLastSeenLoginEventAt';
-const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Test', material: 'Ingredient' };
-const ACTIVITY_VERB_LABELS = { created: 'added', updated: 'edited', deleted: 'deleted' };
+const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Test', material: 'Ingredient', submission: 'Submission' };
+const ACTIVITY_VERB_LABELS = { created: 'added', updated: 'edited', deleted: 'deleted', imported: 'imported', rejected: 'rejected' };
 // Merges the sign-in log with the add/edit/delete activity log into one
 // feed, newest first — this is the only place the two collections meet;
 // everywhere else (attachLoginEventsListener/attachActivityEventsListener)
