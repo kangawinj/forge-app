@@ -5,7 +5,7 @@ import {
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
   showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject,
-  pendingSubmissionsCol
+  pendingSubmissionsCol, myProfile
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -903,7 +903,8 @@ function renderSubmissionReviewForm(){
         <button class="btn btn-sm" id="btnSaveSubmissionReview">${icon('save')} Save</button>
         <button class="btn btn-sm proj-action-cancel" id="btnCancelSubmissionReview">${icon('undo-2')} Cancel</button>
         <button class="btn btn-sm btn-danger" id="btnDeleteSubmission">${icon('x')} Delete</button>
-        <button class="btn btn-primary btn-sm" id="btnImportSubmission" style="margin-left:auto;">Import as Project</button>
+        <button class="btn btn-sm btn-danger" id="btnRejectSubmission" style="margin-left:auto;">Reject</button>
+        <button class="btn btn-primary btn-sm" id="btnImportSubmission">Import as Project</button>
       </div>
     </div>
   `;
@@ -914,7 +915,35 @@ function renderSubmissionReviewForm(){
     renderPendingSubmissionsPanel();
   });
   document.getElementById('btnDeleteSubmission').addEventListener('click', deleteSubmission);
+  document.getElementById('btnRejectSubmission').addEventListener('click', rejectSubmission);
   document.getElementById('btnImportSubmission').addEventListener('click', importSubmission);
+}
+// Whoever is signed in right now, in the friendliest form available --
+// shown to the (unauthenticated, external) submitter on the public page
+// as "handled by", so a raw internal email address isn't the default
+// unless that person genuinely never set a Profile display name.
+function currentUserDisplayLabel(){
+  return myProfile.displayName || currentUser?.email || 'a team member';
+}
+async function rejectSubmission(){
+  const sub = reviewingSubmission;
+  const label = sub.name ? ` ("${sub.name}")` : '';
+  if(!confirm(`Reject this submission${label}? The submitter will see it as rejected and won't be able to edit it further.`)) return;
+  const btn = document.getElementById('btnRejectSubmission');
+  btn.disabled = true;
+  try{
+    const data = readSubmissionReviewForm();
+    await setDoc(doc(pendingSubmissionsCol, sub.id), {
+      ...data, submissionStatus: 'rejected', createdAt: sub.createdAt || Date.now(), updatedAt: Date.now(),
+      decidedBy: currentUserDisplayLabel(), decidedAt: Date.now()
+    });
+    reviewingSubmission = null;
+    pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== sub.id);
+    renderPendingSubmissionsPanel();
+  }catch(err){
+    alert('Could not reject: ' + (err.message || err));
+    btn.disabled = false;
+  }
 }
 function deleteSubmission(){
   const sub = reviewingSubmission;
@@ -1004,7 +1033,8 @@ async function importSubmission(){
   const data = readSubmissionReviewForm();
   try{
     await setDoc(doc(pendingSubmissionsCol, submissionId), {
-      ...data, submissionStatus: 'imported', createdAt: reviewingSubmission.createdAt || Date.now(), updatedAt: Date.now()
+      ...data, submissionStatus: 'imported', createdAt: reviewingSubmission.createdAt || Date.now(), updatedAt: Date.now(),
+      decidedBy: currentUserDisplayLabel(), decidedAt: Date.now()
     });
   }catch(err){
     alert('Could not lock this submission as imported: ' + (err.message || err));

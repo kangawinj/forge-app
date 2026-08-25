@@ -96,24 +96,111 @@ function clearBanner(){
 // for the same field.
 let cookingSteps = [];
 
+// "My Requests": a plain list of {token, name} in this browser's own
+// localStorage -- deliberately NOT a Firestore query across the whole
+// collection (that's restricted to signed-in team members now anyway,
+// see the /pendingSubmissions `list` rule in firestore.rules), so
+// whoever's on this shared link only ever sees requests THEY personally
+// started on THIS browser, never anyone else's. Each entry is refreshed
+// with a live getDoc (by its own known token, which is always allowed)
+// to show its current status.
+const MY_SUBMISSIONS_KEY = 'forgeMySubmissions';
+function getMySubmissionEntries(){
+  try{
+    const raw = localStorage.getItem(MY_SUBMISSIONS_KEY);
+    const list = raw ? JSON.parse(raw) : [];
+    return Array.isArray(list) ? list : [];
+  }catch{
+    return [];
+  }
+}
+function rememberMySubmission(tok, name){
+  const list = getMySubmissionEntries().filter(e => e.token !== tok);
+  list.unshift({ token: tok, name: name || '' });
+  try{ localStorage.setItem(MY_SUBMISSIONS_KEY, JSON.stringify(list.slice(0, 50))); }catch{}
+}
+function forgetMySubmission(tok){
+  const list = getMySubmissionEntries().filter(e => e.token !== tok);
+  try{ localStorage.setItem(MY_SUBMISSIONS_KEY, JSON.stringify(list)); }catch{}
+}
+
 async function init(){
   if(!token){
-    renderLanding();
+    await renderLanding();
     return;
   }
   await loadAndRenderToken();
 }
 
-function renderLanding(){
+async function renderLanding(){
   clearBanner();
+  const tracked = getMySubmissionEntries();
   rootEl.innerHTML = `
-    <div class="card" style="text-align:center;padding:48px 20px;">
+    <div class="card" style="text-align:center;padding:32px 20px;">
       <p style="margin-bottom:16px;color:var(--text-dim);">Click below to submit a new project request.</p>
       <button class="btn btn-primary btn-sm" id="btnStartRequest">+ Add Request Project</button>
       <p id="startRequestFeedback" style="margin-top:12px;font-size:13px;color:var(--danger);"></p>
     </div>
+    ${tracked.length ? `
+    <div class="card" id="myRequestsCard" style="margin-top:16px;">
+      <div class="dash-card-title">My Requests</div>
+      <div id="myRequestsList"><div class="overview-empty">Loading…</div></div>
+    </div>
+    ` : ''}
   `;
   document.getElementById('btnStartRequest').addEventListener('click', startNewRequest);
+  if(tracked.length) await renderMyRequestsList(tracked);
+}
+
+const SUBMISSION_STATUS_INFO = {
+  pending: { label: 'Pending', color: 'var(--text-dim)' },
+  imported: { label: 'Approved', color: 'var(--ok)' },
+  rejected: { label: 'Rejected', color: 'var(--danger)' }
+};
+async function renderMyRequestsList(tracked){
+  const results = await Promise.all(tracked.map(async entry => {
+    try{
+      const snap = await getDoc(doc(db, 'pendingSubmissions', entry.token));
+      return snap.exists() ? { token: entry.token, ...snap.data() } : null;
+    }catch{
+      return null;
+    }
+  }));
+  const live = results.filter(Boolean);
+  // Anything that's gone (a team member deleted it) drops out of the
+  // list and stops being tracked, rather than showing a dead entry
+  // forever.
+  const liveTokens = new Set(live.map(r => r.token));
+  tracked.filter(e => !liveTokens.has(e.token)).forEach(e => forgetMySubmission(e.token));
+
+  const card = document.getElementById('myRequestsCard');
+  if(!live.length){ card?.remove(); return; }
+  const listEl = document.getElementById('myRequestsList');
+  listEl.innerHTML = live.map(sub => {
+    const info = SUBMISSION_STATUS_INFO[sub.submissionStatus] || { label: sub.submissionStatus, color: 'var(--text-dim)' };
+    const canContinue = sub.submissionStatus === 'pending';
+    return `
+      <div class="user-admin-row">
+        <div class="user-admin-row-main">
+          <div class="user-admin-row-email">${escapeHtml(sub.name || '(no project name yet)')}</div>
+          <div class="user-admin-row-meta">
+            <span style="color:${info.color};font-weight:600;">${escapeHtml(info.label)}</span>
+            ${sub.decidedBy ? ` · Handled by ${escapeHtml(sub.decidedBy)}` : ''}
+          </div>
+        </div>
+        <div class="user-admin-row-actions">
+          ${canContinue ? `<button class="btn btn-sm" data-role="continue-request" data-token="${escapeHtml(sub.token)}">Continue Editing</button>` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+  listEl.querySelectorAll('[data-role="continue-request"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      token = btn.dataset.token;
+      history.replaceState(null, '', `?token=${token}`);
+      await loadAndRenderToken();
+    });
+  });
 }
 
 // Same 192-bit CSPRNG token generation as the authenticated app's own
@@ -135,6 +222,11 @@ async function startNewRequest(){
     const newToken = generateToken();
     await setDoc(doc(db, 'pendingSubmissions', newToken), blankSubmission());
     token = newToken;
+    // Tracked immediately (even before anything's actually filled in) so
+    // it shows up under My Requests -- if they navigate away before
+    // saving, they can still find their way back to it by name once it
+    // has one, rather than the request effectively becoming unreachable.
+    rememberMySubmission(newToken, '');
     // Swaps the URL in place (no reload) so refreshing or bookmarking
     // from here on returns to this exact request, without ever leaving
     // the landing page's blank state behind in browser history.
@@ -156,8 +248,10 @@ async function loadAndRenderToken(){
     showBanner('Could not load this form: ' + (err.message || err), 'error');
     return;
   }
-  if(data.submissionStatus === 'imported'){
-    showBanner('This submission has already been processed by our team. If you need to make further changes, please contact whoever sent you this link.', 'info');
+  if(data.submissionStatus === 'imported' || data.submissionStatus === 'rejected'){
+    const who = data.decidedBy ? ` by ${escapeHtml(data.decidedBy)}` : '';
+    const verb = data.submissionStatus === 'imported' ? 'approved and imported' : 'rejected';
+    showBanner(`This submission has been ${verb}${who}. If you need to make further changes, please contact whoever sent you this link.`, 'info');
     return;
   }
   cookingSteps = [...(data.requirements?.cookingCondition?.steps || [])];
@@ -384,12 +478,17 @@ async function save(existing){
   };
   try{
     await setDoc(doc(db, 'pendingSubmissions', token), payload);
-    feedback.style.color = 'var(--ok)';
-    feedback.textContent = 'Saved — you can come back to this same link to make changes until our team reviews it.';
+    rememberMySubmission(token, name);
+    // Back to the fixed landing link, not left sitting on the just-saved
+    // form -- My Requests below the "+ Add Request Project" button is
+    // where this request (and anything else already started on this
+    // browser) shows up from here on.
+    history.replaceState(null, '', location.pathname);
+    token = '';
+    await renderLanding();
   }catch(err){
     feedback.style.color = 'var(--danger)';
     feedback.textContent = 'Could not save: ' + (err.message || err);
-  }finally{
     btn.disabled = false;
   }
 }

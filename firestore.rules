@@ -94,12 +94,21 @@ service cloud.firestore {
     // (never merged into /projects) so this open-by-design write path can
     // never reach real company project data — a submission only becomes a
     // real project when a signed-in team member reviews and imports it
-    // from inside the app. submissionStatus can only ever be flipped to
-    // 'imported' by a signed-in team member (isAllowedUser()), not by the
-    // public submitter, so a link can't be used to un-lock itself after
-    // the app has already locked it.
+    // from inside the app. submissionStatus ('pending' | 'imported' |
+    // 'rejected') can only ever be flipped away from 'pending' by a
+    // signed-in team member (isAllowedUser()), not by the public
+    // submitter, so a link can't be used to un-lock itself after the app
+    // has already locked it.
     match /pendingSubmissions/{token} {
-      allow read: if true;
+      // Split from a single `read` on purpose: the public page only ever
+      // fetches ONE doc it already has the token for (a "get"), it never
+      // needs to enumerate the collection -- so `list` (any query across
+      // /pendingSubmissions) stays team-only, closing off the one way an
+      // unauthenticated visitor with the public Firebase config could
+      // otherwise read every submission at once by querying the
+      // collection directly instead of going through this app's UI.
+      allow get: if true;
+      allow list: if isAllowedUser();
       allow create: if request.resource.data.submissionStatus == 'pending';
       allow update: if isAllowedUser()
         || (resource.data.submissionStatus == 'pending' && request.resource.data.submissionStatus == 'pending');
