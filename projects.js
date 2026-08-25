@@ -1005,127 +1005,130 @@ function renderNewProjectPanel(){
   }
   panel.innerHTML = `
     <div class="card" style="margin:0 0 16px;background:var(--bg);">
-      <div class="project-header-grid">
-        <div class="field" style="margin-bottom:0;">
-          <label>Project Name</label>
-          <input type="text" id="newProjName" placeholder="e.g. Sunrise Foods Q3 Launch">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Photo (optional)</label>
-          <input type="file" id="newProjImageInput" accept="image/*">
-          <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-            <img id="newProjImagePreview" src="${newProjectImage ? escapeHtml(newProjectImage) : ''}" style="${newProjectImage ? '' : 'display:none;'}width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
-            <button type="button" class="btn btn-sm" id="newProjImageRemove" style="${newProjectImage ? '' : 'display:none;'}">Remove photo</button>
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Status</label>
-          <select class="proj-select" id="newProjStatus">
-            ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
-          </select>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Request Date</label>
-          <input type="date" id="newProjRequestDate" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Start Date</label>
-          <input type="date" id="newProjStartDate">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Target / End Date</label>
-          <input type="date" id="newProjTargetEndDate">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Customer Name</label>
-          <input type="text" id="newProjCustomer" list="customerDatalist" placeholder="e.g. ABC Trading Co.">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Destination Country</label>
-          <input type="text" id="newProjDestination" list="destinationDatalist" placeholder="e.g. Japan">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Project Owner</label>
-          <input type="text" id="newProjOwner" list="salesRepDatalist" placeholder="e.g. Somchai">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Factory Sales Rep</label>
-          <input type="text" id="newProjFactoryRep" list="salesRepDatalist" placeholder="e.g. Kenta-san">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Responsible Person (PD)</label>
-          <input type="text" id="newProjResponsible" list="salesRepDatalist" placeholder="e.g. Kanya">
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Factory</label>
-          <input type="text" id="newProjFactory" list="customerDatalist" placeholder="e.g. Rayong Plant 2">
-        </div>
-        <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-          <label>Requirements</label>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Flavor or Filling</label>
-            <input type="text" id="newProjReqFlavorFilling" placeholder="e.g. Original">
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Composition</label>
-            <textarea id="newProjReqComposition" placeholder="e.g. Takoyaki: 20g x 4 pieces"></textarea>
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Recipe</label>
-            <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Packaging condition</label>
-            <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
-          </div>
-          <div class="project-header-grid" style="margin-bottom:8px;">
-            <div class="field" style="margin-bottom:0;">
-              <label>Portion Weight</label>
-              <div class="combo-row">
-                <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
-                <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
-                <span>/</span>
-                <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
-              </div>
-            </div>
-            <div class="field" style="margin-bottom:0;">
-              <label>Inner Packing</label>
-              <div class="combo-row">
-                <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
-                <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
-                <span>/</span>
-                <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
-              </div>
-            </div>
-            <div class="field" style="margin-bottom:0;">
-              <label>Outer Packing</label>
-              <div class="combo-row">
-                <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
-                <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
-                <span>/</span>
-                <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
-              </div>
-            </div>
-            <div class="field" style="margin-bottom:0;">
-              <label>MOQ</label>
-              <div class="combo-row">
-                <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
-                <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
-              </div>
-            </div>
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Cooking Guidelines</label>
-            <input type="text" id="newProjReqCookingCondition" placeholder="e.g. N/A">
-          </div>
-          <div class="field" style="margin-bottom:8px;">
-            <label>Certificate</label>
-            <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
+      <div class="requirements-box" style="margin-top:0;">
+        <div class="requirements-box-title">Project Information</div>
+        <div class="project-header-grid">
+          <div class="field" style="margin-bottom:0;">
+            <label>Project Name</label>
+            <input type="text" id="newProjName" placeholder="e.g. Sunrise Foods Q3 Launch">
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label>Note</label>
-            <textarea id="newProjReqNote" placeholder="Anything else not covered above"></textarea>
+            <label>Photo (optional)</label>
+            <input type="file" id="newProjImageInput" accept="image/*">
+            <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+              <img id="newProjImagePreview" src="${newProjectImage ? escapeHtml(newProjectImage) : ''}" style="${newProjectImage ? '' : 'display:none;'}width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+              <button type="button" class="btn btn-sm" id="newProjImageRemove" style="${newProjectImage ? '' : 'display:none;'}">Remove photo</button>
+            </div>
           </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Status</label>
+            <select class="proj-select" id="newProjStatus">
+              ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}">${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
+            </select>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Request Date</label>
+            <input type="date" id="newProjRequestDate" value="${escapeHtml(new Date().toISOString().slice(0,10))}">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Start Date</label>
+            <input type="date" id="newProjStartDate">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Target / End Date</label>
+            <input type="date" id="newProjTargetEndDate">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Customer Name</label>
+            <input type="text" id="newProjCustomer" list="customerDatalist" placeholder="e.g. ABC Trading Co.">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Destination Country</label>
+            <input type="text" id="newProjDestination" list="destinationDatalist" placeholder="e.g. Japan">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Project Owner</label>
+            <input type="text" id="newProjOwner" list="salesRepDatalist" placeholder="e.g. Somchai">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Factory Sales Rep</label>
+            <input type="text" id="newProjFactoryRep" list="salesRepDatalist" placeholder="e.g. Kenta-san">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Responsible Person (PD)</label>
+            <input type="text" id="newProjResponsible" list="salesRepDatalist" placeholder="e.g. Kanya">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Factory</label>
+            <input type="text" id="newProjFactory" list="customerDatalist" placeholder="e.g. Rayong Plant 2">
+          </div>
+        </div>
+      </div>
+      <div class="requirements-box">
+        <div class="requirements-box-title">Requirements</div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Flavor or Filling</label>
+          <input type="text" id="newProjReqFlavorFilling" placeholder="e.g. Original">
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Composition</label>
+          <textarea id="newProjReqComposition" placeholder="e.g. Takoyaki: 20g x 4 pieces"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Recipe</label>
+          <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Packaging condition</label>
+          <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
+        </div>
+        <div class="project-header-grid" style="margin-bottom:8px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Portion Weight</label>
+            <div class="combo-row">
+              <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
+              <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
+              <span>/</span>
+              <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Inner Packing</label>
+            <div class="combo-row">
+              <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
+              <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
+              <span>/</span>
+              <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Outer Packing</label>
+            <div class="combo-row">
+              <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
+              <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+              <span>/</span>
+              <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
+            </div>
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>MOQ</label>
+            <div class="combo-row">
+              <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
+              <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
+            </div>
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Cooking Guidelines</label>
+          <input type="text" id="newProjReqCookingCondition" placeholder="e.g. N/A">
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Certificate</label>
+          <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
+        </div>
+        <div class="field" style="margin-bottom:0;">
+          <label>Note</label>
+          <textarea id="newProjReqNote" placeholder="Anything else not covered above"></textarea>
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -1906,63 +1909,66 @@ export function renderProjectsList(){
                 <button class="btn btn-sm proj-action-duplicate" data-role="duplicate-project">${icon('copy')} Duplicate</button>
                 <button class="btn btn-sm proj-action-cancel" data-role="cancel-project">${icon('undo-2')} Cancel</button>
               </div>
-              <div class="project-header-grid">
-                <div class="field" style="margin-bottom:0;">
-                  <label>Project Name</label>
-                  <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Photo (optional)</label>
-                  ${isEditing ? `<input type="file" class="proj-image-input" accept="image/*">` : ''}
-                  <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
-                    <img class="proj-image-preview" src="${p.image ? escapeHtml(p.image) : ''}" style="${p.image ? '' : 'display:none;'}width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
-                    ${isEditing ? `<button type="button" class="btn btn-sm proj-image-remove" style="${p.image ? '' : 'display:none;'}">Remove photo</button>` : ''}
+              <div class="requirements-box" style="margin-top:0;">
+                <div class="requirements-box-title">Project Information</div>
+                <div class="project-header-grid">
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Project Name</label>
+                    <input type="text" class="proj-name" ${ro} value="${escapeHtml(p.name)}" placeholder="e.g. Sunrise Foods Q3 Launch">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Photo (optional)</label>
+                    ${isEditing ? `<input type="file" class="proj-image-input" accept="image/*">` : ''}
+                    <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+                      <img class="proj-image-preview" src="${p.image ? escapeHtml(p.image) : ''}" style="${p.image ? '' : 'display:none;'}width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+                      ${isEditing ? `<button type="button" class="btn btn-sm proj-image-remove" style="${p.image ? '' : 'display:none;'}">Remove photo</button>` : ''}
+                    </div>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Status</label>
+                    <select class="proj-select proj-status" ${isEditing ? '' : 'disabled'}>
+                      ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}" ${s === (p.status || PROJECT_STATUSES[0]) ? 'selected' : ''}>${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
+                    </select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Request Date</label>
+                    <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Start Date</label>
+                    <input type="date" class="proj-start-date" ${ro} value="${escapeHtml(p.startDate || '')}">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Target / End Date</label>
+                    <input type="date" class="proj-target-end-date" ${ro} value="${escapeHtml(p.targetEndDate || '')}">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Customer Name</label>
+                    <input type="text" class="proj-customer" list="customerDatalist" ${ro} value="${escapeHtml(p.customerName)}" placeholder="e.g. ABC Trading Co.">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Destination Country</label>
+                    <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Project Owner</label>
+                    <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Factory Sales Rep</label>
+                    <input type="text" class="proj-factory-rep" list="salesRepDatalist" ${ro} value="${escapeHtml(p.factorySalesRep)}" placeholder="e.g. Kenta-san">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Responsible Person (PD)</label>
+                    <input type="text" class="proj-responsible" list="salesRepDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Factory</label>
+                    <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                   </div>
                 </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Status</label>
-                  <select class="proj-select proj-status" ${isEditing ? '' : 'disabled'}>
-                    ${PROJECT_STATUSES.map(s => `<option value="${escapeHtml(s)}" ${s === (p.status || PROJECT_STATUSES[0]) ? 'selected' : ''}>${escapeHtml(PROJECT_STATUS_LABELS[s])}</option>`).join('')}
-                  </select>
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Request Date</label>
-                  <input type="date" class="proj-request-date" ${ro} value="${escapeHtml(p.requestDate || '')}">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Start Date</label>
-                  <input type="date" class="proj-start-date" ${ro} value="${escapeHtml(p.startDate || '')}">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Target / End Date</label>
-                  <input type="date" class="proj-target-end-date" ${ro} value="${escapeHtml(p.targetEndDate || '')}">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Customer Name</label>
-                  <input type="text" class="proj-customer" list="customerDatalist" ${ro} value="${escapeHtml(p.customerName)}" placeholder="e.g. ABC Trading Co.">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Destination Country</label>
-                  <input type="text" class="proj-destination" list="destinationDatalist" ${ro} value="${escapeHtml(p.destinationCountry)}" placeholder="e.g. Japan">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Project Owner</label>
-                  <input type="text" class="proj-owner" list="salesRepDatalist" ${ro} value="${escapeHtml(p.ownerSalesRep)}" placeholder="e.g. Somchai">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Factory Sales Rep</label>
-                  <input type="text" class="proj-factory-rep" list="salesRepDatalist" ${ro} value="${escapeHtml(p.factorySalesRep)}" placeholder="e.g. Kenta-san">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Responsible Person (PD)</label>
-                  <input type="text" class="proj-responsible" list="salesRepDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Factory</label>
-                  <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
-                </div>
-                <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
-                  <div class="requirements-box">
+              </div>
+              <div class="requirements-box">
                     <div class="requirements-box-title">Requirements</div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Idea / Reference Images (optional, up to ${PROJ_REF_IMAGE_MAX})</label>
@@ -2060,8 +2066,6 @@ export function renderProjectsList(){
                       <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
                     </div>
                   </div>
-                </div>
-              </div>
               ` : readOnlyDetailView}
               ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
