@@ -343,7 +343,7 @@ const REQUIREMENTS_FIELD_DEFS = [
 ];
 
 function blankRequirements(){
-  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [], recipeAttachments: [] };
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', storageCondition:'', shelfLife:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [], recipeAttachments: [] };
 }
 
 // Each entry is { id, dataUrl, caption } -- the "Idea / Reference Images"
@@ -1111,6 +1111,16 @@ function renderNewProjectPanel(){
           </div>
           <button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>
         </div>
+        <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Storage Condition</label>
+            <input type="text" id="newProjReqStorageCondition" placeholder="e.g. Keep frozen at -18°C">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Shelf Life</label>
+            <input type="text" id="newProjReqShelfLife" placeholder="e.g. 12 months from production date">
+          </div>
+        </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Composition</label>
           <textarea id="newProjReqComposition" placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%"></textarea>
@@ -1352,6 +1362,8 @@ function renderNewProjectPanel(){
       composition: document.getElementById('newProjReqComposition').value.trim(),
       recipe: document.getElementById('newProjReqRecipe').value.trim(),
       packagingCondition: document.getElementById('newProjReqPackaging').value.trim(),
+      storageCondition: document.getElementById('newProjReqStorageCondition').value.trim(),
+      shelfLife: document.getElementById('newProjReqShelfLife').value.trim(),
       cookingCondition: {
         method: document.getElementById('newProjReqCookingCondition').value.trim(),
         steps: [...panel.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
@@ -2014,6 +2026,12 @@ export function renderProjectsList(){
             ${projRefImagesHtml(req.referenceImages, false)}
             <div class="material-detail-notes-label">Product</div>
             ${readOnlyFlavorsHtml}
+            ${(req.storageCondition || req.shelfLife) ? `
+              <dl class="material-detail-list">${detailRowsHtml([
+                ['Storage Condition', req.storageCondition],
+                ['Shelf Life', req.shelfLife]
+              ])}</dl>
+            ` : ''}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
             ${(req.recipe || req.recipeAttachments.length) ? `
               <div class="material-detail-notes-label">Recipe</div>
@@ -2143,6 +2161,16 @@ export function renderProjectsList(){
                       </table>
                       </div>
                       ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No products yet</div>')}
+                    </div>
+                    <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Storage Condition</label>
+                        <input type="text" class="proj-req-storage-condition" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Shelf Life</label>
+                        <input type="text" class="proj-req-shelf-life" ${ro} value="${escapeHtml(req.shelfLife)}" placeholder="e.g. 12 months from production date">
+                      </div>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Composition</label>
@@ -2594,6 +2622,8 @@ export function renderProjectsList(){
           composition: block.querySelector('.proj-req-composition').value.trim(),
           recipe: block.querySelector('.proj-req-recipe').value.trim(),
           packagingCondition: block.querySelector('.proj-req-packaging').value.trim(),
+          storageCondition: block.querySelector('.proj-req-storage-condition').value.trim(),
+          shelfLife: block.querySelector('.proj-req-shelf-life').value.trim(),
           cookingCondition: {
             method: block.querySelector('.proj-req-cooking-method').value.trim(),
             steps: [...block.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
