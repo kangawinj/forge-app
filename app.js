@@ -158,6 +158,7 @@ function isApprovalExempt(email){
 // lock the underlying Firestore collections, so it's meant to declutter the
 // nav for each person's role, not as a hard security boundary.
 const MODULE_PERMISSIONS = [
+  { key: 'recipes', label: 'Recipes', navBtnId: 'btnRecipesTab' },
   { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
   { key: 'trials', label: 'Test Results', navBtnId: 'btnOpenTrials' },
   { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
@@ -3438,7 +3439,14 @@ onAuthStateChanged(auth, user => {
           // Covers the admin revoking a module while this person is
           // actively sitting on that exact view — without this they'd be
           // left looking at a screen whose own nav tab just disappeared.
-          if(mainFeatureView && MODULE_PERMISSIONS.some(m => m.key === mainFeatureView) && !hasModuleAccess(mainFeatureView)){
+          // Recipes spans three mainFeatureView states (list/compare/editing
+          // a specific recipe) rather than the one-value-per-module mapping
+          // the other entries use, so it needs its own check here.
+          const onUngatedRecipesView = !hasModuleAccess('recipes') &&
+            (mainFeatureView === 'recipesList' || mainFeatureView === 'compare' || (mainFeatureView === null && !!currentId));
+          if(onUngatedRecipesView){
+            goHome();
+          }else if(mainFeatureView && MODULE_PERMISSIONS.some(m => m.key === mainFeatureView) && !hasModuleAccess(mainFeatureView)){
             mainFeatureView = null;
             renderMain();
             renderSidebar();
