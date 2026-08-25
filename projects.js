@@ -620,55 +620,79 @@ function addProductLogEntry(product, stage, note){
 // ---------- Excel export/import for the New Project form ----------
 // Lets someone without Forge access (a factory, a customer) fill in a
 // project's details in Excel and have it imported straight into the New
-// Project form here. SheetJS does the actual .xlsx reading/writing
-// entirely client-side (no backend involved, same "static site talking
-// only to Firebase" shape the rest of the app already has) -- loaded
-// lazily via dynamic import so its ~700KB never costs anything on a
-// session that never touches this feature.
-const XLSX_CDN_URL = 'https://cdn.sheetjs.com/xlsx-latest/package/xlsx.mjs';
-let xlsxLibPromise = null;
-function loadXlsxLib(){
-  if(!xlsxLibPromise) xlsxLibPromise = import(XLSX_CDN_URL);
-  return xlsxLibPromise;
+// Project form here. Reading/writing .xlsx happens entirely client-side
+// (no backend involved, same "static site talking only to Firebase"
+// shape the rest of the app already has), via ExcelJS -- loaded lazily
+// via dynamic import so it never costs anything on a session that never
+// touches this feature. Chosen over the smaller SheetJS specifically
+// because SheetJS's free tier silently drops cell styling and dropdown
+// data-validation lists on write (verified directly against its output
+// XML, not just assumed) -- ExcelJS supports both for real, which is
+// most of what makes this template as easy to fill in as the form
+// itself instead of just a flat, unstyled list of blanks.
+const EXCELJS_CDN_URL = 'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/+esm';
+let excelJsLibPromise = null;
+function loadExcelJsLib(){
+  if(!excelJsLibPromise) excelJsLibPromise = import(EXCELJS_CDN_URL).then(m => m.default);
+  return excelJsLibPromise;
 }
+const TEMPLATE_HEADER_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8F0FA' } };
+const TEMPLATE_HEADER_FONT = { bold: true, size: 12, color: { argb: 'FF1B4F91' } };
 
-// [label, elementId] pairs for the "Project" sheet -- read straight off
-// the New Project panel's own inputs on export, written straight back to
-// those same inputs on import. One shared array means export and import
-// can never drift out of sync with each other about field order/labels.
-const PROJECT_TEMPLATE_FIELDS = [
-  ['Project Name', 'newProjName'],
-  [`Status (${PROJECT_STATUSES.join(' / ')})`, 'newProjStatus'],
-  ['Request Date (YYYY-MM-DD)', 'newProjRequestDate'],
-  ['Start Date (YYYY-MM-DD)', 'newProjStartDate'],
-  ['Target / End Date (YYYY-MM-DD)', 'newProjTargetEndDate'],
-  ['Customer Name', 'newProjCustomer'],
-  ['Destination Country', 'newProjDestination'],
-  ['Project Owner', 'newProjOwner'],
-  ['Factory Sales Rep', 'newProjFactoryRep'],
-  ['Responsible Person (PD)', 'newProjResponsible'],
-  ['Factory', 'newProjFactory'],
-  ['Portion Weight Qty', 'newProjPortionQty'],
-  ['Portion Weight Unit', 'newProjPortionUnit'],
-  ['Portion Per Unit', 'newProjPortionPerUnit'],
-  ['Inner Pack Qty', 'newProjInnerQty'],
-  ['Inner Pack Weight Unit', 'newProjInnerWeightUnit'],
-  ['Inner Pack Unit', 'newProjInnerPackUnit'],
-  ['Outer Pack Qty', 'newProjOuterQty'],
-  ['Outer Pack Unit', 'newProjOuterPackUnit'],
-  ['Outer Pack Container', 'newProjOuterContainerUnit'],
-  ['MOQ Qty', 'newProjMoqQty'],
-  ['MOQ Unit', 'newProjMoqUnit'],
-  ['Packaging Condition', 'newProjReqPackaging'],
-  ['Storage Condition', 'newProjReqStorageCondition'],
-  ['Shelf Life (from production date)', 'newProjReqShelfLife'],
-  ['Composition', 'newProjReqComposition'],
-  ['Recipe', 'newProjReqRecipe'],
-  ['Cooking Method', 'newProjReqCookingCondition'],
-  ['Note', 'newProjReqNote'],
-  ['Certificate', 'newProjReqCertificate']
+// [label, elementId, opts] rows for the "Project" sheet, grouped into
+// the same two sections the form itself has -- read straight off the New
+// Project panel's own inputs on export, written straight back to those
+// same inputs on import. One shared structure means export and import
+// can never drift out of sync about field order/labels, and adding a
+// dropdown (opts.list) is the only per-field thing export needs to know
+// beyond that.
+const PROJECT_TEMPLATE_SECTIONS = [
+  { title: 'PROJECT INFORMATION', fields: [
+    ['Project Name', 'newProjName'],
+    ['Status', 'newProjStatus', { list: PROJECT_STATUSES }],
+    ['Request Date (YYYY-MM-DD)', 'newProjRequestDate'],
+    ['Start Date (YYYY-MM-DD)', 'newProjStartDate'],
+    ['Target / End Date (YYYY-MM-DD)', 'newProjTargetEndDate'],
+    ['Customer Name', 'newProjCustomer'],
+    ['Destination Country', 'newProjDestination'],
+    ['Project Owner', 'newProjOwner'],
+    ['Factory Sales Rep', 'newProjFactoryRep'],
+    ['Responsible Person (PD)', 'newProjResponsible'],
+    ['Factory', 'newProjFactory']
+  ] },
+  { title: 'REQUIREMENTS', fields: [
+    ['Portion Weight Qty', 'newProjPortionQty'],
+    ['Portion Weight Unit', 'newProjPortionUnit'],
+    ['Portion Per Unit', 'newProjPortionPerUnit'],
+    ['Inner Pack Qty', 'newProjInnerQty'],
+    ['Inner Pack Weight Unit', 'newProjInnerWeightUnit'],
+    ['Inner Pack Unit', 'newProjInnerPackUnit'],
+    ['Outer Pack Qty', 'newProjOuterQty'],
+    ['Outer Pack Unit', 'newProjOuterPackUnit'],
+    ['Outer Pack Container', 'newProjOuterContainerUnit'],
+    ['MOQ Qty', 'newProjMoqQty'],
+    ['MOQ Unit', 'newProjMoqUnit'],
+    ['Packaging Condition', 'newProjReqPackaging'],
+    ['Storage Condition', 'newProjReqStorageCondition'],
+    ['Shelf Life (from production date)', 'newProjReqShelfLife'],
+    ['Composition', 'newProjReqComposition'],
+    ['Recipe', 'newProjReqRecipe'],
+    ['Cooking Method', 'newProjReqCookingCondition'],
+    ['Note', 'newProjReqNote'],
+    ['Certificate', 'newProjReqCertificate']
+  ] }
 ];
-const PRODUCT_TEMPLATE_COLUMNS = ['Product', 'Sample Qty', 'Sample Request Date (YYYY-MM-DD)', 'Target Price', 'Actual Price', 'Currency', 'Per', 'Formula / Reference No.', 'Note'];
+const PRODUCT_TEMPLATE_COLUMNS = [
+  { header: 'Product', key: 'name', width: 22 },
+  { header: 'Sample Qty', key: 'sampleQty', width: 12 },
+  { header: 'Sample Request Date (YYYY-MM-DD)', key: 'sampleRequestDate', width: 28 },
+  { header: 'Target Price', key: 'targetPrice', width: 13 },
+  { header: 'Actual Price', key: 'actualPrice', width: 13 },
+  { header: 'Currency', key: 'priceCurrency', width: 11 },
+  { header: 'Per', key: 'priceUnit', width: 10 },
+  { header: 'Formula / Reference No.', key: 'formulaRefCode', width: 20 },
+  { header: 'Note', key: 'note', width: 30 }
+];
 const PRODUCT_TEMPLATE_BLANK_ROWS = 5;
 const COOKING_STEP_TEMPLATE_BLANK_ROWS = 5;
 
@@ -683,21 +707,61 @@ async function exportProjectTemplate(){
   btn.disabled = true;
   btn.innerHTML = 'Loading...';
   try{
-    const XLSX = await loadXlsxLib();
+    const ExcelJS = await loadExcelJsLib();
     // Reads straight off the New Project panel's own inputs when it's
     // open, so this one button covers both "export a blank template" (
     // panel closed, or open but empty -- every field just comes back '')
     // and "export what I've already started filling in".
     const getVal = id => document.getElementById(id)?.value || '';
-    const projectRows = [['Field', 'Value'], ...PROJECT_TEMPLATE_FIELDS.map(([label, id]) => [label, getVal(id)])];
-    const productRows = [PRODUCT_TEMPLATE_COLUMNS, ...Array.from({ length: PRODUCT_TEMPLATE_BLANK_ROWS }, () => [])];
-    const stepRows = [['Step #', 'Instruction'], ...Array.from({ length: COOKING_STEP_TEMPLATE_BLANK_ROWS }, (_, i) => [i + 1, ''])];
+    const wb = new ExcelJS.Workbook();
 
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(projectRows), 'Project');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(productRows), 'Products');
-    XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(stepRows), 'Cooking Steps');
-    XLSX.writeFile(wb, `Project Template - ${new Date().toISOString().slice(0, 10)}.xlsx`);
+    const wsProject = wb.addWorksheet('Project');
+    wsProject.columns = [{ width: 26 }, { width: 44 }];
+    let r = 1;
+    PROJECT_TEMPLATE_SECTIONS.forEach(section => {
+      wsProject.mergeCells(r, 1, r, 2);
+      const titleCell = wsProject.getCell(r, 1);
+      titleCell.value = section.title;
+      titleCell.font = TEMPLATE_HEADER_FONT;
+      titleCell.fill = TEMPLATE_HEADER_FILL;
+      titleCell.alignment = { vertical: 'middle' };
+      wsProject.getRow(r).height = 20;
+      r++;
+      section.fields.forEach(([label, id, opts]) => {
+        wsProject.getCell(r, 1).value = label;
+        wsProject.getCell(r, 1).font = { bold: true };
+        const valueCell = wsProject.getCell(r, 2);
+        valueCell.value = getVal(id);
+        if(opts?.list) valueCell.dataValidation = { type: 'list', allowBlank: true, formulae: [`"${opts.list.join(',')}"`] };
+        r++;
+      });
+    });
+
+    const wsProducts = wb.addWorksheet('Products');
+    wsProducts.columns = PRODUCT_TEMPLATE_COLUMNS;
+    wsProducts.getRow(1).font = { bold: true };
+    wsProducts.getRow(1).fill = TEMPLATE_HEADER_FILL;
+    const currencyColIdx = PRODUCT_TEMPLATE_COLUMNS.findIndex(c => c.key === 'priceCurrency') + 1;
+    for(let i = 0; i < PRODUCT_TEMPLATE_BLANK_ROWS; i++){
+      wsProducts.addRow({});
+      wsProducts.getCell(i + 2, currencyColIdx).dataValidation = { type: 'list', allowBlank: true, formulae: [`"${CURRENCY_OPTIONS.join(',')}"`] };
+    }
+
+    const wsSteps = wb.addWorksheet('Cooking Steps');
+    wsSteps.columns = [{ header: 'Step #', key: 'n', width: 8 }, { header: 'Instruction', key: 'text', width: 50 }];
+    wsSteps.getRow(1).font = { bold: true };
+    wsSteps.getRow(1).fill = TEMPLATE_HEADER_FILL;
+    for(let i = 0; i < COOKING_STEP_TEMPLATE_BLANK_ROWS; i++) wsSteps.addRow({ n: i + 1, text: '' });
+
+    const buf = await wb.xlsx.writeBuffer();
+    const blobUrl = URL.createObjectURL(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }));
+    const a = document.createElement('a');
+    a.href = blobUrl;
+    a.download = `Project Template - ${new Date().toISOString().slice(0, 10)}.xlsx`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(blobUrl);
   }catch(err){
     alert('Could not build the template file: ' + (err.message || err));
   }finally{
@@ -718,6 +782,12 @@ function normalizeImportedDateCell(raw){
   const text = raw == null ? '' : String(raw).trim();
   return /^\d{4}-\d{2}-\d{2}$/.test(text) ? text : '';
 }
+function cellText(v){
+  if(v == null) return '';
+  if(v instanceof Date) return '';
+  if(typeof v === 'object' && 'text' in v) return String(v.text).trim(); // rich text / formula result
+  return String(v).trim();
+}
 
 async function importProjectTemplate(file){
   const labelEl = document.getElementById('btnImportProjectTemplateLabel');
@@ -726,9 +796,10 @@ async function importProjectTemplate(file){
   inputEl.disabled = true;
   labelEl.innerHTML = 'Importing...';
   try{
-    const XLSX = await loadXlsxLib();
-    const data = await file.arrayBuffer();
-    const wb = XLSX.read(data, { type: 'array' });
+    const ExcelJS = await loadExcelJsLib();
+    const buf = await file.arrayBuffer();
+    const wb = new ExcelJS.Workbook();
+    await wb.xlsx.load(buf);
 
     if(!newProjectOpen){
       newProjectOpen = true;
@@ -741,44 +812,50 @@ async function importProjectTemplate(file){
       renderNewProjectPanel();
     }
 
-    const projectSheet = wb.Sheets['Project'];
-    if(projectSheet){
-      const rows = XLSX.utils.sheet_to_json(projectSheet, { header: 1 });
-      const byLabel = new Map(rows.slice(1).map(r => [String(r[0] || '').trim(), r[1]]));
-      PROJECT_TEMPLATE_FIELDS.forEach(([label, id]) => {
+    const wsProject = wb.getWorksheet('Project');
+    if(wsProject){
+      const byLabel = new Map();
+      wsProject.eachRow(row => byLabel.set(cellText(row.getCell(1).value), row.getCell(2).value));
+      PROJECT_TEMPLATE_SECTIONS.forEach(section => section.fields.forEach(([label, id]) => {
         if(!byLabel.has(label)) return;
         const el = document.getElementById(id);
         if(!el) return;
         const raw = byLabel.get(label);
-        el.value = el.type === 'date' ? normalizeImportedDateCell(raw) : (raw == null ? '' : String(raw).trim());
+        el.value = el.type === 'date' ? normalizeImportedDateCell(raw) : cellText(raw);
+      }));
+    }
+
+    const wsProducts = wb.getWorksheet('Products');
+    if(wsProducts){
+      const imported = [];
+      wsProducts.eachRow((row, rowNum) => {
+        if(rowNum === 1) return; // header
+        const get = key => row.getCell(PRODUCT_TEMPLATE_COLUMNS.findIndex(c => c.key === key) + 1).value;
+        const name = cellText(get('name'));
+        if(!name && !cellText(get('sampleQty')) && !cellText(get('targetPrice')) && !cellText(get('actualPrice')) && !cellText(get('formulaRefCode')) && !cellText(get('note'))) return;
+        const f = blankFlavor();
+        f.name = name;
+        f.sampleQty = cellText(get('sampleQty'));
+        f.sampleRequestDate = normalizeImportedDateCell(get('sampleRequestDate'));
+        f.targetPrice = cellText(get('targetPrice'));
+        f.actualPrice = cellText(get('actualPrice'));
+        f.priceCurrency = cellText(get('priceCurrency')) || 'THB';
+        f.priceUnit = cellText(get('priceUnit')) || 'kg';
+        f.formulaRefCode = cellText(get('formulaRefCode'));
+        f.note = cellText(get('note'));
+        imported.push(f);
       });
+      if(imported.length) newProjectFlavors = imported;
     }
 
-    const productSheet = wb.Sheets['Products'];
-    if(productSheet){
-      const rows = XLSX.utils.sheet_to_json(productSheet, { header: 1 }).slice(1)
-        .filter(r => (r || []).some(c => String(c || '').trim()));
-      if(rows.length){
-        newProjectFlavors = rows.map(r => {
-          const f = blankFlavor();
-          f.name = String(r[0] || '').trim();
-          f.sampleQty = String(r[1] || '').trim();
-          f.sampleRequestDate = normalizeImportedDateCell(r[2]);
-          f.targetPrice = String(r[3] || '').trim();
-          f.actualPrice = String(r[4] || '').trim();
-          f.priceCurrency = String(r[5] || '').trim() || 'THB';
-          f.priceUnit = String(r[6] || '').trim() || 'kg';
-          f.formulaRefCode = String(r[7] || '').trim();
-          f.note = String(r[8] || '').trim();
-          return f;
-        });
-      }
-    }
-
-    const stepSheet = wb.Sheets['Cooking Steps'];
-    if(stepSheet){
-      const steps = XLSX.utils.sheet_to_json(stepSheet, { header: 1 }).slice(1)
-        .map(r => String((r || [])[1] || '').trim()).filter(Boolean);
+    const wsSteps = wb.getWorksheet('Cooking Steps');
+    if(wsSteps){
+      const steps = [];
+      wsSteps.eachRow((row, rowNum) => {
+        if(rowNum === 1) return; // header
+        const text = cellText(row.getCell(2).value);
+        if(text) steps.push(text);
+      });
       if(steps.length) cookingStepsEditing = steps;
     }
 
