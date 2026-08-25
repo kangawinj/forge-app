@@ -4,7 +4,7 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, wireModalOverlayClose
+  showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc
@@ -832,7 +832,8 @@ const PROJECT_FILTER_ACCESSORS = {
 // own "(Blank)" entry rather than being silently dropped from the list.
 function projectColumnFilterMenuHtml(key){
   const accessor = PROJECT_FILTER_ACCESSORS[key];
-  const allValues = Array.from(new Set(projects.map(accessor))).sort((a, b) => {
+  const filterableProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+  const allValues = Array.from(new Set(filterableProjects.map(accessor))).sort((a, b) => {
     return key === 'productCount' ? Number(a) - Number(b) : a.localeCompare(b);
   });
   const activeFilter = projectColumnFilters[key];
@@ -1182,7 +1183,7 @@ function renderProjectGanttChart(){
   const container = document.getElementById('projectGanttChart');
   if(!container) return;
   const withDates = projects
-    .filter(p => p.startDate && p.targetEndDate)
+    .filter(p => p.startDate && p.targetEndDate && (isCurrentUserAdmin() || isMyProject(p)))
     .sort((a, b) => a.startDate.localeCompare(b.startDate));
   if(!withDates.length){
     container.innerHTML = `
@@ -1266,7 +1267,12 @@ export function renderProjectsList(){
   const container = document.getElementById('projectsList');
   const dashboardContainer = document.getElementById('projectsDashboard');
   if(!container) return;
-  if(projects.length === 0){
+  // Non-admins only see projects they're actually attached to (by name
+  // match against Owner/Factory Rep/Responsible Person/product Sales Rep/
+  // Activities Updates Who fields) plus the Unassigned bucket, which
+  // always stays visible to everyone — see isMyProject in app.js.
+  const visibleProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+  if(visibleProjects.length === 0){
     if(dashboardContainer) dashboardContainer.innerHTML = '';
     container.innerHTML = '<div class="overview-empty">No projects yet — click "+ New Project" above to start one</div>';
     return;
@@ -1295,23 +1301,24 @@ export function renderProjectsList(){
     const accessor = PROJECT_FILTER_ACCESSORS[key];
     return accessor ? allowed.has(accessor(p)) : true;
   });
-  const sorted = projects.filter(p => matchesSearch(p) && matchesColumnFilters(p)).sort(compareProjects);
+  const sorted = visibleProjects.filter(p => matchesSearch(p) && matchesColumnFilters(p)).sort(compareProjects);
 
-  // Dashboard summary always reflects ALL projects (not the search filter)
-  // — searching narrows the table below, not the overview stats above it.
-  const allProductsGlobal = projects.flatMap(pr => pr.products || []);
+  // Dashboard summary always reflects ALL *visible* projects (not the
+  // search filter) — searching narrows the table below, not the overview
+  // stats above it.
+  const allProductsGlobal = visibleProjects.flatMap(pr => pr.products || []);
   const productsByStage = PROJECT_STAGES
     .map(stage => ({ label: stage, count: allProductsGlobal.filter(x => x.stage === stage).length }))
     .filter(g => g.count > 0);
   const projectsByStatus = PROJECT_STATUSES
-    .map(status => ({ label: status, count: projects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status).length }))
+    .map(status => ({ label: status, count: visibleProjects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status).length }))
     .filter(g => g.count > 0);
   if(dashboardContainer){
     dashboardContainer.innerHTML = `
       <div class="dash-metrics" style="margin-bottom:14px;">
         <div class="dash-metric">
           <div class="dash-metric-label">Projects</div>
-          <div class="dash-metric-value">${projects.length}</div>
+          <div class="dash-metric-value">${visibleProjects.length}</div>
         </div>
         <div class="dash-metric">
           <div class="dash-metric-label">Products</div>
@@ -2085,7 +2092,8 @@ export function renderProjectsList(){
     menu.addEventListener('click', e => e.stopPropagation());
     const key = menu.dataset.filterMenu;
     const accessor = PROJECT_FILTER_ACCESSORS[key];
-    const allValues = Array.from(new Set(projects.map(accessor)));
+    const filterableProjects = isCurrentUserAdmin() ? projects : projects.filter(isMyProject);
+    const allValues = Array.from(new Set(filterableProjects.map(accessor)));
     const selectAllCb = menu.querySelector('.filter-select-all');
     selectAllCb.addEventListener('change', () => {
       if(selectAllCb.checked) delete projectColumnFilters[key];
@@ -3103,7 +3111,7 @@ function renderStatusBarList(groups){
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label);
+    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && (isCurrentUserAdmin() || isMyProject(p)));
     const photosHtml = projectsForStatus.length ? `
       <div class="proj-gallery-grid" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `

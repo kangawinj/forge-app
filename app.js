@@ -63,7 +63,8 @@ export {
   ingredientMaster, productTypeCode, recipes, currentId, recipesLoaded,
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
-  allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements
+  allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
+  isCurrentUserAdmin, isMyProject
 };
 
 const firebaseConfig = {
@@ -176,6 +177,51 @@ function userModulePermissions(item){
 let myModulePermissions = null; // null = unrestricted (admin/exempt, or not loaded yet)
 function hasModuleAccess(key){
   return !myModulePermissions || myModulePermissions[key] !== false;
+}
+
+// Per-project/per-activity visibility for non-admins: everyone can see
+// every project's data in Firestore (this is UI-only, same caveat as
+// MODULE_PERMISSIONS above), but the Projects list and the Home
+// dashboard's Task Tracking / Activities Calendar only show projects and
+// activities the signed-in person is actually involved in, matched by
+// their My Profile display name against the free-text name fields
+// (Owner/Factory Rep/Responsible Person, per-product Sales Rep, and each
+// Activities Update's Who/Next Action Who) — there's no real user-account
+// link for these fields, they're plain typed text. The Unassigned bucket
+// project (see quickAddCalendarPlan) is always visible to everyone since
+// it exists precisely for plans nobody's claimed yet.
+function isCurrentUserAdmin(){
+  return currentUser?.email === ADMIN_EMAIL;
+}
+// Case-insensitive, and tolerant of honorific/suffix differences (e.g. a
+// profile named "Yano" should still match a field typed "Yano-san") via
+// substring containment — guarded to at least 3 characters so a short
+// name can't accidentally match everything.
+function namesMatch(a, b){
+  const x = (a || '').trim().toLowerCase();
+  const y = (b || '').trim().toLowerCase();
+  if(!x || !y) return false;
+  if(x === y) return true;
+  const shorter = x.length <= y.length ? x : y;
+  if(shorter.length < 3) return false;
+  return x.includes(y) || y.includes(x);
+}
+function isMyName(name){
+  return namesMatch(name, myProfile.displayName);
+}
+function isMyProject(p){
+  if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
+  if(isMyName(p?.ownerSalesRep) || isMyName(p?.factorySalesRep) || isMyName(p?.responsiblePerson)) return true;
+  if((p?.products || []).some(prod => isMyName(prod.salesRep))) return true;
+  if((p?.monthlyUpdates || []).map(migrateMonthlyUpdate).some(mu => isMyName(mu.planWho) || isMyName(mu.nextActionWho))) return true;
+  return false;
+}
+// A single Activities Update entry is visible if it names this person
+// directly (even inside a project they're not otherwise attached to —
+// e.g. covering a colleague's task) or if they're attached to the whole
+// project some other way.
+function isMyActivity(p, mu){
+  return isMyName(mu?.planWho) || isMyName(mu?.nextActionWho) || isMyProject(p);
 }
 
 export function showCloudError(message){
@@ -503,7 +549,7 @@ let userApprovalsAdminList = [];
 // This account's own My Profile doc — kept live so the navbar name/avatar
 // (and the My Profile modal, if open) always reflect the latest saved
 // value without needing a manual refresh.
-let myProfile = { displayName: '', photoImage: '' };
+export let myProfile = { displayName: '', photoImage: '' };
 let unsubscribeMyProfile = null;
 let editingProfileImage = ''; // staged photo for the My Profile modal, same pattern as newProjectImage
 
@@ -1865,6 +1911,7 @@ function computeTaskTracking(){
   projects.forEach(p => {
     (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
       if(!mu.date) return;
+      if(!isMyActivity(p, mu)) return;
       // Uses the entry's own Completed Date (see resolveMuCompletedDate),
       // not its due date — a task logged today that was actually finished
       // yesterday shows up under yesterday, not here, once that date is
@@ -1948,6 +1995,7 @@ function computeCalendarEvents(){
   projects.forEach(p => {
     (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
       if(!mu.date) return;
+      if(!isMyActivity(p, mu)) return;
       events.push({
         projectId: p.id,
         projectName: p.name || 'Untitled project',
