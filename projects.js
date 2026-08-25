@@ -560,6 +560,47 @@ export function scheduleProjectSave(p){
   p.updatedBy = currentUser?.email || '';
   saveProjectToCloud(p);
 }
+
+// A single shared holding pen for Activities Updates added straight from
+// the Calendar's empty-cell click (see quickAddCalendarPlan below), before
+// they've been sorted into a real project. Lazily created the first time
+// anyone actually uses that feature -- most teams may never need it at
+// all -- and found again after that by the isUnassignedBucket flag rather
+// than by name, so nothing breaks if someone renames it or a real project
+// happens to also be called "Unassigned".
+function getOrCreateUnassignedProject(){
+  const existing = projects.find(p => p.isUnassignedBucket);
+  if(existing) return existing;
+  const p = blankProject();
+  p.name = 'Unassigned';
+  p.isUnassignedBucket = true;
+  projects.push(p);
+  saveProjectToCloud(p);
+  return p;
+}
+// Clicking an empty calendar cell shouldn't force picking a project
+// first -- that's exactly the friction this is meant to remove -- so it
+// creates a blank entry on the Unassigned bucket project and opens the
+// same "Update Activity" popup already used everywhere else to fill it
+// in (including, while it's still on that bucket project, a "Project"
+// picker at the top to move it once one's known -- see
+// openMuEditModal/saveMuEditModal). createdFromCalendar marks it so
+// closeMuEditModal can quietly remove it again if the popup gets closed
+// without anything ever being filled in, instead of leaving a permanent
+// blank stub on the calendar.
+export function quickAddCalendarPlan(dateStr){
+  const p = getOrCreateUnassignedProject();
+  const mu = {
+    id: uid(), date: dateStr, time: '', planWho: '', plan: '', planWhere: '', planHow: '',
+    actionTaken: '', nextAction: '', nextActionDue: '', nextActionTime: '', nextActionWho: '',
+    nextActionWhere: '', nextActionHow: '', autoCreatePlan: false, sourceUpdateId: '',
+    linkedRecipeId: '', attachments: [], completedDate: '', createdFromCalendar: true
+  };
+  if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
+  p.monthlyUpdates.push(mu);
+  scheduleProjectSave(p);
+  openMuEditModal(p.id, mu.id);
+}
 function addProductLogEntry(product, stage, note){
   product.log.push({ id: uid(), date: Date.now(), stage, note: (note || '').trim(), by: currentUser?.email || '' });
   product.stage = stage;
@@ -2605,6 +2646,21 @@ function openMuEditModal(projectId, updateId, section){
   muEditModalAttachments = (mu.attachments || []).map(a => ({...a}));
   redrawMuEditModalAttachments();
   muEditSnapshotBefore = snapshotMainFields(mu, MU_DIFF_FIELDS);
+  // Only the Unassigned bucket project (see quickAddCalendarPlan) ever
+  // shows the Project picker -- an entry already on a real project never
+  // needed a "which project" question in the first place.
+  const projectFieldEl = document.getElementById('muEditModalProjectField');
+  if(target.p.isUnassignedBucket){
+    const realProjects = projects.filter(x => !x.isUnassignedBucket)
+      .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
+    document.getElementById('muEditModalProjectSelect').innerHTML = `
+      <option value="">— Select a project —</option>
+      ${realProjects.map(x => `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name || 'Untitled project')}</option>`).join('')}
+    `;
+    projectFieldEl.style.display = '';
+  }else{
+    projectFieldEl.style.display = 'none';
+  }
   document.getElementById('muEditModalOverlay').classList.add('open');
   // Jump straight to the box the user actually clicked (Plan / Action
   // Taken / Next Action) instead of always landing at the top — the
@@ -2633,6 +2689,19 @@ function redrawMuEditModalAttachments(){
   });
 }
 function closeMuEditModal(){
+  // A blank entry quickAddCalendarPlan created that never got filled in
+  // (Cancel, ✕, or the backdrop) shouldn't linger as a permanent empty
+  // stub on the calendar -- quietly remove it instead. saveMuEditModal
+  // already refuses to save a genuinely empty entry, so this can only
+  // ever be reached via one of those three close paths, never a real
+  // save.
+  const target = getMuEditModalTarget();
+  if(target?.mu.createdFromCalendar && !target.mu.plan && !target.mu.actionTaken
+    && !target.mu.nextAction && !target.mu.planWho && !target.mu.planWhere){
+    target.p.monthlyUpdates = (target.p.monthlyUpdates || []).filter(x => x.id !== target.mu.id);
+    scheduleProjectSave(target.p);
+    renderProjectsList();
+  }
   document.getElementById('muEditModalOverlay').classList.remove('open');
   muEditModalContext = null;
   muEditModalAttachments = [];
@@ -2716,6 +2785,28 @@ export function initProjectsModal(){
   document.getElementById('btnCancelMuEditModal').addEventListener('click', closeMuEditModal);
   wireModalOverlayClose('muEditModalOverlay', closeMuEditModal);
   document.getElementById('btnSaveMuEditModal').addEventListener('click', saveMuEditModal);
+  // Only visible while editing an entry still on the Unassigned bucket
+  // project (see openMuEditModal) -- picking one here moves the entry
+  // over immediately, rather than waiting for Save, so the rest of the
+  // popup (which now targets the new project) and the calendar's own
+  // "still unassigned" marker both update right away.
+  document.getElementById('muEditModalProjectSelect').addEventListener('change', e => {
+    const targetProjectId = e.target.value;
+    if(!targetProjectId) return;
+    const target = getMuEditModalTarget();
+    const targetProject = projects.find(x => x.id === targetProjectId);
+    if(!target || !targetProject) return;
+    target.p.monthlyUpdates = (target.p.monthlyUpdates || []).filter(x => x.id !== target.mu.id);
+    scheduleProjectSave(target.p);
+    if(!Array.isArray(targetProject.monthlyUpdates)) targetProject.monthlyUpdates = [];
+    targetProject.monthlyUpdates.push(target.mu);
+    scheduleProjectSave(targetProject);
+    logActivityEvent('updated', 'project', targetProject.name || 'Untitled project',
+      [{ field: 'Activities Updates', before: 'Unassigned', after: `Moved here: "${muPlanSummaryLine(target.mu) || 'Untitled'}"` }]);
+    muEditModalContext = { projectId: targetProjectId, updateId: target.mu.id };
+    document.getElementById('muEditModalProjectField').style.display = 'none';
+    renderProjectsList();
+  });
   document.querySelectorAll('#muEditModalOverlay .mu-field-with-translate').forEach(wireMuTranslateButton);
   wireWhereLocationPicker(document.getElementById('muEditModalWhere'), document.getElementById('muEditModalWhereLocation'));
   wireWhereLocationPicker(document.getElementById('muEditModalNextActionWhere'), document.getElementById('muEditModalNextActionWhereLocation'));

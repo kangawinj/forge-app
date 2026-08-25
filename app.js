@@ -33,7 +33,7 @@ import {
   monthlyUpdateStatus, getTaskStatus, daysBetween, projectHasUpdateThisMonth,
   projectProgressPct, statusPillHtml, projectNextAction, initProjectsModal,
   initMuAttachmentPreviewModal, openProjectFilterMenuKey, activeProjScrollbarProxySync,
-  blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements
+  blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements, quickAddCalendarPlan
 } from './projects.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
@@ -1953,6 +1953,13 @@ function computeCalendarEvents(){
         text: muPlanSummaryLine(mu) || mu.actionTaken || 'Untitled task',
         date: mu.date,
         who: mu.planWho || '',
+        // Added via an empty-cell click and not yet moved to a real
+        // project (see quickAddCalendarPlan) -- flagged so the chip can
+        // show a distinct marker (dashed border, see calEventChipHtml)
+        // for "still needs a project", without touching the existing
+        // status colors (overdue/today/upcoming/completed) it's shown
+        // alongside.
+        isUnassigned: !!p.isUnassignedBucket,
         mu
       });
     });
@@ -2010,8 +2017,8 @@ function calEventChipHtml(ev, todayStr){
   const status = getTaskStatus(ev.mu, todayStr);
   return `
     <div class="cal-event-wrap">
-      <button type="button" class="cal-event cal-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">${escapeHtml(ev.text)}</button>
-      <div class="cal-event-tooltip"><b>${escapeHtml(ev.projectName)}</b><br>${escapeHtml(ev.text)}</div>
+      <button type="button" class="cal-event cal-event-${status}${ev.isUnassigned ? ' cal-event-unassigned' : ''} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">${escapeHtml(ev.text)}</button>
+      <div class="cal-event-tooltip"><b>${escapeHtml(ev.projectName)}</b><br>${escapeHtml(ev.text)}${ev.isUnassigned ? '<br><i>Not yet on a project</i>' : ''}</div>
     </div>
   `;
 }
@@ -2034,7 +2041,7 @@ function renderCalMonthGrid(viewDate, eventsByDate, todayStr){
       ? `${cellDate.toLocaleDateString('en-US', { month: 'short' })} ${cellDate.getDate()}`
       : String(cellDate.getDate());
     cellsHtml += `
-      <div class="cal-cell${inMonth ? '' : ' cal-cell-outmonth'}${isToday ? ' cal-cell-today' : ''}">
+      <div class="cal-cell cal-cell-clickable${inMonth ? '' : ' cal-cell-outmonth'}${isToday ? ' cal-cell-today' : ''}" data-cal-date="${dStr}">
         <div class="cal-cell-date">${escapeHtml(dayLabel)}</div>
         <div class="cal-cell-events">${dayEvents.map(ev => calEventChipHtml(ev, todayStr)).join('')}</div>
       </div>
@@ -2057,7 +2064,7 @@ function renderCalWeekGrid(viewDate, eventsByDate, todayStr){
     const isToday = dStr === todayStr;
     const dayEvents = (eventsByDate[dStr] || []).sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
     cellsHtml += `
-      <div class="cal-cell${isToday ? ' cal-cell-today' : ''}">
+      <div class="cal-cell cal-cell-clickable${isToday ? ' cal-cell-today' : ''}" data-cal-date="${dStr}">
         <div class="cal-cell-date">${escapeHtml(cellDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' }))}</div>
         <div class="cal-cell-events">${dayEvents.map(ev => calEventChipHtml(ev, todayStr)).join('')}</div>
       </div>
@@ -2074,18 +2081,20 @@ function renderCalWeekGrid(viewDate, eventsByDate, todayStr){
 function renderCalDayAgenda(viewDate, eventsByDate, todayStr){
   const dStr = calGridDateStr(viewDate);
   const dayEvents = (eventsByDate[dStr] || []).sort((a, b) => (a.projectName || '').localeCompare(b.projectName || ''));
-  if(!dayEvents.length) return `<div class="cal-day-agenda-empty">No activities on this day</div>`;
+  const addBtnHtml = `<button type="button" class="btn btn-sm cal-day-add-btn" data-cal-date="${dStr}">${icon('plus', 14)} Add Plan</button>`;
+  if(!dayEvents.length) return `<div class="cal-day-agenda-empty">No activities on this day${addBtnHtml}</div>`;
   return `
     <div class="cal-day-agenda">
       ${dayEvents.map(ev => {
         const status = getTaskStatus(ev.mu, todayStr);
         return `
-          <button type="button" class="cal-day-event cal-day-event-${status} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">
-            <span class="cal-day-event-project">${escapeHtml(ev.projectName)}</span>
+          <button type="button" class="cal-day-event cal-day-event-${status}${ev.isUnassigned ? ' cal-day-event-unassigned' : ''} action-go-btn" data-item-type="project" data-item-id="${escapeHtml(ev.projectId)}" data-focus-section="activities">
+            <span class="cal-day-event-project">${escapeHtml(ev.projectName)}${ev.isUnassigned ? ' <i>(no project yet)</i>' : ''}</span>
             <span class="cal-day-event-text">${escapeHtml(ev.text)}</span>
           </button>
         `;
       }).join('')}
+      ${addBtnHtml}
     </div>
   `;
 }
@@ -2622,6 +2631,22 @@ function wireDashboardHome(){
     homeCalendarPanes.push({ id: uid(), who: CAL_PANE_ALL });
     saveCalendarPanes();
     refreshDashboardHome();
+  });
+  // Month/Week's day cells (empty space, not an existing event chip --
+  // those already navigate to their own project via .action-go-btn) and
+  // Day view's own "+ Add Plan" button both start the same quick-add flow
+  // (see quickAddCalendarPlan in projects.js): a blank entry on the
+  // Unassigned bucket project, opened straight into the Update Activity
+  // popup to fill in. Delegated on `main` (not queried per-cell) since a
+  // click on a chip still bubbles up through its cell.
+  main.querySelectorAll('.cal-cell-clickable').forEach(cell => {
+    cell.addEventListener('click', e => {
+      if(e.target.closest('.cal-event-wrap')) return;
+      quickAddCalendarPlan(cell.dataset.calDate);
+    });
+  });
+  main.querySelectorAll('.cal-day-add-btn').forEach(btn => {
+    btn.addEventListener('click', () => quickAddCalendarPlan(btn.dataset.calDate));
   });
 
   document.getElementById('taskTrackingWhoTrigger')?.addEventListener('click', e => {

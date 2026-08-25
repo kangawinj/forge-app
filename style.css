@@ -595,6 +595,7 @@
   .combo-row span{color:var(--text-dim);flex-shrink:0;}
   .field{margin-bottom:14px;}
   .field:last-child{margin-bottom:0;}
+  .field-hint{font-size:12px;color:var(--text-dim);margin-top:4px;}
 
   .code-row{
     display:flex;
@@ -3168,6 +3169,24 @@
   .cal-event-upcoming{background:#2563eb;}
   .cal-event-nodate{background:#64748b;}
   .cal-event-completed{background:var(--ok);}
+  /* Clicking empty space in a day cell (Month/Week) starts the quick-add
+     flow (see quickAddCalendarPlan) -- the whole cell is the click
+     target (simplest to hit), but an existing chip's own click still
+     reaches it first via .action-go-btn, this is just a hover hint that
+     the cell itself does something too. */
+  .cal-cell-clickable{cursor:pointer;}
+  .cal-cell-clickable:hover{background:var(--bg);}
+  .cal-cell-today.cal-cell-clickable:hover{background:var(--accent-light);filter:brightness(0.97);}
+  /* A plan added from an empty calendar cell that hasn't been moved to a
+     real project yet (see quickAddCalendarPlan / the Unassigned bucket
+     project) -- a dashed outline layered on top of whatever the normal
+     overdue/today/upcoming/completed color already is, so both pieces of
+     information show at once instead of this replacing that color
+     outright. Deliberately not red -- that already means overdue here. */
+  .cal-event-unassigned, .cal-day-event-unassigned{
+    outline:2px dashed #7c3aed;
+    outline-offset:-2px;
+  }
   /* Full detail on hover instead of the plain native title tooltip — a
      small styled card anchored to the event chip. Pure CSS (:hover), no JS
      needed. Centered above the chip (not clipped by .cal-cell, which has
@@ -3229,7 +3248,9 @@
      worth of events to lay out, so full project name + text both fit on
      one row without needing Month/Week's hover tooltip. */
   .cal-day-agenda{display:flex;flex-direction:column;gap:6px;}
-  .cal-day-agenda-empty{padding:24px 0;text-align:center;color:var(--text-dim);font-size:13px;}
+  .cal-day-agenda-empty{display:flex;flex-direction:column;align-items:center;gap:10px;padding:24px 0;text-align:center;color:var(--text-dim);font-size:13px;}
+  .cal-day-add-btn{align-self:flex-start;margin-top:8px;}
+  .cal-day-agenda-empty .cal-day-add-btn{align-self:center;margin-top:0;}
   .cal-day-event{
     display:flex;
     align-items:baseline;
