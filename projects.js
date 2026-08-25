@@ -485,7 +485,13 @@ function blankProject(){
 // by both prices on the same flavor (they're only meaningful compared
 // against each other in the same terms), not tracked separately per price.
 function blankFlavor(){
-  return { id: uid(), name: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
+  return { id: uid(), name: "", sampleQty: "", sampleUnit: "pcs", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
+}
+// Combines a flavor/product row's sample quantity + unit into one display
+// string for the read-only table, same "N unit" pattern formatFlavorPrice
+// uses for price + currency/per.
+function formatFlavorSampleQty(f){
+  return f.sampleQty ? `${escapeHtml(f.sampleQty)} ${escapeHtml(f.sampleUnit || 'pcs')}` : '-';
 }
 
 export function blankProduct(recipeId){
@@ -1094,10 +1100,13 @@ function renderNewProjectPanel(){
           <label>Product</label>
           <div class="flavor-table-scroll">
           <table class="flavor-table flavor-table-edit">
-            <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
             <tbody class="proj-flavors-tbody">${newProjectFlavors.map(f => `
               <tr data-flavor-id="${escapeHtml(f.id)}">
                 <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+                <td><input type="text" class="flavor-sample-unit" list="unitsDatalist" value="${escapeHtml(f.sampleUnit || 'pcs')}" placeholder="unit"></td>
+                <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                 <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                 <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
                 <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
@@ -1300,6 +1309,9 @@ function renderNewProjectPanel(){
     const flavor = newProjectFlavors.find(x => x.id === flavorId);
     if(!flavor) return;
     row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-unit').addEventListener('change', e => { flavor.sampleUnit = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
     row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
     row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
     row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); });
@@ -2006,10 +2018,12 @@ export function renderProjectsList(){
         const readOnlyFlavorsHtml = flavors.length ? `
           <div class="flavor-table-scroll">
           <table class="flavor-table">
-            <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
+            <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
             <tbody>${flavors.map(f => `
               <tr>
                 <td>${escapeHtml(f.name || 'Untitled product')}</td>
+                <td>${formatFlavorSampleQty(f)}</td>
+                <td>${escapeHtml(f.sampleRequestDate || '-')}</td>
                 <td>${formatFlavorPrice(f, f.targetPrice)}</td>
                 <td>${formatFlavorPrice(f, f.actualPrice)}</td>
                 <td>${escapeHtml(f.formulaRefCode || '-')}</td>
@@ -2145,10 +2159,13 @@ export function renderProjectsList(){
                       <label>Product</label>
                       <div class="flavor-table-scroll">
                       <table class="flavor-table flavor-table-edit">
-                        <thead><tr><th>Product</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                        <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
                         <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
                           <tr data-flavor-id="${escapeHtml(f.id)}">
                             <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+                            <td><input type="number" class="flavor-sample-qty" ${ro} value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+                            <td><input type="text" class="flavor-sample-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.sampleUnit || 'pcs')}" placeholder="unit"></td>
+                            <td><input type="date" class="flavor-sample-request-date" ${ro} value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                             <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                             <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
                             <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
@@ -2853,6 +2870,9 @@ export function renderProjectsList(){
           const flavor = (p.flavors || []).find(x => x.id === flavorId);
           if(!flavor) return;
           row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-sample-unit').addEventListener('change', e => { flavor.sampleUnit = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; scheduleProjectSave(p); });
           row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); scheduleProjectSave(p); });
