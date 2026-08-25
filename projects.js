@@ -1091,7 +1091,7 @@ function renderNewProjectPanel(){
           ${referenceImagesEditing.length < PROJ_REF_IMAGE_MAX ? `<input type="file" class="proj-ref-image-input" accept="image/*">` : ''}
         </div>
         <div class="field" style="margin-bottom:8px;">
-          <label>Flavor / Filling</label>
+          <label>Product</label>
           <div class="flavor-table-scroll">
           <table class="flavor-table flavor-table-edit">
             <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
@@ -2012,7 +2012,7 @@ export function renderProjectsList(){
           <div class="requirements-box">
             <div class="requirements-box-title">Requirements</div>
             ${projRefImagesHtml(req.referenceImages, false)}
-            <div class="material-detail-notes-label">Flavor / Filling</div>
+            <div class="material-detail-notes-label">Product</div>
             ${readOnlyFlavorsHtml}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
             ${(req.recipe || req.recipeAttachments.length) ? `
@@ -2124,7 +2124,7 @@ export function renderProjectsList(){
                       ${isEditing && referenceImagesEditing.length < PROJ_REF_IMAGE_MAX ? `<input type="file" class="proj-ref-image-input" accept="image/*">` : ''}
                     </div>
                     <div class="field" style="margin-bottom:8px;">
-                      <label>Flavor / Filling</label>
+                      <label>Product</label>
                       <div class="flavor-table-scroll">
                       <table class="flavor-table flavor-table-edit">
                         <thead><tr><th>Flavor</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
