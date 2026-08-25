@@ -1123,28 +1123,6 @@ function renderNewProjectPanel(){
           </div>
           <button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>
         </div>
-        <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
-          <div class="field" style="margin-bottom:0;">
-            <label>Storage Condition</label>
-            <input type="text" id="newProjReqStorageCondition" placeholder="e.g. Keep frozen at -18°C">
-          </div>
-          <div class="field" style="margin-bottom:0;">
-            <label>Shelf Life (from production date)</label>
-            <input type="text" id="newProjReqShelfLife" placeholder="e.g. 12 months">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:8px;">
-          <label>Composition</label>
-          <textarea id="newProjReqComposition" placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%"></textarea>
-        </div>
-        <div class="field" style="margin-bottom:8px;">
-          <label>Recipe</label>
-          <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
-          <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
-            <div class="mu-attachments-chiplist"></div>
-            <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
-          </div>
-        </div>
         <div class="project-header-grid" style="margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Portion Weight</label>
@@ -1179,6 +1157,28 @@ function renderNewProjectPanel(){
               <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
               <input type="text" id="newProjMoqUnit" list="unitsDatalist" placeholder="e.g. pcs">
             </div>
+          </div>
+        </div>
+        <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
+          <div class="field" style="margin-bottom:0;">
+            <label>Storage Condition</label>
+            <input type="text" id="newProjReqStorageCondition" placeholder="e.g. Keep frozen at -18°C">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Shelf Life (from production date)</label>
+            <input type="text" id="newProjReqShelfLife" placeholder="e.g. 12 months">
+          </div>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Composition</label>
+          <textarea id="newProjReqComposition" placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%"></textarea>
+        </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Recipe</label>
+          <textarea id="newProjReqRecipe" placeholder="Reference / attachment notes"></textarea>
+          <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
+            <div class="mu-attachments-chiplist"></div>
+            <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
           </div>
         </div>
         <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
@@ -2180,30 +2180,6 @@ export function renderProjectsList(){
                       </div>
                       ${isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-flavor">+ Add Product</button>` : ((p.flavors||[]).length ? '' : '<div class="overview-empty">No products yet</div>')}
                     </div>
-                    <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
-                      <div class="field" style="margin-bottom:0;">
-                        <label>Storage Condition</label>
-                        <input type="text" class="proj-req-storage-condition" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
-                      </div>
-                      <div class="field" style="margin-bottom:0;">
-                        <label>Shelf Life (from production date)</label>
-                        <input type="text" class="proj-req-shelf-life" ${ro} value="${escapeHtml(req.shelfLife)}" placeholder="e.g. 12 months">
-                      </div>
-                    </div>
-                    <div class="field" style="margin-bottom:8px;">
-                      <label>Composition</label>
-                      <textarea class="proj-req-composition" ${ro} placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%">${escapeHtml(req.composition)}</textarea>
-                    </div>
-                    <div class="field" style="margin-bottom:8px;">
-                      <label>Recipe</label>
-                      <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
-                      ${isEditing ? `
-                      <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
-                        <div class="mu-attachments-chiplist"></div>
-                        <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
-                      </div>
-                      ` : ''}
-                    </div>
                     <div class="project-header-grid" style="margin-bottom:8px;">
                       <div class="field" style="margin-bottom:0;">
                         <label>Portion Weight</label>
@@ -2239,6 +2215,30 @@ export function renderProjectsList(){
                           <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || '')}" placeholder="e.g. pcs">
                         </div>
                       </div>
+                    </div>
+                    <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Storage Condition</label>
+                        <input type="text" class="proj-req-storage-condition" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Shelf Life (from production date)</label>
+                        <input type="text" class="proj-req-shelf-life" ${ro} value="${escapeHtml(req.shelfLife)}" placeholder="e.g. 12 months">
+                      </div>
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Composition</label>
+                      <textarea class="proj-req-composition" ${ro} placeholder="e.g. Teriyaki Sauce: Soy Sauce 40%, Mirin 25%, Sugar 20%, Sake 15%">${escapeHtml(req.composition)}</textarea>
+                    </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Recipe</label>
+                      <textarea class="proj-req-recipe" ${ro} placeholder="Reference / attachment notes">${escapeHtml(req.recipe)}</textarea>
+                      ${isEditing ? `
+                      <div class="mu-attachments-editor proj-recipe-attachments" style="margin-top:8px;">
+                        <div class="mu-attachments-chiplist"></div>
+                        <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
+                      </div>
+                      ` : ''}
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
                       <label>Cooking Guidelines</label>
