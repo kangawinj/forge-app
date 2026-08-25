@@ -1060,40 +1060,6 @@ function renderNewProjectPanel(){
           <label>Factory</label>
           <input type="text" id="newProjFactory" list="customerDatalist" placeholder="e.g. Rayong Plant 2">
         </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Portion Weight</label>
-          <div class="combo-row">
-            <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
-            <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
-            <span>/</span>
-            <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Inner Packing</label>
-          <div class="combo-row">
-            <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
-            <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
-            <span>/</span>
-            <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>Outer Packing</label>
-          <div class="combo-row">
-            <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
-            <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
-            <span>/</span>
-            <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
-          </div>
-        </div>
-        <div class="field" style="margin-bottom:0;">
-          <label>MOQ</label>
-          <div class="combo-row">
-            <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
-            <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
-          </div>
-        </div>
         <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
           <label>Requirements</label>
           <div class="field" style="margin-bottom:8px;">
@@ -1111,6 +1077,42 @@ function renderNewProjectPanel(){
           <div class="field" style="margin-bottom:8px;">
             <label>Packaging condition</label>
             <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
+          </div>
+          <div class="project-header-grid" style="margin-bottom:8px;">
+            <div class="field" style="margin-bottom:0;">
+              <label>Portion Weight</label>
+              <div class="combo-row">
+                <input type="number" id="newProjPortionQty" placeholder="e.g. 20" step="any" min="0">
+                <input type="text" id="newProjPortionUnit" list="unitsDatalist" value="g" placeholder="unit">
+                <span>/</span>
+                <input type="text" id="newProjPortionPerUnit" list="unitsDatalist" value="pcs" placeholder="per">
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>Inner Packing</label>
+              <div class="combo-row">
+                <input type="number" id="newProjInnerQty" placeholder="e.g. 30" step="any" min="0">
+                <input type="text" id="newProjInnerWeightUnit" list="unitsDatalist" value="g" placeholder="unit">
+                <span>/</span>
+                <input type="text" id="newProjInnerPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>Outer Packing</label>
+              <div class="combo-row">
+                <input type="number" id="newProjOuterQty" placeholder="e.g. 24" step="any" min="0">
+                <input type="text" id="newProjOuterPackUnit" list="unitsDatalist" value="pack" placeholder="pack unit">
+                <span>/</span>
+                <input type="text" id="newProjOuterContainerUnit" list="unitsDatalist" value="carton" placeholder="container">
+              </div>
+            </div>
+            <div class="field" style="margin-bottom:0;">
+              <label>MOQ</label>
+              <div class="combo-row">
+                <input type="number" id="newProjMoqQty" placeholder="e.g. 500" step="any" min="0">
+                <input type="text" id="newProjMoqUnit" list="unitsDatalist" value="pcs" placeholder="unit">
+              </div>
+            </div>
           </div>
           <div class="field" style="margin-bottom:8px;">
             <label>Cooking Guidelines</label>
@@ -1959,40 +1961,6 @@ export function renderProjectsList(){
                   <label>Factory</label>
                   <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                 </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Portion Weight</label>
-                  <div class="combo-row">
-                    <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 20" step="any" min="0">
-                    <input type="text" class="proj-portion-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionWeightUnit || 'g')}" placeholder="unit">
-                    <span>/</span>
-                    <input type="text" class="proj-portion-per-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionPerUnit || 'pcs')}" placeholder="per">
-                  </div>
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Inner Packing</label>
-                  <div class="combo-row">
-                    <input type="number" class="proj-inner-qty" ${ro} value="${escapeHtml(p.innerPackQty || '')}" placeholder="e.g. 30" step="any" min="0">
-                    <input type="text" class="proj-inner-weight-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackWeightUnit || 'g')}" placeholder="unit">
-                    <span>/</span>
-                    <input type="text" class="proj-inner-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackUnit || 'pack')}" placeholder="pack unit">
-                  </div>
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>Outer Packing</label>
-                  <div class="combo-row">
-                    <input type="number" class="proj-outer-qty" ${ro} value="${escapeHtml(p.outerPackQty || '')}" placeholder="e.g. 24" step="any" min="0">
-                    <input type="text" class="proj-outer-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackUnit || 'pack')}" placeholder="pack unit">
-                    <span>/</span>
-                    <input type="text" class="proj-outer-container-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackContainerUnit || 'carton')}" placeholder="container">
-                  </div>
-                </div>
-                <div class="field" style="margin-bottom:0;">
-                  <label>MOQ</label>
-                  <div class="combo-row">
-                    <input type="number" class="proj-moq-qty" ${ro} value="${escapeHtml(p.moqQty || '')}" placeholder="e.g. 500" step="any" min="0">
-                    <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || 'pcs')}" placeholder="unit">
-                  </div>
-                </div>
                 <div class="field" style="margin-bottom:0;grid-column:1 / -1;">
                   <div class="requirements-box">
                     <div class="requirements-box-title">Requirements</div>
@@ -2035,6 +2003,42 @@ export function renderProjectsList(){
                         <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Attach file/photo<input type="file" class="mu-attach-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.csv" multiple style="display:none;"></label>
                       </div>
                       ` : ''}
+                    </div>
+                    <div class="project-header-grid" style="margin-bottom:8px;">
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Portion Weight</label>
+                        <div class="combo-row">
+                          <input type="number" class="proj-portion-qty" ${ro} value="${escapeHtml(p.portionWeightQty || '')}" placeholder="e.g. 20" step="any" min="0">
+                          <input type="text" class="proj-portion-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionWeightUnit || 'g')}" placeholder="unit">
+                          <span>/</span>
+                          <input type="text" class="proj-portion-per-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.portionPerUnit || 'pcs')}" placeholder="per">
+                        </div>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Inner Packing</label>
+                        <div class="combo-row">
+                          <input type="number" class="proj-inner-qty" ${ro} value="${escapeHtml(p.innerPackQty || '')}" placeholder="e.g. 30" step="any" min="0">
+                          <input type="text" class="proj-inner-weight-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackWeightUnit || 'g')}" placeholder="unit">
+                          <span>/</span>
+                          <input type="text" class="proj-inner-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.innerPackUnit || 'pack')}" placeholder="pack unit">
+                        </div>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>Outer Packing</label>
+                        <div class="combo-row">
+                          <input type="number" class="proj-outer-qty" ${ro} value="${escapeHtml(p.outerPackQty || '')}" placeholder="e.g. 24" step="any" min="0">
+                          <input type="text" class="proj-outer-pack-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackUnit || 'pack')}" placeholder="pack unit">
+                          <span>/</span>
+                          <input type="text" class="proj-outer-container-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.outerPackContainerUnit || 'carton')}" placeholder="container">
+                        </div>
+                      </div>
+                      <div class="field" style="margin-bottom:0;">
+                        <label>MOQ</label>
+                        <div class="combo-row">
+                          <input type="number" class="proj-moq-qty" ${ro} value="${escapeHtml(p.moqQty || '')}" placeholder="e.g. 500" step="any" min="0">
+                          <input type="text" class="proj-moq-unit" list="unitsDatalist" ${ro} value="${escapeHtml(p.moqUnit || 'pcs')}" placeholder="unit">
+                        </div>
+                      </div>
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
                       <label>Cooking Guidelines</label>
