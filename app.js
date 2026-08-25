@@ -183,13 +183,13 @@ function hasModuleAccess(key){
 // every project's data in Firestore (this is UI-only, same caveat as
 // MODULE_PERMISSIONS above), but the Projects list and the Home
 // dashboard's Task Tracking / Activities Calendar only show projects and
-// activities the signed-in person is actually involved in, matched by
-// their My Profile display name against the free-text name fields
-// (Owner/Factory Rep/Responsible Person, per-product Sales Rep, and each
-// Activities Update's Who/Next Action Who) — there's no real user-account
-// link for these fields, they're plain typed text. The Unassigned bucket
-// project (see quickAddCalendarPlan) is always visible to everyone since
-// it exists precisely for plans nobody's claimed yet.
+// activities the signed-in person is actually involved in, matched
+// against the free-text name fields (Owner/Factory Rep/Responsible
+// Person, per-product Sales Rep, and each Activities Update's Who/Next
+// Action Who) — there's no real user-account link for those fields,
+// they're plain typed text. The Unassigned bucket project (see
+// quickAddCalendarPlan) is always visible to everyone since it exists
+// precisely for plans nobody's claimed yet.
 function isCurrentUserAdmin(){
   return currentUser?.email === ADMIN_EMAIL;
 }
@@ -206,8 +206,29 @@ function namesMatch(a, b){
   if(shorter.length < 3) return false;
   return x.includes(y) || y.includes(x);
 }
+// The name to match project/activity fields against for the signed-in
+// person — prefers their Contact Directory entry (Reference Lists >
+// Contact Directory), looked up by matching that entry's own Email field
+// against their login email, over their self-typed My Profile display
+// name. This is the actual "link a user's email to a name in the Contact
+// Directory" — filling in a contact's Email field with that person's
+// Forge login email is what connects the two; a Contact entry is trusted
+// over My Profile since it's admin/team-maintained and reused everywhere
+// names are typed in Projects, so it's far less likely to drift out of
+// sync than a free-text profile field nobody's told to keep in sync.
+function myLinkedName(){
+  const email = (currentUser?.email || '').trim().toLowerCase();
+  if(email){
+    const contact = (metaLists.salesReps || []).find(c => {
+      const contactEmail = typeof c === 'object' ? (c.email || '') : '';
+      return contactEmail.trim().toLowerCase() === email;
+    });
+    if(contact) return metaItemName(contact);
+  }
+  return myProfile.displayName;
+}
 function isMyName(name){
-  return namesMatch(name, myProfile.displayName);
+  return namesMatch(name, myLinkedName());
 }
 function isMyProject(p){
   if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
