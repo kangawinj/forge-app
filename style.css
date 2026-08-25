@@ -1734,29 +1734,32 @@
   .flavor-table td{padding:3px 8px 3px 0;border-bottom:1px solid var(--border);vertical-align:middle;}
   .flavor-table td:first-child, .flavor-table th:first-child{padding-left:0;}
   .flavor-table input, .flavor-table select{width:100%;}
-  /* The editable variant has 11 columns (read-only has 7: Product/Sample
-     Qty/Sample Request Date/Target/Actual/Formula/Note, which just split
-     the width evenly under fixed layout — no override needed there, its
-     cells are plain text rather than inputs that need real elbow room).
-     Percentages stopped working once this grew past ~8 columns -- forcing
-     11 columns into 100% squeezed several down to near-zero width and the
-     header text visibly overlapped. Fixed pixel widths (~1000px total)
+  /* The editable variant has 10 columns, in this order: Product/Sample
+     Qty/Sample Request Date/Target Price/Actual Price/Currency/Per/
+     Formula/Note/delete -- Currency+Per sit right next to the two price
+     columns they actually describe, rather than off at the far end past
+     Formula/Note. (Read-only has 7: Product/Sample Qty/Sample Request
+     Date/Target/Actual/Formula/Note, which just split the width evenly
+     under fixed layout — no override needed there, its cells are plain
+     text rather than inputs that need real elbow room.) Percentages
+     stopped working once this table grew past ~8 columns -- forcing that
+     many into 100% squeezed several down to near-zero width and the
+     header text visibly overlapped. Fixed pixel widths (~970px total)
      plus min-width on the table below fixes that permanently regardless of
      column count -- .flavor-table-scroll's overflow-x:auto (already in
      place) handles anything narrower than that by scrolling instead of
      squeezing. */
-  .flavor-table-edit{min-width:1010px;}
+  .flavor-table-edit{min-width:980px;}
   .flavor-table-edit th:nth-child(1){width:150px;}
   .flavor-table-edit th:nth-child(2){width:80px;}
-  .flavor-table-edit th:nth-child(3){width:70px;}
-  .flavor-table-edit th:nth-child(4){width:130px;}
+  .flavor-table-edit th:nth-child(3){width:130px;}
+  .flavor-table-edit th:nth-child(4){width:90px;}
   .flavor-table-edit th:nth-child(5){width:90px;}
-  .flavor-table-edit th:nth-child(6){width:90px;}
-  .flavor-table-edit th:nth-child(7){width:110px;}
-  .flavor-table-edit th:nth-child(8){width:150px;}
-  .flavor-table-edit th:nth-child(9){width:70px;}
-  .flavor-table-edit th:nth-child(10){width:70px;}
-  .flavor-table-edit th:nth-child(11){width:30px;}
+  .flavor-table-edit th:nth-child(6){width:70px;}
+  .flavor-table-edit th:nth-child(7){width:70px;}
+  .flavor-table-edit th:nth-child(8){width:110px;}
+  .flavor-table-edit th:nth-child(9){width:150px;}
+  .flavor-table-edit th:nth-child(10){width:30px;}
 
   .compare-pickers{
     display:grid;

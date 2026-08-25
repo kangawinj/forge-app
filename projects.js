@@ -353,7 +353,7 @@ function blankRequirements(){
 // almost always are; still a plain text input afterward, so it can be
 // retyped to whatever the photo actually shows.
 const PROJ_REF_IMAGE_DEFAULT_CAPTION = 'Idea / Ref. Photo';
-const PROJ_REF_IMAGE_MAX = 3;
+const PROJ_REF_IMAGE_MAX = 6;
 const PROJ_REF_IMAGE_MAX_DIM = 640;
 async function fileToProjRefImage(file){
   const dataUrl = await resizeImageFile(file, PROJ_REF_IMAGE_MAX_DIM);
@@ -485,13 +485,7 @@ function blankProject(){
 // by both prices on the same flavor (they're only meaningful compared
 // against each other in the same terms), not tracked separately per price.
 function blankFlavor(){
-  return { id: uid(), name: "", sampleQty: "", sampleUnit: "pcs", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
-}
-// Combines a flavor/product row's sample quantity + unit into one display
-// string for the read-only table, same "N unit" pattern formatFlavorPrice
-// uses for price + currency/per.
-function formatFlavorSampleQty(f){
-  return f.sampleQty ? `${escapeHtml(f.sampleQty)} ${escapeHtml(f.sampleUnit || 'pcs')}` : '-';
+  return { id: uid(), name: "", sampleQty: "", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
 }
 
 export function blankProduct(recipeId){
@@ -1100,19 +1094,18 @@ function renderNewProjectPanel(){
           <label>Product</label>
           <div class="flavor-table-scroll">
           <table class="flavor-table flavor-table-edit">
-            <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
             <tbody class="proj-flavors-tbody">${newProjectFlavors.map(f => `
               <tr data-flavor-id="${escapeHtml(f.id)}">
                 <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
                 <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
-                <td><input type="text" class="flavor-sample-unit" list="unitsDatalist" value="${escapeHtml(f.sampleUnit || 'pcs')}" placeholder="unit"></td>
                 <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                 <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                 <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
-                <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
-                <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                 <td><select class="proj-select flavor-currency">${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
                 <td><input type="text" class="flavor-unit" list="unitsDatalist" value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                 <td><button type="button" class="icon-btn" title="Delete this product" data-role="remove-flavor">${icon('x')}</button></td>
               </tr>
             `).join('')}</tbody>
@@ -1126,8 +1119,8 @@ function renderNewProjectPanel(){
             <input type="text" id="newProjReqStorageCondition" placeholder="e.g. Keep frozen at -18°C">
           </div>
           <div class="field" style="margin-bottom:0;">
-            <label>Shelf Life</label>
-            <input type="text" id="newProjReqShelfLife" placeholder="e.g. 12 months from production date">
+            <label>Shelf Life (from production date)</label>
+            <input type="text" id="newProjReqShelfLife" placeholder="e.g. 12 months">
           </div>
         </div>
         <div class="field" style="margin-bottom:8px;">
@@ -1310,7 +1303,6 @@ function renderNewProjectPanel(){
     if(!flavor) return;
     row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
     row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
-    row.querySelector('.flavor-sample-unit').addEventListener('change', e => { flavor.sampleUnit = e.target.value.trim(); });
     row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
     row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
     row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
@@ -2022,7 +2014,7 @@ export function renderProjectsList(){
             <tbody>${flavors.map(f => `
               <tr>
                 <td>${escapeHtml(f.name || 'Untitled product')}</td>
-                <td>${formatFlavorSampleQty(f)}</td>
+                <td>${escapeHtml(f.sampleQty || '-')}</td>
                 <td>${escapeHtml(f.sampleRequestDate || '-')}</td>
                 <td>${formatFlavorPrice(f, f.targetPrice)}</td>
                 <td>${formatFlavorPrice(f, f.actualPrice)}</td>
@@ -2043,7 +2035,7 @@ export function renderProjectsList(){
             ${(req.storageCondition || req.shelfLife) ? `
               <dl class="material-detail-list">${detailRowsHtml([
                 ['Storage Condition', req.storageCondition],
-                ['Shelf Life', req.shelfLife]
+                ['Shelf Life (from production date)', req.shelfLife]
               ])}</dl>
             ` : ''}
             ${req.composition ? `<div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div>` : ''}
@@ -2159,19 +2151,18 @@ export function renderProjectsList(){
                       <label>Product</label>
                       <div class="flavor-table-scroll">
                       <table class="flavor-table flavor-table-edit">
-                        <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th><th>Currency</th><th>Per</th><th></th></tr></thead>
+                        <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
                         <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
                           <tr data-flavor-id="${escapeHtml(f.id)}">
                             <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
                             <td><input type="number" class="flavor-sample-qty" ${ro} value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
-                            <td><input type="text" class="flavor-sample-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.sampleUnit || 'pcs')}" placeholder="unit"></td>
                             <td><input type="date" class="flavor-sample-request-date" ${ro} value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                             <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                             <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
-                            <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
-                            <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                             <td><select class="proj-select flavor-currency" ${isEditing ? '' : 'disabled'}>${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
                             <td><input type="text" class="flavor-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+                            <td><input type="text" class="flavor-formula-ref" ${ro} value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+                            <td><input type="text" class="flavor-note" ${ro} value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
                             <td>${isEditing ? `<button type="button" class="icon-btn" title="Delete this product" data-role="remove-flavor">${icon('x')}</button>` : ''}</td>
                           </tr>
                         `).join('')}</tbody>
@@ -2185,8 +2176,8 @@ export function renderProjectsList(){
                         <input type="text" class="proj-req-storage-condition" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
                       </div>
                       <div class="field" style="margin-bottom:0;">
-                        <label>Shelf Life</label>
-                        <input type="text" class="proj-req-shelf-life" ${ro} value="${escapeHtml(req.shelfLife)}" placeholder="e.g. 12 months from production date">
+                        <label>Shelf Life (from production date)</label>
+                        <input type="text" class="proj-req-shelf-life" ${ro} value="${escapeHtml(req.shelfLife)}" placeholder="e.g. 12 months">
                       </div>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
@@ -2871,7 +2862,6 @@ export function renderProjectsList(){
           if(!flavor) return;
           row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); scheduleProjectSave(p); });
-          row.querySelector('.flavor-sample-unit').addEventListener('change', e => { flavor.sampleUnit = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; scheduleProjectSave(p); });
           row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); scheduleProjectSave(p); });
