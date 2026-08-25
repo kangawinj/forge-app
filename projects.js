@@ -978,7 +978,7 @@ function renderNewProjectPanel(){
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Responsible Person (PD)</label>
-          <input type="text" id="newProjResponsible" list="responsiblePersonDatalist" placeholder="e.g. Kanya">
+          <input type="text" id="newProjResponsible" list="salesRepDatalist" placeholder="e.g. Kanya">
         </div>
         <div class="field" style="margin-bottom:0;">
           <label>Factory</label>
@@ -1825,7 +1825,7 @@ export function renderProjectsList(){
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Responsible Person (PD)</label>
-                  <input type="text" class="proj-responsible" list="responsiblePersonDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
+                  <input type="text" class="proj-responsible" list="salesRepDatalist" ${ro} value="${escapeHtml(p.responsiblePerson)}" placeholder="e.g. Kanya">
                 </div>
                 <div class="field" style="margin-bottom:0;">
                   <label>Factory</label>
