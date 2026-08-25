@@ -1159,6 +1159,10 @@ function renderNewProjectPanel(){
             </div>
           </div>
         </div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Packaging condition</label>
+          <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
+        </div>
         <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Storage Condition</label>
@@ -1187,10 +1191,6 @@ function renderNewProjectPanel(){
           <div style="margin-top:8px;">
             ${trialStringListHtml(cookingStepsEditing, true, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
           </div>
-        </div>
-        <div class="field" style="margin-bottom:8px;">
-          <label>Packaging condition</label>
-          <textarea id="newProjReqPackaging" placeholder="e.g. Microwaveable black plastic tray"></textarea>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Note</label>
@@ -2216,6 +2216,10 @@ export function renderProjectsList(){
                         </div>
                       </div>
                     </div>
+                    <div class="field" style="margin-bottom:8px;">
+                      <label>Packaging condition</label>
+                      <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
+                    </div>
                     <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
                       <div class="field" style="margin-bottom:0;">
                         <label>Storage Condition</label>
@@ -2246,10 +2250,6 @@ export function renderProjectsList(){
                       <div style="margin-top:8px;">
                         ${trialStringListHtml(isEditing ? cookingStepsEditing : req.cookingCondition.steps, isEditing, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
                       </div>
-                    </div>
-                    <div class="field" style="margin-bottom:8px;">
-                      <label>Packaging condition</label>
-                      <textarea class="proj-req-packaging" ${ro} placeholder="e.g. Microwaveable black plastic tray">${escapeHtml(req.packagingCondition)}</textarea>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Note</label>
