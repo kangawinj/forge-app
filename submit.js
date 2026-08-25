@@ -8,12 +8,12 @@
 // other half of that story.
 //
 // Deliberately out of scope for this first version: Idea/Reference
-// Images, the Product pricing table, and Recipe file attachments --
-// each would mean either exposing more of the authenticated app's own
-// Firestore collections/Storage to the public, or base64-inlining
-// photos into this doc and risking Firestore's 1MiB document limit on a
-// form nobody in-house is watching fill up. Everything else on the New
-// Project form (all its plain text/number/date fields, plus the Cooking
+// Images and Recipe file attachments -- either would mean exposing more
+// of the authenticated app's own Firestore collections/Storage to the
+// public, or base64-inlining photos into this doc and risking
+// Firestore's 1MiB document limit on a form nobody in-house is watching
+// fill up. Everything else on the New Project form (all its plain
+// text/number/date fields, the Product table, plus the Cooking
 // Guidelines steps list) is here.
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -43,6 +43,9 @@ const PROJECT_STATUS_LABELS = {
   'Completed': 'Completed (เสร็จสมบูรณ์)',
   'Cancelled': 'Cancelled (ยกเลิก)'
 };
+// Kept in sync manually with CURRENCY_OPTIONS in projects.js, same reason
+// as PROJECT_STATUSES above.
+const CURRENCY_OPTIONS = ['THB','JPY','USD','CNY','EUR'];
 
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -57,6 +60,7 @@ function blankSubmission(){
     innerPackQty: '', innerPackWeightUnit: '', innerPackUnit: '',
     outerPackQty: '', outerPackUnit: '', outerPackContainerUnit: '',
     moqQty: '', moqUnit: '',
+    flavors: [],
     requirements: {
       packagingCondition: '', storageCondition: '', shelfLife: '',
       composition: '', recipe: '',
@@ -95,6 +99,69 @@ function clearBanner(){
 // "staged array, re-rendered on every change" pattern the main app uses
 // for the same field.
 let cookingSteps = [];
+
+// Product table -- same fields as the authenticated app's own Product
+// table (see blankFlavor/newProjectFlavors in projects.js), duplicated
+// here in miniature since this standalone page can't import
+// projects.js. Same staged-array pattern as cookingSteps above, but
+// with per-field ids so add/remove only ever re-renders this table's
+// own root, never the whole form (which would lose an in-progress edit
+// to a different field).
+let flavors = [];
+function blankFlavor(){
+  return { id: crypto.randomUUID(), name: '', sampleQty: '', sampleRequestDate: '', targetPrice: '', actualPrice: '', priceCurrency: 'THB', priceUnit: 'kg', formulaRefCode: '', note: '' };
+}
+function flavorTableHtml(){
+  const rows = flavors.map(f => `
+    <tr data-flavor-id="${escapeHtml(f.id)}">
+      <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+      <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+      <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
+      <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+      <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+      <td><select class="proj-select flavor-currency">${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+      <td><input type="text" class="flavor-unit" value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+      <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+      <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
+      <td><button type="button" class="icon-btn" title="Delete this product" data-role="remove-flavor">×</button></td>
+    </tr>
+  `).join('');
+  return `
+    <div class="flavor-table-scroll">
+    <table class="flavor-table flavor-table-edit">
+      <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+      <tbody class="flavors-tbody">${rows}</tbody>
+    </table>
+    </div>
+    <button type="button" class="btn btn-sm add-row-btn" id="addFlavorBtn">+ Add Product</button>
+  `;
+}
+function wireFlavorTable(){
+  const root = document.getElementById('flavorTableRoot');
+  root.querySelectorAll('.flavors-tbody tr[data-flavor-id]').forEach(row => {
+    const flavor = flavors.find(x => x.id === row.dataset.flavorId);
+    if(!flavor) return;
+    row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
+    row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; });
+    row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); });
+    row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); });
+    row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); });
+    row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
+      flavors = flavors.filter(x => x.id !== flavor.id);
+      root.innerHTML = flavorTableHtml();
+      wireFlavorTable();
+    });
+  });
+  document.getElementById('addFlavorBtn').addEventListener('click', () => {
+    flavors.push(blankFlavor());
+    root.innerHTML = flavorTableHtml();
+    wireFlavorTable();
+  });
+}
 
 // "My Requests": a plain list of {token, name} in this browser's own
 // localStorage -- deliberately NOT a Firestore query across the whole
@@ -232,6 +299,7 @@ async function startNewRequest(){
     // the landing page's blank state behind in browser history.
     history.replaceState(null, '', `?token=${newToken}`);
     cookingSteps = [];
+    flavors = [];
     render(blankSubmission());
   }catch(err){
     feedback.textContent = 'Could not start a new request: ' + (err.message || err);
@@ -255,6 +323,7 @@ async function loadAndRenderToken(){
     return;
   }
   cookingSteps = [...(data.requirements?.cookingCondition?.steps || [])];
+  flavors = (data.flavors || []).map(f => ({ ...f, id: f.id || crypto.randomUUID() }));
   render(data);
 }
 
@@ -325,6 +394,10 @@ function render(data){
       </div>
       <div class="requirements-box">
         <div class="requirements-box-title">Requirements</div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Product</label>
+          <div id="flavorTableRoot">${flavorTableHtml()}</div>
+        </div>
         <div class="project-header-grid" style="margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Portion Weight</label>
@@ -412,6 +485,7 @@ function render(data){
     });
   });
   wireStepsList();
+  wireFlavorTable();
 
   document.getElementById('btnSubmit').addEventListener('click', () => save(data));
 }
@@ -462,6 +536,7 @@ async function save(existing){
     innerPackQty: v('fInnerQty'), innerPackWeightUnit: v('fInnerWeightUnit'), innerPackUnit: v('fInnerPackUnit'),
     outerPackQty: v('fOuterQty'), outerPackUnit: v('fOuterPackUnit'), outerPackContainerUnit: v('fOuterContainerUnit'),
     moqQty: v('fMoqQty'), moqUnit: v('fMoqUnit'),
+    flavors,
     requirements: {
       packagingCondition: v('fPackaging'),
       storageCondition: v('fStorageCondition'),

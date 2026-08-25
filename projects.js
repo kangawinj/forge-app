@@ -704,6 +704,9 @@ let submissionHistory = null; // null = not fetched yet this time History was op
 // Project panel already uses for the same field.
 let reviewingSubmission = null;
 let reviewingCookingSteps = [];
+// The submission's own Product table, staged the same way -- see
+// reviewFlavorTableHtml/wireReviewFlavorTable below.
+let reviewingFlavors = [];
 const SUBMISSION_HISTORY_VERB_LABELS = { imported: 'Imported as Project', rejected: 'Rejected', deleted: 'Deleted' };
 
 async function togglePendingSubmissionsPanel(){
@@ -820,6 +823,7 @@ function renderPendingSubmissionsPanel(){
         if(!sub) return;
         reviewingSubmission = { ...sub };
         reviewingCookingSteps = [...(sub.requirements?.cookingCondition?.steps || [])];
+        reviewingFlavors = (sub.flavors || []).map(f => ({ ...f, id: f.id || uid() }));
         renderPendingSubmissionsPanel();
       });
     });
@@ -898,6 +902,10 @@ function renderSubmissionReviewForm(){
       </div>
       <div class="requirements-box">
         <div class="requirements-box-title">Requirements</div>
+        <div class="field" style="margin-bottom:8px;">
+          <label>Product</label>
+          <div id="reviewFlavorsRoot">${reviewFlavorTableHtml()}</div>
+        </div>
         <div class="project-header-grid" style="margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Portion Weight</label>
@@ -980,6 +988,7 @@ function renderSubmissionReviewForm(){
     </div>
   `;
   wireReviewStepsList();
+  wireReviewFlavorTable();
   document.getElementById('btnSaveSubmissionReview').addEventListener('click', saveSubmissionReview);
   document.getElementById('btnCancelSubmissionReview').addEventListener('click', () => {
     reviewingSubmission = null;
@@ -1058,6 +1067,61 @@ function wireReviewStepsList(){
     wireReviewStepsList();
   });
 }
+// Same columns/fields as the New Project panel's own Product table (see
+// blankFlavor/newProjectFlavors) -- only this table's own root re-renders
+// on add/remove, never the whole review form, so an in-progress edit to
+// a different field on the form isn't lost.
+function reviewFlavorTableHtml(){
+  const rows = reviewingFlavors.map(f => `
+    <tr data-flavor-id="${escapeHtml(f.id)}">
+      <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
+      <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+      <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
+      <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
+      <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
+      <td><select class="proj-select flavor-currency">${CURRENCY_OPTIONS.map(c => `<option value="${c}" ${c === (f.priceCurrency || 'THB') ? 'selected' : ''}>${c}</option>`).join('')}</select></td>
+      <td><input type="text" class="flavor-unit" list="unitsDatalist" value="${escapeHtml(f.priceUnit || 'kg')}" placeholder="unit"></td>
+      <td><input type="text" class="flavor-formula-ref" value="${escapeHtml(f.formulaRefCode||'')}" placeholder="e.g. JPN01-25"></td>
+      <td><input type="text" class="flavor-note" value="${escapeHtml(f.note||'')}" placeholder="Note"></td>
+      <td><button type="button" class="icon-btn" title="Delete this product" data-role="remove-review-flavor">${icon('x')}</button></td>
+    </tr>
+  `).join('');
+  return `
+    <div class="flavor-table-scroll">
+    <table class="flavor-table flavor-table-edit">
+      <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+      <tbody class="sub-review-flavors-tbody">${rows}</tbody>
+    </table>
+    </div>
+    <button type="button" class="btn btn-sm add-row-btn" id="addReviewFlavorBtn">+ Add Product</button>
+  `;
+}
+function wireReviewFlavorTable(){
+  const root = document.getElementById('reviewFlavorsRoot');
+  root.querySelectorAll('.sub-review-flavors-tbody tr[data-flavor-id]').forEach(row => {
+    const flavor = reviewingFlavors.find(x => x.id === row.dataset.flavorId);
+    if(!flavor) return;
+    row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
+    row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
+    row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; });
+    row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); });
+    row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); });
+    row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); });
+    row.querySelector('[data-role="remove-review-flavor"]').addEventListener('click', () => {
+      reviewingFlavors = reviewingFlavors.filter(x => x.id !== flavor.id);
+      root.innerHTML = reviewFlavorTableHtml();
+      wireReviewFlavorTable();
+    });
+  });
+  document.getElementById('addReviewFlavorBtn').addEventListener('click', () => {
+    reviewingFlavors.push(blankFlavor());
+    root.innerHTML = reviewFlavorTableHtml();
+    wireReviewFlavorTable();
+  });
+}
 // Reads the review form's current field values -- shared by Save (writes
 // back to the submission doc, still pending) and Import (also writes
 // these, but as the final imported/locked state), so Import always acts
@@ -1075,6 +1139,7 @@ function readSubmissionReviewForm(){
     innerPackQty: v('subReviewInnerQty'), innerPackWeightUnit: v('subReviewInnerWeightUnit'), innerPackUnit: v('subReviewInnerPackUnit'),
     outerPackQty: v('subReviewOuterQty'), outerPackUnit: v('subReviewOuterPackUnit'), outerPackContainerUnit: v('subReviewOuterContainerUnit'),
     moqQty: v('subReviewMoqQty'), moqUnit: v('subReviewMoqUnit'),
+    flavors: reviewingFlavors,
     requirements: {
       packagingCondition: v('subReviewPackaging'), storageCondition: v('subReviewStorageCondition'), shelfLife: v('subReviewShelfLife'),
       composition: v('subReviewComposition'), recipe: v('subReviewRecipe'),
@@ -1119,7 +1184,7 @@ async function importSubmission(){
   newProjectImage = '';
   referenceImagesEditing = [];
   recipeAttachmentsEditing = [];
-  newProjectFlavors = [];
+  newProjectFlavors = (data.flavors || []).map(f => ({ ...f, id: f.id || uid() }));
   cookingMethodEditing = data.requirements.cookingCondition.method;
   cookingStepsEditing = [...data.requirements.cookingCondition.steps];
   renderNewProjectPanel();
