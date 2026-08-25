@@ -1170,6 +1170,13 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       document.getElementById('projectsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
     });
   });
+  dashboardContainer.querySelectorAll('[data-responsible-filter]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      projectColumnFilters = { ...projectColumnFilters, responsiblePerson: new Set([btn.dataset.responsibleFilter]) };
+      renderProjectsList();
+      document.getElementById('projectsList')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
 }
 
 // A horizontal timeline bar per project running from Start Date to Target/
@@ -1313,6 +1320,27 @@ export function renderProjectsList(){
   const projectsByStatus = PROJECT_STATUSES
     .map(status => ({ label: status, count: visibleProjects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status).length }))
     .filter(g => g.count > 0);
+  // Workload-by-person overview -- how many projects each Responsible
+  // Person (PD) currently has, plus a highlighted group for projects with
+  // no PD set at all so gaps are easy to spot. Grouped from the raw
+  // responsiblePerson value (key) separately from its display label,
+  // since the empty-string key needs to round-trip through the column
+  // filter click below exactly the way PROJECT_FILTER_ACCESSORS.
+  // responsiblePerson already treats "no PD" elsewhere in this file.
+  const responsibleCounts = new Map();
+  visibleProjects.forEach(p => {
+    // Matches PROJECT_FILTER_ACCESSORS.responsiblePerson exactly (no
+    // trim) so a click-to-filter here lands on the same set of projects
+    // the column filter itself would show.
+    const key = PROJECT_FILTER_ACCESSORS.responsiblePerson(p);
+    responsibleCounts.set(key, (responsibleCounts.get(key) || 0) + 1);
+  });
+  const projectsByResponsible = Array.from(responsibleCounts.entries())
+    .map(([key, count]) => ({ key, label: key || '(Not assigned)', count }))
+    .sort((a, b) => {
+      if((a.key === '') !== (b.key === '')) return a.key === '' ? -1 : 1;
+      return b.count - a.count || a.label.localeCompare(b.label);
+    });
   if(dashboardContainer){
     dashboardContainer.innerHTML = `
       <div class="dash-metrics" style="margin-bottom:14px;">
@@ -1328,6 +1356,10 @@ export function renderProjectsList(){
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title">Projects by Status</div>
         ${renderStatusBarList(projectsByStatus)}
+      </div>
+      <div class="dash-card" style="margin-bottom:16px;">
+        <div class="dash-card-title">Projects by Responsible Person (PD)</div>
+        ${renderResponsibleBarList(projectsByResponsible)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title">Products by stage</div>
@@ -3134,6 +3166,22 @@ function renderStatusBarList(groups){
       </div>
     `;
   }).join('');
+}
+// Workload-by-person bar list (see projectsByResponsible above) — same
+// dash-bar-item markup/click-to-filter pattern as renderStatusBarList,
+// minus the photo gallery, since this is about counts per person rather
+// than browsing the projects themselves. The "(Not assigned)" group (key
+// === '') is colored danger-red so a PD gap actually stands out instead
+// of just being another bar in the list.
+function renderResponsibleBarList(groups){
+  if(!groups.length) return '<div class="dash-empty">No data yet</div>';
+  const max = Math.max(...groups.map(g => g.count));
+  return groups.map(g => `
+    <button type="button" class="dash-bar-item dash-bar-item-clickable" data-responsible-filter="${escapeHtml(g.key)}" title="Filter the projects table to ${escapeHtml(g.label)}">
+      <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
+      <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${g.key === '' ? 'var(--danger)' : 'var(--primary)'};"></div></div>
+    </button>
+  `).join('');
 }
 
 
