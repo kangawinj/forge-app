@@ -350,15 +350,18 @@ function blankRequirements(){
 // Each entry is { id, dataUrl, caption } -- the "Idea / Reference Images"
 // gallery at the top of the Requirements box (up to 3, see
 // PROJ_REF_IMAGE_MAX / fileToProjRefImage below). A brand new image starts
-// with this exact caption pre-filled, since that's what these photos
-// almost always are; still a plain text input afterward, so it can be
-// retyped to whatever the photo actually shows.
+// with its own filename (extension stripped) as the caption, since
+// that's usually a more useful starting point than a generic label --
+// still a plain text input afterward, so it can be retyped to whatever
+// the photo actually shows. Falls back to PROJ_REF_IMAGE_DEFAULT_CAPTION
+// on the rare file with no usable name.
 const PROJ_REF_IMAGE_DEFAULT_CAPTION = 'Idea / Ref. Photo';
 const PROJ_REF_IMAGE_MAX = 6;
 const PROJ_REF_IMAGE_MAX_DIM = 640;
 async function fileToProjRefImage(file){
   const dataUrl = await resizeImageFile(file, PROJ_REF_IMAGE_MAX_DIM);
-  return { id: uid(), dataUrl, caption: PROJ_REF_IMAGE_DEFAULT_CAPTION };
+  const caption = (file.name || '').replace(/\.[^./\\]+$/, '').trim() || PROJ_REF_IMAGE_DEFAULT_CAPTION;
+  return { id: uid(), dataUrl, caption };
 }
 // Shared by the read-only card and the editable draft -- `isEditing`
 // controls whether each photo gets a remove (x) button and its caption
