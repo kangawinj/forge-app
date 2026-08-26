@@ -2658,7 +2658,7 @@ export function renderProjectsList(){
             <td class="proj-actions-cell" style="white-space:nowrap;">
               ${isEditing
                 ? ''
-                : `<button class="btn btn-sm" data-role="print-project" title="Print this project">${icon('printer')}</button><button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button><button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}
+                : `<button class="btn btn-sm" data-role="print-project" title="Print this project">${icon('printer')}</button><button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button>${p.isUnassignedBucket ? '' : `<button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}`}
             </td>
           </tr>
         `;
@@ -3627,6 +3627,12 @@ export function renderProjectsList(){
     }
 
     block.querySelector('[data-role="delete-project"]')?.addEventListener('click', () => {
+      // Defense in depth -- the button itself is already hidden for this
+      // project (see the isUnassignedBucket check on the actions cell
+      // above), since deleting it would silently break the Calendar's
+      // "quick add" bucket until getOrCreateUnassignedProject re-creates
+      // a fresh, empty one on next use.
+      if(p.isUnassignedBucket) return;
       if(!confirm(`Delete project "${p.name || 'Untitled project'}"? This removes all its products and progress logs. This cannot be undone.`)) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',
