@@ -344,7 +344,7 @@ const REQUIREMENTS_FIELD_DEFS = [
 ];
 
 function blankRequirements(){
-  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', storageCondition:'', shelfLife:'', cookingCondition: blankCookingCondition(), certificate:'', note:'', referenceImages: [], recipeAttachments: [] };
+  return { flavorFilling:'', composition:'', recipe:'', packagingCondition:'', storageCondition:'', shelfLife:'', cookingCondition: [blankCookingCondition()], certificate:'', note:'', referenceImages: [], recipeAttachments: [] };
 }
 
 // Each entry is { id, dataUrl, caption } -- the "Idea / Reference Images"
@@ -378,22 +378,31 @@ function projRefImagesHtml(images, isEditing){
   `).join('')}</div>`;
 }
 
+// One Cooking Guidelines group -- a project/submission can have several
+// (e.g. "Stove Top" and "Microwave" each with their own steps), see
+// getCookingConditions below.
 function blankCookingCondition(){
-  return { method: '', steps: [] };
+  return { id: uid(), method: '', steps: [] };
 }
 
-// Normalizes cookingCondition into {method, steps}, whatever shape it
-// currently is in -- already-structured (new projects, or ones already
-// saved once under this shape), or a legacy plain string (either
-// newline-joined, from parseLegacyRequirements' old free-text parsing, or
-// arrow-joined, from an earlier iteration of the Cooking Condition
-// autofill that stored one flat string). Never drops data: any string
-// input becomes `steps` with no `method`, since a bare method name was
-// never recoverable from either legacy format.
-function getCookingCondition(cc){
-  if(cc && typeof cc === 'object') return { method: cc.method || '', steps: Array.isArray(cc.steps) ? cc.steps : [] };
+// Normalizes requirements.cookingCondition into an ARRAY of {id, method,
+// steps} groups, whatever shape it currently is in -- already an array
+// (a project/submission saved under this multi-group shape), a single
+// {method, steps} object (every project/submission saved before
+// multi-group support, including every submission from the public
+// submit.html page, which still only ever writes one group), or a
+// legacy plain string (either newline-joined, from
+// parseLegacyRequirements' old free-text parsing, or arrow-joined, from
+// an earlier iteration of the Cooking Condition autofill that stored one
+// flat string). Never drops data, and always returns at least one group
+// so the UI always has a first row to render/edit into.
+function getCookingConditions(cc){
+  const normalizeGroup = g => ({ id: g?.id || uid(), method: g?.method || '', steps: Array.isArray(g?.steps) ? g.steps : [] });
+  if(Array.isArray(cc)) return cc.length ? cc.map(normalizeGroup) : [blankCookingCondition()];
+  if(cc && typeof cc === 'object') return [normalizeGroup(cc)];
   const text = (cc || '').trim();
-  return { method: '', steps: text ? text.split(/\n|→/).map(s => s.trim()).filter(Boolean) : [] };
+  if(!text) return [blankCookingCondition()];
+  return [{ id: uid(), method: '', steps: text.split(/\n|→/).map(s => s.trim()).filter(Boolean) }];
 }
 
 // Parses the free-text `requirements` blob that older/unedited projects
@@ -435,7 +444,7 @@ function parseLegacyRequirements(text){
 function getRequirements(p){
   const req = p.requirements;
   const result = (req && typeof req === 'object') ? { ...blankRequirements(), ...req } : parseLegacyRequirements(req);
-  result.cookingCondition = getCookingCondition(result.cookingCondition);
+  result.cookingCondition = getCookingConditions(result.cookingCondition);
   result.referenceImages = Array.isArray(result.referenceImages) ? result.referenceImages : [];
   result.recipeAttachments = Array.isArray(result.recipeAttachments) ? result.recipeAttachments : [];
   return result;
@@ -703,7 +712,9 @@ let submissionHistory = null; // null = not fetched yet this time History was op
 // "array you edit in place, re-render on every change" pattern the New
 // Project panel already uses for the same field.
 let reviewingSubmission = null;
-let reviewingCookingSteps = [];
+// The submission's own Cooking Guidelines groups, staged the same way --
+// see reviewCookingGuidelinesHtml/wireReviewCookingGuidelines below.
+let reviewingCookingGuidelines = [];
 // The submission's own Product table, staged the same way -- see
 // reviewFlavorTableHtml/wireReviewFlavorTable below.
 let reviewingFlavors = [];
@@ -822,7 +833,7 @@ function renderPendingSubmissionsPanel(){
         const sub = (pendingSubmissionsList || []).find(s => s.id === btn.dataset.submissionId);
         if(!sub) return;
         reviewingSubmission = { ...sub };
-        reviewingCookingSteps = [...(sub.requirements?.cookingCondition?.steps || [])];
+        reviewingCookingGuidelines = getCookingConditions(sub.requirements?.cookingCondition).map(g => ({ id: g.id || uid(), method: g.method, steps: [...g.steps] }));
         reviewingFlavors = (sub.flavors || []).map(f => ({ ...f, id: f.id || uid() }));
         renderPendingSubmissionsPanel();
       });
@@ -832,15 +843,23 @@ function renderPendingSubmissionsPanel(){
     btn.addEventListener('click', () => switchPendingSubmissionsView(btn.dataset.view));
   });
 }
-function reviewCookingStepsHtml(){
-  const rows = reviewingCookingSteps.map((s, i) => `
-    <div class="trial-string-list-row" data-idx="${i}">
-      <span class="trial-string-list-num">${i + 1}.</span>
-      <input type="text" class="sub-review-cooking-step-input" value="${escapeHtml(s)}" placeholder="e.g. Reheat from frozen, 2-3 minutes">
-      <button type="button" class="icon-btn" data-role="remove-review-step" data-idx="${i}" title="Remove">${icon('x')}</button>
+// Cooking Guidelines editor for the review form -- one or more groups,
+// same shape/wiring approach as the New Project panel's own version, but
+// only this section's own root re-renders on add/remove (see
+// wireReviewCookingGuidelines), never the whole review form, so an
+// in-progress edit to a different field on the form isn't lost.
+function reviewCookingGuidelinesHtml(){
+  return reviewingCookingGuidelines.map((g, gi) => `
+    <div class="cooking-guideline-group" data-group-idx="${gi}" style="${gi < reviewingCookingGuidelines.length - 1 ? 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);' : ''}">
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input type="text" class="sub-review-cooking-method-input" list="cookingMethodDatalist" value="${escapeHtml(g.method)}" placeholder="e.g. Microwave" style="flex:1;">
+        ${reviewingCookingGuidelines.length > 1 ? `<button type="button" class="icon-btn" data-role="remove-review-cooking-guideline" title="Remove this guideline">${icon('x')}</button>` : ''}
+      </div>
+      <div style="margin-top:8px;">
+        ${trialStringListHtml(g.steps, true, 'sub-review-cooking-step-input', 'review-step', 'e.g. Reheat from frozen, 2-3 minutes')}
+      </div>
     </div>
-  `).join('');
-  return rows + `<button type="button" class="btn btn-sm add-row-btn" id="addReviewStepBtn">+ Add</button>`;
+  `).join('') + `<button type="button" class="btn btn-sm add-row-btn" id="addReviewCookingGuidelineBtn">+ Add Cooking Guidelines</button>`;
 }
 function renderSubmissionReviewForm(){
   const panel = document.getElementById('pendingSubmissionsPanel');
@@ -966,8 +985,7 @@ function renderSubmissionReviewForm(){
         </div>
         <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
           <label>Cooking Guidelines</label>
-          <input type="text" id="subReviewCookingMethod" value="${escapeHtml(req.cookingCondition?.method)}" list="cookingMethodDatalist" placeholder="e.g. Microwave">
-          <div style="margin-top:8px;" id="reviewStepsListRoot">${reviewCookingStepsHtml()}</div>
+          <div id="reviewCookingGuidelinesRoot">${reviewCookingGuidelinesHtml()}</div>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Note</label>
@@ -987,7 +1005,7 @@ function renderSubmissionReviewForm(){
       </div>
     </div>
   `;
-  wireReviewStepsList();
+  wireReviewCookingGuidelines();
   wireReviewFlavorTable();
   document.getElementById('btnSaveSubmissionReview').addEventListener('click', saveSubmissionReview);
   document.getElementById('btnCancelSubmissionReview').addEventListener('click', () => {
@@ -1049,22 +1067,45 @@ function deleteSubmission(){
     }
   );
 }
-function wireReviewStepsList(){
-  const root = document.getElementById('reviewStepsListRoot');
-  root.querySelectorAll('.sub-review-cooking-step-input').forEach((inp, idx) => {
-    inp.addEventListener('change', () => { reviewingCookingSteps[idx] = inp.value.trim(); });
-  });
-  root.querySelectorAll('[data-role="remove-review-step"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      reviewingCookingSteps.splice(parseInt(btn.dataset.idx, 10), 1);
-      root.innerHTML = reviewCookingStepsHtml();
-      wireReviewStepsList();
+function wireReviewCookingGuidelines(){
+  const root = document.getElementById('reviewCookingGuidelinesRoot');
+  root.querySelectorAll('.cooking-guideline-group').forEach((groupEl, gi) => {
+    const group = reviewingCookingGuidelines[gi];
+    if(!group) return;
+    groupEl.querySelector('.sub-review-cooking-method-input').addEventListener('change', e => {
+      group.method = e.target.value.trim();
+      const match = metaLists.cookingMethods.find(m => metaItemName(m) === group.method);
+      if(match && (match.steps || []).length){
+        group.steps = [...match.steps];
+        root.innerHTML = reviewCookingGuidelinesHtml();
+        wireReviewCookingGuidelines();
+      }
+    });
+    groupEl.querySelectorAll('.sub-review-cooking-step-input').forEach((inp, idx) => {
+      inp.addEventListener('change', () => { group.steps[idx] = inp.value.trim(); });
+    });
+    groupEl.querySelectorAll('[data-role="remove-review-step"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.steps.splice(parseInt(btn.dataset.idx, 10), 1);
+        root.innerHTML = reviewCookingGuidelinesHtml();
+        wireReviewCookingGuidelines();
+      });
+    });
+    groupEl.querySelector('[data-role="add-review-step"]')?.addEventListener('click', () => {
+      group.steps.push('');
+      root.innerHTML = reviewCookingGuidelinesHtml();
+      wireReviewCookingGuidelines();
+    });
+    groupEl.querySelector('[data-role="remove-review-cooking-guideline"]')?.addEventListener('click', () => {
+      reviewingCookingGuidelines.splice(gi, 1);
+      root.innerHTML = reviewCookingGuidelinesHtml();
+      wireReviewCookingGuidelines();
     });
   });
-  document.getElementById('addReviewStepBtn').addEventListener('click', () => {
-    reviewingCookingSteps.push('');
-    root.innerHTML = reviewCookingStepsHtml();
-    wireReviewStepsList();
+  document.getElementById('addReviewCookingGuidelineBtn').addEventListener('click', () => {
+    reviewingCookingGuidelines.push(blankCookingCondition());
+    root.innerHTML = reviewCookingGuidelinesHtml();
+    wireReviewCookingGuidelines();
   });
 }
 // Same columns/fields as the New Project panel's own Product table (see
@@ -1143,10 +1184,10 @@ function readSubmissionReviewForm(){
     requirements: {
       packagingCondition: v('subReviewPackaging'), storageCondition: v('subReviewStorageCondition'), shelfLife: v('subReviewShelfLife'),
       composition: v('subReviewComposition'), recipe: v('subReviewRecipe'),
-      cookingCondition: {
-        method: v('subReviewCookingMethod'),
-        steps: [...document.querySelectorAll('.sub-review-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
-      },
+      cookingCondition: [...document.querySelectorAll('#reviewCookingGuidelinesRoot .cooking-guideline-group')].map(g => ({
+        method: g.querySelector('.sub-review-cooking-method-input').value.trim(),
+        steps: [...g.querySelectorAll('.sub-review-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+      })),
       note: v('subReviewNote'), certificate: v('subReviewCertificate')
     }
   };
@@ -1185,8 +1226,7 @@ async function importSubmission(){
   referenceImagesEditing = [];
   recipeAttachmentsEditing = [];
   newProjectFlavors = (data.flavors || []).map(f => ({ ...f, id: f.id || uid() }));
-  cookingMethodEditing = data.requirements.cookingCondition.method;
-  cookingStepsEditing = [...data.requirements.cookingCondition.steps];
+  cookingGuidelinesEditing = data.requirements.cookingCondition.map(g => ({ id: uid(), method: g.method, steps: [...g.steps] }));
   renderNewProjectPanel();
   const setVal = (id, v) => { const el = document.getElementById(id); if(el) el.value = v || ''; };
   setVal('newProjName', data.name);
@@ -1216,7 +1256,6 @@ async function importSubmission(){
   setVal('newProjReqShelfLife', data.requirements.shelfLife);
   setVal('newProjReqComposition', data.requirements.composition);
   setVal('newProjReqRecipe', data.requirements.recipe);
-  setVal('newProjReqCookingCondition', data.requirements.cookingCondition.method);
   setVal('newProjReqNote', data.requirements.note);
   setVal('newProjReqCertificate', data.requirements.certificate);
   reviewingSubmission = null;
@@ -1274,8 +1313,8 @@ export function mountProjectsView(){
     newProjectOpen = true;
     newProjectImage = '';
     // Reuses the same staged-edit variables an existing project's own
-    // Requirements editor uses (referenceImagesEditing/cookingStepsEditing/
-    // cookingMethodEditing/recipeAttachmentsEditing) so the New Project
+    // Requirements editor uses (referenceImagesEditing/
+    // cookingGuidelinesEditing/recipeAttachmentsEditing) so the New Project
     // panel can render the identical Reference Images / Recipe attachment /
     // Cooking Guidelines steps UI -- reset here since a previous session
     // (or a cancelled edit elsewhere) could otherwise leak stale staged
@@ -1283,8 +1322,7 @@ export function mountProjectsView(){
     // genuinely new piece of state, standing in for p.flavors since there's
     // no real project yet for that array to live on.
     referenceImagesEditing = [];
-    cookingStepsEditing = [];
-    cookingMethodEditing = '';
+    cookingGuidelinesEditing = [blankCookingCondition()];
     recipeAttachmentsEditing = [];
     newProjectFlavors = [];
     renderNewProjectPanel();
@@ -1345,8 +1383,13 @@ let projectEditingId = null;
 // Reference Lists' refListEditingSteps) so Cancel discards them like every
 // other Requirements field does, instead of the live-save behavior
 // Flavor/Filling rows use.
-let cookingStepsEditing = [];
-let cookingMethodEditing = '';
+// Staged Cooking Guidelines groups for whichever project is currently
+// being edited (New Project panel or an existing project's edit-in-place
+// row -- same shared variable, same deferred-edit reasoning as above).
+// Each group is its own {id, method, steps}; always at least one so
+// there's a first row to edit into (see blankCookingCondition/
+// getCookingConditions).
+let cookingGuidelinesEditing = [blankCookingCondition()];
 // Same deferred-edit reasoning, for the Requirements box's Idea / Reference
 // Images gallery.
 let referenceImagesEditing = [];
@@ -1804,10 +1847,18 @@ function renderNewProjectPanel(){
         </div>
         <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
           <label>Cooking Guidelines</label>
-          <input type="text" id="newProjReqCookingCondition" list="cookingMethodDatalist" value="${escapeHtml(cookingMethodEditing)}" placeholder="e.g. Microwave">
-          <div style="margin-top:8px;">
-            ${trialStringListHtml(cookingStepsEditing, true, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
-          </div>
+          <div class="cooking-guidelines-editor">${cookingGuidelinesEditing.map((g, gi) => `
+            <div class="cooking-guideline-group" data-group-idx="${gi}" style="${gi < cookingGuidelinesEditing.length - 1 ? 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);' : ''}">
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="text" class="proj-req-cooking-method" list="cookingMethodDatalist" value="${escapeHtml(g.method)}" placeholder="e.g. Microwave" style="flex:1;">
+                ${cookingGuidelinesEditing.length > 1 ? `<button type="button" class="icon-btn" data-role="remove-cooking-guideline" title="Remove this guideline">${icon('x')}</button>` : ''}
+              </div>
+              <div style="margin-top:8px;">
+                ${trialStringListHtml(g.steps, true, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
+              </div>
+            </div>
+          `).join('')}</div>
+          <button type="button" class="btn btn-sm add-row-btn" data-role="add-cooking-guideline">+ Add Cooking Guidelines</button>
         </div>
         <div class="field" style="margin-bottom:8px;">
           <label>Note</label>
@@ -1858,32 +1909,44 @@ function renderNewProjectPanel(){
     }
   });
 
-  // Cooking Guidelines: same generic add/remove/edit-step wiring the main
-  // edit form uses (see the [data-role="add-cooking-step"] block on the
-  // per-project row below), scoped to this panel instead. Picking a
-  // Cooking Method that has Steps on file pulls them in as a starting
-  // point, same as the main form.
-  panel.querySelector('#newProjReqCookingCondition').addEventListener('change', e => {
-    cookingMethodEditing = e.target.value.trim();
-    const match = metaLists.cookingMethods.find(m => metaItemName(m) === cookingMethodEditing);
-    if(match && (match.steps || []).length){
-      cookingStepsEditing = [...match.steps];
-    }
-    renderNewProjectPanel();
-  });
-  panel.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
-    cookingStepsEditing.push('');
-    renderNewProjectPanel();
-  });
-  panel.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const idx = parseInt(btn.dataset.idx, 10);
-      cookingStepsEditing.splice(idx, 1);
+  // Cooking Guidelines: one or more groups, each its own Method + Steps
+  // list (see cookingGuidelinesEditing) -- every group's controls are
+  // queried scoped to that group's own container so the same
+  // add/remove-step data-role can repeat across groups without
+  // colliding. Picking a Cooking Method that has Steps on file pulls
+  // them in as a starting point for that group, same as before.
+  panel.querySelectorAll('.cooking-guideline-group').forEach((groupEl, gi) => {
+    const group = cookingGuidelinesEditing[gi];
+    if(!group) return;
+    groupEl.querySelector('.proj-req-cooking-method').addEventListener('change', e => {
+      group.method = e.target.value.trim();
+      const match = metaLists.cookingMethods.find(m => metaItemName(m) === group.method);
+      if(match && (match.steps || []).length){
+        group.steps = [...match.steps];
+      }
+      renderNewProjectPanel();
+    });
+    groupEl.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
+      group.steps.push('');
+      renderNewProjectPanel();
+    });
+    groupEl.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        group.steps.splice(parseInt(btn.dataset.idx, 10), 1);
+        renderNewProjectPanel();
+      });
+    });
+    groupEl.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
+      inp.addEventListener('change', () => { group.steps[idx] = inp.value.trim(); });
+    });
+    groupEl.querySelector('[data-role="remove-cooking-guideline"]')?.addEventListener('click', () => {
+      cookingGuidelinesEditing.splice(gi, 1);
       renderNewProjectPanel();
     });
   });
-  panel.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
-    inp.addEventListener('change', () => { cookingStepsEditing[idx] = inp.value.trim(); });
+  panel.querySelector('[data-role="add-cooking-guideline"]')?.addEventListener('click', () => {
+    cookingGuidelinesEditing.push(blankCookingCondition());
+    renderNewProjectPanel();
   });
 
   // Idea / Reference Images -- same upload/remove/caption wiring as the
@@ -1950,8 +2013,7 @@ function renderNewProjectPanel(){
   document.getElementById('btnCancelNewProject').addEventListener('click', () => {
     newProjectOpen = false;
     newProjectImage = '';
-    cookingMethodEditing = '';
-    cookingStepsEditing = [];
+    cookingGuidelinesEditing = [blankCookingCondition()];
     referenceImagesEditing = [];
     recipeAttachmentsEditing = [];
     newProjectFlavors = [];
@@ -1995,10 +2057,10 @@ function renderNewProjectPanel(){
       packagingCondition: document.getElementById('newProjReqPackaging').value.trim(),
       storageCondition: document.getElementById('newProjReqStorageCondition').value.trim(),
       shelfLife: document.getElementById('newProjReqShelfLife').value.trim(),
-      cookingCondition: {
-        method: document.getElementById('newProjReqCookingCondition').value.trim(),
-        steps: [...panel.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
-      },
+      cookingCondition: [...panel.querySelectorAll('.cooking-guideline-group')].map(g => ({
+        method: g.querySelector('.proj-req-cooking-method').value.trim(),
+        steps: [...g.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+      })),
       certificate: document.getElementById('newProjReqCertificate').value.trim(),
       note: document.getElementById('newProjReqNote').value.trim(),
       referenceImages: referenceImagesEditing,
@@ -2009,8 +2071,7 @@ function renderNewProjectPanel(){
     logActivityEvent('created', 'project', p.name || 'Untitled project');
     newProjectOpen = false;
     newProjectImage = '';
-    cookingMethodEditing = '';
-    cookingStepsEditing = [];
+    cookingGuidelinesEditing = [blankCookingCondition()];
     referenceImagesEditing = [];
     recipeAttachmentsEditing = [];
     newProjectFlavors = [];
@@ -2589,7 +2650,7 @@ export function renderProjectsList(){
             <td data-col="responsiblePerson">${missingCell(p.responsiblePerson)}</td>
             <td data-col="factoryName">${missingCell(p.factoryName)}</td>
             <td data-col="requirements">${Object.entries(req).some(([k, v]) => {
-              if(k === 'cookingCondition') return v.method || v.steps.length;
+              if(k === 'cookingCondition') return v.some(g => g.method || g.steps.length);
               if(k === 'referenceImages' || k === 'recipeAttachments') return v.length > 0;
               return (v || '').trim();
             }) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
@@ -2671,9 +2732,14 @@ export function renderProjectsList(){
               ${req.recipe ? `<div class="material-detail-notes">${escapeHtml(req.recipe)}</div>` : ''}
               ${req.recipeAttachments.length ? `<div class="mu-entry-extras" style="margin-top:6px;">${muAttachmentChipsHtml(req.recipeAttachments, false)}</div>` : ''}
             ` : ''}
-            ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
-              <div class="material-detail-notes-label">Cooking Guidelines${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
-              ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+            ${req.cookingCondition.some(g => g.method || g.steps.length) ? `
+              <div class="material-detail-notes-label">Cooking Guidelines</div>
+              ${req.cookingCondition.filter(g => g.method || g.steps.length).map(g => `
+                <div style="margin-bottom:8px;">
+                  ${g.method ? `<div style="font-size:12px;font-weight:600;margin-bottom:2px;">${escapeHtml(g.method)}</div>` : ''}
+                  ${g.steps.length ? `<ol class="cooking-steps-list">${g.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+                </div>
+              `).join('')}
             ` : ''}
             ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
             ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
@@ -2863,10 +2929,18 @@ export function renderProjectsList(){
                     </div>
                     <div class="field requirements-box-divider-below" style="margin-bottom:8px;">
                       <label>Cooking Guidelines</label>
-                      <input type="text" class="proj-req-cooking-method" list="cookingMethodDatalist" ${ro} value="${escapeHtml(isEditing ? cookingMethodEditing : req.cookingCondition.method)}" placeholder="e.g. Microwave">
-                      <div style="margin-top:8px;">
-                        ${trialStringListHtml(isEditing ? cookingStepsEditing : req.cookingCondition.steps, isEditing, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
-                      </div>
+                      <div class="cooking-guidelines-editor">${cookingGuidelinesEditing.map((g, gi) => `
+                        <div class="cooking-guideline-group" data-group-idx="${gi}" style="${gi < cookingGuidelinesEditing.length - 1 ? 'margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--border);' : ''}">
+                          <div style="display:flex;gap:8px;align-items:center;">
+                            <input type="text" class="proj-req-cooking-method" list="cookingMethodDatalist" value="${escapeHtml(g.method)}" placeholder="e.g. Microwave" style="flex:1;">
+                            ${cookingGuidelinesEditing.length > 1 ? `<button type="button" class="icon-btn" data-role="remove-cooking-guideline" title="Remove this guideline">${icon('x')}</button>` : ''}
+                          </div>
+                          <div style="margin-top:8px;">
+                            ${trialStringListHtml(g.steps, true, 'proj-cooking-step-input', 'cooking-step', 'e.g. Reheat from frozen, 2-3 minutes')}
+                          </div>
+                        </div>
+                      `).join('')}</div>
+                      <button type="button" class="btn btn-sm add-row-btn" data-role="add-cooking-guideline">+ Add Cooking Guidelines</button>
                     </div>
                     <div class="field" style="margin-bottom:8px;">
                       <label>Note</label>
@@ -3173,31 +3247,44 @@ export function renderProjectsList(){
         }
       });
 
-      // Picking a Cooking Method that has Steps on file (see Reference
-      // Lists) pulls them in as a starting point -- still a plain editable
-      // step list afterward, not locked to whatever the reference list
-      // says (see the add/remove/edit wiring below).
-      block.querySelector('.proj-req-cooking-method').addEventListener('change', e => {
-        cookingMethodEditing = e.target.value.trim();
-        const match = metaLists.cookingMethods.find(m => metaItemName(m) === cookingMethodEditing);
-        if(match && (match.steps || []).length){
-          cookingStepsEditing = [...match.steps];
-        }
-        renderProjectsList();
-      });
-      block.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
-        cookingStepsEditing.push('');
-        renderProjectsList();
-      });
-      block.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-          const idx = parseInt(btn.dataset.idx, 10);
-          cookingStepsEditing.splice(idx, 1);
+      // Cooking Guidelines: one or more groups (see cookingGuidelinesEditing
+      // and the identical wiring in renderNewProjectPanel above). Picking a
+      // Cooking Method that has Steps on file (see Reference Lists) pulls
+      // them in as a starting point for that group -- still a plain
+      // editable step list afterward, not locked to whatever the
+      // reference list says.
+      block.querySelectorAll('.cooking-guideline-group').forEach((groupEl, gi) => {
+        const group = cookingGuidelinesEditing[gi];
+        if(!group) return;
+        groupEl.querySelector('.proj-req-cooking-method').addEventListener('change', e => {
+          group.method = e.target.value.trim();
+          const match = metaLists.cookingMethods.find(m => metaItemName(m) === group.method);
+          if(match && (match.steps || []).length){
+            group.steps = [...match.steps];
+          }
+          renderProjectsList();
+        });
+        groupEl.querySelector('[data-role="add-cooking-step"]')?.addEventListener('click', () => {
+          group.steps.push('');
+          renderProjectsList();
+        });
+        groupEl.querySelectorAll('[data-role="remove-cooking-step"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            group.steps.splice(parseInt(btn.dataset.idx, 10), 1);
+            renderProjectsList();
+          });
+        });
+        groupEl.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
+          inp.addEventListener('change', () => { group.steps[idx] = inp.value.trim(); });
+        });
+        groupEl.querySelector('[data-role="remove-cooking-guideline"]')?.addEventListener('click', () => {
+          cookingGuidelinesEditing.splice(gi, 1);
           renderProjectsList();
         });
       });
-      block.querySelectorAll('.proj-cooking-step-input').forEach((inp, idx) => {
-        inp.addEventListener('change', () => { cookingStepsEditing[idx] = inp.value.trim(); });
+      block.querySelector('[data-role="add-cooking-guideline"]')?.addEventListener('click', () => {
+        cookingGuidelinesEditing.push(blankCookingCondition());
+        renderProjectsList();
       });
 
       block.querySelector('.proj-ref-image-input')?.addEventListener('change', async e => {
@@ -3259,10 +3346,10 @@ export function renderProjectsList(){
           packagingCondition: block.querySelector('.proj-req-packaging').value.trim(),
           storageCondition: block.querySelector('.proj-req-storage-condition').value.trim(),
           shelfLife: block.querySelector('.proj-req-shelf-life').value.trim(),
-          cookingCondition: {
-            method: block.querySelector('.proj-req-cooking-method').value.trim(),
-            steps: [...block.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
-          },
+          cookingCondition: [...block.querySelectorAll('.cooking-guideline-group')].map(g => ({
+            method: g.querySelector('.proj-req-cooking-method').value.trim(),
+            steps: [...g.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
+          })),
           certificate: block.querySelector('.proj-req-certificate').value.trim(),
           note: block.querySelector('.proj-req-note').value.trim(),
           referenceImages: referenceImagesEditing,
@@ -3277,8 +3364,7 @@ export function renderProjectsList(){
         projectEditingId = null;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
-        cookingMethodEditing = '';
-        cookingStepsEditing = [];
+        cookingGuidelinesEditing = [blankCookingCondition()];
         referenceImagesEditing = [];
         recipeAttachmentsEditing = [];
         projectExpandedIds.delete(p.id);
@@ -3302,8 +3388,7 @@ export function renderProjectsList(){
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
         projectEditSnapshotBefore = null;
-        cookingMethodEditing = '';
-        cookingStepsEditing = [];
+        cookingGuidelinesEditing = [blankCookingCondition()];
         referenceImagesEditing = [];
         recipeAttachmentsEditing = [];
         projectExpandedIds.add(p.id);
@@ -3434,9 +3519,7 @@ export function renderProjectsList(){
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
         projectEditSnapshotBefore = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
-        const cc = getRequirements(p).cookingCondition;
-        cookingMethodEditing = cc.method;
-        cookingStepsEditing = [...cc.steps];
+        cookingGuidelinesEditing = getRequirements(p).cookingCondition.map(g => ({ id: g.id || uid(), method: g.method, steps: [...g.steps] }));
         referenceImagesEditing = getRequirements(p).referenceImages.map(img => ({...img}));
         recipeAttachmentsEditing = getRequirements(p).recipeAttachments.map(a => ({...a}));
         renderProjectsList();
