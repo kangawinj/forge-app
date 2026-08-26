@@ -4,7 +4,7 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, wireModalOverlayClose,
+  showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch
 } from './app.js';
 import {
@@ -1413,19 +1413,17 @@ let projectVisibilityWho = new Set();
 // renderProjectWhoFilter/closeProjectWhoMenu.
 let projectWhoMenuOpen = false;
 // Single source of truth for "can the signed-in person currently see this
-// project" -- always true for the Unassigned bucket (see
-// getOrCreateUnassignedProject) and for the signed-in person's own
-// name-matched projects (myLinkedName), with the Who filter
-// (projectVisibilityWho) adding specific colleagues' projects on top. No
-// admin shortcut here on purpose, unlike isMyProject elsewhere in the
-// app -- an admin's default Projects view is exactly the same as
-// everyone else's ("mine first"); they reach everyone else's projects
-// the same way anyone else does, by adding names in Who. Used everywhere
-// a project might be shown outside the main table (status/PD galleries,
-// the Gantt chart, column filter value lists) so the Who filter actually
-// reveals everything consistently instead of just the table rows.
+// project" -- admin always can (the only account meant to see everyone's
+// work by default), same as always true for the Unassigned bucket (see
+// getOrCreateUnassignedProject); everyone else defaults to just their
+// own name-matched projects (myLinkedName), with the Who filter
+// (projectVisibilityWho) adding specific colleagues' projects on top.
+// Used everywhere a project might be shown outside the main table
+// (status/PD galleries, the Gantt chart, column filter value lists) so
+// the Who filter actually reveals everything consistently instead of
+// just the table rows.
 function isProjectCurrentlyVisible(p){
-  if(p?.isUnassignedBucket) return true;
+  if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
   if(projectMatchesName(p, myLinkedName())) return true;
   for(const name of projectVisibilityWho){
     if(projectMatchesName(p, name)) return true;
@@ -1460,6 +1458,10 @@ function projectWhoFilterOptions(){
 function renderProjectWhoFilter(){
   const wrap = document.getElementById('projectWhoFilterWrap');
   if(!wrap) return;
+  // Meaningless for admin, who already sees everyone's work unconditionally
+  // (see isProjectCurrentlyVisible) -- the button is hidden rather than
+  // just disabled, same as the old My/All Projects toggle it replaced.
+  if(isCurrentUserAdmin()){ wrap.innerHTML = ''; return; }
   const options = projectWhoFilterOptions();
   wrap.innerHTML = `
     <button type="button" class="btn btn-sm${projectVisibilityWho.size ? ' active' : ''}" id="projectWhoTrigger">
