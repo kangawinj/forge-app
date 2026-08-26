@@ -33,7 +33,8 @@ import {
   monthlyUpdateStatus, getTaskStatus, daysBetween, projectHasUpdateThisMonth,
   projectProgressPct, statusPillHtml, projectNextAction, initProjectsModal,
   initMuAttachmentPreviewModal, openProjectFilterMenuKey, activeProjScrollbarProxySync,
-  blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements, quickAddCalendarPlan
+  blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements, quickAddCalendarPlan,
+  projectWhoMenuOpen, closeProjectWhoMenu
 } from './projects.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
@@ -64,7 +65,7 @@ export {
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
-  isCurrentUserAdmin, isMyProject
+  isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch
 };
 
 const firebaseConfig = {
@@ -236,12 +237,24 @@ function myLinkedName(){
 function isMyName(name){
   return namesMatch(name, myLinkedName());
 }
+// Does this project belong to the given person, by fuzzy name match
+// (see namesMatch) against every name-bearing field a project has --
+// Owner/Factory Sales Rep/Responsible Person, each Product's own Sales
+// Rep, and every Activities Update's Plan/Next Action Who. isMyProject
+// (below) is this called with "me" (myLinkedName), plus the
+// admin/Unassigned-bucket shortcuts layered on top there; the Projects
+// page's Who filter (see projects.js) calls this directly for arbitrary
+// colleagues, since a colleague's entry there should only ever match
+// their actual name, never auto-pass for admin.
+function projectMatchesName(p, name){
+  if(namesMatch(p?.ownerSalesRep, name) || namesMatch(p?.factorySalesRep, name) || namesMatch(p?.responsiblePerson, name)) return true;
+  if((p?.products || []).some(prod => namesMatch(prod.salesRep, name))) return true;
+  if((p?.monthlyUpdates || []).map(migrateMonthlyUpdate).some(mu => namesMatch(mu.planWho, name) || namesMatch(mu.nextActionWho, name))) return true;
+  return false;
+}
 function isMyProject(p){
   if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
-  if(isMyName(p?.ownerSalesRep) || isMyName(p?.factorySalesRep) || isMyName(p?.responsiblePerson)) return true;
-  if((p?.products || []).some(prod => isMyName(prod.salesRep))) return true;
-  if((p?.monthlyUpdates || []).map(migrateMonthlyUpdate).some(mu => isMyName(mu.planWho) || isMyName(mu.nextActionWho))) return true;
-  return false;
+  return projectMatchesName(p, myLinkedName());
 }
 // A single Activities Update entry is visible if it names this person
 // directly (even inside a project they're not otherwise attached to —
@@ -3298,6 +3311,7 @@ document.addEventListener('click', () => {
     homeCalendarWhoMenuOpen = false;
     document.getElementById('calWhoMenu')?.classList.remove('open');
   }
+  if(projectWhoMenuOpen) closeProjectWhoMenu();
 });
 
 window.addEventListener('resize', () => { activeProjScrollbarProxySync?.(); });

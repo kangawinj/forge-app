@@ -4,8 +4,8 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin, isMyProject,
-  pendingSubmissionsCol, myProfile, activityEventsCol
+  showCloudError, trialStringListHtml, wireModalOverlayClose,
+  pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -1287,12 +1287,7 @@ export function mountProjectsView(){
           <input type="text" id="projectSearchInput" style="padding-right:28px;" placeholder="Search projects (name, customer, destination, owner, factory...)">
           <button type="button" class="search-clear-btn" id="btnClearProjectSearch" title="Clear search" style="display:none;">${icon('x', 14)}</button>
         </div>
-        ${!isCurrentUserAdmin() ? `
-        <div class="view-mode-toggle" id="projectVisibilityToggle" style="margin-left:0;">
-          <button type="button" class="btn btn-sm view-mode-btn${projectVisibilityScope === 'mine' ? ' active' : ''}" data-visibility-scope="mine">My Projects</button>
-          <button type="button" class="btn btn-sm view-mode-btn${projectVisibilityScope === 'all' ? ' active' : ''}" data-visibility-scope="all">All Projects</button>
-        </div>
-        ` : ''}
+        <div class="task-tracking-who-filter-wrap" id="projectWhoFilterWrap"></div>
         <div class="col-toggle-wrap">
           <button type="button" class="btn btn-sm" id="btnProjectColumns">${icon('sliders-horizontal', 14)} Columns</button>
           <div class="col-toggle-menu" id="projectColumnsMenu">
@@ -1346,16 +1341,7 @@ export function mountProjectsView(){
     projectSearchInputEl.focus();
     renderProjectsList();
   });
-  document.getElementById('projectVisibilityToggle')?.querySelectorAll('[data-visibility-scope]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      if(projectVisibilityScope === btn.dataset.visibilityScope) return;
-      projectVisibilityScope = btn.dataset.visibilityScope;
-      document.querySelectorAll('#projectVisibilityToggle [data-visibility-scope]').forEach(b => {
-        b.classList.toggle('active', b.dataset.visibilityScope === projectVisibilityScope);
-      });
-      renderProjectsList();
-    });
-  });
+  renderProjectWhoFilter();
   const columnsMenu = document.getElementById('projectColumnsMenu');
   document.getElementById('btnProjectColumns').addEventListener('click', e => {
     e.stopPropagation();
@@ -1414,25 +1400,104 @@ let newProjectImage = ''; // staged photo as a data URL for the not-yet-saved ne
 // there's no real project until Save. Reset alongside the other New
 // Project staged-edit variables in btnAddProject's click handler.
 let newProjectFlavors = [];
-// Non-admins land on "mine" every fresh login/page load (this is a plain
-// module-level let, so it naturally resets whenever the app itself
-// reloads) but can switch to "all" to browse everyone else's projects
-// too -- switching back and forth within the same session (navigating
-// away from Projects and back) keeps whichever they last picked, since
-// mountProjectsView() reads this current value rather than hardcoding
-// "mine" every time it rebuilds the toolbar. Meaningless for admins (who
-// already see everything unconditionally via isCurrentUserAdmin()), so
-// the toggle itself is hidden for them -- see mountProjectsView.
-let projectVisibilityScope = 'mine'; // 'mine' | 'all'
+// Everyone (admin included) lands on just their own name-matched
+// projects every fresh login/page load (this is a plain module-level
+// let, so it naturally resets whenever the app itself reloads); the Who
+// filter (see renderProjectWhoFilter) adds specific colleagues' projects
+// on top, one at a time -- switching back and forth within the same
+// session (navigating away from Projects and back) keeps whichever names
+// were last added, since mountProjectsView() reads this current value
+// rather than clearing it every time it rebuilds the toolbar.
+let projectVisibilityWho = new Set();
+// Whether the Who filter's dropdown panel is currently open -- see
+// renderProjectWhoFilter/closeProjectWhoMenu.
+let projectWhoMenuOpen = false;
 // Single source of truth for "can the signed-in person currently see this
-// project" -- admins always can, everyone else can too once they've
-// switched to "All Projects" (projectVisibilityScope), otherwise it's
-// isMyProject's usual name-match. Used everywhere a project might be
-// shown outside the main table (status/PD galleries, the Gantt chart,
-// column filter value lists) so the "All Projects" toggle actually
+// project" -- always true for the Unassigned bucket (see
+// getOrCreateUnassignedProject) and for the signed-in person's own
+// name-matched projects (myLinkedName), with the Who filter
+// (projectVisibilityWho) adding specific colleagues' projects on top. No
+// admin shortcut here on purpose, unlike isMyProject elsewhere in the
+// app -- an admin's default Projects view is exactly the same as
+// everyone else's ("mine first"); they reach everyone else's projects
+// the same way anyone else does, by adding names in Who. Used everywhere
+// a project might be shown outside the main table (status/PD galleries,
+// the Gantt chart, column filter value lists) so the Who filter actually
 // reveals everything consistently instead of just the table rows.
 function isProjectCurrentlyVisible(p){
-  return isCurrentUserAdmin() || projectVisibilityScope === 'all' || isMyProject(p);
+  if(p?.isUnassignedBucket) return true;
+  if(projectMatchesName(p, myLinkedName())) return true;
+  for(const name of projectVisibilityWho){
+    if(projectMatchesName(p, name)) return true;
+  }
+  return false;
+}
+// The Who filter's checkbox list -- every distinct name currently typed
+// into any project's Owner/Factory Sales Rep/Responsible Person, a
+// Product's Sales Rep, or an Activities Update's Plan/Next Action Who,
+// minus the signed-in person's own name (their projects are always
+// shown regardless of this filter, so offering their own name here too
+// would just be a confusing no-op checkbox).
+function projectWhoFilterOptions(){
+  const myName = myLinkedName();
+  const names = new Set();
+  projects.forEach(p => {
+    [p.ownerSalesRep, p.factorySalesRep, p.responsiblePerson].forEach(n => { if(n && n.trim()) names.add(n.trim()); });
+    (p.products || []).forEach(prod => { if(prod.salesRep && prod.salesRep.trim()) names.add(prod.salesRep.trim()); });
+    (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
+      if(mu.planWho && mu.planWho.trim()) names.add(mu.planWho.trim());
+      if(mu.nextActionWho && mu.nextActionWho.trim()) names.add(mu.nextActionWho.trim());
+    });
+  });
+  return [...names].filter(n => !namesMatch(n, myName)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+}
+// Renders (or re-renders) the "Who" button + its dropdown panel into
+// #projectWhoFilterWrap -- a small self-contained component, same
+// pattern as renderPendingSubmissionsPanel/renderSharePanel, so a
+// checkbox change can refresh just this piece (picking up any project
+// added/edited since it last rendered) without disturbing the rest of
+// the toolbar or losing focus/scroll elsewhere on the page.
+function renderProjectWhoFilter(){
+  const wrap = document.getElementById('projectWhoFilterWrap');
+  if(!wrap) return;
+  const options = projectWhoFilterOptions();
+  wrap.innerHTML = `
+    <button type="button" class="btn btn-sm${projectVisibilityWho.size ? ' active' : ''}" id="projectWhoTrigger">
+      Who${projectVisibilityWho.size ? ` (+${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
+    </button>
+    <div class="proj-col-filter-menu${projectWhoMenuOpen ? ' open' : ''}" id="projectWhoMenu">
+      ${options.length ? `
+      <div class="proj-col-filter-values">
+        ${options.map(w => `
+          <label class="proj-col-filter-item">
+            <input type="checkbox" class="project-who-cb" value="${escapeHtml(w)}" ${projectVisibilityWho.has(w) ? 'checked' : ''}>
+            ${escapeHtml(w)}
+          </label>
+        `).join('')}
+      </div>
+      ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear</button>` : ''}
+      ` : `<div class="dash-empty" style="padding:4px;">No one else on any project yet</div>`}
+    </div>
+  `;
+  document.getElementById('projectWhoTrigger').addEventListener('click', e => {
+    e.stopPropagation();
+    projectWhoMenuOpen = !projectWhoMenuOpen;
+    renderProjectWhoFilter();
+  });
+  document.getElementById('projectWhoMenu').addEventListener('click', e => e.stopPropagation());
+  wrap.querySelectorAll('.project-who-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if(cb.checked) projectVisibilityWho.add(cb.value);
+      else projectVisibilityWho.delete(cb.value);
+      renderProjectWhoFilter();
+      renderProjectsList();
+    });
+  });
+  document.getElementById('projectClearWhoFilters')?.addEventListener('click', () => {
+    projectVisibilityWho.clear();
+    renderProjectWhoFilter();
+    renderProjectsList();
+  });
 }
 // Excel-style per-column value filters for the projects table — see the "▾"
 // button sortableProjectHeader() adds to every sortable column. Keyed by
@@ -2246,13 +2311,13 @@ export function renderProjectsList(){
   const container = document.getElementById('projectsList');
   const dashboardContainer = document.getElementById('projectsDashboard');
   if(!container) return;
-  // Non-admins default to only their own projects (by name match against
+  // Everyone defaults to only their own projects (by name match against
   // Owner/Factory Rep/Responsible Person/product Sales Rep/Activities
-  // Updates Who fields) plus the Unassigned bucket, which always stays
-  // visible to everyone — see isMyProject in app.js. The "All Projects"
-  // toggle (projectVisibilityScope, see mountProjectsView) lets them
-  // browse everyone else's too within the same session, without changing
-  // what a fresh login defaults back to.
+  // Updates Who fields, see projectMatchesName in app.js) plus the
+  // Unassigned bucket, which always stays visible to everyone. The Who
+  // filter (projectVisibilityWho, see renderProjectWhoFilter) lets them
+  // add specific colleagues' projects too within the same session,
+  // without changing what a fresh login defaults back to.
   const visibleProjects = projects.filter(isProjectCurrentlyVisible);
   if(visibleProjects.length === 0){
     if(dashboardContainer) dashboardContainer.innerHTML = '';
@@ -4261,5 +4326,14 @@ export function setProjectStatusFilter(status){
 export function closeProjectFilterMenu(){
   openProjectFilterMenuKey = null;
 }
+// Same reasoning, for the Projects toolbar's own Who filter panel (see
+// renderProjectWhoFilter) -- also removes the 'open' class itself, since
+// (unlike openProjectFilterMenuKey's menus) nothing else re-renders
+// #projectWhoFilterWrap on a plain outside click.
+export function closeProjectWhoMenu(){
+  if(!projectWhoMenuOpen) return;
+  projectWhoMenuOpen = false;
+  document.getElementById('projectWhoMenu')?.classList.remove('open');
+}
 
-export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync, PROJECT_STATUS_LABELS, getRequirements };
+export { projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync, PROJECT_STATUS_LABELS, getRequirements, projectWhoMenuOpen };
