@@ -1413,17 +1413,26 @@ let projectVisibilityWho = new Set();
 // renderProjectWhoFilter/closeProjectWhoMenu.
 let projectWhoMenuOpen = false;
 // Single source of truth for "can the signed-in person currently see this
-// project" -- admin always can (the only account meant to see everyone's
-// work by default), same as always true for the Unassigned bucket (see
-// getOrCreateUnassignedProject); everyone else defaults to just their
-// own name-matched projects (myLinkedName), with the Who filter
-// (projectVisibilityWho) adding specific colleagues' projects on top.
-// Used everywhere a project might be shown outside the main table
-// (status/PD galleries, the Gantt chart, column filter value lists) so
-// the Who filter actually reveals everything consistently instead of
-// just the table rows.
+// project" -- always true for the Unassigned bucket (see
+// getOrCreateUnassignedProject). Admin defaults to seeing every project
+// (the Who filter narrows that down to just the checked people, same
+// empty-means-everyone/checked-means-only-them semantics as Task
+// Tracking's own Who filter); everyone else defaults to just their own
+// name-matched projects (myLinkedName), with the Who filter adding
+// specific colleagues' projects on top instead of narrowing. Used
+// everywhere a project might be shown outside the main table (status/PD
+// galleries, the Gantt chart, column filter value lists) so the Who
+// filter actually reveals everything consistently instead of just the
+// table rows.
 function isProjectCurrentlyVisible(p){
-  if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
+  if(p?.isUnassignedBucket) return true;
+  if(isCurrentUserAdmin()){
+    if(!projectVisibilityWho.size) return true;
+    for(const name of projectVisibilityWho){
+      if(projectMatchesName(p, name)) return true;
+    }
+    return false;
+  }
   if(projectMatchesName(p, myLinkedName())) return true;
   for(const name of projectVisibilityWho){
     if(projectMatchesName(p, name)) return true;
@@ -1432,12 +1441,15 @@ function isProjectCurrentlyVisible(p){
 }
 // The Who filter's checkbox list -- every distinct name currently typed
 // into any project's Owner/Factory Sales Rep/Responsible Person, a
-// Product's Sales Rep, or an Activities Update's Plan/Next Action Who,
-// minus the signed-in person's own name (their projects are always
-// shown regardless of this filter, so offering their own name here too
-// would just be a confusing no-op checkbox).
+// Product's Sales Rep, or an Activities Update's Plan/Next Action Who.
+// For everyone except admin, the signed-in person's own name is left out
+// (their projects are always shown regardless of this filter, so
+// offering their own name here too would just be a confusing no-op
+// checkbox) -- admin has no such baseline (see isProjectCurrentlyVisible),
+// so their own name stays in the list like anyone else's.
 function projectWhoFilterOptions(){
   const myName = myLinkedName();
+  const excludeMine = !isCurrentUserAdmin();
   const names = new Set();
   projects.forEach(p => {
     [p.ownerSalesRep, p.factorySalesRep, p.responsiblePerson].forEach(n => { if(n && n.trim()) names.add(n.trim()); });
@@ -1447,7 +1459,7 @@ function projectWhoFilterOptions(){
       if(mu.nextActionWho && mu.nextActionWho.trim()) names.add(mu.nextActionWho.trim());
     });
   });
-  return [...names].filter(n => !namesMatch(n, myName)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  return [...names].filter(n => !excludeMine || !namesMatch(n, myName)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
 }
 // Renders (or re-renders) the "Who" button + its dropdown panel into
 // #projectWhoFilterWrap -- a small self-contained component, same
@@ -1458,14 +1470,11 @@ function projectWhoFilterOptions(){
 function renderProjectWhoFilter(){
   const wrap = document.getElementById('projectWhoFilterWrap');
   if(!wrap) return;
-  // Meaningless for admin, who already sees everyone's work unconditionally
-  // (see isProjectCurrentlyVisible) -- the button is hidden rather than
-  // just disabled, same as the old My/All Projects toggle it replaced.
-  if(isCurrentUserAdmin()){ wrap.innerHTML = ''; return; }
+  const isAdmin = isCurrentUserAdmin();
   const options = projectWhoFilterOptions();
   wrap.innerHTML = `
     <button type="button" class="btn btn-sm${projectVisibilityWho.size ? ' active' : ''}" id="projectWhoTrigger">
-      Who${projectVisibilityWho.size ? ` (+${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
+      Who${projectVisibilityWho.size ? ` (${isAdmin ? '' : '+'}${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
     </button>
     <div class="proj-col-filter-menu${projectWhoMenuOpen ? ' open' : ''}" id="projectWhoMenu">
       ${options.length ? `
@@ -1477,8 +1486,8 @@ function renderProjectWhoFilter(){
           </label>
         `).join('')}
       </div>
-      ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear</button>` : ''}
-      ` : `<div class="dash-empty" style="padding:4px;">No one else on any project yet</div>`}
+      ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear${isAdmin ? ' filter' : ''}</button>` : ''}
+      ` : `<div class="dash-empty" style="padding:4px;">No one on any project yet</div>`}
     </div>
   `;
   document.getElementById('projectWhoTrigger').addEventListener('click', e => {
