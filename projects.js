@@ -3737,10 +3737,8 @@ function openMuEditModal(projectId, updateId, section){
   if(target.p.isUnassignedBucket){
     const realProjects = projects.filter(x => !x.isUnassignedBucket)
       .sort((a, b) => (a.name || '').localeCompare(b.name || '', undefined, { sensitivity: 'base' }));
-    document.getElementById('muEditModalProjectSelect').innerHTML = `
-      <option value="">— Select a project —</option>
-      ${realProjects.map(x => `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name || 'Untitled project')}</option>`).join('')}
-    `;
+    document.getElementById('muEditModalProjectDatalist').innerHTML = realProjects.map(x => `<option value="${escapeHtml(x.name || 'Untitled project')}">`).join('');
+    document.getElementById('muEditModalProjectInput').value = '';
     projectFieldEl.style.display = '';
   }else{
     projectFieldEl.style.display = 'none';
@@ -3873,12 +3871,17 @@ export function initProjectsModal(){
   // project (see openMuEditModal) -- picking one here moves the entry
   // over immediately, rather than waiting for Save, so the rest of the
   // popup (which now targets the new project) and the calendar's own
-  // "still unassigned" marker both update right away.
-  document.getElementById('muEditModalProjectSelect').addEventListener('change', e => {
-    const targetProjectId = e.target.value;
-    if(!targetProjectId) return;
+  // "still unassigned" marker both update right away. A plain text input
+  // (list=muEditModalProjectDatalist) instead of a <select> so a long
+  // project list can be typed/searched instead of scrolled -- matched
+  // back to a real project by exact name, same as every other
+  // datalist-backed field in this app (e.g. the Customer Name field's
+  // country auto-fill).
+  document.getElementById('muEditModalProjectInput').addEventListener('change', e => {
+    const typedName = e.target.value.trim();
+    if(!typedName) return;
     const target = getMuEditModalTarget();
-    const targetProject = projects.find(x => x.id === targetProjectId);
+    const targetProject = projects.find(x => !x.isUnassignedBucket && (x.name || '').trim() === typedName);
     if(!target || !targetProject) return;
     target.p.monthlyUpdates = (target.p.monthlyUpdates || []).filter(x => x.id !== target.mu.id);
     scheduleProjectSave(target.p);
@@ -3887,7 +3890,7 @@ export function initProjectsModal(){
     scheduleProjectSave(targetProject);
     logActivityEvent('updated', 'project', targetProject.name || 'Untitled project',
       [{ field: 'Activities Updates', before: 'Unassigned', after: `Moved here: "${muPlanSummaryLine(target.mu) || 'Untitled'}"` }]);
-    muEditModalContext = { projectId: targetProjectId, updateId: target.mu.id };
+    muEditModalContext = { projectId: targetProject.id, updateId: target.mu.id };
     document.getElementById('muEditModalProjectField').style.display = 'none';
     renderProjectsList();
   });

@@ -148,6 +148,7 @@
 <datalist id="productTypeDatalist"></datalist>
 <datalist id="unitsDatalist"></datalist>
 <datalist id="cookingMethodDatalist"></datalist>
+<datalist id="muEditModalProjectDatalist"></datalist>
 <datalist id="worldCountriesDatalist"></datalist>
 <datalist id="contactTypeDatalist">
   <option value="Internal">
@@ -274,7 +275,7 @@
     <div class="modal-body">
       <div class="field" id="muEditModalProjectField" style="display:none;">
         <label>Project</label>
-        <select class="proj-select" id="muEditModalProjectSelect"></select>
+        <input type="text" id="muEditModalProjectInput" list="muEditModalProjectDatalist" placeholder="Type to search a project…">
         <div class="field-hint">Added from the Calendar and not yet on a project — pick one to move it there.</div>
       </div>
       <div class="mu-plan-box" data-mu-box="plan">
