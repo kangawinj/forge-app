@@ -1412,54 +1412,70 @@ let projectVisibilityWho = new Set();
 // Whether the Who filter's dropdown panel is currently open -- see
 // renderProjectWhoFilter/closeProjectWhoMenu.
 let projectWhoMenuOpen = false;
+// Stands in for "no PD set" as a Set member/checkbox value in the Who
+// filter, same trick the Calendar's own Who filter uses for events with
+// no assignee (see CAL_WHO_UNASSIGNED in app.js) -- an empty checkbox
+// value is awkward to read back reliably.
+const PROJECT_WHO_UNASSIGNED = '__unassigned_pd__';
+// Does this project's PD (Responsible Person) match the given Who
+// filter value -- PROJECT_WHO_UNASSIGNED matches a project with no PD
+// set at all, anything else is a fuzzy name match against that one
+// field only (unlike projectMatchesName, which checks every role a
+// project has).
+function projectMatchesWhoValue(p, value){
+  const pd = (p?.responsiblePerson || '').trim();
+  if(value === PROJECT_WHO_UNASSIGNED) return !pd;
+  return namesMatch(pd, value);
+}
 // Single source of truth for "can the signed-in person currently see this
 // project" -- always true for the Unassigned bucket (see
 // getOrCreateUnassignedProject). Admin defaults to seeing every project
-// (the Who filter narrows that down to just the checked people, same
+// (the Who filter narrows that down to just the checked PDs, same
 // empty-means-everyone/checked-means-only-them semantics as Task
 // Tracking's own Who filter); everyone else defaults to just their own
-// name-matched projects (myLinkedName), with the Who filter adding
-// specific colleagues' projects on top instead of narrowing. Used
-// everywhere a project might be shown outside the main table (status/PD
-// galleries, the Gantt chart, column filter value lists) so the Who
-// filter actually reveals everything consistently instead of just the
-// table rows.
+// name-matched projects (myLinkedName, any role -- not just PD), with
+// the Who filter adding specific PDs' projects on top instead of
+// narrowing. Used everywhere a project might be shown outside the main
+// table (status/PD galleries, the Gantt chart, column filter value
+// lists) so the Who filter actually reveals everything consistently
+// instead of just the table rows.
 function isProjectCurrentlyVisible(p){
   if(p?.isUnassignedBucket) return true;
   if(isCurrentUserAdmin()){
     if(!projectVisibilityWho.size) return true;
-    for(const name of projectVisibilityWho){
-      if(projectMatchesName(p, name)) return true;
+    for(const value of projectVisibilityWho){
+      if(projectMatchesWhoValue(p, value)) return true;
     }
     return false;
   }
   if(projectMatchesName(p, myLinkedName())) return true;
-  for(const name of projectVisibilityWho){
-    if(projectMatchesName(p, name)) return true;
+  for(const value of projectVisibilityWho){
+    if(projectMatchesWhoValue(p, value)) return true;
   }
   return false;
 }
-// The Who filter's checkbox list -- every distinct name currently typed
-// into any project's Owner/Factory Sales Rep/Responsible Person, a
-// Product's Sales Rep, or an Activities Update's Plan/Next Action Who.
-// For everyone except admin, the signed-in person's own name is left out
-// (their projects are always shown regardless of this filter, so
-// offering their own name here too would just be a confusing no-op
-// checkbox) -- admin has no such baseline (see isProjectCurrentlyVisible),
-// so their own name stays in the list like anyone else's.
+// The Who filter's checkbox list -- every distinct PD (Responsible
+// Person) name currently set on any real project (the Unassigned bucket
+// project itself is excluded, since it's always shown regardless and
+// never has a PD anyway), plus a PROJECT_WHO_UNASSIGNED pseudo-entry for
+// projects with no PD set, so "no one assigned yet" is something you can
+// filter by too instead of being silently left out of the list. For
+// everyone except admin, the signed-in person's own name is left out of
+// the named options (their projects are always shown regardless of this
+// filter already) -- admin has no such baseline (see
+// isProjectCurrentlyVisible), so their own name stays in the list too.
 function projectWhoFilterOptions(){
   const myName = myLinkedName();
   const excludeMine = !isCurrentUserAdmin();
-  const names = new Set();
+  const named = new Set();
+  let hasUnassigned = false;
   projects.forEach(p => {
-    [p.ownerSalesRep, p.factorySalesRep, p.responsiblePerson].forEach(n => { if(n && n.trim()) names.add(n.trim()); });
-    (p.products || []).forEach(prod => { if(prod.salesRep && prod.salesRep.trim()) names.add(prod.salesRep.trim()); });
-    (p.monthlyUpdates || []).map(migrateMonthlyUpdate).forEach(mu => {
-      if(mu.planWho && mu.planWho.trim()) names.add(mu.planWho.trim());
-      if(mu.nextActionWho && mu.nextActionWho.trim()) names.add(mu.nextActionWho.trim());
-    });
+    if(p.isUnassignedBucket) return;
+    const pd = (p.responsiblePerson || '').trim();
+    if(pd) named.add(pd); else hasUnassigned = true;
   });
-  return [...names].filter(n => !excludeMine || !namesMatch(n, myName)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  const namedOptions = [...named].filter(n => !excludeMine || !namesMatch(n, myName)).sort((a, b) => a.localeCompare(b, undefined, { sensitivity: 'base' }));
+  return { namedOptions, hasUnassigned };
 }
 // Renders (or re-renders) the "Who" button + its dropdown panel into
 // #projectWhoFilterWrap -- a small self-contained component, same
@@ -1471,23 +1487,35 @@ function renderProjectWhoFilter(){
   const wrap = document.getElementById('projectWhoFilterWrap');
   if(!wrap) return;
   const isAdmin = isCurrentUserAdmin();
-  const options = projectWhoFilterOptions();
+  const { namedOptions, hasUnassigned } = projectWhoFilterOptions();
+  const allValues = hasUnassigned ? [...namedOptions, PROJECT_WHO_UNASSIGNED] : namedOptions;
+  const allSelected = allValues.length > 0 && allValues.every(v => projectVisibilityWho.has(v));
   wrap.innerHTML = `
     <button type="button" class="btn btn-sm${projectVisibilityWho.size ? ' active' : ''}" id="projectWhoTrigger">
       Who${projectVisibilityWho.size ? ` (${isAdmin ? '' : '+'}${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
     </button>
     <div class="proj-col-filter-menu${projectWhoMenuOpen ? ' open' : ''}" id="projectWhoMenu">
-      ${options.length ? `
+      ${allValues.length ? `
+      <label class="proj-col-filter-item proj-col-filter-selectall">
+        <input type="checkbox" id="projectWhoSelectAll" ${allSelected ? 'checked' : ''}>
+        <b>(Select All)</b>
+      </label>
       <div class="proj-col-filter-values">
-        ${options.map(w => `
+        ${namedOptions.map(w => `
           <label class="proj-col-filter-item">
             <input type="checkbox" class="project-who-cb" value="${escapeHtml(w)}" ${projectVisibilityWho.has(w) ? 'checked' : ''}>
             ${escapeHtml(w)}
           </label>
         `).join('')}
+        ${hasUnassigned ? `
+          <label class="proj-col-filter-item">
+            <input type="checkbox" class="project-who-cb" value="${PROJECT_WHO_UNASSIGNED}" ${projectVisibilityWho.has(PROJECT_WHO_UNASSIGNED) ? 'checked' : ''}>
+            Unassigned
+          </label>
+        ` : ''}
       </div>
       ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear${isAdmin ? ' filter' : ''}</button>` : ''}
-      ` : `<div class="dash-empty" style="padding:4px;">No one on any project yet</div>`}
+      ` : `<div class="dash-empty" style="padding:4px;">No PD assigned yet</div>`}
     </div>
   `;
   document.getElementById('projectWhoTrigger').addEventListener('click', e => {
@@ -1503,6 +1531,17 @@ function renderProjectWhoFilter(){
       renderProjectWhoFilter();
       renderProjectsList();
     });
+  });
+  document.getElementById('projectWhoSelectAll')?.addEventListener('change', e => {
+    // Reads the checkboxes already on the page (== allValues) rather than
+    // recomputing that list here -- same set either way, but this way
+    // there's only one place (this function) that decides what counts as
+    // "everyone", same trick the Calendar's own Who filter uses.
+    const values = [...wrap.querySelectorAll('.project-who-cb')].map(cb => cb.value);
+    if(e.target.checked) values.forEach(v => projectVisibilityWho.add(v));
+    else values.forEach(v => projectVisibilityWho.delete(v));
+    renderProjectWhoFilter();
+    renderProjectsList();
   });
   document.getElementById('projectClearWhoFilters')?.addEventListener('click', () => {
     projectVisibilityWho.clear();
