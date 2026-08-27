@@ -305,6 +305,10 @@ export function blankRecipe(){
     processViewMode: 'list',
     yieldPct: '',
     servingSizeG: '',
+    factoryMarginMin: '',
+    factoryMarginMax: '',
+    companyMarginMin: '',
+    companyMarginMax: '',
     versions: [],
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
@@ -823,6 +827,32 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-label">Cost / kg</div>
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
+          <div>
+            <div class="batch-stat-label">Factory Margin (Min% – Max%)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;">
+              <span>–</span>
+              <input type="number" id="f-factoryMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;">
+              <span>%</span>
+            </div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Factory Selling Price / Serving</div>
+            <div class="batch-stat-value" id="overviewFactoryPrice">—</div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Company Margin (Min% – Max%)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;">
+              <span>–</span>
+              <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;">
+              <span>%</span>
+            </div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Company Selling Price / Serving</div>
+            <div class="batch-stat-value" id="overviewCompanyPrice">—</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1050,6 +1080,21 @@ export function renderRecipeEditor(r){
     r.servingSizeG = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
     updateGrandTotal(r);
     scheduleSave();
+  });
+
+  // Factory/Company Selling Price margins -- same "read straight off the
+  // input, no staged variable" pattern as servingSizeG above.
+  [
+    ['f-factoryMarginMin', 'factoryMarginMin'], ['f-factoryMarginMax', 'factoryMarginMax'],
+    ['f-companyMarginMin', 'companyMarginMin'], ['f-companyMarginMax', 'companyMarginMax']
+  ].forEach(([inputId, field]) => {
+    const el = document.getElementById(inputId);
+    el.value = r[field] ?? '';
+    el.addEventListener('input', e => {
+      r[field] = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+      updateGrandTotal(r);
+      scheduleSave();
+    });
   });
 
   renderParts(r);
@@ -2008,9 +2053,13 @@ function renderOverview(allIngredients){
     const per100El = document.getElementById('overviewCostPer100');
     const perKgEl = document.getElementById('overviewCostPerKg');
     const perServingWrap = document.getElementById('overviewCostPerServingWrap');
+    const factoryPriceEl = document.getElementById('overviewFactoryPrice');
+    const companyPriceEl = document.getElementById('overviewCompanyPrice');
     if(per100El) per100El.textContent = '—';
     if(perKgEl) perKgEl.textContent = '—';
     if(perServingWrap) perServingWrap.style.display = 'none';
+    if(factoryPriceEl) factoryPriceEl.textContent = '—';
+    if(companyPriceEl) companyPriceEl.textContent = '—';
     return;
   }
 
@@ -2112,14 +2161,47 @@ function renderOverview(allIngredients){
   const perServingWrap = document.getElementById('overviewCostPerServingWrap');
   const perServingEl = document.getElementById('overviewCostPerServing');
   const servingSize = parseFloat(document.getElementById('f-servingSize')?.value) || 0;
+  const costPerServing = (servingSize > 0 && costPer100 != null) ? (costPer100 / 100 * servingSize) : null;
   if(perServingWrap){
-    if(servingSize > 0 && costPer100 != null){
+    if(costPerServing != null){
       perServingWrap.style.display = '';
-      perServingEl.textContent = `฿${(costPer100 / 100 * servingSize).toFixed(2)}${costSuffix}`;
+      perServingEl.textContent = `฿${costPerServing.toFixed(2)}${costSuffix}`;
       perServingEl.title = missingPriceTitle;
     }else{
       perServingWrap.style.display = 'none';
     }
+  }
+
+  // Factory Selling Price (per serving) is Cost/Serving marked up by the
+  // Factory Margin range; Company Selling Price cascades on top of THAT
+  // (not off cost directly) -- Min follows Min through the whole chain,
+  // Max follows Max, so the overall range reflects the worst-case and
+  // best-case ends consistently rather than mixing a low factory margin
+  // with a high company one or vice versa.
+  const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
+  const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
+  const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
+  const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
+  const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
+
+  const factoryPriceMin = (costPerServing != null && factoryMarginMin != null) ? costPerServing * (1 + factoryMarginMin / 100) : null;
+  const factoryPriceMax = (costPerServing != null && factoryMarginMax != null) ? costPerServing * (1 + factoryMarginMax / 100) : null;
+  const factoryPriceEl = document.getElementById('overviewFactoryPrice');
+  if(factoryPriceEl){
+    factoryPriceEl.textContent = (factoryPriceMin != null && factoryPriceMax != null)
+      ? `฿${factoryPriceMin.toFixed(2)} – ฿${factoryPriceMax.toFixed(2)}${costSuffix}`
+      : '—';
+    factoryPriceEl.title = missingPriceTitle;
+  }
+
+  const companyPriceMin = (factoryPriceMin != null && companyMarginMin != null) ? factoryPriceMin * (1 + companyMarginMin / 100) : null;
+  const companyPriceMax = (factoryPriceMax != null && companyMarginMax != null) ? factoryPriceMax * (1 + companyMarginMax / 100) : null;
+  const companyPriceEl = document.getElementById('overviewCompanyPrice');
+  if(companyPriceEl){
+    companyPriceEl.textContent = (companyPriceMin != null && companyPriceMax != null)
+      ? `฿${companyPriceMin.toFixed(2)} – ฿${companyPriceMax.toFixed(2)}${costSuffix}`
+      : '—';
+    companyPriceEl.title = missingPriceTitle;
   }
 }
 
