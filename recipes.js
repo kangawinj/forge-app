@@ -353,6 +353,9 @@ export function blankRecipe(){
     processViewMode: 'list',
     yieldPct: '',
     servingSizeG: '',
+    pricingCurrency: 'THB',
+    exchangeRate: '',
+    exchangeRateDate: '',
     overheadMultiplier: 1.625,
     factoryMarginMin: '',
     factoryMarginMax: '',
@@ -858,8 +861,27 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
-        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. The Overhead Multiplier (if set) applies to Cost/Serving before any margin. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest ฿0.05 (Cost figures above them don't).</div>
+        <div class="compare-legend">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure below using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier (if set) applies to Cost/Serving before any margin. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
         <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
+          <div>
+            <div class="batch-stat-label">Currency</div>
+            <select id="f-pricingCurrency" class="proj-select">
+              ${['THB','USD','JPY','CNY','EUR'].map(c => `<option value="${c}">${c}</option>`).join('')}
+            </select>
+          </div>
+          <div></div>
+          <div id="exchangeRateFieldWrap" style="display:none;">
+            <div class="batch-stat-label">Exchange Rate (1 = ? THB)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-exchangeRate" min="0" step="0.0001" placeholder="e.g. 36.50" style="width:90px;">
+            </div>
+          </div>
+          <div id="exchangeRateDateFieldWrap" style="display:none;">
+            <div class="batch-stat-label">Rate Date</div>
+            <div class="batch-scale-row">
+              <input type="date" id="f-exchangeRateDate">
+            </div>
+          </div>
           <div>
             <div class="batch-stat-label">Amount per Serving (g)</div>
             <div class="batch-scale-row">
@@ -1152,6 +1174,37 @@ export function renderRecipeEditor(r){
   document.getElementById('f-servingSize').addEventListener('input', e => {
     r.servingSizeG = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
     updateGrandTotal(r);
+    scheduleSave();
+  });
+
+  // Currency picker + its Exchange Rate/Rate Date -- the rate fields
+  // only mean anything once a non-THB currency is picked (THB needs no
+  // conversion at all), so they stay hidden until then.
+  const currencySelect = document.getElementById('f-pricingCurrency');
+  const rateFieldWrap = document.getElementById('exchangeRateFieldWrap');
+  const rateDateFieldWrap = document.getElementById('exchangeRateDateFieldWrap');
+  currencySelect.value = r.pricingCurrency || 'THB';
+  const refreshRateFieldsVisibility = () => {
+    const show = currencySelect.value !== 'THB';
+    rateFieldWrap.style.display = show ? '' : 'none';
+    rateDateFieldWrap.style.display = show ? '' : 'none';
+  };
+  refreshRateFieldsVisibility();
+  currencySelect.addEventListener('change', () => {
+    r.pricingCurrency = currencySelect.value;
+    refreshRateFieldsVisibility();
+    updateGrandTotal(r);
+    scheduleSave();
+  });
+  document.getElementById('f-exchangeRate').value = r.exchangeRate ?? '';
+  document.getElementById('f-exchangeRate').addEventListener('input', e => {
+    r.exchangeRate = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+    updateGrandTotal(r);
+    scheduleSave();
+  });
+  document.getElementById('f-exchangeRateDate').value = r.exchangeRateDate || '';
+  document.getElementById('f-exchangeRateDate').addEventListener('input', e => {
+    r.exchangeRateDate = e.target.value;
     scheduleSave();
   });
 
@@ -2138,6 +2191,27 @@ function renderOverview(allIngredients){
     return;
   }
 
+  // Currency conversion -- picking anything other than THB (which needs
+  // none) converts every money figure this function renders using the
+  // Exchange Rate typed into f-exchangeRate (1 unit of that currency =
+  // however many THB). All internal math above and below still runs in
+  // THB throughout (ingredient prices only ever exist in THB, per the
+  // Ingredient Library) -- `money()` is purely a display-time formatter,
+  // called separately at every place a figure actually gets shown, so
+  // rounding/conversion never compounds through the calculation chain.
+  // Returns null (never a THB number under a foreign currency's label)
+  // when a non-THB currency is picked but no valid rate is set yet.
+  const pricingCurrency = document.getElementById('f-pricingCurrency')?.value || 'THB';
+  const exchangeRateVal = parseFloat(document.getElementById('f-exchangeRate')?.value);
+  const rateAvailable = pricingCurrency === 'THB' || (!isNaN(exchangeRateVal) && exchangeRateVal > 0);
+  const rateMissingTitle = 'Enter an Exchange Rate above to show this in ' + pricingCurrency;
+  const money = (v, roundUp005) => {
+    if(v == null || !rateAvailable) return null;
+    let converted = pricingCurrency === 'THB' ? v : (v / exchangeRateVal);
+    if(roundUp005) converted = Math.ceil(converted / 0.05) * 0.05;
+    return pricingCurrency === 'THB' ? `฿${converted.toFixed(2)}` : `${converted.toFixed(2)} ${pricingCurrency}`;
+  };
+
   const groups = new Map();
   named.forEach(i => {
     const key = i.name.trim().toLowerCase();
@@ -2199,7 +2273,7 @@ function renderOverview(allIngredients){
         </div>
       </td>
       <td class="col-wt">${formatWeight(g.wt)}</td>
-      <td class="col-cost">${g.cost != null ? '฿' + g.cost.toFixed(2) : '—'}</td>
+      <td class="col-cost">${money(g.cost) ?? '—'}</td>
     `;
     body.appendChild(tr);
   });
@@ -2209,12 +2283,13 @@ function renderOverview(allIngredients){
   const missingPriceTitle = allPriced ? '' : 'Some ingredients have no Price/kg on file in the Ingredient Library — this doesn\'t include their cost';
 
   if(costEl){
-    if(hasCost){
-      costEl.innerHTML = `฿${totalCost.toFixed(2)}${costSuffix}`;
+    const m = hasCost ? money(totalCost) : null;
+    if(m != null){
+      costEl.innerHTML = `${m}${costSuffix}`;
       costEl.title = missingPriceTitle;
     }else{
       costEl.innerHTML = totalRecipeWeight > 0 ? '—' : '';
-      costEl.title = totalRecipeWeight > 0 ? 'No ingredients have a Price/kg on file in the Ingredient Library yet' : '';
+      costEl.title = !hasCost && totalRecipeWeight > 0 ? 'No ingredients have a Price/kg on file in the Ingredient Library yet' : (hasCost ? rateMissingTitle : '');
     }
   }
 
@@ -2226,12 +2301,14 @@ function renderOverview(allIngredients){
   const per100El = document.getElementById('overviewCostPer100');
   const perKgEl = document.getElementById('overviewCostPerKg');
   if(per100El){
-    per100El.textContent = costPer100 != null ? `฿${costPer100.toFixed(2)}${costSuffix}` : '—';
-    per100El.title = missingPriceTitle;
+    const m = money(costPer100);
+    per100El.textContent = m != null ? `${m}${costSuffix}` : '—';
+    per100El.title = costPer100 != null ? (m != null ? missingPriceTitle : rateMissingTitle) : '';
   }
   if(perKgEl){
-    perKgEl.textContent = costPerKg != null ? `฿${costPerKg.toFixed(2)}${costSuffix}` : '—';
-    perKgEl.title = missingPriceTitle;
+    const m = money(costPerKg);
+    perKgEl.textContent = m != null ? `${m}${costSuffix}` : '—';
+    perKgEl.title = costPerKg != null ? (m != null ? missingPriceTitle : rateMissingTitle) : '';
   }
   const perServingWrap = document.getElementById('overviewCostPerServingWrap');
   const perServingEl = document.getElementById('overviewCostPerServing');
@@ -2240,8 +2317,9 @@ function renderOverview(allIngredients){
   if(perServingWrap){
     if(costPerServing != null){
       perServingWrap.style.display = '';
-      perServingEl.textContent = `฿${costPerServing.toFixed(2)}${costSuffix}`;
-      perServingEl.title = missingPriceTitle;
+      const m = money(costPerServing);
+      perServingEl.textContent = m != null ? `${m}${costSuffix}` : '—';
+      perServingEl.title = m != null ? missingPriceTitle : rateMissingTitle;
     }else{
       perServingWrap.style.display = 'none';
     }
@@ -2259,12 +2337,19 @@ function renderOverview(allIngredients){
   // × 1, no adjustment).
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
   const marginPrice = (base, marginPct) => (base != null && marginPct != null) ? base * (1 + marginPct / 100) : null;
-  // Selling prices round UP to the nearest 0.05 Baht for display -- a
-  // clean asking price, never quietly undercutting the margin the
-  // fields above were set for (Cost/100g etc. stay at their exact,
-  // unrounded-up value; this is deliberately only for the three Selling
-  // Price figures below).
-  const priceStr = v => '฿' + (Math.ceil(v / 0.05) * 0.05).toFixed(2);
+  // Renders a Min–Max Selling Price range, rounding each end UP to the
+  // nearest 0.05 of the selected currency for a clean asking price
+  // (Cost/100g etc. above stay at their exact, unrounded-up value --
+  // this is deliberately only for the three Selling Price figures
+  // below). Distinguishes "the margin math itself has nothing to show"
+  // from "it does, but there's no Exchange Rate to display it in yet"
+  // so the tooltip points at whichever is actually missing.
+  const priceRangeStr = (min, max) => {
+    if(min == null || max == null) return { text: '—', title: '' };
+    const minStr = money(min, true), maxStr = money(max, true);
+    if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
+    return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
+  };
   const overheadMultiplier = pct(document.getElementById('f-overheadMultiplier')?.value);
   const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
@@ -2274,10 +2359,9 @@ function renderOverview(allIngredients){
   const factoryPriceMax = marginPrice(overheadBase, factoryMarginMax);
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
-    factoryPriceEl.textContent = (factoryPriceMin != null && factoryPriceMax != null)
-      ? `${priceStr(factoryPriceMin)} – ${priceStr(factoryPriceMax)}${costSuffix}`
-      : '—';
-    factoryPriceEl.title = missingPriceTitle;
+    const { text, title } = priceRangeStr(factoryPriceMin, factoryPriceMax);
+    factoryPriceEl.textContent = text;
+    factoryPriceEl.title = title;
   }
 
   const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
@@ -2286,10 +2370,9 @@ function renderOverview(allIngredients){
   const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
   const companyPriceEl = document.getElementById('overviewCompanyPrice');
   if(companyPriceEl){
-    companyPriceEl.textContent = (companyPriceMin != null && companyPriceMax != null)
-      ? `${priceStr(companyPriceMin)} – ${priceStr(companyPriceMax)}${costSuffix}`
-      : '—';
-    companyPriceEl.title = missingPriceTitle;
+    const { text, title } = priceRangeStr(companyPriceMin, companyPriceMax);
+    companyPriceEl.textContent = text;
+    companyPriceEl.title = title;
   }
 
   const customerMarginMin = pct(document.getElementById('f-customerMarginMin')?.value);
@@ -2298,10 +2381,9 @@ function renderOverview(allIngredients){
   const customerPriceMax = marginPrice(companyPriceMax, customerMarginMax);
   const customerPriceEl = document.getElementById('overviewCustomerPrice');
   if(customerPriceEl){
-    customerPriceEl.textContent = (customerPriceMin != null && customerPriceMax != null)
-      ? `${priceStr(customerPriceMin)} – ${priceStr(customerPriceMax)}${costSuffix}`
-      : '—';
-    customerPriceEl.title = missingPriceTitle;
+    const { text, title } = priceRangeStr(customerPriceMin, customerPriceMax);
+    customerPriceEl.textContent = text;
+    customerPriceEl.title = title;
   }
 }
 
