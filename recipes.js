@@ -811,6 +811,10 @@ export function renderRecipeEditor(r){
               <input type="number" id="f-servingSize" min="0" step="0.01" placeholder="e.g. 250">
             </div>
           </div>
+          <div id="overviewCostPerServingWrap" style="display:none;">
+            <div class="batch-stat-label">Cost / Serving</div>
+            <div class="batch-stat-value" id="overviewCostPerServing">—</div>
+          </div>
           <div>
             <div class="batch-stat-label">Cost / 100 g</div>
             <div class="batch-stat-value" id="overviewCostPer100">—</div>
@@ -818,10 +822,6 @@ export function renderRecipeEditor(r){
           <div>
             <div class="batch-stat-label">Cost / kg</div>
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
-          </div>
-          <div id="overviewCostPerServingWrap" style="display:none;">
-            <div class="batch-stat-label">Cost / Serving</div>
-            <div class="batch-stat-value" id="overviewCostPerServing">—</div>
           </div>
         </div>
       </div>
