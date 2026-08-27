@@ -868,7 +868,6 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
-        <div class="compare-legend">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure below using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier (if set) applies to Cost/Serving before any margin. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
         <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
           <div>
             <div class="batch-stat-label">Currency</div>
@@ -913,7 +912,6 @@ export function renderRecipeEditor(r){
               <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;">
               <span>×</span>
             </div>
-            <div class="field-hint">Applied to Cost/Serving before Factory Margin — leave blank to skip (× 1). 1.625 is the reference Overhead value at 25%.</div>
           </div>
           <div></div>
           <div>
@@ -956,6 +954,7 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCustomerPrice">—</div>
           </div>
         </div>
+        <div class="compare-legend" style="margin-top:12px;">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — leave it blank to skip (× 1); 1.625 is the reference Overhead value at 25%. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 
