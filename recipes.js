@@ -8,7 +8,7 @@ import {
   renderReadOnlyProcessFlowchart, renderMain,
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
-  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose
+  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -230,7 +230,55 @@ export function renderLinkedProjectSection(r){
     project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
     `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
   ].filter(Boolean);
-  infoEl.innerHTML = `<div class="ci-row" style="margin-top:6px;">${facts.join(' &nbsp;|&nbsp; ')}</div>`;
+
+  // Everything under the Project's own "Requirements" box -- Portion/
+  // Inner/Outer Packing and MOQ live as plain top-level project fields,
+  // the rest come through getRequirements (handles legacy free-text
+  // projects and normalizes Cooking Guidelines into an array of groups,
+  // same as projects.js's own read-only Requirements view). Short,
+  // single-line facts go in the same compact grid as Trials' linked-
+  // project summary (.trial-project-summary-reqs); longer/multi-line
+  // ones (Packaging Condition, Composition, Recipe, Cooking Guidelines,
+  // Note) get their own labeled block.
+  const req = getRequirements(project);
+  const portionWeight = project.portionWeightQty ? `${escapeHtml(project.portionWeightQty)} ${escapeHtml(project.portionWeightUnit || '')}/${escapeHtml(project.portionPerUnit || '')}` : '';
+  const innerPacking = project.innerPackQty ? `${escapeHtml(project.innerPackQty)} ${escapeHtml(project.innerPackWeightUnit || '')}/${escapeHtml(project.innerPackUnit || '')}` : '';
+  const outerPacking = project.outerPackQty ? `${escapeHtml(project.outerPackQty)} ${escapeHtml(project.outerPackUnit || '')}/${escapeHtml(project.outerPackContainerUnit || '')}` : '';
+  const moq = project.moqQty ? `${escapeHtml(project.moqQty)} ${escapeHtml(project.moqUnit || '')}` : '';
+
+  const shortReqFacts = [
+    portionWeight ? `<div class="ci-row"><b>Portion Weight:</b> ${portionWeight}</div>` : '',
+    innerPacking ? `<div class="ci-row"><b>Inner Packing:</b> ${innerPacking}</div>` : '',
+    outerPacking ? `<div class="ci-row"><b>Outer Packing:</b> ${outerPacking}</div>` : '',
+    moq ? `<div class="ci-row"><b>MOQ:</b> ${moq}</div>` : '',
+    req.storageCondition ? `<div class="ci-row"><b>Storage Condition:</b> ${escapeHtml(req.storageCondition)}</div>` : '',
+    req.shelfLife ? `<div class="ci-row"><b>Shelf Life:</b> ${escapeHtml(req.shelfLife)}</div>` : '',
+    req.certificate ? `<div class="ci-row"><b>Certificate:</b> ${escapeHtml(req.certificate)}</div>` : ''
+  ].filter(Boolean).join('');
+
+  const longReqBlocks = [
+    req.packagingCondition ? `<div><div class="material-detail-notes-label">Packaging Condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div></div>` : '',
+    req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : '',
+    req.recipe ? `<div><div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div></div>` : '',
+    ...req.cookingCondition.filter(g => g.method || g.steps.length).map(g => `
+      <div>
+        <div class="material-detail-notes-label">Cooking Guidelines${g.method ? ` — ${escapeHtml(g.method)}` : ''}</div>
+        ${g.steps.length ? `<ol class="cooking-steps-list">${g.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+      </div>
+    `),
+    req.note ? `<div><div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div></div>` : ''
+  ].filter(Boolean).join('');
+
+  infoEl.innerHTML = `
+    <div class="ci-row" style="margin-top:6px;">${facts.join(' &nbsp;|&nbsp; ')}</div>
+    ${(shortReqFacts || longReqBlocks) ? `
+    <div class="trial-project-summary-reqs" style="margin-top:8px;">
+      <div class="trial-project-summary-reqs-title">Requirements</div>
+      ${shortReqFacts}
+      ${longReqBlocks}
+    </div>
+    ` : ''}
+  `;
 }
 
 export function renderProductTypeSelect(r){
