@@ -811,11 +811,11 @@ export function renderRecipeEditor(r){
       <div class="ingredient-tree">
         <div class="tree-node tree-root-node">
           <span class="tree-node-label">Formula per Portion</span>
-          <span class="tree-node-pct">100.00%</span>
           <span class="tree-node-wt tree-root-wt-wrap">
             <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
             <span class="ing-unit">g</span>
           </span>
+          <span class="tree-node-pct">100.00%</span>
         </div>
         <div id="partsContainer" class="tree-children"></div>
         <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
@@ -1379,13 +1379,13 @@ function renderPartNode(r, part, container, siblingsCtx){
       </div>
       <input type="text" class="part-name" placeholder="Part name">
       <span class="part-ing-count"></span>
-      <div class="row-value-col">
-        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
-        <span class="ing-unit">%</span>
-      </div>
       <div class="row-value-col row-value-wt">
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span class="ing-unit">g</span>
+      </div>
+      <div class="row-value-col">
+        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
+        <span class="ing-unit">%</span>
       </div>
       <button class="icon-btn" title="Delete this part">${icon('x')}</button>
     ` : `
@@ -1393,10 +1393,10 @@ function renderPartNode(r, part, container, siblingsCtx){
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       <input type="text" class="part-name" placeholder="Part name">
       <div class="part-header-fields">
-        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
-        <span>% of recipe</span>
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
+        <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
+        <span>% of recipe</span>
         <span class="part-ing-count"></span>
       </div>
       <button class="icon-btn" title="Delete this part">${icon('x')}</button>
@@ -1616,13 +1616,13 @@ function renderPartNode(r, part, container, siblingsCtx){
             <div class="ing-suggestions"></div>
           </div>
           <input type="text" class="ing-note" placeholder="Note">
-          <div class="row-value-col">
-            <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
-            <span class="ing-unit">%</span>
-          </div>
           <div class="row-value-col row-value-wt">
             <input type="number" class="ing-wt num-input" step="0.01" min="0">
             <span class="ing-unit">g</span>
+          </div>
+          <div class="row-value-col">
+            <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
+            <span class="ing-unit">%</span>
           </div>
           <button class="icon-btn" title="Delete">${icon('x')}</button>
           <div class="ing-flow-link-wrap">
