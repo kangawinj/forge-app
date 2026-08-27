@@ -879,11 +879,12 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="A fixed multiplier applied to Cost/Serving before Factory Margin — leave blank to skip (× 1, no adjustment). 1.625 is the reference Overhead value at 25%.">Overhead Multiplier</div>
+            <div class="batch-stat-label">Overhead Multiplier</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;" title="A fixed multiplier applied to Cost/Serving before Factory Margin — leave blank to skip (× 1, no adjustment). 1.625 is the reference Overhead value at 25%.">
+              <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;">
               <span>×</span>
             </div>
+            <div class="field-hint">Applied to Cost/Serving before Factory Margin — leave blank to skip (× 1). 1.625 is the reference Overhead value at 25%.</div>
           </div>
           <div></div>
           <div>
