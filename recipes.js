@@ -806,6 +806,18 @@ export function renderRecipeEditor(r){
       <div class="components-process-grid">
       <div class="ingredients-edit-view">
       <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
+      <div class="ingredient-tree">
+        <div class="tree-node tree-root-node">
+          <span class="tree-node-label">Formula per Portion</span>
+          <span class="tree-node-pct">100.00%</span>
+          <span class="tree-node-wt tree-root-wt-wrap">
+            <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
+            <span class="ing-unit">g</span>
+          </span>
+        </div>
+        <div id="partsContainer" class="tree-children"></div>
+        <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
+      </div>
       <div class="batch-summary">
         <div>
           <div class="batch-stat-label">Total Recipe Weight (auto-calculated from all ingredient weights)</div>
@@ -829,18 +841,6 @@ export function renderRecipeEditor(r){
           <div class="batch-stat-label">Adjusted Output Weight (after yield loss)</div>
           <div class="batch-stat-value" id="yieldAdjustedDisplay">—</div>
         </div>
-      </div>
-      <div class="ingredient-tree">
-        <div class="tree-node tree-root-node">
-          <span class="tree-node-label">Formula per Portion</span>
-          <span class="tree-node-pct">100.00%</span>
-          <span class="tree-node-wt tree-root-wt-wrap">
-            <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
-            <span class="ing-unit">g</span>
-          </span>
-        </div>
-        <div id="partsContainer" class="tree-children"></div>
-        <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
       </div>
       </div>
       </div>
