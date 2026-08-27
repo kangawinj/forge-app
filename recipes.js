@@ -225,6 +225,8 @@ export function renderLinkedProjectSection(r){
     project.customerName ? `<b>Customer:</b> ${escapeHtml(project.customerName)}` : '',
     project.destinationCountry ? `<b>Destination:</b> ${escapeHtml(project.destinationCountry)}` : '',
     project.ownerSalesRep ? `<b>Project Owner:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
+    project.factorySalesRep ? `<b>Factory Sales Rep:</b> ${escapeHtml(project.factorySalesRep)}` : '',
+    project.responsiblePerson ? `<b>PD:</b> ${escapeHtml(project.responsiblePerson)}` : '',
     project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
     `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
   ].filter(Boolean);
