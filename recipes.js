@@ -221,11 +221,17 @@ export function renderLinkedProjectSection(r){
     return;
   }
   const { project, product } = link;
-  const facts = [
+  // Two lines instead of one long wrapping one -- PD/Factory/Stage on
+  // their own line below Customer/Destination/Owner/Factory Sales Rep,
+  // rather than however many of them happen to fit before the browser's
+  // own wrap point (which could land mid-way through a single field).
+  const factsLine1 = [
     project.customerName ? `<b>Customer:</b> ${escapeHtml(project.customerName)}` : '',
     project.destinationCountry ? `<b>Destination:</b> ${escapeHtml(project.destinationCountry)}` : '',
     project.ownerSalesRep ? `<b>Project Owner:</b> ${escapeHtml(project.ownerSalesRep)}` : '',
-    project.factorySalesRep ? `<b>Factory Sales Rep:</b> ${escapeHtml(project.factorySalesRep)}` : '',
+    project.factorySalesRep ? `<b>Factory Sales Rep:</b> ${escapeHtml(project.factorySalesRep)}` : ''
+  ].filter(Boolean);
+  const factsLine2 = [
     project.responsiblePerson ? `<b>PD:</b> ${escapeHtml(project.responsiblePerson)}` : '',
     project.factoryName ? `<b>Factory:</b> ${escapeHtml(project.factoryName)}` : '',
     `<b>Stage:</b> ${escapeHtml(product.stage || '-')}`
@@ -270,7 +276,8 @@ export function renderLinkedProjectSection(r){
   ].filter(Boolean).join('');
 
   infoEl.innerHTML = `
-    <div class="ci-row" style="margin-top:6px;">${facts.join(' &nbsp;|&nbsp; ')}</div>
+    <div class="ci-row" style="margin-top:6px;">${factsLine1.join(' &nbsp;|&nbsp; ')}</div>
+    <div class="ci-row">${factsLine2.join(' &nbsp;|&nbsp; ')}</div>
     ${(shortReqFacts || longReqBlocks) ? `
     <div class="trial-project-summary-reqs" style="margin-top:8px;">
       <div class="trial-project-summary-reqs-title">Requirements</div>
