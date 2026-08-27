@@ -889,9 +889,9 @@ export function renderRecipeEditor(r){
           <div>
             <div class="batch-stat-label" title="Markup on cost (after the Overhead Multiplier above) — e.g. 50% means the selling price is that × 1.5, not ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Markup on cost, not a % of the selling price">
+              <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-factoryMarginMax" min="0" step="0.01" placeholder="e.g. 100" style="width:64px;" title="Markup on cost, not a % of the selling price">
+              <input type="number" id="f-factoryMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
@@ -902,9 +902,9 @@ export function renderRecipeEditor(r){
           <div>
             <div class="batch-stat-label" title="Markup on the Factory Selling Price above, not a % of the final selling price">Company Margin (Min% – Max% Markup on Factory Price)</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
+              <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
+              <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
@@ -915,9 +915,9 @@ export function renderRecipeEditor(r){
           <div>
             <div class="batch-stat-label" title="Markup on the Company Selling Price above, not a % of the final selling price">Customer Margin (Min% – Max% Markup on Company Price)</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
+              <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-customerMarginMax" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
+              <input type="number" id="f-customerMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
