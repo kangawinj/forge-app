@@ -857,7 +857,7 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
-        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Factory/Company Margin are gross margin — profit as a % of the selling price, not a markup on cost (e.g. 25% margin: Selling Price = Cost ÷ 0.75).</div>
+        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Factory/Company/Customer Margin are gross margin — profit as a % of the selling price, not a markup on cost (e.g. 25% margin: Selling Price = Cost ÷ 0.75). Selling Price figures round up to the nearest whole Baht (Cost figures above them don't).</div>
         <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
           <div>
             <div class="batch-stat-label">Amount per Serving (g)</div>
@@ -2248,6 +2248,12 @@ function renderOverview(allIngredients){
   // (would divide by zero or go negative) and reads as unset.
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
   const marginPrice = (base, marginPct) => (base != null && marginPct != null && marginPct < 100) ? base / (1 - marginPct / 100) : null;
+  // Selling prices round UP to the nearest whole Baht for display -- a
+  // clean asking price, never quietly undercutting the margin the
+  // fields above were set for (Cost/100g etc. stay at their exact,
+  // unrounded-up value; this is deliberately only for the three Selling
+  // Price figures below).
+  const priceStr = v => '฿' + Math.ceil(v);
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
 
@@ -2256,7 +2262,7 @@ function renderOverview(allIngredients){
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
     factoryPriceEl.textContent = (factoryPriceMin != null && factoryPriceMax != null)
-      ? `฿${factoryPriceMin.toFixed(2)} – ฿${factoryPriceMax.toFixed(2)}${costSuffix}`
+      ? `${priceStr(factoryPriceMin)} – ${priceStr(factoryPriceMax)}${costSuffix}`
       : '—';
     factoryPriceEl.title = missingPriceTitle;
   }
@@ -2268,7 +2274,7 @@ function renderOverview(allIngredients){
   const companyPriceEl = document.getElementById('overviewCompanyPrice');
   if(companyPriceEl){
     companyPriceEl.textContent = (companyPriceMin != null && companyPriceMax != null)
-      ? `฿${companyPriceMin.toFixed(2)} – ฿${companyPriceMax.toFixed(2)}${costSuffix}`
+      ? `${priceStr(companyPriceMin)} – ${priceStr(companyPriceMax)}${costSuffix}`
       : '—';
     companyPriceEl.title = missingPriceTitle;
   }
@@ -2280,7 +2286,7 @@ function renderOverview(allIngredients){
   const customerPriceEl = document.getElementById('overviewCustomerPrice');
   if(customerPriceEl){
     customerPriceEl.textContent = (customerPriceMin != null && customerPriceMax != null)
-      ? `฿${customerPriceMin.toFixed(2)} – ฿${customerPriceMax.toFixed(2)}${costSuffix}`
+      ? `${priceStr(customerPriceMin)} – ${priceStr(customerPriceMax)}${costSuffix}`
       : '—';
     customerPriceEl.title = missingPriceTitle;
   }
