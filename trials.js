@@ -423,17 +423,17 @@ export function renderTrialsList(){
               <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
               <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
             </div>
-            ${(req.composition || req.recipe || req.cookingCondition.method || req.cookingCondition.steps.length || req.packagingCondition || req.certificate) ? `
+            ${(req.composition || req.recipe || req.cookingCondition.some(g => g.method || g.steps.length) || req.packagingCondition || req.certificate) ? `
             <div class="trial-project-summary-reqs">
               <div class="trial-project-summary-reqs-title">Requirements</div>
               ${req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : ''}
               ${req.recipe ? `<div><div class="material-detail-notes-label">Recipe</div><div class="material-detail-notes">${escapeHtml(req.recipe)}</div></div>` : ''}
-              ${(req.cookingCondition.method || req.cookingCondition.steps.length) ? `
+              ${req.cookingCondition.filter(g => g.method || g.steps.length).map(g => `
               <div>
-                <div class="material-detail-notes-label">Cooking Guidelines${req.cookingCondition.method ? ` — ${escapeHtml(req.cookingCondition.method)}` : ''}</div>
-                ${req.cookingCondition.steps.length ? `<ol class="cooking-steps-list">${req.cookingCondition.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
+                <div class="material-detail-notes-label">Cooking Guidelines${g.method ? ` — ${escapeHtml(g.method)}` : ''}</div>
+                ${g.steps.length ? `<ol class="cooking-steps-list">${g.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''}
               </div>
-              ` : ''}
+              `).join('')}
               ${req.packagingCondition ? `<div><div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div></div>` : ''}
               ${req.certificate ? `<div><div class="material-detail-notes-label">Certificate</div><div class="material-detail-notes">${escapeHtml(req.certificate)}</div></div>` : ''}
             </div>
