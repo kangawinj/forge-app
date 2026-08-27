@@ -830,23 +830,10 @@ export function renderRecipeEditor(r){
             <input type="date" id="f-date">
           </div>
         </div>
-        <div class="field">
-          <label>Project</label>
-          <select id="f-linkedProject" class="proj-select"></select>
-          <div id="linkedProjectInfo"></div>
-        </div>
-        <div class="field">
-          <label>Product Type</label>
-          <select id="f-productTypeMain" class="proj-select"></select>
-        </div>
         <div class="grid-2">
           <div class="field">
-            <label>Description / Concept</label>
-            <div class="desc-points-list" id="descPointsList"></div>
-            <button class="btn btn-sm add-row-btn" type="button" id="btnAddDescPoint">+ Add Point</button>
-            <div class="desc-photos-label">Photos (up to 3)</div>
-            <div class="trial-photos-row" id="descPhotosRow"></div>
-            <input type="file" id="descPhotoInput" accept="image/*">
+            <label>Project</label>
+            <select id="f-linkedProject" class="proj-select"></select>
           </div>
           <div class="field">
             <label>Recipe Code — CCYY-TTTNN-TNN</label>
@@ -861,6 +848,19 @@ export function renderRecipeEditor(r){
               <input type="text" id="f-codeSuffix" class="code-suffix code-suffix-sm" placeholder="01" maxlength="6" title="Trial number for this recipe">
             </div>
           </div>
+        </div>
+        <div id="linkedProjectInfo"></div>
+        <div class="field">
+          <label>Product Type</label>
+          <select id="f-productTypeMain" class="proj-select"></select>
+        </div>
+        <div class="field">
+          <label>Description / Concept</label>
+          <div class="desc-points-list" id="descPointsList"></div>
+          <button class="btn btn-sm add-row-btn" type="button" id="btnAddDescPoint">+ Add Point</button>
+          <div class="desc-photos-label">Photos (up to 3)</div>
+          <div class="trial-photos-row" id="descPhotosRow"></div>
+          <input type="file" id="descPhotoInput" accept="image/*">
         </div>
       </div>
       <div id="printInfoCard" class="print-only compare-info-col"></div>
