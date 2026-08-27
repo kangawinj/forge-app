@@ -17,6 +17,16 @@ import {
 export let recipes = [];
 export let currentId = null;
 export let unlockedRecipeId = null;
+// Debounce-timer handle for scheduleSave/saveNow below -- module-scoped
+// here since ES modules don't share `let` bindings; app.js has its own,
+// separately-scoped variable of the same name for an unrelated feature,
+// which is just a naming coincidence, not a shared timer.
+let saveTimer = null;
+// Per-recipe-id pending idle-checkpoint timers for scheduleVersionCheckpoint
+// / cancelVersionCheckpoint / autoCheckpointVersion below -- same
+// module-scoping reasoning as saveTimer above (app.js has its own,
+// separately-scoped Map of the same name for an unrelated feature).
+let versionCheckpointTimers = new Map();
 
 /* ---------- Version History (snapshot & restore the recipe's formulation) ---------- */
 export let versionsModalRecipe = null;
