@@ -566,7 +566,8 @@ const CHANGELOG = [
   { version: "3.0.257", date: "2026-08-27", note: "Recipe Overview's cost stats reordered: Amount per Serving, Cost / Serving, Cost / 100g, Cost / kg" },
   { version: "3.0.258", date: "2026-08-27", note: "Recipe Overview: added Factory and Company Selling Price (per serving) — set a Min%/Max% margin for each and it shows a Min-Max price range, Factory marked up from Cost/Serving and Company marked up on top of the Factory price" },
   { version: "3.0.259", date: "2026-08-27", note: "Fixed Test Results crashing whenever a Test Result was linked to a project — a leftover reference to the old single Cooking Guidelines shape broke every render since multi-group support shipped (3.0.245)" },
-  { version: "3.0.260", date: "2026-08-27", note: "A recipe's linked-project summary (section 1) now also shows the whole Requirements box from that project — Portion/Inner/Outer Packing, MOQ, Storage Condition, Shelf Life, Certificate, Packaging Condition, Composition, Recipe notes, every Cooking Guidelines group, and Note" }
+  { version: "3.0.260", date: "2026-08-27", note: "A recipe's linked-project summary (section 1) now also shows the whole Requirements box from that project — Portion/Inner/Outer Packing, MOQ, Storage Condition, Shelf Life, Certificate, Packaging Condition, Composition, Recipe notes, every Cooking Guidelines group, and Note" },
+  { version: "3.0.261", date: "2026-08-27", note: "Fixed Factory/Company Margin on Recipe Overview — they were calculated as a markup on cost (Price = Cost × (1 + %)); now correctly gross margin, profit as a % of the selling price (Price = Cost ÷ (1 − %)), matching how margin is normally meant" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
