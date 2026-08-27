@@ -357,6 +357,8 @@ export function blankRecipe(){
     factoryMarginMax: '',
     companyMarginMin: '',
     companyMarginMax: '',
+    customerMarginMin: '',
+    customerMarginMax: '',
     versions: [],
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
@@ -901,6 +903,19 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-label">Company Selling Price / Serving</div>
             <div class="batch-stat-value" id="overviewCompanyPrice">—</div>
           </div>
+          <div>
+            <div class="batch-stat-label" title="Profit as a % of the selling price (gross margin), on top of the Company Selling Price above">Customer Margin (Min% – Max% of Selling Price)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-customerMarginMin" min="0" max="99.99" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Company price">
+              <span>–</span>
+              <input type="number" id="f-customerMarginMax" min="0" max="99.99" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Company price">
+              <span>%</span>
+            </div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Customer Selling Price / Serving</div>
+            <div class="batch-stat-value" id="overviewCustomerPrice">—</div>
+          </div>
         </div>
       </div>
     </div>
@@ -1134,7 +1149,8 @@ export function renderRecipeEditor(r){
   // input, no staged variable" pattern as servingSizeG above.
   [
     ['f-factoryMarginMin', 'factoryMarginMin'], ['f-factoryMarginMax', 'factoryMarginMax'],
-    ['f-companyMarginMin', 'companyMarginMin'], ['f-companyMarginMax', 'companyMarginMax']
+    ['f-companyMarginMin', 'companyMarginMin'], ['f-companyMarginMax', 'companyMarginMax'],
+    ['f-customerMarginMin', 'customerMarginMin'], ['f-customerMarginMax', 'customerMarginMax']
   ].forEach(([inputId, field]) => {
     const el = document.getElementById(inputId);
     el.value = r[field] ?? '';
@@ -2234,8 +2250,6 @@ function renderOverview(allIngredients){
   const marginPrice = (base, marginPct) => (base != null && marginPct != null && marginPct < 100) ? base / (1 - marginPct / 100) : null;
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
-  const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
-  const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
 
   const factoryPriceMin = marginPrice(costPerServing, factoryMarginMin);
   const factoryPriceMax = marginPrice(costPerServing, factoryMarginMax);
@@ -2247,6 +2261,8 @@ function renderOverview(allIngredients){
     factoryPriceEl.title = missingPriceTitle;
   }
 
+  const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
+  const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
   const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
   const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
   const companyPriceEl = document.getElementById('overviewCompanyPrice');
@@ -2255,6 +2271,18 @@ function renderOverview(allIngredients){
       ? `฿${companyPriceMin.toFixed(2)} – ฿${companyPriceMax.toFixed(2)}${costSuffix}`
       : '—';
     companyPriceEl.title = missingPriceTitle;
+  }
+
+  const customerMarginMin = pct(document.getElementById('f-customerMarginMin')?.value);
+  const customerMarginMax = pct(document.getElementById('f-customerMarginMax')?.value);
+  const customerPriceMin = marginPrice(companyPriceMin, customerMarginMin);
+  const customerPriceMax = marginPrice(companyPriceMax, customerMarginMax);
+  const customerPriceEl = document.getElementById('overviewCustomerPrice');
+  if(customerPriceEl){
+    customerPriceEl.textContent = (customerPriceMin != null && customerPriceMax != null)
+      ? `฿${customerPriceMin.toFixed(2)} – ฿${customerPriceMax.toFixed(2)}${costSuffix}`
+      : '—';
+    customerPriceEl.title = missingPriceTitle;
   }
 }
 
