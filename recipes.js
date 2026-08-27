@@ -304,6 +304,7 @@ export function blankRecipe(){
     processFlowchart: { nodes: [], edges: [] },
     processViewMode: 'list',
     yieldPct: '',
+    servingSizeG: '',
     versions: [],
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
@@ -802,6 +803,27 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
+        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file.</div>
+        <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
+          <div>
+            <div class="batch-stat-label">Amount per Serving (g)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-servingSize" min="0" step="0.01" placeholder="e.g. 250">
+            </div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Cost / 100 g</div>
+            <div class="batch-stat-value" id="overviewCostPer100">—</div>
+          </div>
+          <div>
+            <div class="batch-stat-label">Cost / kg</div>
+            <div class="batch-stat-value" id="overviewCostPerKg">—</div>
+          </div>
+          <div id="overviewCostPerServingWrap" style="display:none;">
+            <div class="batch-stat-label">Cost / Serving</div>
+            <div class="batch-stat-value" id="overviewCostPerServing">—</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -1015,6 +1037,18 @@ export function renderRecipeEditor(r){
   document.getElementById('f-yieldPct').addEventListener('input', e => {
     r.yieldPct = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
     updateYieldDisplay(r);
+    scheduleSave();
+  });
+
+  // Recipe Overview's Cost / Serving stat (see renderOverview) reads this
+  // directly off the input rather than a staged variable, same as the
+  // weight/% fields elsewhere in this file -- so it only needs refreshing
+  // here, not threaded through every place that already re-runs
+  // updateGrandTotal for an unrelated reason.
+  document.getElementById('f-servingSize').value = r.servingSizeG ?? '';
+  document.getElementById('f-servingSize').addEventListener('input', e => {
+    r.servingSizeG = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+    updateGrandTotal(r);
     scheduleSave();
   });
 
@@ -1971,6 +2005,12 @@ function renderOverview(allIngredients){
   if(named.length === 0){
     body.innerHTML = '<tr><td colspan="5"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
     if(costEl){ costEl.innerHTML = ''; costEl.title = ''; }
+    const per100El = document.getElementById('overviewCostPer100');
+    const perKgEl = document.getElementById('overviewCostPerKg');
+    const perServingWrap = document.getElementById('overviewCostPerServingWrap');
+    if(per100El) per100El.textContent = '—';
+    if(perKgEl) perKgEl.textContent = '—';
+    if(perServingWrap) perServingWrap.style.display = 'none';
     return;
   }
 
@@ -2040,14 +2080,45 @@ function renderOverview(allIngredients){
     body.appendChild(tr);
   });
 
+  const hasCost = totalRecipeWeight > 0 && anyPriced;
+  const costSuffix = !allPriced ? '*' : '';
+  const missingPriceTitle = allPriced ? '' : 'Some ingredients have no Price/kg on file in the Ingredient Library — this doesn\'t include their cost';
+
   if(costEl){
-    if(totalRecipeWeight > 0 && anyPriced){
-      const costPer100 = (totalCost / totalRecipeWeight) * 100;
-      costEl.innerHTML = `฿${totalCost.toFixed(2)}${!allPriced ? '*' : ''}<div class="overview-cost-per100">฿${costPer100.toFixed(2)} / 100g</div>`;
-      costEl.title = allPriced ? '' : 'Some ingredients have no Price/kg on file in the Ingredient Library — this total doesn\'t include their cost';
+    if(hasCost){
+      costEl.innerHTML = `฿${totalCost.toFixed(2)}${costSuffix}`;
+      costEl.title = missingPriceTitle;
     }else{
       costEl.innerHTML = totalRecipeWeight > 0 ? '—' : '';
       costEl.title = totalRecipeWeight > 0 ? 'No ingredients have a Price/kg on file in the Ingredient Library yet' : '';
+    }
+  }
+
+  // Cost / 100g, Cost / kg, and (once a serving size is entered) Cost /
+  // Serving -- moved below the table, out of the cramped Total cell, per
+  // the same "* marks a partial estimate" convention as Compare Costing.
+  const costPer100 = hasCost ? (totalCost / totalRecipeWeight) * 100 : null;
+  const costPerKg = hasCost ? (totalCost / totalRecipeWeight) * 1000 : null;
+  const per100El = document.getElementById('overviewCostPer100');
+  const perKgEl = document.getElementById('overviewCostPerKg');
+  if(per100El){
+    per100El.textContent = costPer100 != null ? `฿${costPer100.toFixed(2)}${costSuffix}` : '—';
+    per100El.title = missingPriceTitle;
+  }
+  if(perKgEl){
+    perKgEl.textContent = costPerKg != null ? `฿${costPerKg.toFixed(2)}${costSuffix}` : '—';
+    perKgEl.title = missingPriceTitle;
+  }
+  const perServingWrap = document.getElementById('overviewCostPerServingWrap');
+  const perServingEl = document.getElementById('overviewCostPerServing');
+  const servingSize = parseFloat(document.getElementById('f-servingSize')?.value) || 0;
+  if(perServingWrap){
+    if(servingSize > 0 && costPer100 != null){
+      perServingWrap.style.display = '';
+      perServingEl.textContent = `฿${(costPer100 / 100 * servingSize).toFixed(2)}${costSuffix}`;
+      perServingEl.title = missingPriceTitle;
+    }else{
+      perServingWrap.style.display = 'none';
     }
   }
 }
