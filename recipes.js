@@ -247,6 +247,27 @@ export function renderLinkedProjectSection(r){
   // ones (Packaging Condition, Composition, Recipe, Cooking Guidelines,
   // Note) get their own labeled block.
   const req = getRequirements(project);
+  const flavors = project.flavors || [];
+  const formatFlavorPrice = (f, price) => price ? `${escapeHtml(price)} ${escapeHtml(f.priceCurrency || 'THB')} / ${escapeHtml(f.priceUnit || 'kg')}` : '-';
+  const productTableHtml = flavors.length ? `
+    <div class="material-detail-notes-label">Product</div>
+    <div class="flavor-table-scroll">
+    <table class="flavor-table">
+      <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Formula / Reference No.</th><th>Note</th></tr></thead>
+      <tbody>${flavors.map(f => `
+        <tr>
+          <td>${escapeHtml(f.name || 'Untitled product')}</td>
+          <td>${escapeHtml(f.sampleQty || '-')}</td>
+          <td>${escapeHtml(f.sampleRequestDate || '-')}</td>
+          <td>${formatFlavorPrice(f, f.targetPrice)}</td>
+          <td>${formatFlavorPrice(f, f.actualPrice)}</td>
+          <td>${escapeHtml(f.formulaRefCode || '-')}</td>
+          <td>${escapeHtml(f.note || '-')}</td>
+        </tr>
+      `).join('')}</tbody>
+    </table>
+    </div>
+  ` : '';
   const portionWeight = project.portionWeightQty ? `${escapeHtml(project.portionWeightQty)} ${escapeHtml(project.portionWeightUnit || '')}/${escapeHtml(project.portionPerUnit || '')}` : '';
   const innerPacking = project.innerPackQty ? `${escapeHtml(project.innerPackQty)} ${escapeHtml(project.innerPackWeightUnit || '')}/${escapeHtml(project.innerPackUnit || '')}` : '';
   const outerPacking = project.outerPackQty ? `${escapeHtml(project.outerPackQty)} ${escapeHtml(project.outerPackUnit || '')}/${escapeHtml(project.outerPackContainerUnit || '')}` : '';
@@ -278,9 +299,10 @@ export function renderLinkedProjectSection(r){
   infoEl.innerHTML = `
     <div class="ci-row" style="margin-top:6px;">${factsLine1.join(' &nbsp;|&nbsp; ')}</div>
     <div class="ci-row">${factsLine2.join(' &nbsp;|&nbsp; ')}</div>
-    ${(shortReqFacts || longReqBlocks) ? `
+    ${(productTableHtml || shortReqFacts || longReqBlocks) ? `
     <div class="trial-project-summary-reqs" style="margin-top:8px;">
       <div class="trial-project-summary-reqs-title">Requirements</div>
+      ${productTableHtml}
       ${shortReqFacts}
       ${longReqBlocks}
     </div>
