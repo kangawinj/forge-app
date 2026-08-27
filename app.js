@@ -577,7 +577,8 @@ const CHANGELOG = [
   { version: "3.0.268", date: "2026-08-27", note: "Fixed every dropdown in the recipe editor (Currency, Linked Project, Product Type, and the two Process Flowchart link pickers) staying clickable on a read-only/locked recipe — the lock only ever disabled inputs/textareas/buttons, never <select> elements" },
   { version: "3.0.269", date: "2026-08-28", note: "Recipe editor's linked-project summary: PD/Factory/Stage now sit on their own line below Customer/Destination/Project Owner/Factory Sales Rep, instead of one long line that could wrap mid-field" },
   { version: "3.0.270", date: "2026-08-28", note: "Recipe Overview: merged the Overhead Multiplier's tooltip note into the main cost/pricing note and moved that note to below the whole Currency/Cost/Margin block, instead of splitting it between a note above the block and a separate hint mid-block" },
-  { version: "3.0.271", date: "2026-08-28", note: "Recipe editor's linked-project Requirements box now includes the Product table (Sample Qty, Sample Request Date, Target/Actual Price, Formula/Reference No., Note) — it was missing even though the Project's own Requirements view has always shown it" }
+  { version: "3.0.271", date: "2026-08-28", note: "Recipe editor's linked-project Requirements box now includes the Product table (Sample Qty, Sample Request Date, Target/Actual Price, Formula/Reference No., Note) — it was missing even though the Project's own Requirements view has always shown it" },
+  { version: "3.0.272", date: "2026-08-28", note: "Fixed the Product table added above breaking the Requirements box layout — it was squeezed into a single narrow auto-fit grid column alongside Portion Weight/Storage Condition instead of spanning the full width, causing overlap and severely wrapped text" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

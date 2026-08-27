@@ -250,6 +250,7 @@ export function renderLinkedProjectSection(r){
   const flavors = project.flavors || [];
   const formatFlavorPrice = (f, price) => price ? `${escapeHtml(price)} ${escapeHtml(f.priceCurrency || 'THB')} / ${escapeHtml(f.priceUnit || 'kg')}` : '-';
   const productTableHtml = flavors.length ? `
+    <div style="grid-column:1/-1;">
     <div class="material-detail-notes-label">Product</div>
     <div class="flavor-table-scroll">
     <table class="flavor-table">
@@ -266,6 +267,7 @@ export function renderLinkedProjectSection(r){
         </tr>
       `).join('')}</tbody>
     </table>
+    </div>
     </div>
   ` : '';
   const portionWeight = project.portionWeightQty ? `${escapeHtml(project.portionWeightQty)} ${escapeHtml(project.portionWeightUnit || '')}/${escapeHtml(project.portionPerUnit || '')}` : '';
