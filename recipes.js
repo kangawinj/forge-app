@@ -832,8 +832,8 @@ export function renderRecipeEditor(r){
         </div>
         <div class="grid-2">
           <div class="field">
-            <label>Project</label>
-            <select id="f-linkedProject" class="proj-select"></select>
+            <label>Product Type</label>
+            <select id="f-productTypeMain" class="proj-select"></select>
           </div>
           <div class="field">
             <label>Recipe Code — CCYY-TTTNN-TNN</label>
@@ -849,11 +849,11 @@ export function renderRecipeEditor(r){
             </div>
           </div>
         </div>
-        <div id="linkedProjectInfo"></div>
         <div class="field">
-          <label>Product Type</label>
-          <select id="f-productTypeMain" class="proj-select"></select>
+          <label>Project</label>
+          <select id="f-linkedProject" class="proj-select"></select>
         </div>
+        <div id="linkedProjectInfo"></div>
         <div class="field">
           <label>Description / Concept</label>
           <div class="desc-points-list" id="descPointsList"></div>

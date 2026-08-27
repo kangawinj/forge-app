@@ -579,7 +579,8 @@ const CHANGELOG = [
   { version: "3.0.270", date: "2026-08-28", note: "Recipe Overview: merged the Overhead Multiplier's tooltip note into the main cost/pricing note and moved that note to below the whole Currency/Cost/Margin block, instead of splitting it between a note above the block and a separate hint mid-block" },
   { version: "3.0.271", date: "2026-08-28", note: "Recipe editor's linked-project Requirements box now includes the Product table (Sample Qty, Sample Request Date, Target/Actual Price, Formula/Reference No., Note) — it was missing even though the Project's own Requirements view has always shown it" },
   { version: "3.0.272", date: "2026-08-28", note: "Fixed the Product table added above breaking the Requirements box layout — it was squeezed into a single narrow auto-fit grid column alongside Portion Weight/Storage Condition instead of spanning the full width, causing overlap and severely wrapped text" },
-  { version: "3.0.273", date: "2026-08-28", note: "Recipe editor: moved Recipe Code up next to Project (was paired with Description/Concept further down) so it sits beside the field it's most related to" }
+  { version: "3.0.273", date: "2026-08-28", note: "Recipe editor: moved Recipe Code up next to Project (was paired with Description/Concept further down) so it sits beside the field it's most related to" },
+  { version: "3.0.274", date: "2026-08-28", note: "Recipe editor: swapped Product Type into the row next to Recipe Code, and moved Project down to its own line below (with the linked-project info panel still following right after it)" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
