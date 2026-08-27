@@ -570,7 +570,8 @@ const CHANGELOG = [
   { version: "3.0.261", date: "2026-08-27", note: "Fixed Factory/Company Margin on Recipe Overview — they were calculated as a markup on cost (Price = Cost × (1 + %)); now correctly gross margin, profit as a % of the selling price (Price = Cost ÷ (1 − %)), matching how margin is normally meant" },
   { version: "3.0.262", date: "2026-08-27", note: "Recipe Overview: added a third pricing tier, Customer Margin and Customer Selling Price / Serving, cascading on top of the Company Selling Price the same way Company cascades on top of Factory" },
   { version: "3.0.263", date: "2026-08-27", note: "Factory/Company/Customer Selling Price now round up to the nearest whole Baht for a clean asking price (e.g. ฿14.99 shows as ฿15) — the Cost figures above them are unaffected, still exact" },
-  { version: "3.0.264", date: "2026-08-27", note: "Factory/Company/Customer Selling Price now round up to the nearest ฿0.05 instead of the nearest whole Baht, showing two decimal places again (e.g. ฿9.07 shows as ฿9.10)" }
+  { version: "3.0.264", date: "2026-08-27", note: "Factory/Company/Customer Selling Price now round up to the nearest ฿0.05 instead of the nearest whole Baht, showing two decimal places again (e.g. ฿9.07 shows as ฿9.10)" },
+  { version: "3.0.265", date: "2026-08-27", note: "Factory/Company/Customer Margin on Recipe Overview switched back to markup on the tier before them (Selling Price = Base × (1 + %), e.g. 50% = ×1.5, 100% = ×2) instead of gross margin — and added an Overhead Multiplier field, a fixed × applied to Cost/Serving before Factory Margin" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -353,6 +353,7 @@ export function blankRecipe(){
     processViewMode: 'list',
     yieldPct: '',
     servingSizeG: '',
+    overheadMultiplier: '',
     factoryMarginMin: '',
     factoryMarginMax: '',
     companyMarginMin: '',
@@ -857,7 +858,7 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
-        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Factory/Company/Customer Margin are gross margin — profit as a % of the selling price, not a markup on cost (e.g. 25% margin: Selling Price = Cost ÷ 0.75). Selling Price figures round up to the nearest ฿0.05 (Cost figures above them don't).</div>
+        <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. The Overhead Multiplier (if set) applies to Cost/Serving before any margin. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest ฿0.05 (Cost figures above them don't).</div>
         <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
           <div>
             <div class="batch-stat-label">Amount per Serving (g)</div>
@@ -878,11 +879,18 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="Profit as a % of the selling price (gross margin) — e.g. a 25% margin means the selling price is Cost ÷ 0.75, not Cost × 1.25">Factory Margin (Min% – Max% of Selling Price)</div>
+            <div class="batch-stat-label" title="A fixed multiplier (e.g. overhead) applied to Cost/Serving before any margin — leave blank to skip (× 1, no adjustment)">Overhead Multiplier</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-factoryMarginMin" min="0" max="99.99" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Profit as a % of the selling price, not a markup on cost">
+              <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;" title="A fixed multiplier applied to Cost/Serving before any margin below — leave blank to skip (× 1, no adjustment)">
+              <span>×</span>
+            </div>
+          </div>
+          <div>
+            <div class="batch-stat-label" title="Markup on cost — e.g. 50% means the selling price is Cost × 1.5, not Cost ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
+            <div class="batch-scale-row">
+              <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-factoryMarginMax" min="0" max="99.99" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Profit as a % of the selling price, not a markup on cost">
+              <input type="number" id="f-factoryMarginMax" min="0" step="0.01" placeholder="e.g. 100" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
@@ -891,11 +899,11 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewFactoryPrice">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="Profit as a % of the selling price (gross margin), on top of the Factory Selling Price above">Company Margin (Min% – Max% of Selling Price)</div>
+            <div class="batch-stat-label" title="Markup on the Factory Selling Price above, not a % of the final selling price">Company Margin (Min% – Max% Markup on Factory Price)</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-companyMarginMin" min="0" max="99.99" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Factory price">
+              <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-companyMarginMax" min="0" max="99.99" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Factory price">
+              <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
@@ -904,11 +912,11 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCompanyPrice">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="Profit as a % of the selling price (gross margin), on top of the Company Selling Price above">Customer Margin (Min% – Max% of Selling Price)</div>
+            <div class="batch-stat-label" title="Markup on the Company Selling Price above, not a % of the final selling price">Customer Margin (Min% – Max% Markup on Company Price)</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-customerMarginMin" min="0" max="99.99" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Company price">
+              <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
               <span>–</span>
-              <input type="number" id="f-customerMarginMax" min="0" max="99.99" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Profit as a % of the selling price, not a markup on the Company price">
+              <input type="number" id="f-customerMarginMax" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
               <span>%</span>
             </div>
           </div>
@@ -1148,6 +1156,7 @@ export function renderRecipeEditor(r){
   // Factory/Company Selling Price margins -- same "read straight off the
   // input, no staged variable" pattern as servingSizeG above.
   [
+    ['f-overheadMultiplier', 'overheadMultiplier'],
     ['f-factoryMarginMin', 'factoryMarginMin'], ['f-factoryMarginMax', 'factoryMarginMax'],
     ['f-companyMarginMin', 'companyMarginMin'], ['f-companyMarginMax', 'companyMarginMax'],
     ['f-customerMarginMin', 'customerMarginMin'], ['f-customerMarginMax', 'customerMarginMax']
@@ -2236,29 +2245,31 @@ function renderOverview(allIngredients){
     }
   }
 
-  // Factory/Company Margin are gross margin -- profit as a % of the
-  // SELLING price, not a markup on cost -- so Selling Price = Cost /
-  // (1 - margin/100) (e.g. a 25% margin means cost is 75% of the price,
-  // profit the other 25%: ฿4.43 cost / 0.75 = ฿5.91 price). Company
-  // Selling Price cascades on top of the Factory price (not off cost
-  // directly) -- Min follows Min through the whole chain, Max follows
-  // Max, so the overall range reflects the worst-case and best-case ends
-  // consistently rather than mixing a low factory margin with a high
-  // company one or vice versa. A margin of 100% or more is nonsensical
-  // (would divide by zero or go negative) and reads as unset.
+  // Factory/Company/Customer Margin are markup on the tier before them --
+  // Selling Price = Base × (1 + margin/100) (e.g. a 50% margin means
+  // Selling Price = Base × 1.5, a 100% margin means × 2). Company Selling
+  // Price cascades on top of the Factory price (not off cost directly),
+  // and Customer on top of Company -- Min follows Min through the whole
+  // chain, Max follows Max, so the overall range reflects the worst-case
+  // and best-case ends consistently rather than mixing a low margin on
+  // one tier with a high one on another. Factory's own base is
+  // Cost/Serving times the Overhead Multiplier (if set; unset behaves as
+  // × 1, no adjustment).
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-  const marginPrice = (base, marginPct) => (base != null && marginPct != null && marginPct < 100) ? base / (1 - marginPct / 100) : null;
+  const marginPrice = (base, marginPct) => (base != null && marginPct != null) ? base * (1 + marginPct / 100) : null;
   // Selling prices round UP to the nearest 0.05 Baht for display -- a
   // clean asking price, never quietly undercutting the margin the
   // fields above were set for (Cost/100g etc. stay at their exact,
   // unrounded-up value; this is deliberately only for the three Selling
   // Price figures below).
   const priceStr = v => '฿' + (Math.ceil(v / 0.05) * 0.05).toFixed(2);
+  const overheadMultiplier = pct(document.getElementById('f-overheadMultiplier')?.value);
+  const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
 
-  const factoryPriceMin = marginPrice(costPerServing, factoryMarginMin);
-  const factoryPriceMax = marginPrice(costPerServing, factoryMarginMax);
+  const factoryPriceMin = marginPrice(overheadBase, factoryMarginMin);
+  const factoryPriceMax = marginPrice(overheadBase, factoryMarginMax);
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
     factoryPriceEl.textContent = (factoryPriceMin != null && factoryPriceMax != null)
