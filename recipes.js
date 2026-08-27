@@ -1312,7 +1312,7 @@ function renderLockState(r){
         }
       );
     });
-    cards.querySelectorAll('input, textarea, button').forEach(el => { el.disabled = true; });
+    cards.querySelectorAll('input, textarea, select, button').forEach(el => { el.disabled = true; });
   }
 }
 
