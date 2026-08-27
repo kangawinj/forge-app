@@ -560,7 +560,8 @@ const CHANGELOG = [
   { version: "3.0.251", date: "2026-08-27", note: "Fixed the recipe editor's Save button never locking a recipe back to read-only after saving (and autosave not actually reaching the cloud) — a JS error was silently aborting every save attempt" },
   { version: "3.0.252", date: "2026-08-27", note: "Recipes: swapped the order of the Formula table and the Total Recipe Weight/Scale/Yield summary box in section 3 — Formula now comes first" },
   { version: "3.0.253", date: "2026-08-27", note: "Recipes: the linked project's info line (Customer/Destination/etc.) now also shows Factory Sales Rep and PD" },
-  { version: "3.0.254", date: "2026-08-27", note: "Recipes: weight (g) now comes before % everywhere in section 3's formula tree — the recipe root row, each Part's header, and every ingredient row" }
+  { version: "3.0.254", date: "2026-08-27", note: "Recipes: weight (g) now comes before % everywhere in section 3's formula tree — the recipe root row, each Part's header, and every ingredient row" },
+  { version: "3.0.255", date: "2026-08-27", note: "Recipe Overview (section 2) now has a Cost (฿) column per ingredient, using each linked Ingredient Library entry's Price/kg, plus a total cost and cost per 100g in the footer row — ingredients with no price on file show as missing rather than being silently costed at zero" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

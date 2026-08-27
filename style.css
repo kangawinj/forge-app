@@ -687,6 +687,7 @@
   .col-no{width:34px;color:var(--text-dim);text-align:center;}
   .col-pct{width:100px;}
   .col-wt{width:110px;}
+  .col-cost{width:100px;}
   .col-del{width:34px;text-align:center;}
   .num-input{text-align:right;}
   tfoot td{
@@ -996,8 +997,8 @@
      already sit ~15px in from the cell's right edge via their own
      padding+border, so adding the same padding to the <td> itself would
      double up and push them out of alignment again. */
-  tfoot .col-pct, tfoot .col-wt,
-  #overviewBody .col-pct, #overviewBody .col-wt,
+  tfoot .col-pct, tfoot .col-wt, tfoot .col-cost,
+  #overviewBody .col-pct, #overviewBody .col-wt, #overviewBody .col-cost,
   .part-subtotal-pct, .part-subtotal-wt,
   .compare-table .col-pct, .compare-table .col-wt{
     text-align:right;
@@ -1025,6 +1026,15 @@
   }
   .overview-block table{font-size:13px;}
   .overview-block th{border-bottom:2px solid var(--border);}
+  /* The grand-total row's Cost cell doubles up: the plain total (Baht) on
+     top, the per-100g figure the whole card exists to answer right below
+     it in smaller, dimmer text — same cell, not a separate column, since
+     it's a derived reading of that same total, not its own line item. */
+  .overview-cost-per100{
+    font-size:11px;
+    font-weight:400;
+    color:var(--text-dim);
+  }
   .overview-bar-wrap{
     display:flex;
     align-items:center;

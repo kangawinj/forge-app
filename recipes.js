@@ -787,6 +787,7 @@ export function renderRecipeEditor(r){
               <th>Ingredient</th>
               <th class="col-pct">% of Recipe</th>
               <th class="col-wt">Total Weight (g)</th>
+              <th class="col-cost">Cost (฿)</th>
             </tr>
           </thead>
           <tbody id="overviewBody"></tbody>
@@ -796,6 +797,7 @@ export function renderRecipeEditor(r){
               <td>Total</td>
               <td class="col-pct" id="grandTotalPct"></td>
               <td class="col-wt" id="grandTotalWt"></td>
+              <td class="col-cost" id="grandTotalCost"></td>
             </tr>
           </tfoot>
         </table>
@@ -1964,9 +1966,11 @@ function renderOverview(allIngredients){
   if(!body) return;
   body.innerHTML = '';
 
+  const costEl = document.getElementById('grandTotalCost');
   const named = allIngredients.filter(i => (i.name||'').trim() !== '');
   if(named.length === 0){
-    body.innerHTML = '<tr><td colspan="4"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="5"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    if(costEl){ costEl.innerHTML = ''; costEl.title = ''; }
     return;
   }
 
@@ -1975,13 +1979,18 @@ function renderOverview(allIngredients){
     const key = i.name.trim().toLowerCase();
     if(!groups.has(key)){
       const material = i.materialId ? ingredientMaster.find(m => m.id === i.materialId) : null;
+      // null (not 0) when the matched Ingredient Library entry has no
+      // Price/kg on file, so a missing price shows as missing cost below
+      // rather than silently costing nothing.
+      const pricePerKg = material && material.price !== '' && material.price != null ? parseFloat(material.price) : null;
       groups.set(key, {
         name: i.name.trim(),
         pct: 0,
         wt: 0,
         image: material ? material.image : '',
         vendorName: material ? material.vendorName : '',
-        manufacturer: material ? material.manufacturer : ''
+        manufacturer: material ? material.manufacturer : '',
+        pricePerKg
       });
     }
     const g = groups.get(key);
@@ -1992,14 +2001,22 @@ function renderOverview(allIngredients){
   // so it's computed straight from weight rather than summing the now
   // per-part ing.percent values.
   const totalRecipeWeight = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-  groups.forEach(g => { g.pct = totalRecipeWeight > 0 ? (g.wt / totalRecipeWeight * 100) : 0; });
+  groups.forEach(g => {
+    g.pct = totalRecipeWeight > 0 ? (g.wt / totalRecipeWeight * 100) : 0;
+    g.cost = g.pricePerKg != null ? (g.wt / 1000) * g.pricePerKg : null;
+  });
 
   const rows = [...groups.values()].sort((a,b) => b.pct - a.pct);
   const maxPct = Math.max(...rows.map(g => g.pct), 100);
 
+  let totalCost = 0;
+  let allPriced = true;
+  let anyPriced = false;
+
   rows.forEach((g, idx) => {
     const tr = document.createElement('tr');
     const barPct = Math.min(100, (g.pct / maxPct) * 100);
+    if(g.cost != null){ totalCost += g.cost; anyPriced = true; }else{ allPriced = false; }
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
       <td>
@@ -2018,9 +2035,21 @@ function renderOverview(allIngredients){
         </div>
       </td>
       <td class="col-wt">${formatWeight(g.wt)}</td>
+      <td class="col-cost">${g.cost != null ? '฿' + g.cost.toFixed(2) : '—'}</td>
     `;
     body.appendChild(tr);
   });
+
+  if(costEl){
+    if(totalRecipeWeight > 0 && anyPriced){
+      const costPer100 = (totalCost / totalRecipeWeight) * 100;
+      costEl.innerHTML = `฿${totalCost.toFixed(2)}${!allPriced ? '*' : ''}<div class="overview-cost-per100">฿${costPer100.toFixed(2)} / 100g</div>`;
+      costEl.title = allPriced ? '' : 'Some ingredients have no Price/kg on file in the Ingredient Library — this total doesn\'t include their cost';
+    }else{
+      costEl.innerHTML = totalRecipeWeight > 0 ? '—' : '';
+      costEl.title = totalRecipeWeight > 0 ? 'No ingredients have a Price/kg on file in the Ingredient Library yet' : '';
+    }
+  }
 }
 
 /* ---------- Process Steps (grouped: a process title + its own numbered steps) ---------- */
