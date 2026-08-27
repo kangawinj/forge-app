@@ -833,10 +833,6 @@ export function renderRecipeEditor(r){
         <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
       </div>
       </div>
-      <div class="simple-process-col">
-        <div class="simple-process-col-title">Process</div>
-        <div id="simpleProcessPreview"></div>
-      </div>
       </div>
       <div id="printIngredientTree" class="print-only"></div>
     </div>

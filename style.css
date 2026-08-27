@@ -1060,11 +1060,15 @@
     border-radius:var(--radius);
     overflow-x:auto;
   }
-  /* Section 3's two-column "Ingredient | Process" layout, matching the
-     user's own reference spreadsheet — the ingredient tree on the left,
-     a plain read-only preview of the Process List (see
-     renderSimpleProcessPreview) on the right. Editing the process itself
-     still happens in section 4; this column just mirrors it live. */
+  /* Section 3's ingredient tree, full width -- used to sit side by side
+     with a plain read-only preview of the Process List (see
+     renderSimpleProcessPreview, still defined but unused now that its
+     target element is gone) in a two-column "Ingredient | Process"
+     layout matching the user's own reference spreadsheet, but that left
+     too little room to type the formula. Single column for now; if the
+     preview column comes back, restore grid-template-columns:minmax(0,1fr)
+     minmax(0,1fr) (and its <900px single-column override) plus the
+     .simple-process-col markup in recipes.js. */
   .components-process-grid{
     display:grid;
     /* minmax(0,1fr), not bare 1fr -- a plain 1fr track still won't shrink
@@ -1073,12 +1077,9 @@
        column pushes the whole page into horizontal scroll on narrow
        screens instead of scrolling internally via .ingredient-tree's own
        overflow-x:auto. */
-    grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+    grid-template-columns:minmax(0,1fr);
     gap:20px;
     align-items:start;
-  }
-  @media (max-width:900px){
-    .components-process-grid{grid-template-columns:minmax(0,1fr);}
   }
   .simple-process-col{
     background:var(--bg);
