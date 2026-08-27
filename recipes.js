@@ -353,7 +353,7 @@ export function blankRecipe(){
     processViewMode: 'list',
     yieldPct: '',
     servingSizeG: '',
-    overheadMultiplier: '',
+    overheadMultiplier: 1.625,
     factoryMarginMin: '',
     factoryMarginMax: '',
     companyMarginMin: '',
@@ -879,14 +879,15 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="A fixed multiplier (e.g. overhead) applied to Cost/Serving before any margin — leave blank to skip (× 1, no adjustment)">Overhead Multiplier</div>
+            <div class="batch-stat-label" title="A fixed multiplier applied to Cost/Serving before Factory Margin — leave blank to skip (× 1, no adjustment). 1.625 is the reference Overhead value at 25%.">Overhead Multiplier</div>
             <div class="batch-scale-row">
-              <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;" title="A fixed multiplier applied to Cost/Serving before any margin below — leave blank to skip (× 1, no adjustment)">
+              <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;" title="A fixed multiplier applied to Cost/Serving before Factory Margin — leave blank to skip (× 1, no adjustment). 1.625 is the reference Overhead value at 25%.">
               <span>×</span>
             </div>
           </div>
+          <div></div>
           <div>
-            <div class="batch-stat-label" title="Markup on cost — e.g. 50% means the selling price is Cost × 1.5, not Cost ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
+            <div class="batch-stat-label" title="Markup on cost (after the Overhead Multiplier above) — e.g. 50% means the selling price is that × 1.5, not ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
             <div class="batch-scale-row">
               <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>–</span>
