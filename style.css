@@ -1418,6 +1418,12 @@
     font-size:11px;
     color:var(--text-dim);
     margin-top:2px;
+    /* .ing-hint is a sibling of .tree-ing-node, not a child of
+       .ing-name-wrap, so it needs its own left offset to line up under the
+       ingredient name instead of starting from the row's own left edge
+       (under the drag handle) -- .row-handle-col's fixed 48px plus
+       .tree-node's 10px gap, matching the name column's real start. */
+    margin-left:58px;
   }
   .ing-hint.hint-block{
     color:var(--danger);

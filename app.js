@@ -582,7 +582,8 @@ const CHANGELOG = [
   { version: "3.0.273", date: "2026-08-28", note: "Recipe editor: moved Recipe Code up next to Project (was paired with Description/Concept further down) so it sits beside the field it's most related to" },
   { version: "3.0.274", date: "2026-08-28", note: "Recipe editor: swapped Product Type into the row next to Recipe Code, and moved Project down to its own line below (with the linked-project info panel still following right after it)" },
   { version: "3.0.275", date: "2026-08-28", note: "Print / PDF: the empty red/green status bar above \"1. Product Details\" no longer prints — its lock-status message and toolbar buttons were already hidden, but the colored bar wrapping them wasn't. Also, the printed Product Details now include Product Type and, if linked, the Project name plus its full info panel (Customer/Destination/.../Requirements incl. the Product table) — previously it only showed Code, Date, Total weight, and Description" },
-  { version: "3.0.276", date: "2026-08-28", note: "Removed the borders from the Recipe Code segments (year, product type, sequence, trial number) — kept the grey background and grouping, just without the boxed-in outline" }
+  { version: "3.0.276", date: "2026-08-28", note: "Removed the borders from the Recipe Code segments (year, product type, sequence, trial number) — kept the grey background and grouping, just without the boxed-in outline" },
+  { version: "3.0.277", date: "2026-08-28", note: "Fixed an ingredient row's hint text (vendor Code, or the \"not in the library\" warning) floating out over the drag-handle column instead of lining up under the ingredient name — it's a sibling of the row, not a child of the name field, so it needed its own left offset to match" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
