@@ -978,7 +978,13 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
         </div>
-        <div class="batch-summary" style="margin-top:12px;margin-bottom:0;">
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">3. Costing</div>
+      <div class="overview-block">
+        <div class="batch-summary" style="margin-top:0;margin-bottom:0;">
           <div>
             <div class="batch-stat-label">Currency</div>
             <select id="f-pricingCurrency" class="proj-select">
@@ -1069,7 +1075,7 @@ export function renderRecipeEditor(r){
     </div>
 
     <div class="card">
-      <div class="card-title">3. Components and Process</div>
+      <div class="card-title">4. Components and Process</div>
       <div class="components-process-grid">
       <div class="ingredients-edit-view">
       <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
@@ -1119,7 +1125,7 @@ export function renderRecipeEditor(r){
 
     <div class="card">
       <div class="card-title">
-        4. Process Steps
+        5. Process Steps
         <div class="view-mode-toggle" id="processViewToggle">
           <button type="button" class="btn btn-sm view-mode-btn" data-mode="list">${icon('list', 14)} List</button>
           <button type="button" class="btn btn-sm view-mode-btn" data-mode="flowchart">${icon('git-branch', 14)} Flowchart</button>
