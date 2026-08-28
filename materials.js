@@ -363,7 +363,7 @@ function subIngredientRowHtml(si){
   return `
     <tr data-sub-id="${escapeHtml(si.id)}">
       <td><input type="text" class="sub-ing-type" value="${escapeHtml(si.type||'')}" placeholder="e.g. Dice"></td>
-      <td><input type="number" class="sub-ing-size" value="${escapeHtml(si.size||'')}" step="any" min="0" placeholder="e.g. 30"></td>
+      <td><input type="text" class="sub-ing-size" value="${escapeHtml(si.size||'')}" placeholder="e.g. 2-3"></td>
       <td><input type="text" class="sub-ing-sizeUnit" list="unitsDatalist" value="${escapeHtml(si.sizeUnit||'')}" placeholder="e.g. g"></td>
       <td><input type="text" class="sub-ing-cooking" list="cookingMethodDatalist" value="${escapeHtml(si.cooking||'')}" placeholder="e.g. Deep Fry, Steam, Microwave..."></td>
       <td><input type="number" class="sub-ing-yield" value="${escapeHtml(si.yieldPct||'')}" step="any" min="0" max="100" placeholder="e.g. 92"></td>
