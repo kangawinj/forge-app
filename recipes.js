@@ -805,11 +805,16 @@ let dragPayload = null;
 // row's DOM (on every add/delete/weight change) the same way
 // projectExpandedIds/trialExpandedIds survive their own list re-renders.
 let ingSubsExpandedIds = new Set();
-// Read-only view of the matched Ingredient Library entry's own Sub
-// Ingredients (Type/Size/Unit/Cooking/%Yield, see materials.js) -- nothing
-// here is edited from the recipe side, it's just pulled in for reference so
-// e.g. "Fresh Red Spur Pepper" can show how it's normally cut/cooked
-// without retyping that per recipe.
+// Picker over the matched Ingredient Library entry's own Sub Ingredients
+// (Type/Size/Unit/Cooking/%Yield, see materials.js) -- each row is a
+// clickable button so a specific cut/prep variant can be applied to this
+// recipe row (see applySubIngredient below), rather than just displaying
+// the full list read-only. A table rather than a plain button list since
+// it stays scannable even once an ingredient has many variants on file.
+function subIngredientSummary(si){
+  const sizeStr = (si.size && si.sizeUnit) ? `${si.size} ${si.sizeUnit}` : (si.size || si.sizeUnit || '');
+  return [si.type, sizeStr, si.cooking].filter(Boolean).join(' · ');
+}
 function ingSubIngredientsHtml(ing, matched){
   const subs = matched?.subIngredients || [];
   if(!subs.length) return '';
@@ -820,8 +825,8 @@ function ingSubIngredientsHtml(ing, matched){
     <div class="flavor-table-scroll" style="margin-top:4px;">
     <table class="flavor-table">
       <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th></tr></thead>
-      <tbody>${subs.map(si => `
-        <tr>
+      <tbody>${subs.map((si, idx) => `
+        <tr data-sub-idx="${idx}" title="Click to use this in the Note field">
           <td>${escapeHtml(si.type || '-')}</td>
           <td>${escapeHtml(si.size || '-')}</td>
           <td>${escapeHtml(si.sizeUnit || '-')}</td>
@@ -834,16 +839,26 @@ function ingSubIngredientsHtml(ing, matched){
     ` : ''}
   `;
 }
-// Renders into subsEl and (re)wires its own toggle button -- called again,
-// recursively, from inside the click handler itself, since replacing
-// innerHTML drops whatever listener was on the old button.
-function renderIngSubsToggle(subsEl, ing, matched){
+// Renders into subsEl and (re)wires its toggle button + selectable rows --
+// called again, recursively, from inside the click handlers themselves,
+// since replacing innerHTML drops whatever listeners were on the old ones.
+function renderIngSubsToggle(subsEl, ing, matched, noteInput){
   subsEl.innerHTML = ingSubIngredientsHtml(ing, matched);
   const btn = subsEl.querySelector('[data-role="toggle-ing-subs"]');
   if(!btn) return;
   btn.addEventListener('click', () => {
     if(ingSubsExpandedIds.has(ing.id)) ingSubsExpandedIds.delete(ing.id); else ingSubsExpandedIds.add(ing.id);
-    renderIngSubsToggle(subsEl, ing, matched);
+    renderIngSubsToggle(subsEl, ing, matched, noteInput);
+  });
+  const subs = matched?.subIngredients || [];
+  subsEl.querySelectorAll('tr[data-sub-idx]').forEach(row => {
+    row.addEventListener('click', () => {
+      const si = subs[parseInt(row.dataset.subIdx, 10)];
+      if(!si) return;
+      ing.note = subIngredientSummary(si);
+      noteInput.value = ing.note;
+      scheduleSave();
+    });
   });
 }
 
@@ -2077,7 +2092,7 @@ function renderPartNode(r, part, container, siblingsCtx){
             pctDisplay.value = (0).toFixed(2);
           }
         }
-        renderIngSubsToggle(subsEl, ing, matched);
+        renderIngSubsToggle(subsEl, ing, matched, noteInput);
       }
       syncMaterialLink(false);
 
