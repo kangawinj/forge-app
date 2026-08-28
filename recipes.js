@@ -923,15 +923,15 @@ export function renderRecipeEditor(r){
             </div>
           </div>
           <div id="overviewCostPerServingWrap" style="display:none;">
-            <div class="batch-stat-label">Cost / Serving</div>
+            <div class="batch-stat-label">Cost RM / Serving</div>
             <div class="batch-stat-value" id="overviewCostPerServing">—</div>
           </div>
           <div>
-            <div class="batch-stat-label">Cost / 100 g</div>
+            <div class="batch-stat-label">Cost RM / 100 g</div>
             <div class="batch-stat-value" id="overviewCostPer100">—</div>
           </div>
           <div>
-            <div class="batch-stat-label">Cost / kg</div>
+            <div class="batch-stat-label">Cost RM / kg</div>
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
           <div>
