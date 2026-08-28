@@ -1110,6 +1110,23 @@
     font-size:13px;
     line-height:1;
   }
+  /* Print-only pairing of the ingredient tree with a compact top-to-bottom
+     Process Flow (step titles only, full detail prints separately on its
+     own page via printProcessesView/printProcessFlowchart) -- see
+     renderPrintView. Screen layout is untouched since this whole grid only
+     ever renders inside a .print-only wrapper. */
+  .components-process-print-grid{
+    grid-template-columns:minmax(0,1fr) minmax(0,320px);
+    gap:20px;
+    align-items:start;
+  }
+  .print-process-flow-step{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    background:#fff;
+    padding:8px 10px;
+    text-align:center;
+  }
   .tree-node{
     display:flex;
     align-items:baseline;
@@ -3464,6 +3481,10 @@
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .flow-canvas-wrap, .view-mode-toggle{display:none !important;}
     .print-only{display:block !important;}
+    /* Higher specificity than .print-only{display:block} above (both
+       !important, so specificity decides) -- keeps the ingredient tree +
+       Process Flow side by side instead of collapsing to a block. */
+    .print-only.components-process-print-grid{display:grid !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}

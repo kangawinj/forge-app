@@ -1111,7 +1111,10 @@ export function renderRecipeEditor(r){
       </div>
       </div>
       </div>
-      <div id="printIngredientTree" class="print-only"></div>
+      <div class="print-only components-process-print-grid">
+        <div id="printIngredientTree"></div>
+        <div id="printProcessStepsFlow" class="simple-process-col"></div>
+      </div>
     </div>
 
     <div class="card">
@@ -3313,6 +3316,27 @@ function renderPrintView(r){
   if(treeEl){
     const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     treeEl.innerHTML = readOnlyIngredientTreeHtml(r.parts, totalWt, r.processFlowchart.nodes);
+  }
+
+  // Compact companion to the ingredient tree above -- just the Process
+  // Steps' titles, connected top-to-bottom by an arrow, so the printed
+  // recipe and its process flow sit side by side on one page (see
+  // .components-process-print-grid). The full step detail (times,
+  // temperatures, components) still prints on its own page further down
+  // via printProcessesView/printProcessFlowchart -- this is a summary, not
+  // a replacement.
+  const flowStepsEl = document.getElementById('printProcessStepsFlow');
+  if(flowStepsEl){
+    const steps = (r.processes || []).filter(p =>
+      (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== '') || (p.components||[]).length > 0
+    );
+    flowStepsEl.innerHTML = steps.length ? `
+      <div class="simple-process-col-title">Process Flow</div>
+      ${steps.map((p, idx) => `
+        ${idx > 0 ? '<div class="simple-process-arrow">↓</div>' : ''}
+        <div class="simple-process-step print-process-flow-step">${idx+1}. ${escapeHtml(p.title || 'Untitled process')}</div>
+      `).join('')}
+    ` : '';
   }
 
   // Mutually exclusive with the flowchart print view below, matching
