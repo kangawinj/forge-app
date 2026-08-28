@@ -14,6 +14,14 @@ let unsubscribeMaterials = null;
 let materialsLoaded = false;
 let editingMaterialId = null;
 let editingMaterialImage = null; // staged photo as a data URL, or null for no photo
+// This ingredient's own composition, e.g. "Curry Powder" made of Turmeric,
+// Coriander, ... -- a plain array on the material doc (same deferred-shape
+// idea as a Project's requirements), edited inline in the form (no separate
+// Edit toggle per row, just Add/Copy/Delete -- everything is a live input).
+let editingSubIngredients = [];
+function blankSubIngredient(){
+  return { id: uid(), nameEn: '', nameTh: '', size: '', sizeUnit: '', yieldPct: '' };
+}
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes'];
 const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
 let materialEditSnapshotBefore = null;
@@ -151,19 +159,13 @@ export function mountMaterialsView(){
           </div>
           <div class="field">
             <label>6. Price/kg (฿)</label>
-            <div class="code-row">
-              <span class="code-prefix">฿</span>
-              <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00" class="code-suffix">
-            </div>
+            <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00">
           </div>
         </div>
         <div class="grid-3">
           <div class="field">
             <label>7. MOQ/kg (if any)</label>
-            <div class="code-row">
-              <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25" class="unit-input">
-              <span class="unit-suffix">kg</span>
-            </div>
+            <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25">
           </div>
           <div class="field">
             <label>8. Photo (optional)</label>
@@ -177,6 +179,16 @@ export function mountMaterialsView(){
         <div class="field">
           <label>9. Usage Notes (optional)</label>
           <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
+        </div>
+        <div class="field">
+          <label>10. Sub Ingredients (optional)</label>
+          <div class="flavor-table-scroll">
+            <table class="flavor-table" id="subIngredientsTable">
+              <thead><tr><th>English Name</th><th>Thai Name</th><th>Size</th><th>Size Unit</th><th>% Yield</th><th></th></tr></thead>
+              <tbody id="subIngredientsBody"></tbody>
+            </table>
+          </div>
+          <button class="btn btn-sm add-row-btn" type="button" id="btnAddSubIngredient">+ Add Sub Ingredient</button>
         </div>
         <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
         <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
@@ -224,6 +236,10 @@ export function mountMaterialsView(){
     document.getElementById('mf-image').value = '';
     setMaterialImagePreview(null);
   });
+  document.getElementById('btnAddSubIngredient').addEventListener('click', () => {
+    editingSubIngredients.push(blankSubIngredient());
+    renderSubIngredientsTable();
+  });
   document.getElementById('btnAddMaterial').addEventListener('click', () => {
     const nameEn = document.getElementById('mf-nameEn').value.trim();
     const nameTh = document.getElementById('mf-nameTh').value.trim();
@@ -244,6 +260,7 @@ export function mountMaterialsView(){
       price: document.getElementById('mf-price').value.trim(),
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
+      subIngredients: editingSubIngredients.map(si => ({...si})),
       image: editingMaterialImage || '',
       createdBy: existing?.createdBy || currentUser?.email || '',
       createdAt: existing?.createdAt || Date.now(),
@@ -283,6 +300,23 @@ function openMaterialDetail(m){
       <div class="material-detail-notes-label">Usage Notes</div>
       <div class="material-detail-notes">${escapeHtml(m.usageNotes)}</div>
     ` : ''}
+    ${(m.subIngredients || []).length ? `
+      <div class="material-detail-notes-label">Sub Ingredients</div>
+      <div class="flavor-table-scroll">
+      <table class="flavor-table">
+        <thead><tr><th>English Name</th><th>Thai Name</th><th>Size</th><th>Size Unit</th><th>% Yield</th></tr></thead>
+        <tbody>${m.subIngredients.map(si => `
+          <tr>
+            <td>${escapeHtml(si.nameEn || '-')}</td>
+            <td>${escapeHtml(si.nameTh || '-')}</td>
+            <td>${escapeHtml(si.size || '-')}</td>
+            <td>${escapeHtml(si.sizeUnit || '-')}</td>
+            <td>${si.yieldPct !== '' && si.yieldPct != null ? escapeHtml(si.yieldPct) + '%' : '-'}</td>
+          </tr>
+        `).join('')}</tbody>
+      </table>
+      </div>
+    ` : ''}
     <div class="material-detail-activity">
       ${m.createdBy ? `<div>Created by ${escapeHtml(m.createdBy)}${m.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(m.createdAt)) : ''}</div>` : ''}
       ${m.updatedBy ? `<div>Last edited by ${escapeHtml(m.updatedBy)}${m.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(m.updatedAt)) : ''}</div>` : ''}
@@ -321,6 +355,49 @@ function fillMaterialForm(m){
   document.getElementById('mf-usageNotes').value = m.usageNotes || '';
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(m.image || null);
+  editingSubIngredients = (m.subIngredients || []).map(si => ({...si}));
+  renderSubIngredientsTable();
+}
+
+function subIngredientRowHtml(si){
+  return `
+    <tr data-sub-id="${escapeHtml(si.id)}">
+      <td><input type="text" class="sub-ing-nameEn" value="${escapeHtml(si.nameEn||'')}" placeholder="e.g. Turmeric Powder"></td>
+      <td><input type="text" class="sub-ing-nameTh" value="${escapeHtml(si.nameTh||'')}" placeholder="Thai name"></td>
+      <td><input type="number" class="sub-ing-size" value="${escapeHtml(si.size||'')}" step="any" min="0" placeholder="e.g. 30"></td>
+      <td><input type="text" class="sub-ing-sizeUnit" value="${escapeHtml(si.sizeUnit||'')}" placeholder="e.g. g"></td>
+      <td><input type="number" class="sub-ing-yield" value="${escapeHtml(si.yieldPct||'')}" step="any" min="0" max="100" placeholder="e.g. 92"></td>
+      <td>
+        <button type="button" class="icon-btn" title="Copy this row" data-role="copy-sub-ingredient">${icon('copy')}</button>
+        <button type="button" class="icon-btn" title="Delete this row" data-role="remove-sub-ingredient">${icon('x')}</button>
+      </td>
+    </tr>
+  `;
+}
+
+function renderSubIngredientsTable(){
+  const body = document.getElementById('subIngredientsBody');
+  if(!body) return;
+  body.innerHTML = editingSubIngredients.length
+    ? editingSubIngredients.map(subIngredientRowHtml).join('')
+    : `<tr><td colspan="6"><div class="overview-empty">No sub ingredients yet</div></td></tr>`;
+  body.querySelectorAll('tr[data-sub-id]').forEach(row => {
+    const si = editingSubIngredients.find(x => x.id === row.dataset.subId);
+    if(!si) return;
+    row.querySelector('.sub-ing-nameEn').addEventListener('change', e => { si.nameEn = e.target.value.trim(); });
+    row.querySelector('.sub-ing-nameTh').addEventListener('change', e => { si.nameTh = e.target.value.trim(); });
+    row.querySelector('.sub-ing-size').addEventListener('change', e => { si.size = e.target.value.trim(); });
+    row.querySelector('.sub-ing-sizeUnit').addEventListener('change', e => { si.sizeUnit = e.target.value.trim(); });
+    row.querySelector('.sub-ing-yield').addEventListener('change', e => { si.yieldPct = e.target.value.trim(); });
+    row.querySelector('[data-role="copy-sub-ingredient"]').addEventListener('click', () => {
+      editingSubIngredients.splice(editingSubIngredients.indexOf(si) + 1, 0, { ...si, id: uid() });
+      renderSubIngredientsTable();
+    });
+    row.querySelector('[data-role="remove-sub-ingredient"]').addEventListener('click', () => {
+      editingSubIngredients = editingSubIngredients.filter(x => x.id !== si.id);
+      renderSubIngredientsTable();
+    });
+  });
 }
 
 function startEditMaterial(m){
@@ -352,6 +429,8 @@ function cancelEditMaterial(){
   MATERIAL_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(null);
+  editingSubIngredients = [];
+  renderSubIngredientsTable();
   document.getElementById('materialFormTitle').textContent = '+ Add New Ingredient';
   document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
   document.getElementById('btnCancelEditMaterial').style.display = 'none';
