@@ -1120,12 +1120,70 @@
     gap:20px;
     align-items:start;
   }
-  .print-process-flow-step{
-    border:1px solid var(--border);
-    border-radius:var(--radius);
+  /* Vertical stepper -- a numbered circle per Process Step, connected by a
+     line running behind them (drawn per-node as a pseudo-element rather
+     than one shared line, so it only spans exactly as far as there are
+     nodes below it). Every circle renders the same neutral way; there's no
+     "step completed" concept in the data to show progress against. */
+  .print-process-flow-stepper{margin-top:4px;}
+  .print-process-flow-node{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    position:relative;
+    padding:6px 0;
+  }
+  .print-process-flow-node:not(:last-child)::after{
+    content:'';
+    position:absolute;
+    left:13px;
+    top:34px;
+    bottom:-6px;
+    width:2px;
+    background:var(--border);
+  }
+  .print-process-flow-circle{
+    flex:0 0 auto;
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    border:2px solid var(--primary);
     background:#fff;
-    padding:8px 10px;
-    text-align:center;
+    color:var(--primary-dark);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-weight:700;
+    font-size:13px;
+    position:relative;
+    z-index:1;
+  }
+  .print-process-flow-label{font-size:13px;font-weight:600;color:var(--text);}
+  /* Redesigned print ingredient table (see printIngredientTableHtml) --
+     Part/Sub-part rows get a tinted background and bold group totals,
+     plain padding-based indent (no box-drawing tree characters), "–" for
+     an empty Prep/Note, grand total as its own bottom row. */
+  .print-ing-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .print-ing-table th{
+    text-align:left;
+    font-size:11px;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--text-dim);
+    padding:0 10px 8px 10px;
+    border-bottom:1px solid var(--border);
+  }
+  .print-ing-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
+  .print-ing-num{text-align:right;white-space:nowrap;}
+  .print-ing-group-row td{
+    background:var(--bg);
+    font-weight:700;
+    color:var(--primary-dark);
+  }
+  .print-ing-total-row td{
+    font-weight:700;
+    border-bottom:none;
+    border-top:2px solid var(--text);
   }
   .tree-node{
     display:flex;

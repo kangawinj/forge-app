@@ -593,7 +593,8 @@ const CHANGELOG = [
   { version: "3.0.284", date: "2026-08-28", note: "Recipe Formula tree's Sub Ingredients panel is now a picker, not just a reference table — click a variant (e.g. \"Dice · 2-3 mm · Blanch\") to fill that row's Note field with it, still editable afterward" },
   { version: "3.0.285", date: "2026-08-28", note: "Sub Ingredients panel now collapses back automatically right after picking a variant, instead of staying expanded" },
   { version: "3.0.286", date: "2026-08-28", note: "Fixed the Sub Ingredients table's Size field silently discarding anything that wasn't a plain number — a number input can't hold a range like \"2-3\", so it just went blank. Changed to plain text, since sizes are commonly given as a range (e.g. \"2-3 mm\")" },
-  { version: "3.0.287", date: "2026-08-28", note: "Print/PDF: \"3. Components and Process\" now shows the recipe formula on the left and a compact Process Flow (step titles connected by arrows, top to bottom) on the right, side by side — the full step detail still prints separately on its own \"4. Process Steps\" page further down" }
+  { version: "3.0.287", date: "2026-08-28", note: "Print/PDF: \"3. Components and Process\" now shows the recipe formula on the left and a compact Process Flow (step titles connected by arrows, top to bottom) on the right, side by side — the full step detail still prints separately on its own \"4. Process Steps\" page further down" },
+  { version: "3.0.288", date: "2026-08-28", note: "Print/PDF redesign: the ingredient table now highlights each Part/Sub-part as a bold total row, shows \"–\" for an empty Prep/Note, and ends with a bold Formula total row; the Process Flow is now a numbered-circle stepper connected by a vertical line instead of plain arrow text" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -3276,6 +3276,54 @@ function renderDescPhotos(r){
   if(input) input.style.display = r.descPhotos.length >= 3 ? 'none' : '';
 }
 
+// Print-only redesign of the ingredient breakdown -- Part/Sub-part rows get
+// a tinted background and bold group totals, plain padding-based indent
+// instead of box-drawing tree connectors, "–" for an empty Prep/Note, and
+// the grand total as its own row at the bottom instead of a "Formula per
+// Portion" row up top. A separate function from readOnlyIngredientTreeHtml
+// (app.js) rather than a rewrite of it, since that one is also reused by
+// the Versions comparison view and shouldn't change there.
+function printIngredientTableHtml(parts, totalWeight){
+  const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
+  if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
+  const fmtWt = n => (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  function rowsForPart(part, depth){
+    const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
+    const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+    const label = (part.name||'').trim() || 'Unnamed part';
+    const partWeight = partTotalWeight(part);
+    const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
+    const groupRow = `
+      <tr class="print-ing-group-row">
+        <td style="padding-left:${12 + depth*16}px">${escapeHtml(label)}</td>
+        <td></td>
+        <td class="print-ing-num">${partPct.toFixed(2)}%</td>
+        <td class="print-ing-num">${fmtWt(partWeight)}</td>
+      </tr>
+    `;
+    const ingRows = namedIngredients.map(ing => `
+      <tr class="print-ing-row">
+        <td style="padding-left:${12 + (depth+1)*16}px">${escapeHtml(ing.name)}</td>
+        <td>${escapeHtml(ing.note || '').trim() || '–'}</td>
+        <td class="print-ing-num">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
+        <td class="print-ing-num">${fmtWt(parseFloat(ing.weight)||0)}</td>
+      </tr>
+    `).join('');
+    const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1)).join('');
+    return groupRow + ingRows + subRows;
+  }
+
+  const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('');
+  return `
+    <table class="print-ing-table">
+      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">%</th><th class="print-ing-num">g</th></tr></thead>
+      <tbody>${bodyRows}</tbody>
+      <tfoot><tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">100.00%</td><td class="print-ing-num">${fmtWt(totalWeight)} g</td></tr></tfoot>
+    </table>
+  `;
+}
+
 function withTemporaryVisibility(el, fn){
   const prevCss = el.style.cssText;
   el.style.cssText = 'display:block !important;position:absolute;left:-9999px;top:-9999px;visibility:visible;';
@@ -3315,16 +3363,18 @@ function renderPrintView(r){
   const treeEl = document.getElementById('printIngredientTree');
   if(treeEl){
     const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-    treeEl.innerHTML = readOnlyIngredientTreeHtml(r.parts, totalWt, r.processFlowchart.nodes);
+    treeEl.innerHTML = printIngredientTableHtml(r.parts, totalWt);
   }
 
   // Compact companion to the ingredient tree above -- just the Process
-  // Steps' titles, connected top-to-bottom by an arrow, so the printed
-  // recipe and its process flow sit side by side on one page (see
+  // Steps' titles, connected top-to-bottom by a vertical line, so the
+  // printed recipe and its process flow sit side by side on one page (see
   // .components-process-print-grid). The full step detail (times,
   // temperatures, components) still prints on its own page further down
   // via printProcessesView/printProcessFlowchart -- this is a summary, not
-  // a replacement.
+  // a replacement. Every node renders the same neutral way (numbered
+  // circle) -- there's no "step completed" concept in the data model, so
+  // this never fabricates progress/done-state that isn't actually tracked.
   const flowStepsEl = document.getElementById('printProcessStepsFlow');
   if(flowStepsEl){
     const steps = (r.processes || []).filter(p =>
@@ -3332,10 +3382,14 @@ function renderPrintView(r){
     );
     flowStepsEl.innerHTML = steps.length ? `
       <div class="simple-process-col-title">Process Flow</div>
-      ${steps.map((p, idx) => `
-        ${idx > 0 ? '<div class="simple-process-arrow">↓</div>' : ''}
-        <div class="simple-process-step print-process-flow-step">${idx+1}. ${escapeHtml(p.title || 'Untitled process')}</div>
-      `).join('')}
+      <div class="print-process-flow-stepper">
+        ${steps.map((p, idx) => `
+          <div class="print-process-flow-node">
+            <div class="print-process-flow-circle">${idx+1}</div>
+            <div class="print-process-flow-label">${escapeHtml(p.title || 'Untitled process')}</div>
+          </div>
+        `).join('')}
+      </div>
     ` : '';
   }
 
