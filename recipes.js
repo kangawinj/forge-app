@@ -799,6 +799,29 @@ export function updateRecipeTitleDisplay(r){
 
 let dragPayload = null;
 
+// Recipe Overview table (see renderOverview) — 'wt' also covers % of
+// Recipe, since that's just weight expressed as a share of the total and
+// so always sorts identically to it; a separate key would just be the same
+// order twice. Defaults match the table's original fixed order (heaviest
+// ingredient first) so nothing changes on-screen until the user clicks a
+// header.
+let overviewSortKey = 'wt';
+let overviewSortDir = 'desc';
+function overviewHeaderRowHtml(){
+  const th = (label, cls, key) => {
+    const active = overviewSortKey === key;
+    const arrow = active ? icon(overviewSortDir === 'asc' ? 'chevron-up' : 'chevron-down', 12) : '';
+    return `<th class="${cls || ''} proj-th-sortable${active ? ' active' : ''}"><span class="proj-th-label" data-sort-key="${key}">${label} ${arrow}</span></th>`;
+  };
+  return `
+    <th class="col-no">#</th>
+    ${th('Ingredient', '', 'name')}
+    ${th('% of Recipe', 'col-pct', 'wt')}
+    ${th('Total Weight (g)', 'col-wt', 'wt')}
+    ${th('Cost (฿)', 'col-cost', 'cost')}
+  `;
+}
+
 export function renderRecipeEditor(r){
   const main = document.getElementById('mainArea');
   main.innerHTML = `
@@ -876,13 +899,7 @@ export function renderRecipeEditor(r){
         <div style="overflow-x:auto;">
         <table>
           <thead>
-            <tr>
-              <th class="col-no">#</th>
-              <th>Ingredient</th>
-              <th class="col-pct">% of Recipe</th>
-              <th class="col-wt">Total Weight (g)</th>
-              <th class="col-cost">Cost (฿)</th>
-            </tr>
+            <tr id="overviewHeaderRow">${overviewHeaderRowHtml()}</tr>
           </thead>
           <tbody id="overviewBody"></tbody>
           <tfoot>
@@ -1197,6 +1214,25 @@ export function renderRecipeEditor(r){
     r.yieldPct = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
     updateYieldDisplay(r);
     scheduleSave();
+  });
+
+  // Recipe Overview column sort — clicking a header toggles asc/desc on
+  // that column (starting asc when switching to a different one), same
+  // interaction as the Projects table's sortable columns. One delegated
+  // listener on the header row rather than one per <th> since the row's
+  // own HTML gets replaced (via overviewHeaderRowHtml) on every click to
+  // redraw the active arrow.
+  document.getElementById('overviewHeaderRow').addEventListener('click', e => {
+    const key = e.target.closest('[data-sort-key]')?.dataset.sortKey;
+    if(!key) return;
+    if(overviewSortKey === key){
+      overviewSortDir = overviewSortDir === 'asc' ? 'desc' : 'asc';
+    }else{
+      overviewSortKey = key;
+      overviewSortDir = 'asc';
+    }
+    document.getElementById('overviewHeaderRow').innerHTML = overviewHeaderRowHtml();
+    updateGrandTotal(r);
   });
 
   // Recipe Overview's Cost / Serving stat (see renderOverview) reads this
@@ -2278,7 +2314,13 @@ function renderOverview(allIngredients){
     g.cost = g.pricePerKg != null ? (g.wt / 1000) * g.pricePerKg : null;
   });
 
-  const rows = [...groups.values()].sort((a,b) => b.pct - a.pct);
+  const OVERVIEW_SORT_ACCESSORS = { name: g => g.name.toLowerCase(), wt: g => g.wt, cost: g => g.cost ?? -1 };
+  const overviewSortAccessor = OVERVIEW_SORT_ACCESSORS[overviewSortKey] || OVERVIEW_SORT_ACCESSORS.wt;
+  const rows = [...groups.values()].sort((a,b) => {
+    const av = overviewSortAccessor(a), bv = overviewSortAccessor(b);
+    const cmp = av < bv ? -1 : av > bv ? 1 : 0;
+    return overviewSortDir === 'asc' ? cmp : -cmp;
+  });
   const maxPct = Math.max(...rows.map(g => g.pct), 100);
 
   let totalCost = 0;
