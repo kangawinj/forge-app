@@ -858,6 +858,8 @@ function renderIngSubsToggle(subsEl, ing, matched, noteInput){
       ing.note = subIngredientSummary(si);
       noteInput.value = ing.note;
       scheduleSave();
+      ingSubsExpandedIds.delete(ing.id);
+      renderIngSubsToggle(subsEl, ing, matched, noteInput);
     });
   });
 }

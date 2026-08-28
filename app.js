@@ -590,7 +590,8 @@ const CHANGELOG = [
   { version: "3.0.281", date: "2026-08-28", note: "Ingredient Library's Sub Ingredients table: replaced English Name/Thai Name with a single Type column, renamed Size Unit to Unit, and added a Cooking column (preparation method/steps) — now Type / Size / Unit / Cooking / % Yield" },
   { version: "3.0.282", date: "2026-08-28", note: "Sub Ingredients table: Type's example placeholder changed to \"Dice\", and Unit / Cooking now offer a dropdown of suggestions from the Units / Cooking Method reference lists (still free text if what's needed isn't in the list, same as every other reference-list field in the app)" },
   { version: "3.0.283", date: "2026-08-28", note: "Recipe Formula tree: an ingredient row now shows a \"Sub Ingredients (N)\" toggle when its matched Ingredient Library entry has any on file — click to reveal that entry's Type/Size/Unit/Cooking/%Yield breakdown for reference, read-only, without leaving the recipe" },
-  { version: "3.0.284", date: "2026-08-28", note: "Recipe Formula tree's Sub Ingredients panel is now a picker, not just a reference table — click a variant (e.g. \"Dice · 2-3 mm · Blanch\") to fill that row's Note field with it, still editable afterward" }
+  { version: "3.0.284", date: "2026-08-28", note: "Recipe Formula tree's Sub Ingredients panel is now a picker, not just a reference table — click a variant (e.g. \"Dice · 2-3 mm · Blanch\") to fill that row's Note field with it, still editable afterward" },
+  { version: "3.0.285", date: "2026-08-28", note: "Sub Ingredients panel now collapses back automatically right after picking a variant, instead of staying expanded" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
