@@ -3434,7 +3434,7 @@
   .print-only{display:none;}
 
   @media print{
-    .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner{display:none !important;}
+    .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .flow-canvas-wrap, .view-mode-toggle{display:none !important;}

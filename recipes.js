@@ -207,19 +207,11 @@ export function findProjectForRecipe(recipeId){
   return null;
 }
 
-export function renderLinkedProjectSection(r){
-  const select = document.getElementById('f-linkedProject');
-  if(!select) return;
-  const link = findProjectForRecipe(r.id);
-  const sortedProjects = [...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
-  select.innerHTML = `<option value="">— Not linked —</option>` +
-    sortedProjects.map(p => `<option value="${escapeHtml(p.id)}" ${link && link.project.id === p.id ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('');
-
-  const infoEl = document.getElementById('linkedProjectInfo');
-  if(!link){
-    infoEl.innerHTML = '';
-    return;
-  }
+// Shared by the on-screen "Project" field's info panel and the print view's
+// Product Details card -- both show the exact same linked-project facts and
+// Requirements box, just inside a different wrapper.
+export function linkedProjectInfoHtml(link){
+  if(!link) return '';
   const { project, product } = link;
   // Two lines instead of one long wrapping one -- PD/Factory/Stage on
   // their own line below Customer/Destination/Owner/Factory Sales Rep,
@@ -298,7 +290,7 @@ export function renderLinkedProjectSection(r){
     req.note ? `<div><div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div></div>` : ''
   ].filter(Boolean).join('');
 
-  infoEl.innerHTML = `
+  return `
     <div class="ci-row" style="margin-top:6px;">${factsLine1.join(' &nbsp;|&nbsp; ')}</div>
     <div class="ci-row">${factsLine2.join(' &nbsp;|&nbsp; ')}</div>
     ${(productTableHtml || shortReqFacts || longReqBlocks) ? `
@@ -310,6 +302,18 @@ export function renderLinkedProjectSection(r){
     </div>
     ` : ''}
   `;
+}
+
+export function renderLinkedProjectSection(r){
+  const select = document.getElementById('f-linkedProject');
+  if(!select) return;
+  const link = findProjectForRecipe(r.id);
+  const sortedProjects = [...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'}));
+  select.innerHTML = `<option value="">— Not linked —</option>` +
+    sortedProjects.map(p => `<option value="${escapeHtml(p.id)}" ${link && link.project.id === p.id ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('');
+
+  const infoEl = document.getElementById('linkedProjectInfo');
+  infoEl.innerHTML = linkedProjectInfoHtml(link);
 }
 
 export function renderProductTypeSelect(r){
@@ -3170,15 +3174,28 @@ function renderPrintView(r){
   const infoEl = document.getElementById('printInfoCard');
   if(infoEl){
     const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const link = findProjectForRecipe(r.id);
+    const typeCode = recipeProductTypeCode(r);
+    const productTypeLabel = r.productType ? `${r.productType}${typeCode ? ` (${typeCode})` : ''}` : '-';
+    const photosHtml = (r.descPhotos || []).length ? `
+      <div class="ci-row"><b>Photos:</b></div>
+      <div class="trial-photos-row">${r.descPhotos.map((photo, idx) => `
+        <div class="trial-photo-thumb"><img src="${escapeHtml(photo)}" alt="Description photo ${idx+1}"></div>
+      `).join('')}</div>
+    ` : '';
+    // Same "1. Product Details" facts shown on-screen -- Code/Date/Product
+    // Type/Description/Photos plus, if linked, the Project name and its full
+    // info panel (Customer/Destination/.../Requirements incl. Product table)
+    // via the shared linkedProjectInfoHtml, not just a cherry-picked subset.
     infoEl.innerHTML = `
       <div class="ci-name">${escapeHtml(r.name || 'Untitled recipe')}</div>
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
-      <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
-      ${r.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(r.customerName)}</div>` : ''}
-      ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
-      ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
+      <div class="ci-row"><b>Product Type:</b> ${escapeHtml(productTypeLabel)}</div>
+      ${link ? `<div class="ci-row"><b>Project:</b> ${escapeHtml(link.project.name || 'Untitled project')}</div>${linkedProjectInfoHtml(link)}` : ''}
       ${descriptionListHtml(r)}
+      ${photosHtml}
+      <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
     `;
   }
 
