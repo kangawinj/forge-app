@@ -586,7 +586,8 @@ const CHANGELOG = [
   { version: "3.0.277", date: "2026-08-28", note: "Fixed an ingredient row's hint text (vendor Code, or the \"not in the library\" warning) floating out over the drag-handle column instead of lining up under the ingredient name — it's a sibling of the row, not a child of the name field, so it needed its own left offset to match" },
   { version: "3.0.278", date: "2026-08-28", note: "Ingredient Library: removed the boxed ฿/kg badges from Price/kg and MOQ/kg (the field labels already say the unit). Also added an optional Sub Ingredients table to each ingredient — English Name, Thai Name, Size, Size Unit, % Yield, with Add/Copy/Delete per row — shown in both the add/edit form and the read-only detail view" },
   { version: "3.0.279", date: "2026-08-28", note: "Recipe Overview: relabeled Cost / Serving, Cost / 100 g, and Cost / kg to Cost RM / Serving, Cost RM / 100 g, and Cost RM / kg" },
-  { version: "3.0.280", date: "2026-08-28", note: "Recipe Overview's ingredient table is now sortable — click Ingredient, % of Recipe, Total Weight, or Cost to sort by that column, click again to reverse; same click-to-sort interaction as the Projects table" }
+  { version: "3.0.280", date: "2026-08-28", note: "Recipe Overview's ingredient table is now sortable — click Ingredient, % of Recipe, Total Weight, or Cost to sort by that column, click again to reverse; same click-to-sort interaction as the Projects table" },
+  { version: "3.0.281", date: "2026-08-28", note: "Ingredient Library's Sub Ingredients table: replaced English Name/Thai Name with a single Type column, renamed Size Unit to Unit, and added a Cooking column (preparation method/steps) — now Type / Size / Unit / Cooking / % Yield" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

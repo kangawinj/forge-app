@@ -20,7 +20,7 @@ let editingMaterialImage = null; // staged photo as a data URL, or null for no p
 // Edit toggle per row, just Add/Copy/Delete -- everything is a live input).
 let editingSubIngredients = [];
 function blankSubIngredient(){
-  return { id: uid(), nameEn: '', nameTh: '', size: '', sizeUnit: '', yieldPct: '' };
+  return { id: uid(), type: '', size: '', sizeUnit: '', cooking: '', yieldPct: '' };
 }
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes'];
 const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
@@ -184,7 +184,7 @@ export function mountMaterialsView(){
           <label>10. Sub Ingredients (optional)</label>
           <div class="flavor-table-scroll">
             <table class="flavor-table" id="subIngredientsTable">
-              <thead><tr><th>English Name</th><th>Thai Name</th><th>Size</th><th>Size Unit</th><th>% Yield</th><th></th></tr></thead>
+              <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th></th></tr></thead>
               <tbody id="subIngredientsBody"></tbody>
             </table>
           </div>
@@ -304,13 +304,13 @@ function openMaterialDetail(m){
       <div class="material-detail-notes-label">Sub Ingredients</div>
       <div class="flavor-table-scroll">
       <table class="flavor-table">
-        <thead><tr><th>English Name</th><th>Thai Name</th><th>Size</th><th>Size Unit</th><th>% Yield</th></tr></thead>
+        <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th></tr></thead>
         <tbody>${m.subIngredients.map(si => `
           <tr>
-            <td>${escapeHtml(si.nameEn || '-')}</td>
-            <td>${escapeHtml(si.nameTh || '-')}</td>
+            <td>${escapeHtml(si.type || '-')}</td>
             <td>${escapeHtml(si.size || '-')}</td>
             <td>${escapeHtml(si.sizeUnit || '-')}</td>
+            <td>${escapeHtml(si.cooking || '-')}</td>
             <td>${si.yieldPct !== '' && si.yieldPct != null ? escapeHtml(si.yieldPct) + '%' : '-'}</td>
           </tr>
         `).join('')}</tbody>
@@ -362,10 +362,10 @@ function fillMaterialForm(m){
 function subIngredientRowHtml(si){
   return `
     <tr data-sub-id="${escapeHtml(si.id)}">
-      <td><input type="text" class="sub-ing-nameEn" value="${escapeHtml(si.nameEn||'')}" placeholder="e.g. Turmeric Powder"></td>
-      <td><input type="text" class="sub-ing-nameTh" value="${escapeHtml(si.nameTh||'')}" placeholder="Thai name"></td>
+      <td><input type="text" class="sub-ing-type" value="${escapeHtml(si.type||'')}" placeholder="e.g. Turmeric Powder"></td>
       <td><input type="number" class="sub-ing-size" value="${escapeHtml(si.size||'')}" step="any" min="0" placeholder="e.g. 30"></td>
       <td><input type="text" class="sub-ing-sizeUnit" value="${escapeHtml(si.sizeUnit||'')}" placeholder="e.g. g"></td>
+      <td><input type="text" class="sub-ing-cooking" value="${escapeHtml(si.cooking||'')}" placeholder="e.g. Boil 5 min"></td>
       <td><input type="number" class="sub-ing-yield" value="${escapeHtml(si.yieldPct||'')}" step="any" min="0" max="100" placeholder="e.g. 92"></td>
       <td>
         <button type="button" class="icon-btn" title="Copy this row" data-role="copy-sub-ingredient">${icon('copy')}</button>
@@ -384,10 +384,10 @@ function renderSubIngredientsTable(){
   body.querySelectorAll('tr[data-sub-id]').forEach(row => {
     const si = editingSubIngredients.find(x => x.id === row.dataset.subId);
     if(!si) return;
-    row.querySelector('.sub-ing-nameEn').addEventListener('change', e => { si.nameEn = e.target.value.trim(); });
-    row.querySelector('.sub-ing-nameTh').addEventListener('change', e => { si.nameTh = e.target.value.trim(); });
+    row.querySelector('.sub-ing-type').addEventListener('change', e => { si.type = e.target.value.trim(); });
     row.querySelector('.sub-ing-size').addEventListener('change', e => { si.size = e.target.value.trim(); });
     row.querySelector('.sub-ing-sizeUnit').addEventListener('change', e => { si.sizeUnit = e.target.value.trim(); });
+    row.querySelector('.sub-ing-cooking').addEventListener('change', e => { si.cooking = e.target.value.trim(); });
     row.querySelector('.sub-ing-yield').addEventListener('change', e => { si.yieldPct = e.target.value.trim(); });
     row.querySelector('[data-role="copy-sub-ingredient"]').addEventListener('click', () => {
       editingSubIngredients.splice(editingSubIngredients.indexOf(si) + 1, 0, { ...si, id: uid() });
