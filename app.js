@@ -588,7 +588,8 @@ const CHANGELOG = [
   { version: "3.0.279", date: "2026-08-28", note: "Recipe Overview: relabeled Cost / Serving, Cost / 100 g, and Cost / kg to Cost RM / Serving, Cost RM / 100 g, and Cost RM / kg" },
   { version: "3.0.280", date: "2026-08-28", note: "Recipe Overview's ingredient table is now sortable — click Ingredient, % of Recipe, Total Weight, or Cost to sort by that column, click again to reverse; same click-to-sort interaction as the Projects table" },
   { version: "3.0.281", date: "2026-08-28", note: "Ingredient Library's Sub Ingredients table: replaced English Name/Thai Name with a single Type column, renamed Size Unit to Unit, and added a Cooking column (preparation method/steps) — now Type / Size / Unit / Cooking / % Yield" },
-  { version: "3.0.282", date: "2026-08-28", note: "Sub Ingredients table: Type's example placeholder changed to \"Dice\", and Unit / Cooking now offer a dropdown of suggestions from the Units / Cooking Method reference lists (still free text if what's needed isn't in the list, same as every other reference-list field in the app)" }
+  { version: "3.0.282", date: "2026-08-28", note: "Sub Ingredients table: Type's example placeholder changed to \"Dice\", and Unit / Cooking now offer a dropdown of suggestions from the Units / Cooking Method reference lists (still free text if what's needed isn't in the list, same as every other reference-list field in the app)" },
+  { version: "3.0.283", date: "2026-08-28", note: "Recipe Formula tree: an ingredient row now shows a \"Sub Ingredients (N)\" toggle when its matched Ingredient Library entry has any on file — click to reveal that entry's Type/Size/Unit/Cooking/%Yield breakdown for reference, read-only, without leaving the recipe" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

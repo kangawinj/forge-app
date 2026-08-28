@@ -1439,6 +1439,24 @@
     color:var(--text-dim);
     cursor:not-allowed;
   }
+  /* Read-only Sub Ingredients pulled in from the matched Ingredient
+     Library entry -- same left offset as .ing-hint so it lines up under
+     the ingredient name, only ever present when that entry actually has
+     Sub Ingredients on file (see ingSubIngredientsHtml). */
+  .ing-subs{margin-top:2px;margin-left:58px;}
+  .ing-subs-toggle{
+    display:inline-flex;
+    align-items:center;
+    gap:2px;
+    border:none;
+    background:none;
+    padding:0;
+    font-size:11px;
+    font-weight:600;
+    color:var(--primary);
+    cursor:pointer;
+  }
+  .ing-subs-toggle:hover{color:var(--primary-dark);}
   /* Optional link from an ingredient row to a Process Flowchart node (see
      the .ing-flow-link-wrap markup in renderRows). Hidden entirely until
      the recipe has at least one flowchart node, so this is invisible for
