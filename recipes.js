@@ -3304,16 +3304,16 @@ function printIngredientTableHtml(parts, totalWeight){
       <tr class="print-ing-group-row">
         <td style="padding-left:${12 + depth*16}px">${escapeHtml(label)}</td>
         <td></td>
-        <td class="print-ing-num">${partPct.toFixed(2)}%</td>
         <td class="print-ing-num">${fmtWt(partWeight)}</td>
+        <td class="print-ing-num">${partPct.toFixed(2)}%</td>
       </tr>
     `;
     const ingRows = namedIngredients.map(ing => `
       <tr class="print-ing-row">
         <td style="padding-left:${12 + (depth+1)*16}px">${escapeHtml(ing.name)}</td>
         <td>${escapeHtml(ing.note || '').trim() || '–'}</td>
-        <td class="print-ing-num">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
         <td class="print-ing-num">${fmtWt(parseFloat(ing.weight)||0)}</td>
+        <td class="print-ing-num">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
       </tr>
     `).join('');
     const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1)).join('');
@@ -3323,9 +3323,9 @@ function printIngredientTableHtml(parts, totalWeight){
   const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('');
   return `
     <table class="print-ing-table">
-      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">%</th><th class="print-ing-num">g</th></tr></thead>
+      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">g</th><th class="print-ing-num">%</th></tr></thead>
       <tbody>${bodyRows}</tbody>
-      <tfoot><tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">100.00%</td><td class="print-ing-num">${fmtWt(totalWeight)} g</td></tr></tfoot>
+      <tfoot><tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">100.00%</td></tr></tfoot>
     </table>
   `;
 }
