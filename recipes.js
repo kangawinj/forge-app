@@ -1080,12 +1080,11 @@ export function renderRecipeEditor(r){
           <input type="file" id="descPhotoInput" accept="image/*">
         </div>
         <div class="field">
-          <div class="field-label-row">
-            <label>Note</label>
-            <button type="button" class="btn-translate" id="btnTranslateNote" title="Translate (machine translation)">${icon('globe', 12)} Translate</button>
+          <label>Note</label>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea id="f-note" rows="2" placeholder="Anything else worth noting about this recipe"></textarea>
+            <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
           </div>
-          <textarea id="f-note" rows="2" placeholder="Anything else worth noting about this recipe"></textarea>
-          <div class="translate-result" id="noteTranslateResult" style="display:none;"></div>
         </div>
       </div>
       <div id="printInfoCard" class="print-only compare-info-col"></div>
@@ -1334,9 +1333,7 @@ export function renderRecipeEditor(r){
     r.note = e.target.value;
     scheduleSave();
   });
-  document.getElementById('btnTranslateNote').addEventListener('click', () => {
-    runTranslatePreview(document.getElementById('f-note').value, document.getElementById('noteTranslateResult'));
-  });
+  wireRecipeTranslateButton(document.getElementById('f-note').closest('.mu-field-with-translate'));
 
   document.getElementById('f-name').addEventListener('input', e => {
     r.name = e.target.value;
@@ -3375,35 +3372,52 @@ function refreshProcessViewMode(r){
   if(isFlow) renderProcessFlowchart(r); // container is now genuinely visible — safe to measure/build
 }
 
-// Free, key-less machine translation (MyMemory) for a quick Thai<->English
-// preview on the Note and Description/Concept fields -- no API key or
-// billing setup needed, unlike Google Cloud Translation, at the cost of
-// lower quality and a daily rate limit. Detects direction from whether the
-// text contains Thai script, so one button works both ways. Purely a
-// read-only preview shown next to the field -- never overwrites what was
-// typed, so it's safe to use on text still being edited.
-async function translateText(text){
-  const hasThai = /[฀-๿]/.test(text);
-  const langpair = hasThai ? 'th|en' : 'en|th';
-  const res = await fetch(`https://api.mymemory.translated.net/get?q=${encodeURIComponent(text)}&langpair=${langpair}`);
-  if(!res.ok) throw new Error('Translation service error');
-  const data = await res.json();
-  const translated = data?.responseData?.translatedText;
-  if(!translated) throw new Error('No translation returned');
-  return translated;
+// Same pattern as Projects' Activities Updates translate button (see
+// guessTranslateTargetLang/translateText/wireMuTranslateButton in
+// projects.js) -- free, keyless machine translation via the same public
+// endpoint translate.google.com's own web page calls (client=gtx), an
+// unofficial use of it so it could be rate-limited or blocked without
+// notice. Kept as its own copy here (not imported from projects.js) since
+// recipes.js and projects.js don't otherwise depend on each other's
+// internals -- if this ever needs to change, the same edit has to be made
+// in both places.
+function guessRecipeTranslateTargetLang(text){
+  return /[฀-๿]/.test(text) ? 'en' : 'th';
 }
-// Shared by the Note and Description/Concept translate buttons -- shows
-// "Translating…" then the result (or a plain failure message) inside
-// resultEl, which the caller is responsible for creating/positioning.
-async function runTranslatePreview(text, resultEl){
-  if(!text.trim()){ resultEl.style.display = 'none'; return; }
-  resultEl.style.display = 'block';
-  resultEl.textContent = 'Translating…';
-  try{
-    resultEl.textContent = await translateText(text.trim());
-  }catch(err){
-    resultEl.textContent = 'Translation failed — try again later.';
-  }
+async function translateRecipeText(text, targetLang){
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Translation service unavailable');
+  const data = await res.json();
+  return data[0].map(chunk => chunk[0]).join('');
+}
+// Puts the translated text first with the original following in
+// parentheses, replacing the field's own content -- same behavior as
+// wireMuTranslateButton, applied to the Note field and each Description/
+// Concept point. Dispatches a real 'input' event after setting the value
+// (wireMuTranslateButton's modal reads textarea.value fresh at Save time,
+// so it doesn't need to; every field here auto-saves on 'input' instead)
+// so the recipe's own already-wired input listener picks up the change and
+// schedules a save the normal way, instead of needing a special case.
+function wireRecipeTranslateButton(wrapEl){
+  const textarea = wrapEl.querySelector('textarea');
+  const btn = wrapEl.querySelector('.mu-translate-btn');
+  if(!textarea || !btn) return;
+  btn.addEventListener('click', async () => {
+    const original = textarea.value.trim();
+    if(!original) return;
+    btn.classList.add('loading');
+    try{
+      const translated = await translateRecipeText(original, guessRecipeTranslateTargetLang(original));
+      textarea.value = `${translated}\n(${original})`;
+      textarea.dispatchEvent(new Event('input', { bubbles: true }));
+    }catch(err){
+      console.error('Forge: translation failed', err);
+      alert('Translation failed — the free translation service may be temporarily unavailable. Please try again in a moment.');
+    }finally{
+      btn.classList.remove('loading');
+    }
+  });
 }
 
 function renderDescPoints(r){
@@ -3416,18 +3430,17 @@ function renderDescPoints(r){
     row.innerHTML = `
       <span class="step-badge">${idx+1}</span>
       <div class="desc-point-body">
-        <textarea rows="2" placeholder="e.g. Product characteristics, selling point, target audience..."></textarea>
-        <div class="translate-result" style="display:none;"></div>
+        <div class="mu-field-with-translate" style="width:auto;">
+          <textarea rows="2" placeholder="e.g. Product characteristics, selling point, target audience..."></textarea>
+          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+        </div>
       </div>
-      <button class="icon-btn" title="Translate (machine translation)" data-role="translate-desc-point">${icon('globe')}</button>
       <button class="icon-btn" title="Delete" data-role="delete-desc-point">${icon('x')}</button>
     `;
     const ta = row.querySelector('textarea');
     ta.value = point;
     ta.addEventListener('input', e => { r.description[idx] = e.target.value; scheduleSave(); });
-    row.querySelector('[data-role="translate-desc-point"]').addEventListener('click', () => {
-      runTranslatePreview(ta.value, row.querySelector('.translate-result'));
-    });
+    wireRecipeTranslateButton(row.querySelector('.mu-field-with-translate'));
     row.querySelector('[data-role="delete-desc-point"]').addEventListener('click', () => {
       r.description.splice(idx, 1);
       renderDescPoints(r);
