@@ -601,7 +601,8 @@ const CHANGELOG = [
   { version: "3.0.292", date: "2026-08-28", note: "The sidebar's compact recipe list is now grouped by Product Type too, as a collapsible accordion — click a category's arrow to expand/collapse its recipes. The currently open recipe's own category always starts expanded so it's never hidden. Typing a search still shows a flat filtered list across every recipe" },
   { version: "3.0.293", date: "2026-08-28", note: "Added a Note field to \"1. Product Details\" (after Description/Photos) — shows in print/PDF too when filled in" },
   { version: "3.0.294", date: "2026-08-28", note: "Added a Translate button to Note and each Description/Concept point — free machine translation (Thai<->English, auto-detected), shown as a read-only preview under the field without changing what's typed. No API key/setup needed, but lower quality and rate-limited vs. a paid translation service — not for anything that needs to be contractually precise" },
-  { version: "3.0.295", date: "2026-08-28", note: "Recipe's Translate button (Note, Description/Concept) now works the same way as Projects' Activities Updates translate button — replaces the field with the translation followed by the original in parentheses, instead of showing a separate read-only preview underneath" }
+  { version: "3.0.295", date: "2026-08-28", note: "Recipe's Translate button (Note, Description/Concept) now works the same way as Projects' Activities Updates translate button — replaces the field with the translation followed by the original in parentheses, instead of showing a separate read-only preview underneath" },
+  { version: "3.0.296", date: "2026-08-28", note: "Print/PDF: Product Details' reference/description photos now print 1.5x larger (150px vs. the on-screen 100px thumbnail)" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -3604,6 +3604,13 @@
        just lay out at full size instead of being clipped. */
     #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
 
+    /* Product Details' reference/description photos print 1.5x larger
+       (150px vs. the on-screen 100px thumbnail) since paper has the room
+       and a bigger photo reads better than a tiny one — scoped to the
+       print info card so Trials' own (still small, still on-screen)
+       photo thumbnails elsewhere are unaffected. */
+    #printInfoCard .trial-photo-thumb{width:150px;height:150px;}
+
     /* Printing a single Project (see the per-row printer button in
        projects.js) -- hide the rest of the Projects page chrome, then
        hide every project's table row except the one marked
