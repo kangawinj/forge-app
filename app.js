@@ -598,7 +598,8 @@ const CHANGELOG = [
   { version: "3.0.289", date: "2026-08-28", note: "Split the Currency/Cost/Margin/Selling Price block out of \"2. Recipe Overview\" into its own \"3. Costing\" card — Components and Process and Process Steps are now 4 and 5" },
   { version: "3.0.290", date: "2026-08-28", note: "Print/PDF: swapped the ingredient table's g and % columns — now Ingredient / Prep / Note / g / %" },
   { version: "3.0.291", date: "2026-08-28", note: "The full-page Recipes view now opens on a grid of Product Type categories (each with a recipe count) instead of one flat list — click a category to see just its recipes, with a back button to return. Typing a search still searches every recipe regardless of category" },
-  { version: "3.0.292", date: "2026-08-28", note: "The sidebar's compact recipe list is now grouped by Product Type too, as a collapsible accordion — click a category's arrow to expand/collapse its recipes. The currently open recipe's own category always starts expanded so it's never hidden. Typing a search still shows a flat filtered list across every recipe" }
+  { version: "3.0.292", date: "2026-08-28", note: "The sidebar's compact recipe list is now grouped by Product Type too, as a collapsible accordion — click a category's arrow to expand/collapse its recipes. The currently open recipe's own category always starts expanded so it's never hidden. Typing a search still shows a flat filtered list across every recipe" },
+  { version: "3.0.293", date: "2026-08-28", note: "Added a Note field to \"1. Product Details\" (after Description/Photos) — shows in print/PDF too when filled in" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

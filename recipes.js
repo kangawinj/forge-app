@@ -184,7 +184,7 @@ export function initVersionsModal(){
 export let unsubscribeRecipes = null;
 export let recipesLoaded = false;
 
-export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %' };
+export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', note: 'Note' };
 
 export let recipeEditSnapshotBefore = null;
 
@@ -381,6 +381,7 @@ export function blankRecipe(){
     salesRep: "",
     description: [],
     descPhotos: [],
+    note: "",
     batchWeight: 1000,
     parts: [],
     processes: [ { id: uid(), title: "", steps: [], components: [] } ],
@@ -1078,6 +1079,10 @@ export function renderRecipeEditor(r){
           <div class="trial-photos-row" id="descPhotosRow"></div>
           <input type="file" id="descPhotoInput" accept="image/*">
         </div>
+        <div class="field">
+          <label>Note</label>
+          <textarea id="f-note" rows="2" placeholder="Anything else worth noting about this recipe"></textarea>
+        </div>
       </div>
       <div id="printInfoCard" class="print-only compare-info-col"></div>
     </div>
@@ -1320,6 +1325,11 @@ export function renderRecipeEditor(r){
   updateRecipeTitleDisplay(r);
   renderDescPoints(r);
   renderDescPhotos(r);
+  document.getElementById('f-note').value = r.note || '';
+  document.getElementById('f-note').addEventListener('input', e => {
+    r.note = e.target.value;
+    scheduleSave();
+  });
 
   document.getElementById('f-name').addEventListener('input', e => {
     r.name = e.target.value;
@@ -3486,6 +3496,7 @@ function renderPrintView(r){
       ${link ? `<div class="ci-row"><b>Project:</b> ${escapeHtml(link.project.name || 'Untitled project')}</div>${linkedProjectInfoHtml(link)}` : ''}
       ${descriptionListHtml(r)}
       ${photosHtml}
+      ${(r.note||'').trim() ? `<div class="ci-row"><b>Note:</b></div><div class="material-detail-notes">${escapeHtml(r.note)}</div>` : ''}
       <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
     `;
   }
