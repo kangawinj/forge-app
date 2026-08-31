@@ -184,7 +184,31 @@ export function initVersionsModal(){
 export let unsubscribeRecipes = null;
 export let recipesLoaded = false;
 
-export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', note: 'Note' };
+export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', note: 'Note', devStatus: 'Development Status' };
+
+// Where a recipe is at in its own development lifecycle -- shown as a
+// colored dropdown next to the recipe title (see renderRecipeEditor /
+// updateDevStatusSelectColor). "In Development" is the default every new
+// recipe starts at; the other five are the states a PD can move it to.
+const RECIPE_DEV_STATUSES = [
+  { value: 'In Development', emoji: '🟡', color: '#a16207', bg: '#fef9c3', border: '#eab308' },
+  { value: 'On Hold', emoji: '⚪', color: '#4b5563', bg: '#f3f4f6', border: '#9ca3af' },
+  { value: 'Pilot', emoji: '🟣', color: '#7e22ce', bg: '#f3e8ff', border: '#a855f7' },
+  { value: 'Approved', emoji: '🟢', color: '#15803d', bg: '#dcfce7', border: '#22c55e' },
+  { value: 'Discontinued', emoji: '🔴', color: '#b91c1c', bg: '#fee2e2', border: '#ef4444' },
+  { value: 'Needs Improvement', emoji: '🟠', color: '#c2410c', bg: '#ffedd5', border: '#f97316' }
+];
+function recipeDevStatusMeta(value){
+  return RECIPE_DEV_STATUSES.find(s => s.value === value) || RECIPE_DEV_STATUSES[0];
+}
+// Recolors the <select> itself to match whichever status is currently
+// selected, so it reads as a colored pill rather than a plain dropdown.
+function updateDevStatusSelectColor(select){
+  const meta = recipeDevStatusMeta(select.value);
+  select.style.color = meta.color;
+  select.style.background = meta.bg;
+  select.style.borderColor = meta.border;
+}
 
 export let recipeEditSnapshotBefore = null;
 
@@ -382,6 +406,7 @@ export function blankRecipe(){
     description: [],
     descPhotos: [],
     note: "",
+    devStatus: "In Development",
     batchWeight: 1000,
     parts: [],
     processes: [ { id: uid(), title: "", steps: [], components: [] } ],
@@ -1020,6 +1045,12 @@ export function renderRecipeEditor(r){
         <div class="recipe-title-display" id="recipeTitleDisplay"></div>
         <div class="save-status saved" id="saveStatus">Ready</div>
         <div class="recipe-activity-display" id="recipeActivityDisplay"></div>
+        <div class="dev-status-row">
+          <label for="f-devStatus">Development Status:</label>
+          <select id="f-devStatus" class="dev-status-select">
+            ${RECIPE_DEV_STATUSES.map(s => `<option value="${escapeHtml(s.value)}">${s.emoji} ${escapeHtml(s.value)}</option>`).join('')}
+          </select>
+        </div>
       </div>
     </div>
 
@@ -1029,7 +1060,6 @@ export function renderRecipeEditor(r){
         <button class="btn" id="btnVersions">${icon('clock')} Versions</button>
         <button class="btn" id="btnDuplicate">${icon('copy')} Duplicate</button>
         <button class="btn" id="btnPrint">${icon('printer')} Print / PDF</button>
-        <button class="btn" id="btnExportExcel">${icon('download')} Export Excel</button>
       </div>
     </div>
 
@@ -1326,6 +1356,14 @@ export function renderRecipeEditor(r){
     updateRecipeTitleDisplay(r);
   });
   updateRecipeTitleDisplay(r);
+  const devStatusSelect = document.getElementById('f-devStatus');
+  devStatusSelect.value = r.devStatus || 'In Development';
+  updateDevStatusSelectColor(devStatusSelect);
+  devStatusSelect.addEventListener('change', e => {
+    r.devStatus = e.target.value;
+    updateDevStatusSelectColor(devStatusSelect);
+    scheduleSave();
+  });
   renderDescPoints(r);
   renderDescPhotos(r);
   document.getElementById('f-note').value = r.note || '';
@@ -1565,8 +1603,6 @@ export function renderRecipeEditor(r){
     window.print();
   });
 
-  document.getElementById('btnExportExcel').addEventListener('click', () => exportRecipeToExcel(r));
-
   renderLockState(r);
   playContentTransition(main);
 }
@@ -1648,79 +1684,6 @@ export function allIngredientsInPart(part){
 }
 export function allIngredientsInRecipe(r){
   return (r.parts || []).flatMap(allIngredientsInPart);
-}
-
-// Same idea as allIngredientsInPart, but keeps each ingredient's Part path
-// (e.g. "Part 1 > Sauce Sub-part") instead of flattening it away — the
-// export sheet needs to show which Part/Sub-part an ingredient belongs to,
-// which allIngredientsInPart's callers never needed.
-function flattenPartForExcel(part, pathPrefix){
-  const path = pathPrefix ? `${pathPrefix} > ${part.name || 'Untitled part'}` : (part.name || 'Untitled part');
-  const rows = (part.ingredients || []).map(ing => ({
-    part: path,
-    name: ing.name || '',
-    percent: ing.percent === '' || ing.percent == null ? '' : Number(ing.percent),
-    weight: ing.weight === '' || ing.weight == null ? '' : Number(ing.weight),
-    note: ing.note || ''
-  }));
-  return [...rows, ...(part.parts || []).flatMap(sub => flattenPartForExcel(sub, path))];
-}
-// Top-level entry point — r.parts has no shared parent of its own, so each
-// top-level Part starts its own path fresh rather than being wrapped in a
-// fake parent (which would wrongly prepend "Untitled part" to every row).
-function flattenRecipePartsForExcel(parts){
-  return (parts || []).flatMap(part => flattenPartForExcel(part, ''));
-}
-
-// Exports the current recipe as a 3-sheet .xlsx workbook (Overview,
-// Ingredients, Process) via SheetJS (loaded as a plain global — see the
-// <script> tag right before the main module script). Excel/XLSX rather
-// than CSV specifically because a real workbook keeps Thai characters
-// correct without a manual BOM/encoding workaround and can hold more than
-// one sheet.
-function exportRecipeToExcel(r){
-  if(typeof XLSX === 'undefined'){
-    alert('Could not load the Excel export library — check your internet connection and try again.');
-    return;
-  }
-  const link = findProjectForRecipe(r.id);
-  const overviewRows = [
-    ['Product Name', r.name || 'Untitled recipe'],
-    ['Recipe Code', fullCode(r) || '-'],
-    ['Date', r.date || '-'],
-    ['Product Type', r.productType || '-'],
-    ['Batch Weight (g)', r.batchWeight || ''],
-    ['Yield %', r.yieldPct || ''],
-    ['Project', link ? (link.project.name || 'Untitled project') : '-'],
-    ['Customer', link ? (link.project.customerName || '-') : '-'],
-    ['Destination', link ? (link.project.destinationCountry || '-') : '-'],
-    ['Stage', link ? (link.product.stage || '-') : '-'],
-    ['Created By', r.createdBy || '-'],
-    ['Created At', formatActivityDateTime(r.createdAt) || '-'],
-    ['Last Edited By', r.updatedBy || '-'],
-    ['Last Edited At', formatActivityDateTime(r.updatedAt) || '-'],
-    [],
-    ['Description / Concept'],
-    ...(r.description || []).map(pt => [pt])
-  ];
-  const ingredientRows = flattenRecipePartsForExcel(r.parts)
-    .map(row => ({ Part: row.part, Ingredient: row.name, '%': row.percent, 'Weight (g)': row.weight, Note: row.note }));
-  const processRows = (r.processes || []).flatMap((proc, pIdx) =>
-    (proc.steps && proc.steps.length ? proc.steps : ['']).map((step, sIdx) => ({
-      'Process #': pIdx + 1,
-      'Process Name': proc.title || `Process ${pIdx + 1}`,
-      'Step #': sIdx + 1,
-      'Step': step || ''
-    }))
-  );
-
-  const wb = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet(overviewRows), 'Overview');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ingredientRows), 'Ingredients');
-  XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(processRows), 'Process');
-
-  const filenameBase = [r.name || 'Untitled recipe', fullCode(r)].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '-');
-  XLSX.writeFile(wb, `${filenameBase}.xlsx`);
 }
 
 // Scales every ingredient under a Part (including ones nested inside its
