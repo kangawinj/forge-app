@@ -506,25 +506,24 @@
     color:var(--text-dim);
     margin-top:4px;
   }
-  /* Development Status dropdown -- colored per-status via JS (see
-     updateDevStatusSelectColor in recipes.js) rather than a fixed CSS
-     class per value, so it reads as a colored pill instead of a plain
-     dropdown. */
+  /* Development Status dropdown -- same small soft-pill language as
+     Projects' .mu-status-badge (no border, just a soft background +
+     colored text), colored per-status via JS (updateDevStatusSelectColor
+     in recipes.js) rather than a fixed CSS class per value. */
   .dev-status-row{
     display:flex;
     align-items:center;
-    gap:8px;
-    margin-top:8px;
+    gap:6px;
+    margin-top:4px;
   }
-  .dev-status-row label{font-size:12px;color:var(--text-dim);font-weight:600;}
+  .dev-status-row label{font-size:11px;color:var(--text-dim);}
   .dev-status-select{
     width:auto;
-    padding:4px 10px;
-    font-size:13px;
-    font-weight:600;
+    padding:2px 8px 2px 6px;
+    font-size:11px;
+    font-weight:700;
     border-radius:999px;
-    border-width:1px;
-    border-style:solid;
+    border:none;
     cursor:pointer;
   }
   .recipe-title-display{

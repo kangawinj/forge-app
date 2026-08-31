@@ -191,23 +191,23 @@ export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference
 // updateDevStatusSelectColor). "In Development" is the default every new
 // recipe starts at; the other five are the states a PD can move it to.
 const RECIPE_DEV_STATUSES = [
-  { value: 'In Development', emoji: '🟡', color: '#a16207', bg: '#fef9c3', border: '#eab308' },
-  { value: 'On Hold', emoji: '⚪', color: '#4b5563', bg: '#f3f4f6', border: '#9ca3af' },
-  { value: 'Pilot', emoji: '🟣', color: '#7e22ce', bg: '#f3e8ff', border: '#a855f7' },
-  { value: 'Approved', emoji: '🟢', color: '#15803d', bg: '#dcfce7', border: '#22c55e' },
-  { value: 'Discontinued', emoji: '🔴', color: '#b91c1c', bg: '#fee2e2', border: '#ef4444' },
-  { value: 'Needs Improvement', emoji: '🟠', color: '#c2410c', bg: '#ffedd5', border: '#f97316' }
+  { value: 'In Development', emoji: '🟡', color: '#a16207', bg: '#fef9c3' },
+  { value: 'On Hold', emoji: '⚪', color: '#4b5563', bg: '#f3f4f6' },
+  { value: 'Pilot', emoji: '🟣', color: '#7e22ce', bg: '#f3e8ff' },
+  { value: 'Approved', emoji: '🟢', color: '#15803d', bg: '#dcfce7' },
+  { value: 'Discontinued', emoji: '🔴', color: '#b91c1c', bg: '#fee2e2' },
+  { value: 'Needs Improvement', emoji: '🟠', color: '#c2410c', bg: '#ffedd5' }
 ];
 function recipeDevStatusMeta(value){
   return RECIPE_DEV_STATUSES.find(s => s.value === value) || RECIPE_DEV_STATUSES[0];
 }
 // Recolors the <select> itself to match whichever status is currently
-// selected, so it reads as a colored pill rather than a plain dropdown.
+// selected -- same soft-pill look as Projects' .mu-status-badge (no
+// border, just background + text color), rather than a plain dropdown.
 function updateDevStatusSelectColor(select){
   const meta = recipeDevStatusMeta(select.value);
   select.style.color = meta.color;
   select.style.background = meta.bg;
-  select.style.borderColor = meta.border;
 }
 
 export let recipeEditSnapshotBefore = null;
