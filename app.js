@@ -40,7 +40,7 @@ import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
   RECIPE_DIFF_FIELDS, findProjectForRecipe, fullCode, recipeDisplayLabel,
   descriptionListHtml, attachRecipesListener, mountRecipesListView,
-  renderRecipeCards, renderRecipesListGrid, yearPrefix, suggestNextRecipeSeq,
+  renderRecipeCards, renderSidebarRecipeCards, renderRecipesListGrid, yearPrefix, suggestNextRecipeSeq,
   refreshCodeCountryBadge, updateRecipeTitleDisplay, getCurrent, scheduleSave,
   saveNow, scheduleVersionCheckpoint, cancelVersionCheckpoint,
   autoCheckpointVersion, openVersionsModal, initVersionPreviewModal,
@@ -597,7 +597,8 @@ const CHANGELOG = [
   { version: "3.0.288", date: "2026-08-28", note: "Print/PDF redesign: the ingredient table now highlights each Part/Sub-part as a bold total row, shows \"–\" for an empty Prep/Note, and ends with a bold Formula total row; the Process Flow is now a numbered-circle stepper connected by a vertical line instead of plain arrow text" },
   { version: "3.0.289", date: "2026-08-28", note: "Split the Currency/Cost/Margin/Selling Price block out of \"2. Recipe Overview\" into its own \"3. Costing\" card — Components and Process and Process Steps are now 4 and 5" },
   { version: "3.0.290", date: "2026-08-28", note: "Print/PDF: swapped the ingredient table's g and % columns — now Ingredient / Prep / Note / g / %" },
-  { version: "3.0.291", date: "2026-08-28", note: "The full-page Recipes view now opens on a grid of Product Type categories (each with a recipe count) instead of one flat list — click a category to see just its recipes, with a back button to return. Typing a search still searches every recipe regardless of category" }
+  { version: "3.0.291", date: "2026-08-28", note: "The full-page Recipes view now opens on a grid of Product Type categories (each with a recipe count) instead of one flat list — click a category to see just its recipes, with a back button to return. Typing a search still searches every recipe regardless of category" },
+  { version: "3.0.292", date: "2026-08-28", note: "The sidebar's compact recipe list is now grouped by Product Type too, as a collapsible accordion — click a category's arrow to expand/collapse its recipes. The currently open recipe's own category always starts expanded so it's never hidden. Typing a search still shows a flat filtered list across every recipe" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1428,7 +1429,7 @@ export function renderSidebar(){
   // is now its own separate destination reached via the Forge logo.
   document.getElementById('btnRecipesTab')?.classList.toggle('active',
     mainFeatureView === 'recipesList' || mainFeatureView === 'compare' || (mainFeatureView === null && !!currentId));
-  renderRecipeCards(document.getElementById('recipeList'), document.getElementById('searchInput').value);
+  renderSidebarRecipeCards(document.getElementById('recipeList'), document.getElementById('searchInput').value);
 }
 
 

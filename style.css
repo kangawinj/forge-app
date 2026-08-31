@@ -444,6 +444,36 @@
   .recipe-category-tile-name{font-weight:700;font-size:14px;color:var(--primary-dark);}
   .recipe-category-tile-count{font-size:12px;color:var(--text-dim);margin-top:4px;}
   .recipe-category-current{font-weight:700;font-size:16px;color:var(--primary-dark);margin-bottom:10px;}
+  /* Sidebar's own version of the same Product Type grouping -- a
+     collapsible accordion (arrow to expand/collapse) rather than the
+     full-page view's separate tile screen, since the sidebar's single
+     narrow column has no room for two screens. See
+     renderSidebarRecipeCards. */
+  .recipe-category-group{margin-bottom:2px;}
+  .recipe-category-header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    text-align:left;
+    background:none;
+    border:none;
+    border-radius:var(--radius);
+    padding:8px 10px;
+    cursor:pointer;
+    color:var(--text-dim);
+  }
+  .recipe-category-header:hover{background:var(--primary-light);color:var(--text);}
+  .recipe-category-header.open{color:var(--text);font-weight:600;}
+  .recipe-category-header-name{flex:1;font-size:12px;text-transform:uppercase;letter-spacing:.03em;}
+  .recipe-category-header-count{font-size:11px;color:var(--text-dim);}
+  .recipe-category-items{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding-left:8px;
+    margin-top:2px;
+  }
   .hidden-file{display:none;}
 
   /* Main */

@@ -626,14 +626,37 @@ export function autoCheckpointVersion(r){
   if(versionsModalRecipe === r) renderVersionsList(r);
 }
 
-// Shared by the compact sidebar list (shown while a recipe is open) and the
-// full-page Recipes view (shown from the "Recipes" tab) — same cards, same
-// click-to-open behavior, just mounted into whichever container is visible
-// right now so the two never have to duplicate this logic separately.
-// `category` is optional (the sidebar never passes one, so it's always the
-// full flat/searchable list there) — only the full-page Recipes view uses
-// it, to show one Product Type's recipes at a time (see
-// recipeCategoryTilesHtml/renderRecipesListGrid below).
+// One recipe row (used by both the flat/filtered list below and the
+// sidebar's category accordion) -- same markup, same click-to-open
+// behavior, just built once so neither place has to duplicate it.
+function appendRecipeItemEl(container, r){
+  const div = document.createElement('div');
+  div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
+  const allIngredients = allIngredientsInRecipe(r);
+  // % is always weight / totalWeight, so it's exactly 100% by construction
+  // whenever there's any weight at all (ing.percent is now per-part, so it
+  // can't be summed directly to check this).
+  const hasWeight = allIngredients.some(i => (parseFloat(i.weight)||0) > 0);
+  const totalPct = hasWeight ? 100 : 0;
+  const codeDisplay = fullCode(r);
+  div.innerHTML = `
+    <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
+    <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
+  `;
+  div.addEventListener('click', () => guardNavigation(() => {
+    if(r.id !== currentId) unlockedRecipeId = null;
+    currentId = r.id;
+    setMainFeatureView(null);
+    renderMain();
+    renderSidebar();
+  }));
+  container.appendChild(div);
+}
+
+// Flat (optionally category-filtered) list — used by the full-page Recipes
+// view (shown from the "Recipes" tab) to show one Product Type's recipes
+// at a time (see recipeCategoryTilesHtml/renderRecipesListGrid below), and
+// by the sidebar accordion below as its search-mode fallback.
 export function renderRecipeCards(container, query, category){
   if(!container) return;
   const q = (query || '').trim().toLowerCase();
@@ -641,29 +664,65 @@ export function renderRecipeCards(container, query, category){
   container.innerHTML = '';
   sorted.filter(r => !q || (r.name||'Untitled').toLowerCase().includes(q))
     .filter(r => !category || ((r.productType||'').trim() || 'Uncategorized') === category)
-    .forEach(r => {
-      const div = document.createElement('div');
-      div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
-      const allIngredients = allIngredientsInRecipe(r);
-      // % is always weight / totalWeight, so it's exactly 100% by
-      // construction whenever there's any weight at all (ing.percent is now
-      // per-part, so it can't be summed directly to check this).
-      const hasWeight = allIngredients.some(i => (parseFloat(i.weight)||0) > 0);
-      const totalPct = hasWeight ? 100 : 0;
-      const codeDisplay = fullCode(r);
-      div.innerHTML = `
-        <div class="r-name">${escapeHtml(recipeDisplayLabel(r))}</div>
-        <div class="r-meta">${codeDisplay ? escapeHtml(codeDisplay)+' · ' : ''}${totalPct.toFixed(1)}% · ${allIngredients.length} ingredients</div>
-      `;
-      div.addEventListener('click', () => guardNavigation(() => {
-        if(r.id !== currentId) unlockedRecipeId = null;
-        currentId = r.id;
-        setMainFeatureView(null);
-        renderMain();
-        renderSidebar();
-      }));
-      container.appendChild(div);
+    .forEach(r => appendRecipeItemEl(container, r));
+}
+
+// Which Product Type categories are currently expanded in the sidebar's
+// compact list -- an accordion rather than the full-page view's separate
+// tile screen, since the sidebar's single narrow column has no room for
+// two screens. Persists across re-renders (renderSidebar runs constantly,
+// on every edit) so toggling a category open doesn't collapse again on
+// the next keystroke elsewhere in the app.
+let sidebarExpandedCategories = new Set();
+
+export function renderSidebarRecipeCards(container, query){
+  if(!container) return;
+  const q = (query || '').trim();
+  if(q){
+    renderRecipeCards(container, q, null);
+    return;
+  }
+  // The currently open recipe's own category always shows expanded, so
+  // switching to it (from a link elsewhere, or reopening the app) never
+  // leaves it hidden behind a collapsed group.
+  const current = recipes.find(r => r.id === currentId);
+  if(current) sidebarExpandedCategories.add((current.productType||'').trim() || 'Uncategorized');
+
+  const groups = new Map();
+  [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt).forEach(r => {
+    const cat = (r.productType||'').trim() || 'Uncategorized';
+    if(!groups.has(cat)) groups.set(cat, []);
+    groups.get(cat).push(r);
+  });
+  const sortedCats = [...groups.keys()].sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'}));
+
+  container.innerHTML = '';
+  sortedCats.forEach(cat => {
+    const items = groups.get(cat);
+    const expanded = sidebarExpandedCategories.has(cat);
+    const group = document.createElement('div');
+    group.className = 'recipe-category-group';
+    const header = document.createElement('button');
+    header.type = 'button';
+    header.className = 'recipe-category-header' + (expanded ? ' open' : '');
+    header.innerHTML = `
+      ${icon(expanded ? 'chevron-down' : 'chevron-right', 14)}
+      <span class="recipe-category-header-name">${escapeHtml(cat)}</span>
+      <span class="recipe-category-header-count">${items.length}</span>
+    `;
+    header.addEventListener('click', () => {
+      if(sidebarExpandedCategories.has(cat)) sidebarExpandedCategories.delete(cat); else sidebarExpandedCategories.add(cat);
+      renderSidebarRecipeCards(container, query);
     });
+    group.appendChild(header);
+    if(expanded){
+      const itemsWrap = document.createElement('div');
+      itemsWrap.className = 'recipe-category-items';
+      items.forEach(r => appendRecipeItemEl(itemsWrap, r));
+      group.appendChild(itemsWrap);
+    }
+    container.appendChild(group);
+  });
 }
 
 export function createNewRecipe(){
