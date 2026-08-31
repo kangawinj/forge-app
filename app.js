@@ -596,7 +596,8 @@ const CHANGELOG = [
   { version: "3.0.287", date: "2026-08-28", note: "Print/PDF: \"3. Components and Process\" now shows the recipe formula on the left and a compact Process Flow (step titles connected by arrows, top to bottom) on the right, side by side — the full step detail still prints separately on its own \"4. Process Steps\" page further down" },
   { version: "3.0.288", date: "2026-08-28", note: "Print/PDF redesign: the ingredient table now highlights each Part/Sub-part as a bold total row, shows \"–\" for an empty Prep/Note, and ends with a bold Formula total row; the Process Flow is now a numbered-circle stepper connected by a vertical line instead of plain arrow text" },
   { version: "3.0.289", date: "2026-08-28", note: "Split the Currency/Cost/Margin/Selling Price block out of \"2. Recipe Overview\" into its own \"3. Costing\" card — Components and Process and Process Steps are now 4 and 5" },
-  { version: "3.0.290", date: "2026-08-28", note: "Print/PDF: swapped the ingredient table's g and % columns — now Ingredient / Prep / Note / g / %" }
+  { version: "3.0.290", date: "2026-08-28", note: "Print/PDF: swapped the ingredient table's g and % columns — now Ingredient / Prep / Note / g / %" },
+  { version: "3.0.291", date: "2026-08-28", note: "The full-page Recipes view now opens on a grid of Product Type categories (each with a recipe count) instead of one flat list — click a category to see just its recipes, with a back button to return. Typing a search still searches every recipe regardless of category" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

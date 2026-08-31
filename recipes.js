@@ -630,12 +630,17 @@ export function autoCheckpointVersion(r){
 // full-page Recipes view (shown from the "Recipes" tab) — same cards, same
 // click-to-open behavior, just mounted into whichever container is visible
 // right now so the two never have to duplicate this logic separately.
-export function renderRecipeCards(container, query){
+// `category` is optional (the sidebar never passes one, so it's always the
+// full flat/searchable list there) — only the full-page Recipes view uses
+// it, to show one Product Type's recipes at a time (see
+// recipeCategoryTilesHtml/renderRecipesListGrid below).
+export function renderRecipeCards(container, query, category){
   if(!container) return;
   const q = (query || '').trim().toLowerCase();
   const sorted = [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt);
   container.innerHTML = '';
   sorted.filter(r => !q || (r.name||'Untitled').toLowerCase().includes(q))
+    .filter(r => !category || ((r.productType||'').trim() || 'Uncategorized') === category)
     .forEach(r => {
       const div = document.createElement('div');
       div.className = 'recipe-item' + (r.id === currentId ? ' active' : '');
@@ -674,9 +679,19 @@ export function createNewRecipe(){
 }
 
 
+// Which Product Type category the full-page Recipes view is currently
+// drilled into, or null to show the category tiles themselves -- reset on
+// every fresh mount (leaving the tab and coming back starts over at the
+// top level, same as everything else in this file that opens a full-page
+// view). Typing a search query bypasses categories entirely (shows a flat
+// filtered list across every recipe) since search already says exactly
+// what the user is looking for.
+let recipesListCategoryFilter = null;
+
 export function mountRecipesListView(){
   const main = document.getElementById('mainArea');
   main.classList.remove('main-wide');
+  recipesListCategoryFilter = null;
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
@@ -689,6 +704,8 @@ export function mountRecipesListView(){
       <div class="search-box" style="margin:0 0 16px;">
         <input type="text" id="recipesListSearchInput" placeholder="Search product name...">
       </div>
+      <div id="recipesListCategoryHeader"></div>
+      <div class="recipe-category-grid" id="recipesListCategoryGrid"></div>
       <div class="recipe-list" id="recipesListGrid"></div>
     </div>
   `;
@@ -704,8 +721,56 @@ export function mountRecipesListView(){
   renderRecipesListGrid();
   playContentTransition(main);
 }
+
+// Product Type tiles (one per distinct r.productType, "Uncategorized" for
+// blank) with a recipe count each -- clicking one drills into that
+// category's own filtered recipe list via renderRecipeCards.
+function recipeCategoryTilesHtml(){
+  const counts = new Map();
+  recipes.forEach(r => {
+    const cat = (r.productType||'').trim() || 'Uncategorized';
+    counts.set(cat, (counts.get(cat) || 0) + 1);
+  });
+  const sorted = [...counts.entries()].sort((a,b) => a[0].localeCompare(b[0], undefined, {sensitivity:'base'}));
+  return sorted.map(([cat, count]) => `
+    <button type="button" class="recipe-category-tile" data-category="${escapeHtml(cat)}">
+      <div class="recipe-category-tile-name">${escapeHtml(cat)}</div>
+      <div class="recipe-category-tile-count">${count} recipe${count === 1 ? '' : 's'}</div>
+    </button>
+  `).join('');
+}
+
 export function renderRecipesListGrid(){
-  renderRecipeCards(document.getElementById('recipesListGrid'), document.getElementById('recipesListSearchInput')?.value);
+  const query = document.getElementById('recipesListSearchInput')?.value || '';
+  const q = query.trim();
+  const headerEl = document.getElementById('recipesListCategoryHeader');
+  const catGridEl = document.getElementById('recipesListCategoryGrid');
+  const listEl = document.getElementById('recipesListGrid');
+
+  const showingCategoryTiles = !q && !recipesListCategoryFilter;
+  catGridEl.style.display = showingCategoryTiles ? '' : 'none';
+  listEl.style.display = showingCategoryTiles ? 'none' : '';
+
+  if(showingCategoryTiles){
+    headerEl.innerHTML = '';
+    catGridEl.innerHTML = recipeCategoryTilesHtml();
+    catGridEl.querySelectorAll('.recipe-category-tile').forEach(btn => {
+      btn.addEventListener('click', () => {
+        recipesListCategoryFilter = btn.dataset.category;
+        renderRecipesListGrid();
+      });
+    });
+    return;
+  }
+
+  headerEl.innerHTML = (!q && recipesListCategoryFilter) ? `
+    <button type="button" class="btn btn-sm" id="btnBackToRecipeCategories" style="margin-bottom:10px;">${icon('chevron-left', 14)} All Categories</button>
+    <div class="recipe-category-current">${escapeHtml(recipesListCategoryFilter)}</div>
+  ` : '';
+  const backBtn = document.getElementById('btnBackToRecipeCategories');
+  if(backBtn) backBtn.addEventListener('click', () => { recipesListCategoryFilter = null; renderRecipesListGrid(); });
+
+  renderRecipeCards(listEl, query, q ? null : recipesListCategoryFilter);
 }
 
 // r.date is always "YYYY-MM-DD" (a <input type="date"> value), so the year

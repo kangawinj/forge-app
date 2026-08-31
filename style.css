@@ -423,6 +423,27 @@
     color:var(--text-dim);
     margin-top:2px;
   }
+  /* Product Type category tiles on the full-page Recipes view (see
+     recipeCategoryTilesHtml) -- one tile per distinct r.productType,
+     clicking drills into that category's own recipe-list (.recipe-item
+     cards, same as the flat/searched view). */
+  .recipe-category-grid{
+    display:grid;
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr));
+    gap:12px;
+  }
+  .recipe-category-tile{
+    text-align:left;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px;
+    cursor:pointer;
+  }
+  .recipe-category-tile:hover{background:var(--primary-light);border-color:var(--primary);}
+  .recipe-category-tile-name{font-weight:700;font-size:14px;color:var(--primary-dark);}
+  .recipe-category-tile-count{font-size:12px;color:var(--text-dim);margin-top:4px;}
+  .recipe-category-current{font-weight:700;font-size:16px;color:var(--primary-dark);margin-bottom:10px;}
   .hidden-file{display:none;}
 
   /* Main */
