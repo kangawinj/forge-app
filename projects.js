@@ -4168,25 +4168,44 @@ async function fileToMuAttachment(file){
 // Always interactive (not gated behind the project's own Edit toggle) --
 // attaching a supporting document doesn't need "unlock to edit" the way
 // core project fields do, same reasoning as adding an Activities Update.
+// Empty state stays a <label> wrapping the file input (click anywhere ->
+// file picker). Once filled, the box itself opens the full-size preview
+// popup (reusing the same modal Activities' attachments already use)
+// instead -- re-uploading gets its own small icon so clicking the preview
+// to look at it doesn't also risk silently replacing the file. The
+// thumbnail iframe's #toolbar=0&navpanes=0&scrollbar=0 asks Chrome's
+// built-in PDF viewer to drop its own toolbar/sidebar chrome, which ate a
+// third of this small box's height -- the full popup keeps them, since
+// there's room to actually use Download/Print there.
 function projectDocSlotHtml(attachment, slotKey, label){
-  const preview = attachment ? (
-    attachment.isImage
-      ? `<img src="${escapeHtml(attachment.dataUrl)}" alt="${escapeHtml(attachment.name)}">`
-      : `<iframe src="${escapeHtml(attachment.dataUrl)}" title="${escapeHtml(attachment.name)}"></iframe>`
-  ) : `
-    <div class="project-doc-slot-empty">
-      ${icon('upload', 28)}
-      <span>Click to upload ${escapeHtml(label)}</span>
-    </div>
-  `;
+  if(!attachment){
+    return `
+      <div class="project-doc-slot">
+        <label class="project-doc-slot-box">
+          <input type="file" class="project-doc-slot-input" data-doc-slot="${slotKey}" accept=".pdf,image/*" style="display:none;">
+          <div class="project-doc-slot-empty">
+            ${icon('upload', 28)}
+            <span>Click to upload ${escapeHtml(label)}</span>
+          </div>
+        </label>
+        <div class="project-doc-slot-caption">${escapeHtml(label)}</div>
+      </div>
+    `;
+  }
+  const preview = attachment.isImage
+    ? `<img src="${escapeHtml(attachment.dataUrl)}" alt="${escapeHtml(attachment.name)}">`
+    : `<iframe src="${escapeHtml(attachment.dataUrl)}#toolbar=0&navpanes=0&scrollbar=0" title="${escapeHtml(attachment.name)}"></iframe>`;
   return `
     <div class="project-doc-slot">
-      <label class="project-doc-slot-box">
-        <input type="file" class="project-doc-slot-input" data-doc-slot="${slotKey}" accept=".pdf,image/*" style="display:none;">
+      <div class="project-doc-slot-box" data-role="open-project-doc-preview" data-doc-slot="${slotKey}" title="Click to view">
         ${preview}
-        ${attachment ? `<button type="button" class="project-doc-slot-remove" data-role="remove-project-doc" data-doc-slot="${slotKey}" title="Remove">${icon('x', 12)}</button>` : ''}
-      </label>
-      <div class="project-doc-slot-caption">${escapeHtml(label)}${attachment ? `: ${escapeHtml(attachment.name)}` : ''}</div>
+        <label class="project-doc-slot-replace" title="Replace file">
+          <input type="file" class="project-doc-slot-input" data-doc-slot="${slotKey}" accept=".pdf,image/*" style="display:none;">
+          ${icon('upload', 12)}
+        </label>
+        <button type="button" class="project-doc-slot-remove" data-role="remove-project-doc" data-doc-slot="${slotKey}" title="Remove">${icon('x', 12)}</button>
+      </div>
+      <div class="project-doc-slot-caption">${escapeHtml(label)}: ${escapeHtml(attachment.name)}</div>
     </div>
   `;
 }
@@ -4208,12 +4227,27 @@ function wireProjectDocSlots(block, p){
       }
     });
   });
+  // The replace <label> sits inside the box that also opens the preview
+  // popup on click -- stop the click from bubbling up to that handler so
+  // choosing a new file doesn't also pop the preview open at the same time.
+  block.querySelectorAll('.project-doc-slot-replace').forEach(label => {
+    label.addEventListener('click', e => e.stopPropagation());
+  });
+  block.querySelectorAll('[data-role="open-project-doc-preview"]').forEach(boxEl => {
+    boxEl.addEventListener('click', () => {
+      const attachment = p[boxEl.dataset.docSlot];
+      if(attachment) openMuAttachmentPreview([attachment], 0);
+    });
+  });
   block.querySelectorAll('[data-role="remove-project-doc"]').forEach(btn => {
-    // preventDefault so clicking the remove (x) button doesn't also
-    // trigger the enclosing <label>'s native "open file picker" behavior.
+    // preventDefault/stopPropagation so clicking remove doesn't also open
+    // the file picker (empty state's <label>) or the preview popup (filled
+    // state's click-to-open box).
     btn.addEventListener('click', e => {
       e.preventDefault();
       e.stopPropagation();
+      const label = btn.dataset.docSlot === 'quotationAttachment' ? 'Quotation' : 'Specification';
+      if(!confirm(`Remove the ${label} document? This can't be undone.`)) return;
       p[btn.dataset.docSlot] = null;
       scheduleProjectSave(p);
       renderProjectsList();

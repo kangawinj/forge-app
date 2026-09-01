@@ -2812,6 +2812,20 @@
     cursor:pointer;
   }
   .project-doc-slot-remove:hover{color:var(--danger);border-color:var(--danger);}
+  .project-doc-slot-replace{
+    position:absolute;
+    top:8px;left:8px;
+    width:26px;height:26px;
+    border-radius:50%;
+    background:#fff;
+    border:1px solid var(--border);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    cursor:pointer;
+    color:var(--text-dim);
+  }
+  .project-doc-slot-replace:hover{color:var(--primary);border-color:var(--primary);}
   .project-doc-slot-caption{
     flex:0 0 auto;
     font-size:12px;
