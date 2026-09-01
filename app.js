@@ -606,7 +606,8 @@ const CHANGELOG = [
   { version: "3.0.297", date: "2026-08-28", note: "Removed the Export Excel button from the recipe toolbar. Added a Development Status dropdown next to the recipe title — 🟡 In Development (default), ⚪ On Hold, 🟣 Pilot, 🟢 Approved, 🔴 Discontinued, 🟠 Needs Improvement — color-coded to match" },
   { version: "3.0.298", date: "2026-08-28", note: "Restyled the Development Status dropdown to match the app's existing small soft-pill badges (e.g. Projects' Activities status badges) instead of a bordered, oversized dropdown that looked out of place" },
   { version: "3.0.299", date: "2026-08-28", note: "Project's Product table: added a Unit column next to Sample Qty (e.g. \"5 pcs\"), and the Sample Qty Unit / Per fields now select their existing text on focus, so clicking a datalist suggestion replaces it instead of needing to delete it first — across the submission review form, New Project, Edit Project, and the public submission page" },
-  { version: "3.0.300", date: "2026-08-28", note: "Added Quotation and Specification document slots to the project detail view — click to upload, shows a live A4-proportioned preview (image or PDF, via the browser's own PDF viewer) with the filename captioned below, click the × to remove" }
+  { version: "3.0.300", date: "2026-08-28", note: "Added Quotation and Specification document slots to the project detail view — click to upload, shows a live A4-proportioned preview (image or PDF, via the browser's own PDF viewer) with the filename captioned below, click the × to remove" },
+  { version: "3.0.301", date: "2026-08-28", note: "Enlarged the Quotation/Specification document slots from 130px to 320px wide (still exact A4 proportions), matching the bigger size the reference example showed" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

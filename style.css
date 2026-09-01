@@ -2747,11 +2747,11 @@
      (an image directly, a PDF via the browser's own built-in viewer in an
      iframe) at roughly A4 proportions, scaled down to fit next to the
      project info column instead of the page's own full width. */
-  .project-doc-slot{flex:0 0 130px;display:flex;flex-direction:column;align-items:center;}
+  .project-doc-slot{flex:0 0 320px;display:flex;flex-direction:column;align-items:center;}
   .project-doc-slot-box{
     position:relative;
     display:block;
-    width:130px;
+    width:320px;
     aspect-ratio:210/297;
     border:1px solid var(--border);
     border-radius:8px;
@@ -2775,17 +2775,17 @@
     flex-direction:column;
     align-items:center;
     justify-content:center;
-    gap:6px;
+    gap:10px;
     background:var(--bg);
     color:var(--text-dim);
-    font-size:11px;
+    font-size:13px;
     text-align:center;
-    padding:8px;
+    padding:16px;
   }
   .project-doc-slot-remove{
     position:absolute;
-    top:4px;right:4px;
-    width:20px;height:20px;
+    top:8px;right:8px;
+    width:26px;height:26px;
     border-radius:50%;
     background:#fff;
     border:1px solid var(--border);
@@ -2796,11 +2796,11 @@
   }
   .project-doc-slot-remove:hover{color:var(--danger);border-color:var(--danger);}
   .project-doc-slot-caption{
-    font-size:11px;
+    font-size:12px;
     color:var(--text-dim);
-    margin-top:6px;
+    margin-top:8px;
     text-align:center;
-    max-width:130px;
+    max-width:320px;
     overflow:hidden;
     text-overflow:ellipsis;
     white-space:nowrap;

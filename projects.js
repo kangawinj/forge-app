@@ -4175,7 +4175,7 @@ function projectDocSlotHtml(attachment, slotKey, label){
       : `<iframe src="${escapeHtml(attachment.dataUrl)}" title="${escapeHtml(attachment.name)}"></iframe>`
   ) : `
     <div class="project-doc-slot-empty">
-      ${icon('upload', 20)}
+      ${icon('upload', 28)}
       <span>Click to upload ${escapeHtml(label)}</span>
     </div>
   `;
