@@ -607,7 +607,8 @@ const CHANGELOG = [
   { version: "3.0.298", date: "2026-08-28", note: "Restyled the Development Status dropdown to match the app's existing small soft-pill badges (e.g. Projects' Activities status badges) instead of a bordered, oversized dropdown that looked out of place" },
   { version: "3.0.299", date: "2026-08-28", note: "Project's Product table: added a Unit column next to Sample Qty (e.g. \"5 pcs\"), and the Sample Qty Unit / Per fields now select their existing text on focus, so clicking a datalist suggestion replaces it instead of needing to delete it first — across the submission review form, New Project, Edit Project, and the public submission page" },
   { version: "3.0.300", date: "2026-08-28", note: "Added Quotation and Specification document slots to the project detail view — click to upload, shows a live A4-proportioned preview (image or PDF, via the browser's own PDF viewer) with the filename captioned below, click the × to remove" },
-  { version: "3.0.301", date: "2026-08-28", note: "Enlarged the Quotation/Specification document slots from 130px to 320px wide (still exact A4 proportions), matching the bigger size the reference example showed" }
+  { version: "3.0.301", date: "2026-08-28", note: "Enlarged the Quotation/Specification document slots from 130px to 320px wide (still exact A4 proportions), matching the bigger size the reference example showed" },
+  { version: "3.0.302", date: "2026-08-28", note: "Fixed a Quotation/Specification slot growing far taller than its empty sibling once a real PDF was loaded — the box's height is now a fixed pixel value instead of aspect-ratio, so it can no longer be pushed larger by the embedded PDF viewer's own rendering" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
