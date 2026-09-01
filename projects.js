@@ -4175,8 +4175,12 @@ async function fileToMuAttachment(file){
 // to look at it doesn't also risk silently replacing the file. The
 // thumbnail iframe's #toolbar=0&navpanes=0&scrollbar=0 asks Chrome's
 // built-in PDF viewer to drop its own toolbar/sidebar chrome, which ate a
-// third of this small box's height -- the full popup keeps them, since
-// there's room to actually use Download/Print there.
+// third of this small box's height; &view=Fit&zoom=page-fit asks it to
+// zoom the page to fill the viewport instead of its own default zoom
+// (which left visible margin around the page even with toolbar/sidebar
+// gone) -- since the box itself is already A4-proportioned, an actual A4
+// page ends up flush with the box's own edges. The full popup keeps the
+// toolbar, since there's room to actually use Download/Print there.
 function projectDocSlotHtml(attachment, slotKey, label){
   if(!attachment){
     return `
@@ -4194,7 +4198,7 @@ function projectDocSlotHtml(attachment, slotKey, label){
   }
   const preview = attachment.isImage
     ? `<img src="${escapeHtml(attachment.dataUrl)}" alt="${escapeHtml(attachment.name)}">`
-    : `<iframe src="${escapeHtml(attachment.dataUrl)}#toolbar=0&navpanes=0&scrollbar=0" title="${escapeHtml(attachment.name)}"></iframe>`;
+    : `<iframe src="${escapeHtml(attachment.dataUrl)}#toolbar=0&navpanes=0&scrollbar=0&view=Fit&zoom=page-fit" title="${escapeHtml(attachment.name)}"></iframe>`;
   return `
     <div class="project-doc-slot">
       <div class="project-doc-slot-box" data-role="open-project-doc-preview" data-doc-slot="${slotKey}" title="Click to view">
