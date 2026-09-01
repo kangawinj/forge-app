@@ -3112,9 +3112,11 @@ export function renderProjectsList(){
               ` : ''}
 
               <div class="field" style="margin-bottom:0;margin-top:16px;" id="activities-updates-${escapeHtml(p.id)}">
-                <label>Activities Updates</label>
-                <div class="mu-timeline proj-monthly-list">${monthlyUpdatesHtml}</div>
-                ${isEditing ? (monthlyUpdateAddOpen ? `
+                <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+                  <label style="margin-bottom:0;">Activities Updates</label>
+                  ${(isEditing && !monthlyUpdateAddOpen) ? `<button class="btn btn-sm" data-role="open-add-monthly-update">+ Add Update</button>` : ''}
+                </div>
+                ${isEditing && monthlyUpdateAddOpen ? `
                   <div class="proj-monthly-add">
                     <div class="mu-plan-box">
                       <div class="mu-plan-box-title">Plan</div>
@@ -3213,7 +3215,8 @@ export function renderProjectsList(){
                       <button class="btn btn-sm proj-action-cancel" data-role="cancel-add-monthly-update">${icon('undo-2')} Cancel</button>
                     </div>
                   </div>
-                ` : `<button class="btn btn-sm" data-role="open-add-monthly-update">+ Add Update</button>`) : ''}
+                ` : ''}
+                <div class="mu-timeline proj-monthly-list">${monthlyUpdatesHtml}</div>
               </div>
             </td>
           </tr>
