@@ -4235,7 +4235,11 @@ async function renderProjectDocPreview(canvas, dataUrl){
   try{
     const pdf = await pdfjsLib.getDocument({ url: dataUrl }).promise;
     const page = await pdf.getPage(1);
-    const dpr = window.devicePixelRatio || 1;
+    // Floor of 2x even on standard (dpr:1) screens -- at exactly 1:1 the
+    // buffer only has as many pixels as the small on-screen box, which
+    // reads soft for fine print like a quotation table; supersampling
+    // gives pdf.js's own anti-aliasing more source detail to work with.
+    const dpr = Math.max(window.devicePixelRatio || 1, 2);
     canvas.width = cssWidth * dpr;
     canvas.height = cssHeight * dpr;
     const baseViewport = page.getViewport({ scale: 1 });
