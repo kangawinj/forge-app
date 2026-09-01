@@ -2893,15 +2893,15 @@ export function renderProjectsList(){
             <div class="project-detail-info">
               <div class="project-detail-title">${escapeHtml(p.name || 'Untitled project')}</div>
               <dl class="material-detail-list">${readOnlyDetailRowsBefore}${readOnlyDetailRowsAfter}</dl>
-              ${readOnlyRequirementsHtml}
-              ${allAttachments.length ? `
-              <div class="material-detail-notes-label">Attachments (${allAttachments.length})</div>
-              <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
-              ` : ''}
             </div>
             ${projectDocSlotHtml(p.quotationAttachment, 'quotationAttachment', 'Quotation')}
             ${projectDocSlotHtml(p.specAttachment, 'specAttachment', 'Specification')}
           </div>
+          ${readOnlyRequirementsHtml}
+          ${allAttachments.length ? `
+          <div class="material-detail-notes-label">Attachments (${allAttachments.length})</div>
+          <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
+          ` : ''}
         `;
 
         const detailRow = isExpanded ? `
