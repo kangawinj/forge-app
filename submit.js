@@ -109,13 +109,14 @@ let cookingSteps = [];
 // to a different field).
 let flavors = [];
 function blankFlavor(){
-  return { id: crypto.randomUUID(), name: '', sampleQty: '', sampleRequestDate: '', targetPrice: '', actualPrice: '', priceCurrency: 'THB', priceUnit: 'kg', formulaRefCode: '', note: '' };
+  return { id: crypto.randomUUID(), name: '', sampleQty: '', sampleQtyUnit: '', sampleRequestDate: '', targetPrice: '', actualPrice: '', priceCurrency: 'THB', priceUnit: 'kg', formulaRefCode: '', note: '' };
 }
 function flavorTableHtml(){
   const rows = flavors.map(f => `
     <tr data-flavor-id="${escapeHtml(f.id)}">
       <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
       <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+      <td><input type="text" class="flavor-sample-qty-unit" value="${escapeHtml(f.sampleQtyUnit||'')}" placeholder="e.g. pcs"></td>
       <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
       <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
       <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
@@ -129,7 +130,7 @@ function flavorTableHtml(){
   return `
     <div class="flavor-table-scroll">
     <table class="flavor-table flavor-table-edit">
-      <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+      <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
       <tbody class="flavors-tbody">${rows}</tbody>
     </table>
     </div>
@@ -143,6 +144,7 @@ function wireFlavorTable(){
     if(!flavor) return;
     row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
     row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty-unit').addEventListener('change', e => { flavor.sampleQtyUnit = e.target.value.trim(); });
     row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
     row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
     row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });

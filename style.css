@@ -1922,17 +1922,18 @@
      column count -- .flavor-table-scroll's overflow-x:auto (already in
      place) handles anything narrower than that by scrolling instead of
      squeezing. */
-  .flavor-table-edit{min-width:980px;}
+  .flavor-table-edit{min-width:1040px;}
   .flavor-table-edit th:nth-child(1){width:150px;}
   .flavor-table-edit th:nth-child(2){width:80px;}
-  .flavor-table-edit th:nth-child(3){width:130px;}
-  .flavor-table-edit th:nth-child(4){width:90px;}
+  .flavor-table-edit th:nth-child(3){width:70px;}
+  .flavor-table-edit th:nth-child(4){width:130px;}
   .flavor-table-edit th:nth-child(5){width:90px;}
-  .flavor-table-edit th:nth-child(6){width:70px;}
+  .flavor-table-edit th:nth-child(6){width:90px;}
   .flavor-table-edit th:nth-child(7){width:70px;}
-  .flavor-table-edit th:nth-child(8){width:110px;}
-  .flavor-table-edit th:nth-child(9){width:150px;}
-  .flavor-table-edit th:nth-child(10){width:30px;}
+  .flavor-table-edit th:nth-child(8){width:70px;}
+  .flavor-table-edit th:nth-child(9){width:110px;}
+  .flavor-table-edit th:nth-child(10){width:150px;}
+  .flavor-table-edit th:nth-child(11){width:30px;}
 
   .compare-pickers{
     display:grid;

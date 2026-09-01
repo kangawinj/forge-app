@@ -274,7 +274,7 @@ export function linkedProjectInfoHtml(link){
       <tbody>${flavors.map(f => `
         <tr>
           <td>${escapeHtml(f.name || 'Untitled product')}</td>
-          <td>${escapeHtml(f.sampleQty || '-')}</td>
+          <td>${f.sampleQty ? `${escapeHtml(f.sampleQty)}${f.sampleQtyUnit ? ' ' + escapeHtml(f.sampleQtyUnit) : ''}` : '-'}</td>
           <td>${escapeHtml(f.sampleRequestDate || '-')}</td>
           <td>${formatFlavorPrice(f, f.targetPrice)}</td>
           <td>${formatFlavorPrice(f, f.actualPrice)}</td>

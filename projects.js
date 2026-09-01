@@ -498,7 +498,16 @@ function blankProject(){
 // by both prices on the same flavor (they're only meaningful compared
 // against each other in the same terms), not tracked separately per price.
 function blankFlavor(){
-  return { id: uid(), name: "", sampleQty: "", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
+  return { id: uid(), name: "", sampleQty: "", sampleQtyUnit: "", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
+}
+
+// A datalist-backed <input> only shows suggestions matching the CURRENT
+// text (e.g. "kg" won't suggest while "pcs" is still typed) -- selecting
+// the existing value on focus means one click already has it highlighted,
+// so opening the dropdown and picking a different unit just types over it
+// instead of needing to delete first.
+function selectTextOnFocus(el){
+  if(el) el.addEventListener('focus', () => el.select());
 }
 
 export function blankProduct(recipeId){
@@ -1120,6 +1129,7 @@ function reviewFlavorTableHtml(){
     <tr data-flavor-id="${escapeHtml(f.id)}">
       <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
       <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+      <td><input type="text" class="flavor-sample-qty-unit" list="unitsDatalist" value="${escapeHtml(f.sampleQtyUnit||'')}" placeholder="e.g. pcs"></td>
       <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
       <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
       <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
@@ -1133,7 +1143,7 @@ function reviewFlavorTableHtml(){
   return `
     <div class="flavor-table-scroll">
     <table class="flavor-table flavor-table-edit">
-      <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+      <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
       <tbody class="sub-review-flavors-tbody">${rows}</tbody>
     </table>
     </div>
@@ -1147,6 +1157,7 @@ function wireReviewFlavorTable(){
     if(!flavor) return;
     row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
     row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty-unit').addEventListener('change', e => { flavor.sampleQtyUnit = e.target.value.trim(); });
     row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
     row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
     row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
@@ -1154,6 +1165,8 @@ function wireReviewFlavorTable(){
     row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); });
     row.querySelector('.flavor-formula-ref').addEventListener('change', e => { flavor.formulaRefCode = e.target.value.trim(); });
     row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); });
+    selectTextOnFocus(row.querySelector('.flavor-sample-qty-unit'));
+    selectTextOnFocus(row.querySelector('.flavor-unit'));
     row.querySelector('[data-role="remove-review-flavor"]').addEventListener('click', () => {
       reviewingFlavors = reviewingFlavors.filter(x => x.id !== flavor.id);
       root.innerHTML = reviewFlavorTableHtml();
@@ -1882,11 +1895,12 @@ function renderNewProjectPanel(){
           <label>Product</label>
           <div class="flavor-table-scroll">
           <table class="flavor-table flavor-table-edit">
-            <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+            <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
             <tbody class="proj-flavors-tbody">${newProjectFlavors.map(f => `
               <tr data-flavor-id="${escapeHtml(f.id)}">
                 <td><input type="text" class="flavor-name" value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
                 <td><input type="number" class="flavor-sample-qty" value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+                <td><input type="text" class="flavor-sample-qty-unit" list="unitsDatalist" value="${escapeHtml(f.sampleQtyUnit||'')}" placeholder="e.g. pcs"></td>
                 <td><input type="date" class="flavor-sample-request-date" value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                 <td><input type="number" class="flavor-target-price" value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                 <td><input type="number" class="flavor-actual-price" value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
@@ -2111,6 +2125,7 @@ function renderNewProjectPanel(){
     if(!flavor) return;
     row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); });
     row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); });
+    row.querySelector('.flavor-sample-qty-unit').addEventListener('change', e => { flavor.sampleQtyUnit = e.target.value.trim(); });
     row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; });
     row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); });
     row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); });
@@ -2118,6 +2133,8 @@ function renderNewProjectPanel(){
     row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); });
     row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; });
     row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); });
+    selectTextOnFocus(row.querySelector('.flavor-sample-qty-unit'));
+    selectTextOnFocus(row.querySelector('.flavor-unit'));
     row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
       newProjectFlavors = newProjectFlavors.filter(x => x.id !== flavorId);
       renderNewProjectPanel();
@@ -2820,7 +2837,7 @@ export function renderProjectsList(){
             <tbody>${flavors.map(f => `
               <tr>
                 <td>${escapeHtml(f.name || 'Untitled product')}</td>
-                <td>${escapeHtml(f.sampleQty || '-')}</td>
+                <td>${f.sampleQty ? `${escapeHtml(f.sampleQty)}${f.sampleQtyUnit ? ' ' + escapeHtml(f.sampleQtyUnit) : ''}` : '-'}</td>
                 <td>${escapeHtml(f.sampleRequestDate || '-')}</td>
                 <td>${formatFlavorPrice(f, f.targetPrice)}</td>
                 <td>${formatFlavorPrice(f, f.actualPrice)}</td>
@@ -2962,11 +2979,12 @@ export function renderProjectsList(){
                       <label>Product</label>
                       <div class="flavor-table-scroll">
                       <table class="flavor-table flavor-table-edit">
-                        <thead><tr><th>Product</th><th>Sample Qty</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
+                        <thead><tr><th>Product</th><th>Sample Qty</th><th>Unit</th><th>Sample Request Date</th><th>Target Price</th><th>Actual Price</th><th>Currency</th><th>Per</th><th>Formula / Reference No.</th><th>Note</th><th></th></tr></thead>
                         <tbody class="proj-flavors-tbody">${(p.flavors||[]).map(f => `
                           <tr data-flavor-id="${escapeHtml(f.id)}">
                             <td><input type="text" class="flavor-name" ${ro} value="${escapeHtml(f.name||'')}" placeholder="e.g. Red bean"></td>
                             <td><input type="number" class="flavor-sample-qty" ${ro} value="${escapeHtml(f.sampleQty||'')}" step="any" min="0" placeholder="e.g. 50"></td>
+                            <td><input type="text" class="flavor-sample-qty-unit" list="unitsDatalist" ${ro} value="${escapeHtml(f.sampleQtyUnit||'')}" placeholder="e.g. pcs"></td>
                             <td><input type="date" class="flavor-sample-request-date" ${ro} value="${escapeHtml(f.sampleRequestDate||'')}"></td>
                             <td><input type="number" class="flavor-target-price" ${ro} value="${escapeHtml(f.targetPrice||'')}" step="any" min="0"></td>
                             <td><input type="number" class="flavor-actual-price" ${ro} value="${escapeHtml(f.actualPrice||'')}" step="any" min="0"></td>
@@ -3690,6 +3708,7 @@ export function renderProjectsList(){
           if(!flavor) return;
           row.querySelector('.flavor-name').addEventListener('change', e => { flavor.name = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-sample-qty').addEventListener('change', e => { flavor.sampleQty = e.target.value.trim(); scheduleProjectSave(p); });
+          row.querySelector('.flavor-sample-qty-unit').addEventListener('change', e => { flavor.sampleQtyUnit = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-sample-request-date').addEventListener('change', e => { flavor.sampleRequestDate = e.target.value; scheduleProjectSave(p); });
           row.querySelector('.flavor-target-price').addEventListener('change', e => { flavor.targetPrice = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-actual-price').addEventListener('change', e => { flavor.actualPrice = e.target.value.trim(); scheduleProjectSave(p); });
@@ -3697,6 +3716,8 @@ export function renderProjectsList(){
           row.querySelector('.flavor-note').addEventListener('change', e => { flavor.note = e.target.value.trim(); scheduleProjectSave(p); });
           row.querySelector('.flavor-currency').addEventListener('change', e => { flavor.priceCurrency = e.target.value; scheduleProjectSave(p); });
           row.querySelector('.flavor-unit').addEventListener('change', e => { flavor.priceUnit = e.target.value.trim(); scheduleProjectSave(p); });
+          selectTextOnFocus(row.querySelector('.flavor-sample-qty-unit'));
+          selectTextOnFocus(row.querySelector('.flavor-unit'));
           row.querySelector('[data-role="remove-flavor"]').addEventListener('click', () => {
             p.flavors = p.flavors.filter(x => x.id !== flavorId);
             scheduleProjectSave(p);
