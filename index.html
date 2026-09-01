@@ -498,10 +498,17 @@
 </div>
 
 <!-- SheetJS (xlsx) — pinned version, loaded as a plain global (not an ES
-     module) so exportRecipeToExcel() can call the XLSX global directly.
-     Only used when someone actually clicks "Export Excel", but loaded
-     up front here so it's ready well before any click is possible. -->
+     module) so projects.js can call the XLSX global directly. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- pdf.js (Mozilla) — pinned version, loaded as a plain global so the
+     Quotation/Specification document slot's small preview (see
+     renderProjectDocPreview in projects.js) can render a PDF's first page
+     onto a <canvas> at whatever exact scale fills that box, edge to edge —
+     the browser's own built-in PDF viewer (used for the full-size popup,
+     where it's fine) always leaves a fixed margin around the page that no
+     documented open-parameter can remove. workerSrc has to be set once,
+     from JS, before the first getDocument() call — see initPdfJsWorker(). -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script type="module" src="app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {

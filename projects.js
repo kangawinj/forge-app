@@ -4161,26 +4161,19 @@ async function fileToMuAttachment(file){
 
 // Project-level Quotation/Specification document slots -- one file each,
 // shown in the read-only project summary as an A4-proportioned preview
-// (an image renders directly; a PDF renders via the browser's own built-in
-// PDF viewer inside an iframe pointed at its data: URL, so there's no need
-// to pull in a PDF-rendering library just for a thumbnail) rather than a
-// small chip you have to click to see, like Activities' attachments below.
-// Always interactive (not gated behind the project's own Edit toggle) --
-// attaching a supporting document doesn't need "unlock to edit" the way
-// core project fields do, same reasoning as adding an Activities Update.
+// (an image renders directly; a PDF's first page renders onto a <canvas>
+// via pdf.js -- see renderProjectDocPreview below) rather than a small chip
+// you have to click to see, like Activities' attachments below. Always
+// interactive (not gated behind the project's own Edit toggle) -- attaching
+// a supporting document doesn't need "unlock to edit" the way core project
+// fields do, same reasoning as adding an Activities Update.
 // Empty state stays a <label> wrapping the file input (click anywhere ->
 // file picker). Once filled, the box itself opens the full-size preview
-// popup (reusing the same modal Activities' attachments already use)
-// instead -- re-uploading gets its own small icon so clicking the preview
-// to look at it doesn't also risk silently replacing the file. The
-// thumbnail iframe's #toolbar=0&navpanes=0&scrollbar=0 asks Chrome's
-// built-in PDF viewer to drop its own toolbar/sidebar chrome, which ate a
-// third of this small box's height; &view=Fit&zoom=page-fit asks it to
-// zoom the page to fill the viewport instead of its own default zoom
-// (which left visible margin around the page even with toolbar/sidebar
-// gone) -- since the box itself is already A4-proportioned, an actual A4
-// page ends up flush with the box's own edges. The full popup keeps the
-// toolbar, since there's room to actually use Download/Print there.
+// popup (reusing the same modal Activities' attachments already use, and
+// still the browser's own built-in PDF viewer there -- full toolbar is
+// exactly what a "properly view this" popup should have) instead --
+// re-uploading gets its own small icon so clicking the preview to look at
+// it doesn't also risk silently replacing the file.
 function projectDocSlotHtml(attachment, slotKey, label){
   if(!attachment){
     return `
@@ -4198,7 +4191,7 @@ function projectDocSlotHtml(attachment, slotKey, label){
   }
   const preview = attachment.isImage
     ? `<img src="${escapeHtml(attachment.dataUrl)}" alt="${escapeHtml(attachment.name)}">`
-    : `<iframe src="${escapeHtml(attachment.dataUrl)}#toolbar=0&navpanes=0&scrollbar=0&view=Fit&zoom=page-fit" title="${escapeHtml(attachment.name)}"></iframe>`;
+    : `<canvas class="project-doc-slot-canvas" data-doc-slot="${slotKey}"></canvas>`;
   return `
     <div class="project-doc-slot">
       <div class="project-doc-slot-box" data-role="open-project-doc-preview" data-doc-slot="${slotKey}" title="Click to view">
@@ -4216,7 +4209,50 @@ function projectDocSlotHtml(attachment, slotKey, label){
 // `block` is the project's own detail-row element -- re-queried each call
 // since renderProjectsList() rebuilds the DOM on every change, same as
 // every other per-row wiring in this file.
+let pdfJsWorkerInitialized = false;
+function initPdfJsWorker(){
+  if(pdfJsWorkerInitialized || typeof pdfjsLib === 'undefined') return;
+  pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+  pdfJsWorkerInitialized = true;
+}
+// Renders a PDF's first page onto `canvas`, scaled to fully cover the
+// canvas's own pixel dimensions (cropping evenly off both edges if the
+// page's own aspect ratio isn't exactly the canvas's, same idea as CSS
+// object-fit:cover) so the preview always fills the box edge to edge --
+// see the pdf.js <script> comment in index.html for why this exists
+// instead of just pointing an iframe at the PDF's data: URL (the browser's
+// own built-in viewer always leaves a fixed margin around the page that no
+// documented open-parameter can remove).
+async function renderProjectDocPreview(canvas, dataUrl){
+  initPdfJsWorker();
+  if(typeof pdfjsLib === 'undefined') return;
+  const cssWidth = canvas.clientWidth;
+  const cssHeight = canvas.clientHeight;
+  if(!cssWidth || !cssHeight) return;
+  try{
+    const pdf = await pdfjsLib.getDocument({ url: dataUrl }).promise;
+    const page = await pdf.getPage(1);
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = cssWidth * dpr;
+    canvas.height = cssHeight * dpr;
+    const baseViewport = page.getViewport({ scale: 1 });
+    const scale = Math.max(canvas.width / baseViewport.width, canvas.height / baseViewport.height);
+    const viewport = page.getViewport({ scale });
+    const ctx = canvas.getContext('2d');
+    // Centers the (necessarily-larger-than-canvas, on the cover axis)
+    // rendered page so cropping trims evenly off both edges instead of
+    // only the right/bottom.
+    ctx.setTransform(1, 0, 0, 1, (canvas.width - viewport.width) / 2, (canvas.height - viewport.height) / 2);
+    await page.render({ canvasContext: ctx, viewport }).promise;
+  }catch(err){
+    console.error('Forge: PDF preview render failed', err);
+  }
+}
 function wireProjectDocSlots(block, p){
+  block.querySelectorAll('.project-doc-slot-canvas').forEach(canvas => {
+    const attachment = p[canvas.dataset.docSlot];
+    if(attachment) renderProjectDocPreview(canvas, attachment.dataUrl);
+  });
   block.querySelectorAll('.project-doc-slot-input').forEach(input => {
     input.addEventListener('change', async () => {
       const file = input.files[0];

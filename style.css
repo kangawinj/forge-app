@@ -2775,7 +2775,7 @@
     background:#fff;
   }
   .project-doc-slot-box:hover{border-color:var(--primary);}
-  .project-doc-slot-box img, .project-doc-slot-box iframe{
+  .project-doc-slot-box img, .project-doc-slot-box canvas{
     width:100%;
     height:100%;
     max-width:100%;
