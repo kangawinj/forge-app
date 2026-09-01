@@ -483,6 +483,8 @@ function blankProject(){
     moqUnit: "pcs",
     products: [],
     monthlyUpdates: [],
+    quotationAttachment: null,
+    specAttachment: null,
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
     updatedBy: currentUser?.email || '',
@@ -2897,6 +2899,8 @@ export function renderProjectsList(){
               <div class="project-all-attachments mu-entry-extras" style="margin-top:0;">${muAttachmentChipsHtml(allAttachments, false)}</div>
               ` : ''}
             </div>
+            ${projectDocSlotHtml(p.quotationAttachment, 'quotationAttachment', 'Quotation')}
+            ${projectDocSlotHtml(p.specAttachment, 'specAttachment', 'Specification')}
           </div>
         `;
 
@@ -3323,6 +3327,8 @@ export function renderProjectsList(){
       else projectExpandedIds.add(id);
       renderProjectsList();
     });
+
+    wireProjectDocSlots(block, p);
 
     // Prints the whole expanded project detail (fields, Requirements,
     // Flavor/Filling table, Products, Activities Updates) as a one-off
@@ -4151,6 +4157,68 @@ async function fileToMuAttachment(file){
   }
   const dataUrl = await readFileAsDataUrl(file);
   return { id: uid(), name: file.name, dataUrl, isImage: false };
+}
+
+// Project-level Quotation/Specification document slots -- one file each,
+// shown in the read-only project summary as an A4-proportioned preview
+// (an image renders directly; a PDF renders via the browser's own built-in
+// PDF viewer inside an iframe pointed at its data: URL, so there's no need
+// to pull in a PDF-rendering library just for a thumbnail) rather than a
+// small chip you have to click to see, like Activities' attachments below.
+// Always interactive (not gated behind the project's own Edit toggle) --
+// attaching a supporting document doesn't need "unlock to edit" the way
+// core project fields do, same reasoning as adding an Activities Update.
+function projectDocSlotHtml(attachment, slotKey, label){
+  const preview = attachment ? (
+    attachment.isImage
+      ? `<img src="${escapeHtml(attachment.dataUrl)}" alt="${escapeHtml(attachment.name)}">`
+      : `<iframe src="${escapeHtml(attachment.dataUrl)}" title="${escapeHtml(attachment.name)}"></iframe>`
+  ) : `
+    <div class="project-doc-slot-empty">
+      ${icon('upload', 20)}
+      <span>Click to upload ${escapeHtml(label)}</span>
+    </div>
+  `;
+  return `
+    <div class="project-doc-slot">
+      <label class="project-doc-slot-box">
+        <input type="file" class="project-doc-slot-input" data-doc-slot="${slotKey}" accept=".pdf,image/*" style="display:none;">
+        ${preview}
+        ${attachment ? `<button type="button" class="project-doc-slot-remove" data-role="remove-project-doc" data-doc-slot="${slotKey}" title="Remove">${icon('x', 12)}</button>` : ''}
+      </label>
+      <div class="project-doc-slot-caption">${escapeHtml(label)}${attachment ? `: ${escapeHtml(attachment.name)}` : ''}</div>
+    </div>
+  `;
+}
+// `block` is the project's own detail-row element -- re-queried each call
+// since renderProjectsList() rebuilds the DOM on every change, same as
+// every other per-row wiring in this file.
+function wireProjectDocSlots(block, p){
+  block.querySelectorAll('.project-doc-slot-input').forEach(input => {
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      input.value = '';
+      if(!file) return;
+      try{
+        p[input.dataset.docSlot] = await fileToMuAttachment(file);
+        scheduleProjectSave(p);
+        renderProjectsList();
+      }catch(err){
+        alert(err.message || 'Could not attach that file.');
+      }
+    });
+  });
+  block.querySelectorAll('[data-role="remove-project-doc"]').forEach(btn => {
+    // preventDefault so clicking the remove (x) button doesn't also
+    // trigger the enclosing <label>'s native "open file picker" behavior.
+    btn.addEventListener('click', e => {
+      e.preventDefault();
+      e.stopPropagation();
+      p[btn.dataset.docSlot] = null;
+      scheduleProjectSave(p);
+      renderProjectsList();
+    });
+  });
 }
 // Shared by the popup modal, the inline add form, the inline edit form, and
 // the read-only card — `editable` controls whether a remove (✕) button
