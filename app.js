@@ -614,7 +614,8 @@ const CHANGELOG = [
   { version: "3.0.305", date: "2026-08-28", note: "Quotation/Specification slots: the PDF page now zooms to fill the whole box edge-to-edge instead of leaving a visible margin at the viewer's own default zoom, since the box itself is already A4-proportioned" },
   { version: "3.0.306", date: "2026-08-28", note: "Quotation/Specification slots: the small preview now renders a PDF's first page directly onto a canvas via pdf.js instead of embedding the browser's own PDF viewer — since the browser viewer always left a fixed margin around the page that no open-parameter could remove, the small preview now fills the box completely edge to edge with no crop-inducing gap" },
   { version: "3.0.307", date: "2026-08-28", note: "Moved the \"+ Add Update\" button from below the whole Activities Updates history to right next to the \"Activities Updates\" label at the top — the add form now opens there too, above the history, instead of at the very bottom" },
-  { version: "3.0.308", date: "2026-09-01", note: "Quotation/Specification previews now render at a sharper resolution — the canvas is always drawn at least 2x the box's on-screen size (previously exactly 1x on standard, non-Retina screens), giving pdf.js's anti-aliasing more detail to work with so small print looks crisper" }
+  { version: "3.0.308", date: "2026-09-01", note: "Quotation/Specification previews now render at a sharper resolution — the canvas is always drawn at least 2x the box's on-screen size (previously exactly 1x on standard, non-Retina screens), giving pdf.js's anti-aliasing more detail to work with so small print looks crisper" },
+  { version: "3.0.309", date: "2026-09-02", note: "Activities Updates' Plan/Next Action fields relabeled and reorganized: Who/What/Where became Person/Activity/Location · Channel, How was removed, and two new fields — With (internal teammate involved) and Owner (who owns this record) — were added, across the Update Activity popup, the inline Add/Edit forms, and the timeline card display" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3443,9 +3444,7 @@ function applyStaticIcons(){
   setIcon('btnCloseProductLogModal', 'x', 16);
   setIcon('btnMuEditModalTranslatePlan', 'globe', 14);
   setIcon('btnMuEditModalTranslateAction', 'globe', 14);
-  setIcon('btnMuEditModalTranslateHow', 'globe', 14);
   setIcon('btnMuEditModalTranslateNextAction', 'globe', 14);
-  setIcon('btnMuEditModalTranslateNextActionHow', 'globe', 14);
   prefixIcon('btnCompare', 'scale');
   prefixIcon('btnOpenUserAdmin', 'users');
   prefixIcon('btnOpenMyProfile', 'user');

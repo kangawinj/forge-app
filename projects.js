@@ -127,7 +127,8 @@ export function migrateMonthlyUpdate(mu){
     time: mu.time || '',
     planWho: mu.planWho || '',
     planWhere: mu.planWhere || '',
-    planHow: mu.planHow || '',
+    planWith: mu.planWith || '',
+    planOwner: mu.planOwner || '',
     actionTaken: mu.actionTaken !== undefined ? mu.actionTaken : (mu.results || ''),
     nextAction: mu.nextAction !== undefined ? mu.nextAction : (mu.nextPlan || ''),
     nextActionDue: mu.nextActionDue !== undefined ? mu.nextActionDue : (mu.nextPlanDate || ''),
@@ -138,7 +139,8 @@ export function migrateMonthlyUpdate(mu){
     nextActionTime: mu.nextActionTime || '',
     nextActionWho: mu.nextActionWho || '',
     nextActionWhere: mu.nextActionWhere || '',
-    nextActionHow: mu.nextActionHow || '',
+    nextActionWith: mu.nextActionWith || '',
+    nextActionOwner: mu.nextActionOwner || '',
     autoCreatePlan: !!mu.autoCreatePlan,
     sourceUpdateId: mu.sourceUpdateId || '',
     linkedRecipeId: mu.linkedRecipeId || '',
@@ -268,14 +270,16 @@ function maybeAutoCreateNextPlan(p, mu){
       existing.planWho = mu.nextActionWho || '';
       existing.plan = mu.nextAction;
       existing.planWhere = mu.nextActionWhere || '';
-      existing.planHow = mu.nextActionHow || '';
+      existing.planWith = mu.nextActionWith || '';
+      existing.planOwner = mu.nextActionOwner || '';
     }
     return;
   }
   if(!mu.autoCreatePlan || !mu.nextAction || !mu.nextActionDue) return;
   p.monthlyUpdates.push({
     id: uid(), date: mu.nextActionDue, time: mu.nextActionTime || '',
-    planWho: mu.nextActionWho || '', plan: mu.nextAction, planWhere: mu.nextActionWhere || '', planHow: mu.nextActionHow || '',
+    planWho: mu.nextActionWho || '', plan: mu.nextAction, planWhere: mu.nextActionWhere || '',
+    planWith: mu.nextActionWith || '', planOwner: mu.nextActionOwner || '',
     actionTaken: '', nextAction: '', nextActionDue: '',
     autoCreatePlan: false, sourceUpdateId: mu.id,
     createdBy: currentUser?.email || '', createdAt: Date.now()
@@ -288,13 +292,15 @@ function captureMonthlyUpdateDraft(p, block){
   const whoInput = block.querySelector('.proj-mu-who');
   const planInput = block.querySelector('.proj-mu-plan');
   const whereInput = block.querySelector('.proj-mu-where');
-  const howInput = block.querySelector('.proj-mu-how');
+  const withInput = block.querySelector('.proj-mu-with');
+  const ownerInput = block.querySelector('.proj-mu-owner');
   const actionInput = block.querySelector('.proj-mu-action');
   const nextActionTimeInput = block.querySelector('.proj-mu-nextaction-time');
   const nextActionWhoInput = block.querySelector('.proj-mu-nextaction-who');
   const nextActionInput = block.querySelector('.proj-mu-nextaction');
   const nextActionWhereInput = block.querySelector('.proj-mu-nextaction-where');
-  const nextActionHowInput = block.querySelector('.proj-mu-nextaction-how');
+  const nextActionWithInput = block.querySelector('.proj-mu-nextaction-with');
+  const nextActionOwnerInput = block.querySelector('.proj-mu-nextaction-owner');
   const nextActionDueInput = block.querySelector('.proj-mu-nextaction-due');
   const autoCreateInput = block.querySelector('.proj-mu-autocreate');
   const recipeInput = block.querySelector('.proj-mu-recipe');
@@ -305,13 +311,15 @@ function captureMonthlyUpdateDraft(p, block){
   const planWho = whoInput?.value.trim() || '';
   const plan = planInput.value.trim();
   const planWhere = whereInput?.value.trim() || '';
-  const planHow = howInput?.value.trim() || '';
+  const planWith = withInput?.value.trim() || '';
+  const planOwner = ownerInput?.value.trim() || '';
   const actionTaken = actionInput.value.trim();
   const nextActionTime = nextActionTimeInput?.value || '';
   const nextActionWho = nextActionWhoInput?.value.trim() || '';
   const nextAction = nextActionInput.value.trim();
   const nextActionWhere = nextActionWhereInput?.value.trim() || '';
-  const nextActionHow = nextActionHowInput?.value.trim() || '';
+  const nextActionWith = nextActionWithInput?.value.trim() || '';
+  const nextActionOwner = nextActionOwnerInput?.value.trim() || '';
   const nextActionDue = nextActionDueInput.value;
   const autoCreatePlan = !!autoCreateInput?.checked;
   const linkedRecipeId = recipeInput?.value || '';
@@ -319,8 +327,8 @@ function captureMonthlyUpdateDraft(p, block){
   if(!date || (!plan && !actionTaken && !nextAction)) return false;
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
   const mu = {
-    id: uid(), date, time, planWho, plan, planWhere, planHow, actionTaken,
-    nextActionTime, nextActionWho, nextAction, nextActionWhere, nextActionHow, nextActionDue, autoCreatePlan,
+    id: uid(), date, time, planWho, plan, planWhere, planWith, planOwner, actionTaken,
+    nextActionTime, nextActionWho, nextAction, nextActionWhere, nextActionWith, nextActionOwner, nextActionDue, autoCreatePlan,
     linkedRecipeId, attachments: monthlyUpdateDraftAttachments, completedDate,
     sourceUpdateId: '', createdBy: currentUser?.email || '', createdAt: Date.now()
   };
@@ -625,9 +633,9 @@ function getOrCreateUnassignedProject(){
 export function quickAddCalendarPlan(dateStr){
   const p = getOrCreateUnassignedProject();
   const mu = {
-    id: uid(), date: dateStr, time: '', planWho: '', plan: '', planWhere: '', planHow: '',
+    id: uid(), date: dateStr, time: '', planWho: '', plan: '', planWhere: '', planWith: '', planOwner: '',
     actionTaken: '', nextAction: '', nextActionDue: '', nextActionTime: '', nextActionWho: '',
-    nextActionWhere: '', nextActionHow: '', autoCreatePlan: false, sourceUpdateId: '',
+    nextActionWhere: '', nextActionWith: '', nextActionOwner: '', autoCreatePlan: false, sourceUpdateId: '',
     linkedRecipeId: '', attachments: [], completedDate: '', createdFromCalendar: true
   };
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
@@ -2627,27 +2635,28 @@ export function renderProjectsList(){
                             </div>
                           </div>
                           <div class="field">
-                            <label>Who</label>
+                            <label>Person</label>
                             <input type="text" class="proj-mu-edit-who" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planWho || '')}">
                           </div>
                           <div class="field">
-                            <label>What</label>
+                            <label>Activity</label>
                             <div class="mu-field-with-translate" style="width:auto;">
-                              <textarea class="proj-mu-edit-plan" placeholder="What">${escapeHtml(mu.plan || '')}</textarea>
+                              <textarea class="proj-mu-edit-plan" placeholder="Activity">${escapeHtml(mu.plan || '')}</textarea>
                               <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                             </div>
                           </div>
                           <div class="field">
-                            <label>Where</label>
+                            <label>With</label>
+                            <input type="text" class="proj-mu-edit-with" list="salesRepDatalist" placeholder="e.g. Tanaka-san" value="${escapeHtml(mu.planWith || '')}">
+                          </div>
+                          <div class="field">
+                            <label>Location / Channel</label>
                             <input type="text" class="proj-mu-edit-where" list="customerDatalist" placeholder="e.g. UMIOS Office" value="${escapeHtml(mu.planWhere || '')}">
                             <select class="proj-select proj-mu-edit-where-location" style="display:none;margin-top:6px;"></select>
                           </div>
                           <div class="field" style="margin-bottom:0;">
-                            <label>How</label>
-                            <div class="mu-field-with-translate" style="width:auto;">
-                              <textarea class="proj-mu-edit-how" placeholder="How">${escapeHtml(mu.planHow || '')}</textarea>
-                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
-                            </div>
+                            <label>Owner</label>
+                            <input type="text" class="proj-mu-edit-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planOwner || '')}">
                           </div>
                         </div>
                         <div class="mu-plan-box">
@@ -2674,27 +2683,28 @@ export function renderProjectsList(){
                             </div>
                           </div>
                           <div class="field">
-                            <label>Who</label>
+                            <label>Person</label>
                             <input type="text" class="proj-mu-edit-nextaction-who" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionWho || '')}">
                           </div>
                           <div class="field">
-                            <label>What</label>
+                            <label>Activity</label>
                             <div class="mu-field-with-translate" style="width:auto;">
-                              <textarea class="proj-mu-edit-nextaction" placeholder="Next Action">${escapeHtml(mu.nextAction || '')}</textarea>
+                              <textarea class="proj-mu-edit-nextaction" placeholder="Activity">${escapeHtml(mu.nextAction || '')}</textarea>
                               <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                             </div>
                           </div>
                           <div class="field">
-                            <label>Where</label>
+                            <label>With</label>
+                            <input type="text" class="proj-mu-edit-nextaction-with" list="salesRepDatalist" placeholder="e.g. Tanaka-san" value="${escapeHtml(mu.nextActionWith || '')}">
+                          </div>
+                          <div class="field">
+                            <label>Location / Channel</label>
                             <input type="text" class="proj-mu-edit-nextaction-where" list="customerDatalist" placeholder="e.g. UMIOS Office" value="${escapeHtml(mu.nextActionWhere || '')}">
                             <select class="proj-select proj-mu-edit-nextaction-where-location" style="display:none;margin-top:6px;"></select>
                           </div>
                           <div class="field" style="margin-bottom:0;">
-                            <label>How</label>
-                            <div class="mu-field-with-translate" style="width:auto;">
-                              <textarea class="proj-mu-edit-nextaction-how" placeholder="How">${escapeHtml(mu.nextActionHow || '')}</textarea>
-                              <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
-                            </div>
+                            <label>Owner</label>
+                            <input type="text" class="proj-mu-edit-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionOwner || '')}">
                           </div>
                         </div>
                         <div class="field">
@@ -2743,8 +2753,9 @@ export function renderProjectsList(){
                       <div class="mu-card-title">${icon('file-text', 14)} PLAN${source ? ' <span class="mu-badge">AUTO-CREATED</span>' : ''}${status === 'planned' ? ' <span class="mu-status-pill">PLANNED</span>' : ''}</div>
                       ${(mu.time || mu.planWho) ? `<div class="mu-plan-detail-line">${mu.time ? `<b>When:</b> ${escapeHtml(mu.time)}` : ''}${mu.time && mu.planWho ? ' &nbsp;·&nbsp; ' : ''}${mu.planWho ? escapeHtml(mu.planWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
+                      ${mu.planWith ? `<div class="mu-plan-detail-line"><b>With:</b> ${escapeHtml(mu.planWith)}</div>` : ''}
                       ${mu.planWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.planWhere)}</div>` : ''}
-                      ${mu.planHow ? `<div class="mu-plan-detail-line"><b>How:</b> ${escapeHtml(mu.planHow)}</div>` : ''}
+                      ${mu.planOwner ? `<div class="mu-plan-detail-line"><b>Owner:</b> ${escapeHtml(mu.planOwner)}</div>` : ''}
                       ${source ? `<div class="mu-source-link">${icon('undo-2', 12)} From Next action · ${escapeHtml(formatDateLong(source.date))}${source.createdAt ? ', ' + escapeHtml(formatTimeOnly(source.createdAt)) : ''}</div>` : ''}
                     </div>
                     <div class="mu-card mu-card-clickable" data-section="action" title="Click to update">
@@ -2756,8 +2767,9 @@ export function renderProjectsList(){
                       <div class="mu-card-title">${icon('clock', 14)} NEXT ACTION${mu.nextActionDue ? `<span class="mu-due-inline${nextActionSuperseded ? ' mu-due-superseded' : ''}">Due ${escapeHtml(formatDateLong(mu.nextActionDue))}</span>` : ''}</div>
                       ${(mu.nextActionTime || mu.nextActionWho) ? `<div class="mu-plan-detail-line">${mu.nextActionTime ? `<b>When:</b> ${escapeHtml(mu.nextActionTime)}` : ''}${mu.nextActionTime && mu.nextActionWho ? ' &nbsp;·&nbsp; ' : ''}${mu.nextActionWho ? escapeHtml(mu.nextActionWho) : ''}</div>` : ''}
                       <div class="mu-card-text">${escapeHtml(mu.nextAction)}</div>
+                      ${mu.nextActionWith ? `<div class="mu-plan-detail-line"><b>With:</b> ${escapeHtml(mu.nextActionWith)}</div>` : ''}
                       ${mu.nextActionWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.nextActionWhere)}</div>` : ''}
-                      ${mu.nextActionHow ? `<div class="mu-plan-detail-line"><b>How:</b> ${escapeHtml(mu.nextActionHow)}</div>` : ''}
+                      ${mu.nextActionOwner ? `<div class="mu-plan-detail-line"><b>Owner:</b> ${escapeHtml(mu.nextActionOwner)}</div>` : ''}
                     </div>
                     ` : ''}
                   </div>
@@ -3128,27 +3140,28 @@ export function renderProjectsList(){
                         </div>
                       </div>
                       <div class="field">
-                        <label>Who</label>
+                        <label>Person</label>
                         <input type="text" class="proj-mu-who" list="salesRepDatalist" placeholder="e.g. Yano-san">
                       </div>
                       <div class="field">
-                        <label>What</label>
+                        <label>Activity</label>
                         <div class="mu-field-with-translate" style="width:auto;">
-                          <textarea class="proj-mu-plan" placeholder="What"></textarea>
+                          <textarea class="proj-mu-plan" placeholder="Activity"></textarea>
                           <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                         </div>
                       </div>
                       <div class="field">
-                        <label>Where</label>
+                        <label>With</label>
+                        <input type="text" class="proj-mu-with" list="salesRepDatalist" placeholder="e.g. Tanaka-san">
+                      </div>
+                      <div class="field">
+                        <label>Location / Channel</label>
                         <input type="text" class="proj-mu-where" list="customerDatalist" placeholder="e.g. UMIOS Office">
                         <select class="proj-select proj-mu-where-location" style="display:none;margin-top:6px;"></select>
                       </div>
                       <div class="field" style="margin-bottom:0;">
-                        <label>How</label>
-                        <div class="mu-field-with-translate" style="width:auto;">
-                          <textarea class="proj-mu-how" placeholder="How"></textarea>
-                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
-                        </div>
+                        <label>Owner</label>
+                        <input type="text" class="proj-mu-owner" list="salesRepDatalist" placeholder="e.g. Yano-san">
                       </div>
                     </div>
                     <div class="mu-plan-box">
@@ -3175,27 +3188,28 @@ export function renderProjectsList(){
                         </div>
                       </div>
                       <div class="field">
-                        <label>Who</label>
+                        <label>Person</label>
                         <input type="text" class="proj-mu-nextaction-who" list="salesRepDatalist" placeholder="e.g. Yano-san">
                       </div>
                       <div class="field">
-                        <label>What</label>
+                        <label>Activity</label>
                         <div class="mu-field-with-translate" style="width:auto;">
-                          <textarea class="proj-mu-nextaction" placeholder="Next Action"></textarea>
+                          <textarea class="proj-mu-nextaction" placeholder="Activity"></textarea>
                           <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
                         </div>
                       </div>
                       <div class="field">
-                        <label>Where</label>
+                        <label>With</label>
+                        <input type="text" class="proj-mu-nextaction-with" list="salesRepDatalist" placeholder="e.g. Tanaka-san">
+                      </div>
+                      <div class="field">
+                        <label>Location / Channel</label>
                         <input type="text" class="proj-mu-nextaction-where" list="customerDatalist" placeholder="e.g. UMIOS Office">
                         <select class="proj-select proj-mu-nextaction-where-location" style="display:none;margin-top:6px;"></select>
                       </div>
                       <div class="field" style="margin-bottom:0;">
-                        <label>How</label>
-                        <div class="mu-field-with-translate" style="width:auto;">
-                          <textarea class="proj-mu-nextaction-how" placeholder="How"></textarea>
-                          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
-                        </div>
+                        <label>Owner</label>
+                        <input type="text" class="proj-mu-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san">
                       </div>
                     </div>
                     <div class="field">
@@ -3611,13 +3625,15 @@ export function renderProjectsList(){
         const planWho = entry.querySelector('.proj-mu-edit-who')?.value.trim() || '';
         const plan = entry.querySelector('.proj-mu-edit-plan').value.trim();
         const planWhere = entry.querySelector('.proj-mu-edit-where')?.value.trim() || '';
-        const planHow = entry.querySelector('.proj-mu-edit-how')?.value.trim() || '';
+        const planWith = entry.querySelector('.proj-mu-edit-with')?.value.trim() || '';
+        const planOwner = entry.querySelector('.proj-mu-edit-owner')?.value.trim() || '';
         const actionTaken = entry.querySelector('.proj-mu-edit-action').value.trim();
         const nextActionTime = entry.querySelector('.proj-mu-edit-nextaction-time')?.value || '';
         const nextActionWho = entry.querySelector('.proj-mu-edit-nextaction-who')?.value.trim() || '';
         const nextAction = entry.querySelector('.proj-mu-edit-nextaction').value.trim();
         const nextActionWhere = entry.querySelector('.proj-mu-edit-nextaction-where')?.value.trim() || '';
-        const nextActionHow = entry.querySelector('.proj-mu-edit-nextaction-how')?.value.trim() || '';
+        const nextActionWith = entry.querySelector('.proj-mu-edit-nextaction-with')?.value.trim() || '';
+        const nextActionOwner = entry.querySelector('.proj-mu-edit-nextaction-owner')?.value.trim() || '';
         const nextActionDue = entry.querySelector('.proj-mu-edit-nextaction-due').value;
         const autoCreatePlan = !!entry.querySelector('.proj-mu-edit-autocreate')?.checked;
         const linkedRecipeId = entry.querySelector('.proj-mu-edit-recipe')?.value || '';
@@ -3631,13 +3647,15 @@ export function renderProjectsList(){
         mu.planWho = planWho;
         mu.plan = plan;
         mu.planWhere = planWhere;
-        mu.planHow = planHow;
+        mu.planWith = planWith;
+        mu.planOwner = planOwner;
         mu.actionTaken = actionTaken;
         mu.nextActionTime = nextActionTime;
         mu.nextActionWho = nextActionWho;
         mu.nextAction = nextAction;
         mu.nextActionWhere = nextActionWhere;
-        mu.nextActionHow = nextActionHow;
+        mu.nextActionWith = nextActionWith;
+        mu.nextActionOwner = nextActionOwner;
         mu.nextActionDue = nextActionDue;
         mu.autoCreatePlan = autoCreatePlan;
         mu.linkedRecipeId = linkedRecipeId;
@@ -3863,7 +3881,8 @@ function openMuEditModal(projectId, updateId, section){
   // wireWhereLocationPicker's listener re-evaluates against this entry's
   // Where value instead of whatever the previously-open entry left behind.
   document.getElementById('muEditModalWhere').dispatchEvent(new Event('input'));
-  document.getElementById('muEditModalHow').value = mu.planHow || '';
+  document.getElementById('muEditModalWith').value = mu.planWith || '';
+  document.getElementById('muEditModalOwner').value = mu.planOwner || '';
   document.getElementById('muEditModalAction').value = mu.actionTaken || '';
   document.getElementById('muEditModalNextActionDue').value = mu.nextActionDue || '';
   document.getElementById('muEditModalNextActionTime').value = mu.nextActionTime || '';
@@ -3871,7 +3890,8 @@ function openMuEditModal(projectId, updateId, section){
   document.getElementById('muEditModalNextAction').value = mu.nextAction || '';
   document.getElementById('muEditModalNextActionWhere').value = mu.nextActionWhere || '';
   document.getElementById('muEditModalNextActionWhere').dispatchEvent(new Event('input'));
-  document.getElementById('muEditModalNextActionHow').value = mu.nextActionHow || '';
+  document.getElementById('muEditModalNextActionWith').value = mu.nextActionWith || '';
+  document.getElementById('muEditModalNextActionOwner').value = mu.nextActionOwner || '';
   document.getElementById('muEditModalCompletedDate').value = mu.completedDate || '';
   document.getElementById('muEditModalAutoCreate').checked = !!mu.autoCreatePlan;
   document.getElementById('muEditModalRecipe').innerHTML = muRecipeOptionsHtml(mu.linkedRecipeId);
@@ -3927,7 +3947,8 @@ function closeMuEditModal(){
   // save.
   const target = getMuEditModalTarget();
   if(target?.mu.createdFromCalendar && !target.mu.plan && !target.mu.actionTaken
-    && !target.mu.nextAction && !target.mu.planWho && !target.mu.planWhere){
+    && !target.mu.nextAction && !target.mu.planWho && !target.mu.planWhere
+    && !target.mu.planWith && !target.mu.planOwner){
     target.p.monthlyUpdates = (target.p.monthlyUpdates || []).filter(x => x.id !== target.mu.id);
     scheduleProjectSave(target.p);
     renderProjectsList();
@@ -3945,13 +3966,15 @@ function saveMuEditModal(){
   const planWho = document.getElementById('muEditModalWho').value.trim();
   const plan = document.getElementById('muEditModalPlan').value.trim();
   const planWhere = document.getElementById('muEditModalWhere').value.trim();
-  const planHow = document.getElementById('muEditModalHow').value.trim();
+  const planWith = document.getElementById('muEditModalWith').value.trim();
+  const planOwner = document.getElementById('muEditModalOwner').value.trim();
   const actionTaken = document.getElementById('muEditModalAction').value.trim();
   const nextActionTime = document.getElementById('muEditModalNextActionTime').value;
   const nextActionWho = document.getElementById('muEditModalNextActionWho').value.trim();
   const nextAction = document.getElementById('muEditModalNextAction').value.trim();
   const nextActionWhere = document.getElementById('muEditModalNextActionWhere').value.trim();
-  const nextActionHow = document.getElementById('muEditModalNextActionHow').value.trim();
+  const nextActionWith = document.getElementById('muEditModalNextActionWith').value.trim();
+  const nextActionOwner = document.getElementById('muEditModalNextActionOwner').value.trim();
   const nextActionDue = document.getElementById('muEditModalNextActionDue').value;
   const autoCreatePlan = document.getElementById('muEditModalAutoCreate').checked;
   const linkedRecipeId = document.getElementById('muEditModalRecipe').value;
@@ -3966,13 +3989,15 @@ function saveMuEditModal(){
   mu.planWho = planWho;
   mu.plan = plan;
   mu.planWhere = planWhere;
-  mu.planHow = planHow;
+  mu.planWith = planWith;
+  mu.planOwner = planOwner;
   mu.actionTaken = actionTaken;
   mu.nextActionTime = nextActionTime;
   mu.nextActionWho = nextActionWho;
   mu.nextAction = nextAction;
   mu.nextActionWhere = nextActionWhere;
-  mu.nextActionHow = nextActionHow;
+  mu.nextActionWith = nextActionWith;
+  mu.nextActionOwner = nextActionOwner;
   mu.nextActionDue = nextActionDue;
   mu.autoCreatePlan = autoCreatePlan;
   mu.linkedRecipeId = linkedRecipeId;
@@ -4098,10 +4123,10 @@ const PROJECT_DIFF_FIELDS = {
 // everywhere else (they're refs/arrays, not something a plain before/after
 // string reads well for).
 const MU_DIFF_FIELDS = {
-  date: 'When (Date)', time: 'When (Time)', planWho: 'Who', plan: 'What', planWhere: 'Where', planHow: 'How',
+  date: 'When (Date)', time: 'When (Time)', planWho: 'Person', plan: 'Activity', planWith: 'With', planWhere: 'Location / Channel', planOwner: 'Owner',
   actionTaken: 'Action Taken', completedDate: 'Completed Date',
-  nextActionDue: 'Next Action When (Date)', nextActionTime: 'Next Action When (Time)', nextActionWho: 'Next Action Who',
-  nextAction: 'Next Action What', nextActionWhere: 'Next Action Where', nextActionHow: 'Next Action How'
+  nextActionDue: 'Next Action When (Date)', nextActionTime: 'Next Action When (Time)', nextActionWho: 'Next Action Person',
+  nextAction: 'Next Action Activity', nextActionWith: 'Next Action With', nextActionWhere: 'Next Action Location / Channel', nextActionOwner: 'Next Action Owner'
 };
 
 // Auto-fills Completed Date with today the first time Action Taken gets
