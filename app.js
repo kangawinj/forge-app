@@ -638,7 +638,8 @@ const CHANGELOG = [
   { version: "3.0.329", date: "2026-09-03", note: "When a Process Step's Component is a whole Part (e.g. \"Vegan Tartar Sauce\" added as one lumped-together entry), its row now shows a read-only list of what's actually inside it — just the ingredient names as plain chips, no editable weight/tolerance/% fields, so a lumped Component's makeup is still visible at a glance" },
   { version: "3.0.330", date: "2026-09-03", note: "That read-only ingredient breakdown now shows each ingredient's Weight (g) and % too, lined up under the same columns as the main row, instead of just its name" },
   { version: "3.0.331", date: "2026-09-04", note: "Added a Preview button next to Print / PDF on the recipe page — opens the exact same print layout full-screen (sidebar and toolbar hidden) without triggering an actual print job, with a close button at the top-right to return to editing" },
-  { version: "3.0.332", date: "2026-09-04", note: "Left-aligned the Component name column on the Process Steps page's Cutting/Weighing/etc. tables — it was inheriting the same right-align as the numeric Weight/Tolerance/Range/% columns next to it" }
+  { version: "3.0.332", date: "2026-09-04", note: "Left-aligned the Component name column on the Process Steps page's Cutting/Weighing/etc. tables — it was inheriting the same right-align as the numeric Weight/Tolerance/Range/% columns next to it" },
+  { version: "3.0.333", date: "2026-09-04", note: "Narrowed the # column on those same Cutting/Weighing/etc. tables (it was taking far more room than a single digit needs) and gave all the reclaimed width to the Component column, so long ingredient names wrap less" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

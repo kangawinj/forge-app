@@ -2112,6 +2112,17 @@
      class is shared with Compare Recipes/Trials tables whose own 2nd
      column really is numeric. */
   .process-view-comp-table th:nth-child(2), .process-view-comp-table td:nth-child(2){text-align:left;}
+  /* table-layout:fixed with no explicit column widths left the browser
+     free to hand the # column far more space than a single digit needs,
+     pushing Component's text start away from it and forcing long
+     ingredient names to wrap onto 2-3 lines early. Pinning every OTHER
+     column's width means Component (the only one left unset) takes all
+     the remaining table width instead. */
+  .process-view-comp-table th:nth-child(1), .process-view-comp-table td:nth-child(1){width:32px;}
+  .process-view-comp-table th:nth-child(3), .process-view-comp-table td:nth-child(3){width:90px;}
+  .process-view-comp-table th:nth-child(4), .process-view-comp-table td:nth-child(4){width:90px;}
+  .process-view-comp-table th:nth-child(5), .process-view-comp-table td:nth-child(5){width:150px;}
+  .process-view-comp-table th:nth-child(6), .process-view-comp-table td:nth-child(6){width:70px;}
   .compare-table th{
     font-size:11px;
     text-transform:uppercase;
