@@ -1260,8 +1260,12 @@
     text-transform:uppercase;
     letter-spacing:.03em;
     color:var(--text-dim);
-    padding:0 8px 6px 8px;
+    padding:4px 8px 6px 8px;
     border-bottom:1px solid var(--border);
+    /* Same soft gradient as the group rows below (see .print-ing-group-row
+       td) so the column header reads as part of the same highlighted
+       "heading" family instead of sitting there plain. */
+    background:linear-gradient(to right, #d7e0f2, #eef2fa);
   }
   /* Tighter than the app's other tables -- this one prints alongside the
      Process Flow column in "4. Components and Process" and a recipe can
@@ -1279,8 +1283,10 @@
        (.print-ing-table td above) for a clear but quiet separation.
        Stronger than --primary-light (#e8ecf5) -- that pale a tint read as
        plain white once actually printed/exported to PDF, so the group
-       rows weren't visibly standing out from the detail rows below them. */
-    background:#d7e0f2;
+       rows weren't visibly standing out from the detail rows below them.
+       A soft left-to-right gradient (not a flat fill) for a bit more
+       depth, fading toward the same lighter tone the table header uses. */
+    background:linear-gradient(to right, #d7e0f2, #eef2fa);
     font-weight:700;
     color:var(--primary-dark);
   }
