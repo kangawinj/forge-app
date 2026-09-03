@@ -1059,9 +1059,20 @@ export function renderRecipeEditor(r){
       <div class="toolbar">
         <button class="btn" id="btnVersions">${icon('clock')} Versions</button>
         <button class="btn" id="btnDuplicate">${icon('copy')} Duplicate</button>
+        <button class="btn" id="btnPreview">${icon('eye')} Preview</button>
         <button class="btn" id="btnPrint">${icon('printer')} Print / PDF</button>
       </div>
     </div>
+
+    <!-- Fixed, always in the DOM (not print-only) so it's available the
+         instant preview-print-mode is toggled on -- see btnPreview's
+         wiring below and the .preview-print-mode rules in style.css,
+         which mirror @media print's own visibility rules but driven by
+         this class instead, so the exact same #printInfoCard/
+         #printIngredientTree/etc. content (already populated by
+         renderPrintView for the real Print button) can be shown on
+         screen too, full-bleed, without actually invoking window.print(). -->
+    <button class="print-preview-close" id="btnClosePrintPreview" title="Close Preview">${icon('x', 22)}</button>
 
     <div id="recipeCards">
     <div class="card">
@@ -1601,6 +1612,21 @@ export function renderRecipeEditor(r){
     };
     window.addEventListener('afterprint', restoreTitle);
     window.print();
+  });
+
+  // Full-screen on-screen mirror of what Print / PDF would produce --
+  // reuses the exact same #printInfoCard/#printIngredientTree/etc.
+  // content (renderPrintView already builds it for the real Print button,
+  // whether or not that's been clicked yet this session) and the same
+  // print-only visibility rules, just toggled by a class instead of an
+  // actual @media print, so there's no window.print() dialog involved.
+  document.getElementById('btnPreview').addEventListener('click', () => {
+    renderPrintView(r);
+    document.body.classList.add('preview-print-mode');
+    window.scrollTo(0, 0);
+  });
+  document.getElementById('btnClosePrintPreview').addEventListener('click', () => {
+    document.body.classList.remove('preview-print-mode');
   });
 
   renderLockState(r);

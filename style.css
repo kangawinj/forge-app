@@ -3740,6 +3740,89 @@
 
   .print-only{display:none;}
 
+  /* Fixed close button for Preview mode (see .preview-print-mode below and
+     btnPreview/btnClosePrintPreview in recipes.js) -- always in the DOM,
+     just hidden until that class is on <body>, so it's ready the instant
+     Preview opens without a re-render. */
+  .print-preview-close{
+    display:none;
+    position:fixed;
+    top:16px;
+    right:16px;
+    z-index:200;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    border:1px solid var(--border);
+    background:var(--panel);
+    color:var(--primary-dark);
+    box-shadow:var(--shadow);
+    cursor:pointer;
+    align-items:center;
+    justify-content:center;
+  }
+  body.preview-print-mode .print-preview-close{display:flex;}
+  /* On-screen mirror of a recipe's @media print output (see that block
+     further down) for the "Preview" button -- same idea (hide the editing
+     UI, show the .print-only content, recipe-specific print tweaks) but
+     toggled by this class instead of an actual print job, so it can be
+     shown/closed without ever calling window.print(). Kept as its own
+     block rather than merging with @media print because a real print
+     triggered the normal way (Ctrl+P, the browser's own File > Print,
+     printing something other than a recipe) still needs to work without
+     this class ever being set -- update both blocks together if the
+     recipe-print styling here changes. */
+  body.preview-print-mode{
+    /* The rest of the page (sidebar etc., already display:none below) no
+       longer takes up any layout space, but .app itself still isn't
+       positioned to cover the viewport on its own -- that's done on .app
+       directly below, this just stops the body itself from scrolling
+       behind the fixed .app so there's no double scrollbar. */
+    overflow:hidden;
+    background:#fff;
+  }
+  body.preview-print-mode *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  body.preview-print-mode .sidebar,
+  body.preview-print-mode .toolbar,
+  body.preview-print-mode .top-navbar,
+  body.preview-print-mode .mobile-sidebar-toggle,
+  body.preview-print-mode .sidebar-backdrop,
+  body.preview-print-mode .sidebar-close-btn,
+  body.preview-print-mode .recipe-header-actions,
+  body.preview-print-mode .app-footer{display:none !important;}
+  body.preview-print-mode .recipe-fields-edit,
+  body.preview-print-mode .processes-list,
+  body.preview-print-mode .ingredients-edit-view,
+  body.preview-print-mode .flow-canvas-wrap,
+  body.preview-print-mode .view-mode-toggle,
+  body.preview-print-mode .danger-zone{display:none !important;}
+  body.preview-print-mode .print-only{display:block !important;}
+  body.preview-print-mode .print-only.components-process-print-grid{display:grid !important;}
+  body.preview-print-mode .app{
+    display:block !important;
+    position:fixed;
+    inset:0;
+    overflow-y:auto;
+    background:#fff;
+    z-index:100;
+  }
+  body.preview-print-mode .main{max-width:210mm !important;padding:32px 0 60px !important;margin:0 auto !important;}
+  body.preview-print-mode .card{box-shadow:none;border:1px solid #999;padding:16px 18px;}
+  body.preview-print-mode #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
+  body.preview-print-mode #printInfoCard .trial-photo-thumb{width:150px;height:150px;}
+  body.preview-print-mode .recipe-title-display{
+    font-size:32px !important;
+    margin-bottom:6px !important;
+    white-space:nowrap !important;
+  }
+  body.preview-print-mode .recipe-title-display .rt-code{
+    display:inline !important;
+    font-size:16px !important;
+    margin-left:12px !important;
+    margin-top:0 !important;
+  }
+  body.preview-print-mode .batch-summary{grid-template-columns:1fr 1fr !important;}
+
   /* Tighter than the browser's own default print margin (~1in on every
      side) -- pulled back in so "4. Components and Process" has the best
      chance of fitting on one page; @page must sit outside @media print. */
