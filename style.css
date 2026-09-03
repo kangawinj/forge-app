@@ -488,6 +488,12 @@
      (they used wider modals before converting to full-page views). */
   .main.main-wide{max-width:1300px;}
   .main:has(.home-dashboard){max-width:1200px;}
+  /* A recipe page (#recipeCards, whether locked-read-only or unlocked-for-
+     editing) reads as its own document, not a generic app page -- capping
+     it at an actual A4 sheet's width (210mm, same physical size the Print
+     view puts on paper) instead of the 960px default lets the on-screen
+     layout already look like the page it'll print as. */
+  .main:has(#recipeCards){max-width:210mm;}
   .main-header{
     display:flex;
     justify-content:space-between;
