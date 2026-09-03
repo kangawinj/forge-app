@@ -1253,7 +1253,13 @@
   .print-ing-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
   .print-ing-num{text-align:right;white-space:nowrap;}
   .print-ing-group-row td{
-    background:var(--bg);
+    /* Same pale-orange family as "4. Components and Process"'s own title
+       band (--accent-light, see the #recipeCards .card-title print rules)
+       instead of the plain neutral gray this used to be -- these group
+       rows (Powder/Oil/Seasoning/...) are that section's own headings, so
+       carrying its color down into the table makes them easier to pick
+       out while scanning, not just the card title at the very top. */
+    background:var(--accent-light);
     font-weight:700;
     color:var(--primary-dark);
   }
