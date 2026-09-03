@@ -3754,6 +3754,15 @@
   }
 
   @media print{
+    /* Chrome/Edge/Firefox all default to NOT printing background colors,
+       gradients or images unless the user has ticked "Background
+       graphics" in the print dialog (off by default) -- this is exactly
+       why the group-row/table-header shading and gradients above showed
+       up correctly in every on-screen/computed-style check but vanished
+       from the actual printed page/PDF, while border-left (not a
+       background) still showed fine. This forces every background to
+       print regardless of that dialog setting. */
+    *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
