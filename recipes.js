@@ -2556,14 +2556,31 @@ function renderOverview(allIngredients){
     return overviewSortDir === 'asc' ? cmp : -cmp;
   });
   const maxPct = Math.max(...rows.map(g => g.pct), 100);
+  // Weight/Cost have no natural 0-100 bound the way % does, so their bars
+  // scale against the largest value actually in this recipe (that row's
+  // bar fills 100%) rather than against a fixed ceiling.
+  const maxWt = Math.max(...rows.map(g => g.wt), 0);
+  const maxCost = Math.max(...rows.filter(g => g.cost != null).map(g => g.cost), 0);
 
   let totalCost = 0;
   let allPriced = true;
   let anyPriced = false;
 
+  // A thin bar under the number itself (not a separate pill beside it) --
+  // same idea for all three numeric columns (%/Weight/Cost), each scaled
+  // against its own column's own values (see maxPct/maxWt/maxCost above).
+  const numCellHtml = (text, barPct) => `
+    <div class="overview-num-cell">
+      <span>${text}</span>
+      ${barPct != null ? `<div class="overview-mini-bar"><div class="overview-mini-bar-fill" style="width:${barPct}%"></div></div>` : ''}
+    </div>
+  `;
+
   rows.forEach((g, idx) => {
     const tr = document.createElement('tr');
-    const barPct = Math.min(100, (g.pct / maxPct) * 100);
+    const pctBarPct = Math.min(100, (g.pct / maxPct) * 100);
+    const wtBarPct = maxWt > 0 ? Math.min(100, (g.wt / maxWt) * 100) : 0;
+    const costBarPct = g.cost != null && maxCost > 0 ? Math.min(100, (g.cost / maxCost) * 100) : null;
     if(g.cost != null){ totalCost += g.cost; anyPriced = true; }else{ allPriced = false; }
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
@@ -2576,14 +2593,9 @@ function renderOverview(allIngredients){
           </div>
         </div>
       </td>
-      <td class="col-pct">
-        <div class="overview-bar-wrap">
-          <div class="overview-bar-track"><div class="overview-bar-fill" style="width:${barPct}%"></div></div>
-          <span>${g.pct.toFixed(2)}%</span>
-        </div>
-      </td>
-      <td class="col-wt">${formatWeight(g.wt)}</td>
-      <td class="col-cost">${money(g.cost) ?? '—'}</td>
+      <td class="col-pct">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
+      <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
+      <td class="col-cost">${numCellHtml(money(g.cost) ?? '—', costBarPct)}</td>
     `;
     body.appendChild(tr);
   });
