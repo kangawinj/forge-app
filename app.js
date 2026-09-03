@@ -622,7 +622,8 @@ const CHANGELOG = [
   { version: "3.0.313", date: "2026-09-03", note: "Narrowed the printed page's left/right margins (10mm each, down from the browser's default of roughly an inch) so content sits closer to the paper's edge — top/bottom margins are unchanged" },
   { version: "3.0.314", date: "2026-09-03", note: "Each of a printed recipe's 5 numbered sections now has its own accent color (title text + a colored left edge on the card) — blue/green/gold/orange/red — instead of every section printing in the same plain navy, so they're easier to tell apart at a glance while flipping through the pages" },
   { version: "3.0.315", date: "2026-09-03", note: "Toned the previous version's section colors down — instead of solid colored title text and a colored border, each printed section now gets a soft pale color band behind its title bar (same light-tint style as other soft-colored UI already in the app), with the title text staying plain dark navy" },
-  { version: "3.0.316", date: "2026-09-03", note: "\"4. Components and Process\"'s own group headings (Powder/Oil/Seasoning/Vinegar/Vegetable/Water) now print on the same pale-orange band as that section's title, instead of plain gray, so they stand out while scanning the table" }
+  { version: "3.0.316", date: "2026-09-03", note: "\"4. Components and Process\"'s own group headings (Powder/Oil/Seasoning/Vinegar/Vegetable/Water) now print on the same pale-orange band as that section's title, instead of plain gray, so they stand out while scanning the table" },
+  { version: "3.0.317", date: "2026-09-03", note: "Reverted the printed recipe's design back to how it looked at v3.0.310 — removed the narrowed 10mm margins, the one-section-per-page breaks, the pale color bands on each section's title, and the colored group headings in Components and Process" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
