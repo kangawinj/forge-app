@@ -3721,6 +3721,17 @@
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+    /* Each numbered recipe section (1. Product Details, 2. Recipe
+       Overview, 3. Costing, 4. Components and Process, 5. Process Steps)
+       prints on its own page instead of however many happen to fit --
+       break-before on every card but the first (so section 1 still starts
+       on page 1 right under the title, not a blank page ahead of it),
+       paired with break-inside:avoid above so a section that does fit
+       within one page never gets needlessly split across two. Scoped to
+       #recipeCards specifically -- .card is reused all over the app
+       (Projects/Materials/RefLists/Trials/Compare all print their own
+       .card sections) and none of those want a forced page-per-card. */
+    #recipeCards .card + .card{break-before:page;}
     body{background:#fff;}
     /* The read-only flowchart's on-screen scroll box has a fixed
        max-height/overflow for the browser viewport — on paper it should
