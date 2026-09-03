@@ -2103,6 +2103,15 @@
     text-align:right;
   }
   .compare-table th:first-child, .compare-table td:first-child{text-align:left;}
+  /* readOnlyProcessesHtml's Process Step Component table (the read-only
+     "Cutting"/"Weighing"/... breakdown on the Process Steps page and in
+     Version Preview) -- its 2nd column is the Component's name, not a
+     number, so it shouldn't inherit .compare-table's default right-align
+     the way Weight/Tolerance/Range/% (columns 3-6) correctly do. Scoped
+     to this one table specifically, not all of .compare-table, since that
+     class is shared with Compare Recipes/Trials tables whose own 2nd
+     column really is numeric. */
+  .process-view-comp-table th:nth-child(2), .process-view-comp-table td:nth-child(2){text-align:left;}
   .compare-table th{
     font-size:11px;
     text-transform:uppercase;
