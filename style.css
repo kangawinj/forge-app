@@ -2151,6 +2151,19 @@
   }
   .compare-steps-col ol{margin:0 0 12px;padding-left:18px;}
   .compare-steps-col li{margin-bottom:8px;line-height:1.5;}
+  /* One bordered white card per Process Step (Cutting/Weighing/Mixing 1/
+     ...) inside the parent .compare-steps-col's own gray background --
+     see readOnlyProcessesHtml -- so a run of many Steps stacked in a row
+     visibly separates into "here's one Step, here's the next" instead of
+     just flowing straight together. */
+  .process-view-step-block{
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:12px 14px;
+    margin-bottom:12px;
+  }
+  .process-view-step-block:last-child{margin-bottom:0;}
   .compare-process-title{
     font-weight:700;
     font-size:12px;

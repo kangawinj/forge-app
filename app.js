@@ -639,7 +639,8 @@ const CHANGELOG = [
   { version: "3.0.330", date: "2026-09-03", note: "That read-only ingredient breakdown now shows each ingredient's Weight (g) and % too, lined up under the same columns as the main row, instead of just its name" },
   { version: "3.0.331", date: "2026-09-04", note: "Added a Preview button next to Print / PDF on the recipe page — opens the exact same print layout full-screen (sidebar and toolbar hidden) without triggering an actual print job, with a close button at the top-right to return to editing" },
   { version: "3.0.332", date: "2026-09-04", note: "Left-aligned the Component name column on the Process Steps page's Cutting/Weighing/etc. tables — it was inheriting the same right-align as the numeric Weight/Tolerance/Range/% columns next to it" },
-  { version: "3.0.333", date: "2026-09-04", note: "Narrowed the # column on those same Cutting/Weighing/etc. tables (it was taking far more room than a single digit needs) and gave all the reclaimed width to the Component column, so long ingredient names wrap less" }
+  { version: "3.0.333", date: "2026-09-04", note: "Narrowed the # column on those same Cutting/Weighing/etc. tables (it was taking far more room than a single digit needs) and gave all the reclaimed width to the Component column, so long ingredient names wrap less" },
+  { version: "3.0.334", date: "2026-09-04", note: "Each Process Step (Cutting/Weighing/Mixing 1/...) on the Process Steps page and in Version Preview now renders as its own bordered white block instead of flowing straight into the next one, so it's clear where one Step ends and the next begins" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3022,28 +3023,35 @@ export function readOnlyProcessesHtml(processes){
     (p.components||[]).length > 0
   );
   if(list.length === 0) return '<div class="compare-missing">No processes yet</div>';
+  // Each Process Step (Cutting/Weighing/Mixing 1/...) gets its own bordered
+  // white block instead of just flowing straight into the next one -- on
+  // the parent .compare-steps-col's own gray background, that's the only
+  // thing that actually reads as "here's where one Step ends and the next
+  // begins" when there can be many of them stacked in a row.
   return list.map(p => {
     const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
     const components = p.components || [];
     return `
-      <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
-      ${components.length ? `
-        <table class="compare-table process-view-comp-table" style="margin-bottom:10px;">
-          <thead><tr><th>#</th><th>Component</th><th>Weight (g)</th><th>Tolerance</th><th>Range</th><th>%</th></tr></thead>
-          <tbody>${components.map((c, cIdx) => {
-            const wt = parseFloat(c.weight) || 0;
-            const tol = parseFloat(c.tolerance) || 0;
-            return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
-          }).join('')}</tbody>
-          <tfoot><tr class="total-row">
-            <td></td><td>Total</td>
-            <td>${formatWeight(components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0))}</td>
-            <td></td><td></td>
-            <td>${components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0).toFixed(2)}%</td>
-          </tr></tfoot>
-        </table>
-      ` : ''}
-      ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+      <div class="process-view-step-block">
+        <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
+        ${components.length ? `
+          <table class="compare-table process-view-comp-table" style="margin-bottom:10px;">
+            <thead><tr><th>#</th><th>Component</th><th>Weight (g)</th><th>Tolerance</th><th>Range</th><th>%</th></tr></thead>
+            <tbody>${components.map((c, cIdx) => {
+              const wt = parseFloat(c.weight) || 0;
+              const tol = parseFloat(c.tolerance) || 0;
+              return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
+            }).join('')}</tbody>
+            <tfoot><tr class="total-row">
+              <td></td><td>Total</td>
+              <td>${formatWeight(components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0))}</td>
+              <td></td><td></td>
+              <td>${components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0).toFixed(2)}%</td>
+            </tr></tfoot>
+          </table>
+        ` : ''}
+        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+      </div>
     `;
   }).join('');
 }
