@@ -3708,6 +3708,16 @@
 
   .print-only{display:none;}
 
+  /* Narrows the browser's own default print margin (usually ~1in/25mm
+     left+right) down to something closer to the paper's edge -- top/bottom
+     are left alone since only the left/right margin was reported as too
+     wide. Only takes effect while printing/in the print preview, same as
+     @media print below, but @page itself must sit outside that block. */
+  @page{
+    margin-left: 10mm;
+    margin-right: 10mm;
+  }
+
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
