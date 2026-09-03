@@ -619,7 +619,8 @@ const CHANGELOG = [
   { version: "3.0.310", date: "2026-09-02", note: "The Add Update form's Owner field now starts pre-filled with the project's PD (Responsible Person) instead of blank — still a plain text field, so it can be changed to anyone else before saving" },
   { version: "3.0.311", date: "2026-09-03", note: "A recipe page (locked or unlocked for editing) is now capped at an actual A4 sheet's width (210mm) instead of the app's usual 960px page width, so the on-screen layout already reads like the page it prints as — every other page (Ingredient Library, Projects, etc.) keeps its own width" },
   { version: "3.0.312", date: "2026-09-03", note: "Printing a recipe now puts each numbered section — 1. Product Details, 2. Recipe Overview, 3. Costing, 4. Components and Process, 5. Process Steps — on its own separate page instead of however many happen to fit per sheet" },
-  { version: "3.0.313", date: "2026-09-03", note: "Narrowed the printed page's left/right margins (10mm each, down from the browser's default of roughly an inch) so content sits closer to the paper's edge — top/bottom margins are unchanged" }
+  { version: "3.0.313", date: "2026-09-03", note: "Narrowed the printed page's left/right margins (10mm each, down from the browser's default of roughly an inch) so content sits closer to the paper's edge — top/bottom margins are unchanged" },
+  { version: "3.0.314", date: "2026-09-03", note: "Each of a printed recipe's 5 numbered sections now has its own accent color (title text + a colored left edge on the card) — blue/green/gold/orange/red — instead of every section printing in the same plain navy, so they're easier to tell apart at a glance while flipping through the pages" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

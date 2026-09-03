@@ -3742,6 +3742,28 @@
        (Projects/Materials/RefLists/Trials/Compare all print their own
        .card sections) and none of those want a forced page-per-card. */
     #recipeCards .card + .card{break-before:page;}
+    /* Each of the 5 numbered sections gets its own accent color (title
+       text + a colored left edge on the card) instead of every section
+       reading in the same plain navy -- since each one now prints on its
+       own page (see the break-before rule above), a distinct color is a
+       quick visual flag while flipping through the printed pages, not
+       just a same-page cue. Card 4's orange matches the accent color its
+       own Cutting/Weighing/Mixing... sub-headers already use inside
+       Process Steps' cards (see printIngredientTableHtml/.simple-process-
+       col-title in recipes.js) -- card 5 deliberately uses a different
+       color from that so a top-level section title is never confused
+       with its own inner sub-headers. nth-of-type, not a class per card,
+       since the order of these 5 cards is fixed in the template.  */
+    #recipeCards .card:nth-of-type(1){border-left:4px solid #2f5fa8;}
+    #recipeCards .card:nth-of-type(1) .card-title{color:#2f5fa8;}
+    #recipeCards .card:nth-of-type(2){border-left:4px solid #1f8a4c;}
+    #recipeCards .card:nth-of-type(2) .card-title{color:#1f8a4c;}
+    #recipeCards .card:nth-of-type(3){border-left:4px solid #a6790a;}
+    #recipeCards .card:nth-of-type(3) .card-title{color:#a6790a;}
+    #recipeCards .card:nth-of-type(4){border-left:4px solid #ef7f24;}
+    #recipeCards .card:nth-of-type(4) .card-title{color:#ef7f24;}
+    #recipeCards .card:nth-of-type(5){border-left:4px solid #b03a2e;}
+    #recipeCards .card:nth-of-type(5) .card-title{color:#b03a2e;}
     body{background:#fff;}
     /* The read-only flowchart's on-screen scroll box has a fixed
        max-height/overflow for the browser viewport — on paper it should
