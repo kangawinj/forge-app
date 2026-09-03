@@ -1101,14 +1101,22 @@
   }
   .overview-block table{font-size:13px;}
   .overview-block th{border-bottom:2px solid var(--border);}
+  /* Right-aligns the number/bar block itself within these columns -- now
+     needed since .overview-num-cell below shrink-wraps to the number's own
+     width instead of stretching to fill the column, so it no longer sits
+     at the column's right edge on its own. */
+  .overview-block .col-pct, .overview-block .col-wt, .overview-block .col-cost{text-align:right;}
   /* Recipe Overview's %/Weight/Cost columns -- a thin bar directly under
      the number itself (not a separate pill/track sitting beside it),
      scaled against that column's own values (see maxPct/maxWt/maxCost in
-     renderOverview). */
+     renderOverview). inline-flex (not flex) so this shrink-wraps to
+     exactly the number text's own width -- the bar's width:100% below
+     then resolves against THAT (the number, its only width-determining
+     sibling) rather than stretching across the whole column. */
   .overview-num-cell{
-    display:flex;
+    display:inline-flex;
     flex-direction:column;
-    align-items:flex-end;
+    align-items:stretch;
     gap:4px;
   }
   .overview-mini-bar{

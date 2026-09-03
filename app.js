@@ -642,7 +642,8 @@ const CHANGELOG = [
   { version: "3.0.333", date: "2026-09-04", note: "Narrowed the # column on those same Cutting/Weighing/etc. tables (it was taking far more room than a single digit needs) and gave all the reclaimed width to the Component column, so long ingredient names wrap less" },
   { version: "3.0.334", date: "2026-09-04", note: "Each Process Step (Cutting/Weighing/Mixing 1/...) on the Process Steps page and in Version Preview now renders as its own bordered white block instead of flowing straight into the next one, so it's clear where one Step ends and the next begins" },
   { version: "3.0.335", date: "2026-09-04", note: "The read-only Process Steps page and Version Preview now show the same sub-ingredient breakdown under any Component that's a whole Part (e.g. \"Powder\") as the live editor already did — read-only names/weight/%, no editable fields" },
-  { version: "3.0.336", date: "2026-09-04", note: "Recipe Overview's %/Weight/Cost columns replaced the boxed bar-and-percentage widget with a thin bar directly under each number, on all three columns instead of just %, each scaled against that column's own values" }
+  { version: "3.0.336", date: "2026-09-04", note: "Recipe Overview's %/Weight/Cost columns replaced the boxed bar-and-percentage widget with a thin bar directly under each number, on all three columns instead of just %, each scaled against that column's own values" },
+  { version: "3.0.337", date: "2026-09-04", note: "Those under-number bars now shrink to exactly the width of the number above them instead of stretching across the whole column, so a short value like \"0.10%\" gets a short bar and a long one like \"40.95%\" gets a longer one" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
