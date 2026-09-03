@@ -1157,7 +1157,10 @@
     align-items:start;
   }
   .simple-process-col{
-    background:var(--primary-light);
+    /* Same strengthened blue-gray as the ingredient table's group rows
+       (see .print-ing-group-row td) -- var(--primary-light) alone printed
+       too close to plain white to read as a highlight. */
+    background:#d7e0f2;
     border:1px solid var(--border);
     border-radius:var(--radius);
     /* Less top padding than left/right/bottom -- lines the "Process Flow"
@@ -1269,15 +1272,22 @@
   .print-ing-table td{padding:4px 8px;border-bottom:1px solid var(--border);}
   .print-ing-num{text-align:right;white-space:nowrap;}
   .print-ing-group-row td{
-    /* "Section Header Shading" -- one flat light blue-gray for every
-       group row (Powder/Oil/Seasoning/...), not a color per group, so the
-       table reads as clean and consistent rather than busy; detail rows
+    /* "Section Header Shading" -- one flat blue-gray for every group row
+       (Powder/Oil/Seasoning/...), not a color per group, so the table
+       reads as clean and consistent rather than busy; detail rows
        underneath stay plain white with the existing thin --border divider
-       (.print-ing-table td above) for a clear but quiet separation. */
-    background:var(--primary-light);
+       (.print-ing-table td above) for a clear but quiet separation.
+       Stronger than --primary-light (#e8ecf5) -- that pale a tint read as
+       plain white once actually printed/exported to PDF, so the group
+       rows weren't visibly standing out from the detail rows below them. */
+    background:#d7e0f2;
     font-weight:700;
     color:var(--primary-dark);
   }
+  /* Left-edge accent stripe -- gives each group row a second, unmissable
+     visual anchor (not just the background tint) so a group heading is
+     obvious even glancing down the page quickly. */
+  .print-ing-group-row td:first-child{border-left:3px solid var(--primary);}
   .print-ing-total-row td{
     font-weight:700;
     border-bottom:none;
