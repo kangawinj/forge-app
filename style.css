@@ -1160,7 +1160,11 @@
     background:var(--primary-light);
     border:1px solid var(--border);
     border-radius:var(--radius);
-    padding:14px 16px;
+    /* Less top padding than left/right/bottom -- lines the "Process Flow"
+       title up closer to the ingredient table's own header row (which
+       starts flush, no top padding of its own) since both columns are
+       align-items:start siblings in the same grid row. */
+    padding:10px 14px 12px;
   }
   .simple-process-col-title{
     font-weight:700;
@@ -1193,8 +1197,14 @@
      renderPrintView. Screen layout is untouched since this whole grid only
      ever renders inside a .print-only wrapper. */
   .components-process-print-grid{
-    grid-template-columns:minmax(0,1fr) minmax(0,320px);
-    gap:20px;
+    /* 62/38 fr split -- fr shares out the row's actual available width
+       proportionally (unlike the old fixed-320px right column), so the
+       ratio holds regardless of the page's own width. align-items:start
+       (unchanged) is what keeps both columns' top edges flush AND lets
+       the Process Flow card sit at its own natural content height
+       instead of stretching to match the taller ingredient table. */
+    grid-template-columns:minmax(0,62fr) minmax(0,38fr);
+    gap:16px;
     align-items:start;
   }
   /* Vertical stepper -- a numbered circle per Process Step, connected by a
@@ -3719,6 +3729,14 @@
 
   .print-only{display:none;}
 
+  /* Tighter than the browser's own default print margin (~1in on every
+     side) -- pulled back in now specifically so "4. Components and
+     Process" has the best chance of fitting on one page; @page must sit
+     outside @media print. */
+  @page{
+    margin: 10mm;
+  }
+
   @media print{
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
@@ -3731,7 +3749,7 @@
     .print-only.components-process-print-grid{display:grid !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
-    .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+    .card{box-shadow:none;border:1px solid #999;break-inside:avoid;padding:16px 18px;}
     /* "4. Components and Process" pairs a potentially long ingredient
        table with the Process Flow box side by side in a CSS grid --
        break-inside:avoid on .card above doesn't reliably hold across a
