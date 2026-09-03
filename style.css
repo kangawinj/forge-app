@@ -1157,7 +1157,7 @@
     align-items:start;
   }
   .simple-process-col{
-    background:var(--bg);
+    background:var(--primary-light);
     border:1px solid var(--border);
     border-radius:var(--radius);
     padding:14px 16px;
@@ -1217,7 +1217,7 @@
     top:34px;
     bottom:-6px;
     width:2px;
-    background:var(--border);
+    background:#c7d3e6;
   }
   .print-process-flow-circle{
     flex:0 0 auto;
@@ -1235,7 +1235,7 @@
     position:relative;
     z-index:1;
   }
-  .print-process-flow-label{font-size:13px;font-weight:600;color:var(--text);}
+  .print-process-flow-label{font-size:13px;font-weight:600;color:var(--primary-dark);}
   /* Redesigned print ingredient table (see printIngredientTableHtml) --
      Part/Sub-part rows get a tinted background and bold group totals,
      plain padding-based indent (no box-drawing tree characters), "–" for
@@ -1259,7 +1259,12 @@
   .print-ing-table td{padding:4px 8px;border-bottom:1px solid var(--border);}
   .print-ing-num{text-align:right;white-space:nowrap;}
   .print-ing-group-row td{
-    background:var(--bg);
+    /* "Section Header Shading" -- one flat light blue-gray for every
+       group row (Powder/Oil/Seasoning/...), not a color per group, so the
+       table reads as clean and consistent rather than busy; detail rows
+       underneath stay plain white with the existing thin --border divider
+       (.print-ing-table td above) for a clear but quiet separation. */
+    background:var(--primary-light);
     font-weight:700;
     color:var(--primary-dark);
   }
