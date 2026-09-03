@@ -1240,17 +1240,23 @@
      Part/Sub-part rows get a tinted background and bold group totals,
      plain padding-based indent (no box-drawing tree characters), "–" for
      an empty Prep/Note, grand total as its own bottom row. */
-  .print-ing-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .print-ing-table{width:100%;border-collapse:collapse;font-size:12px;}
   .print-ing-table th{
     text-align:left;
-    font-size:11px;
+    font-size:10px;
     text-transform:uppercase;
     letter-spacing:.03em;
     color:var(--text-dim);
-    padding:0 10px 8px 10px;
+    padding:0 8px 6px 8px;
     border-bottom:1px solid var(--border);
   }
-  .print-ing-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
+  /* Tighter than the app's other tables -- this one prints alongside the
+     Process Flow column in "4. Components and Process" and a recipe can
+     easily have 15-20+ ingredient rows, so a few px saved per row is what
+     keeps the whole thing fitting on one printed page instead of spilling
+     onto a second (see the #recipeCards .card:nth-of-type(4) break-before
+     rule below, which gives it a full fresh page to fit into). */
+  .print-ing-table td{padding:4px 8px;border-bottom:1px solid var(--border);}
   .print-ing-num{text-align:right;white-space:nowrap;}
   .print-ing-group-row td{
     background:var(--bg);
@@ -3721,6 +3727,18 @@
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+    /* "4. Components and Process" pairs a potentially long ingredient
+       table with the Process Flow box side by side in a CSS grid --
+       break-inside:avoid on .card above doesn't reliably hold across a
+       grid child in Chrome's print engine, so a recipe with many
+       ingredients could split the grid mid-table instead of moving the
+       whole section to a fresh page. Starting it on its own page gives it
+       the most room to fit as one piece (paired with the tighter
+       .print-ing-table row padding, and printIngredientTableHtml's
+       tbody-not-tfoot fix that stopped the total row from also printing a
+       page early). Scoped to this one section only -- not every section,
+       unlike an earlier version of this print design. */
+    #recipeCards .card:nth-of-type(4){break-before:page;}
     body{background:#fff;}
     /* The read-only flowchart's on-screen scroll box has a fixed
        max-height/overflow for the browser viewport — on paper it should

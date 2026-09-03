@@ -3475,12 +3475,17 @@ function printIngredientTableHtml(parts, totalWeight){
     return groupRow + ingRows + subRows;
   }
 
-  const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('');
+  // "Formula total" is a plain last row of <tbody>, not a <tfoot> --
+  // browsers print a <tfoot> at the bottom of EVERY page a table spans
+  // across (repeating like a <thead>), which showed up as the total row
+  // appearing a page early, mid-table, in addition to its correct spot at
+  // the very end once the table actually finished on the next page.
+  const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('')
+    + `<tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">100.00%</td></tr>`;
   return `
     <table class="print-ing-table">
       <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">g</th><th class="print-ing-num">%</th></tr></thead>
       <tbody>${bodyRows}</tbody>
-      <tfoot><tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">100.00%</td></tr></tfoot>
     </table>
   `;
 }
