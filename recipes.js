@@ -2915,19 +2915,33 @@ function renderProcesses(r){
         compBody.appendChild(tr);
 
         // If this Component is a whole Part (not a single ingredient),
-        // show what's actually inside it -- read-only, just names, no
-        // weight/%/tolerance inputs -- so "Vegan Tartar Sauce" as one
-        // lumped-together 500g Component still lets you see at a glance
-        // what that 500g is actually made of, without duplicating the
-        // main ingredient tree's own editable fields here.
+        // show what's actually inside it -- read-only, one row per
+        // ingredient with its own Weight/% (the ingredient's own stored
+        // weight/percent -- % of the whole recipe, same figures already
+        // shown in the Recipe Overview table and the printed ingredient
+        // table, not a separately-computed %-of-this-part) lined up under
+        // the same Weight/% columns as the main row above, so "Vegan
+        // Tartar Sauce" as one lumped-together 500g Component still lets
+        // you see at a glance what that 500g is actually made of, without
+        // duplicating the main ingredient tree's own editable fields here.
         const matchedPart = findPartByName(r.parts, (comp.name || '').trim());
-        const innerNames = matchedPart ? allIngredientsInPart(matchedPart).map(i => (i.name||'').trim()).filter(Boolean) : [];
-        if(innerNames.length){
+        const innerIngredients = matchedPart
+          ? allIngredientsInPart(matchedPart).filter(i => (i.name||'').trim() !== '')
+          : [];
+        innerIngredients.forEach(ing => {
           const subTr = document.createElement('tr');
           subTr.className = 'comp-sublist-row';
-          subTr.innerHTML = `<td></td><td colspan="6"><div class="comp-sublist">${innerNames.map(n => `<span class="comp-sublist-item">${escapeHtml(n)}</span>`).join('')}</div></td>`;
+          subTr.innerHTML = `
+            <td></td>
+            <td class="comp-sublist-name">${escapeHtml(ing.name)}</td>
+            <td class="col-wt comp-sublist-num">${formatWeight(parseFloat(ing.weight) || 0)}</td>
+            <td class="col-tol"></td>
+            <td class="col-range"></td>
+            <td class="col-pct comp-sublist-num">${(parseFloat(ing.percent) || 0).toFixed(2)}%</td>
+            <td class="col-del"></td>
+          `;
           compBody.appendChild(subTr);
-        }
+        });
       });
 
       recalcAllPercents();

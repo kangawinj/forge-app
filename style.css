@@ -2511,20 +2511,14 @@
   .col-tol{width:100px;}
   .col-range{width:120px;white-space:nowrap;}
   /* Read-only breakdown of what's actually inside a Component that's a
-     whole Part (see findPartByName/renderComponentRows) -- plain chips,
-     no inputs, so it reads unambiguously as reference info rather than
-     something editable here (editing still only happens on the main
-     ingredient tree itself). */
-  .comp-sublist-row td{padding:0 8px 10px 8px;border-bottom:1px solid var(--border);}
-  .comp-sublist{display:flex;flex-wrap:wrap;gap:6px;}
-  .comp-sublist-item{
-    display:inline-block;
-    padding:3px 9px;
-    border-radius:999px;
-    background:var(--bg);
-    color:var(--text-dim);
-    font-size:12px;
-  }
+     whole Part (see findPartByName/renderComponentRows) -- one row per
+     ingredient, its Weight/% lined up under the same .col-wt/.col-pct
+     columns as the main editable row above, no inputs, so it reads
+     unambiguously as reference info rather than something editable here
+     (editing still only happens on the main ingredient tree itself). */
+  .comp-sublist-row td{padding:4px 8px;color:var(--text-dim);background:var(--bg);}
+  .comp-sublist-name{padding-left:20px;}
+  .comp-sublist-num{text-align:right;white-space:nowrap;}
 
   .desc-points-list{margin-bottom:8px;}
   .desc-point-row{
