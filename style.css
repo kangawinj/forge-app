@@ -1160,7 +1160,11 @@
     background:var(--bg);
     border:1px solid var(--border);
     border-radius:var(--radius);
-    padding:14px 16px;
+    /* Less top padding than left/right/bottom -- lines the "Process Flow"
+       title up closer to the ingredient table's own header row (which
+       starts flush, no top padding of its own) since both columns are
+       align-items:start siblings in the same grid row. */
+    padding:10px 14px 12px;
   }
   .simple-process-col-title{
     font-weight:700;
@@ -1193,8 +1197,14 @@
      renderPrintView. Screen layout is untouched since this whole grid only
      ever renders inside a .print-only wrapper. */
   .components-process-print-grid{
-    grid-template-columns:minmax(0,1fr) minmax(0,320px);
-    gap:20px;
+    /* 62/38 fr split -- fr shares out the row's actual available width
+       proportionally (unlike the old fixed-320px right column), so the
+       ratio holds regardless of the page's own width. align-items:start
+       (unchanged) is what keeps both columns' top edges flush AND lets
+       the Process Flow card sit at its own natural content height
+       instead of stretching to match the taller ingredient table. */
+    grid-template-columns:minmax(0,62fr) minmax(0,38fr);
+    gap:16px;
     align-items:start;
   }
   /* Vertical stepper -- a numbered circle per Process Step, connected by a
@@ -1240,17 +1250,23 @@
      Part/Sub-part rows get a tinted background and bold group totals,
      plain padding-based indent (no box-drawing tree characters), "–" for
      an empty Prep/Note, grand total as its own bottom row. */
-  .print-ing-table{width:100%;border-collapse:collapse;font-size:13px;}
+  .print-ing-table{width:100%;border-collapse:collapse;font-size:12px;}
   .print-ing-table th{
     text-align:left;
-    font-size:11px;
+    font-size:10px;
     text-transform:uppercase;
     letter-spacing:.03em;
     color:var(--text-dim);
-    padding:0 10px 8px 10px;
+    padding:0 8px 6px 8px;
     border-bottom:1px solid var(--border);
   }
-  .print-ing-table td{padding:6px 10px;border-bottom:1px solid var(--border);}
+  /* Tighter than the app's other tables -- this one prints alongside the
+     Process Flow column in "4. Components and Process" and a recipe can
+     easily have 15-20+ ingredient rows, so a few px saved per row is what
+     keeps the whole thing fitting on one printed page instead of spilling
+     onto a second (see the #recipeCards .card:nth-of-type(4) break-before
+     rule below, which gives it a full fresh page to fit into). */
+  .print-ing-table td{padding:4px 8px;border-bottom:1px solid var(--border);}
   .print-ing-num{text-align:right;white-space:nowrap;}
   .print-ing-group-row td{
     background:var(--bg);
@@ -3708,14 +3724,20 @@
 
   .print-only{display:none;}
 
+  /* Tighter than the browser's own default print margin (~1in on every
+     side) -- pulled back in so "4. Components and Process" has the best
+     chance of fitting on one page; @page must sit outside @media print. */
+  @page{
+    margin: 10mm;
+  }
+
   @media print{
     /* Chrome/Edge/Firefox all default to NOT printing background colors,
        gradients or images unless the user has ticked "Background
-       graphics" in the print dialog (off by default) -- kept even though
-       the print design itself was reverted back to v3.0.310 below, since
-       any future/inline print background (or one a user tries adding
-       later) would otherwise silently vanish from the actual printed
-       page/PDF while borders and text still show up fine. */
+       graphics" in the print dialog (off by default) -- any print
+       background (now or added later) would otherwise silently vanish
+       from the actual printed page/PDF while borders and text still show
+       up fine. */
     *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
@@ -3728,7 +3750,18 @@
     .print-only.components-process-print-grid{display:grid !important;}
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
-    .card{box-shadow:none;border:1px solid #999;break-inside:avoid;}
+    .card{box-shadow:none;border:1px solid #999;break-inside:avoid;padding:16px 18px;}
+    /* "4. Components and Process" pairs a potentially long ingredient
+       table with the Process Flow box side by side in a CSS grid --
+       break-inside:avoid on .card above doesn't reliably hold across a
+       grid child in Chrome's print engine, so a recipe with many
+       ingredients could split the grid mid-table instead of moving the
+       whole section to a fresh page. Starting it on its own page gives it
+       the most room to fit as one piece (paired with the tighter
+       .print-ing-table row padding above, and printIngredientTableHtml's
+       tbody-not-tfoot fix that stopped the total row from also printing a
+       page early). Scoped to this one section only -- not every section. */
+    #recipeCards .card:nth-of-type(4){break-before:page;}
     body{background:#fff;}
     /* The read-only flowchart's on-screen scroll box has a fixed
        max-height/overflow for the browser viewport — on paper it should
