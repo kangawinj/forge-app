@@ -144,7 +144,7 @@ export function openVersionPreview(r, v){
     <div class="overview-title" style="margin-top:16px;">Ingredients</div>
     ${readOnlyIngredientTreeHtml(snap.parts, totalWt, snapFlowchart.nodes)}
     <div class="overview-title" style="margin-top:16px;">Process Steps</div>
-    ${isFlowMode ? '<div id="versionPreviewFlowchart"></div>' : `<div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes)}</div>`}
+    ${isFlowMode ? '<div id="versionPreviewFlowchart"></div>' : `<div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes, snap.parts)}</div>`}
   `;
   document.getElementById('versionPreviewModalOverlay').classList.add('open');
   if(isFlowMode){
@@ -3664,7 +3664,7 @@ function renderPrintView(r){
   // whichever mode is currently selected on-screen (see processViewMode).
   const isFlowMode = r.processViewMode === 'flowchart' && r.processFlowchart.nodes.length > 0;
   const procEl = document.getElementById('printProcessesView');
-  if(procEl) procEl.innerHTML = isFlowMode ? '' : readOnlyProcessesHtml(r.processes);
+  if(procEl) procEl.innerHTML = isFlowMode ? '' : readOnlyProcessesHtml(r.processes, r.parts);
 
   const flowEl = document.getElementById('printProcessFlowchart');
   if(flowEl){

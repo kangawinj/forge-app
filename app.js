@@ -640,7 +640,8 @@ const CHANGELOG = [
   { version: "3.0.331", date: "2026-09-04", note: "Added a Preview button next to Print / PDF on the recipe page — opens the exact same print layout full-screen (sidebar and toolbar hidden) without triggering an actual print job, with a close button at the top-right to return to editing" },
   { version: "3.0.332", date: "2026-09-04", note: "Left-aligned the Component name column on the Process Steps page's Cutting/Weighing/etc. tables — it was inheriting the same right-align as the numeric Weight/Tolerance/Range/% columns next to it" },
   { version: "3.0.333", date: "2026-09-04", note: "Narrowed the # column on those same Cutting/Weighing/etc. tables (it was taking far more room than a single digit needs) and gave all the reclaimed width to the Component column, so long ingredient names wrap less" },
-  { version: "3.0.334", date: "2026-09-04", note: "Each Process Step (Cutting/Weighing/Mixing 1/...) on the Process Steps page and in Version Preview now renders as its own bordered white block instead of flowing straight into the next one, so it's clear where one Step ends and the next begins" }
+  { version: "3.0.334", date: "2026-09-04", note: "Each Process Step (Cutting/Weighing/Mixing 1/...) on the Process Steps page and in Version Preview now renders as its own bordered white block instead of flowing straight into the next one, so it's clear where one Step ends and the next begins" },
+  { version: "3.0.335", date: "2026-09-04", note: "The read-only Process Steps page and Version Preview now show the same sub-ingredient breakdown under any Component that's a whole Part (e.g. \"Powder\") as the live editor already did — read-only names/weight/%, no editable fields" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3013,10 +3014,29 @@ export function renderMain(){
 
 
 
+// Finds a Part anywhere in the recipe's tree (including nested Sub-parts)
+// by name -- a local copy of recipes.js's own findPartByName (not shared
+// directly since recipes.js already imports things FROM this file, and
+// the reverse would be circular). Used below to look up what's actually
+// inside a Process Step's Component when that Component is a whole Part
+// added as one lumped entry, same idea as the live editor's own Process
+// Steps Components table (see renderComponentRows in recipes.js).
+function findPartByNameForProcessView(parts, name){
+  for(const part of (parts || [])){
+    if((part.name || '').trim() === name) return part;
+    const found = findPartByNameForProcessView(part.parts, name);
+    if(found) return found;
+  }
+  return null;
+}
+
 // Shared by the print view and the Version Preview modal — a process list
 // (title + optional components table + numbered steps) rendered read-only,
-// fed from either the live recipe or a frozen version snapshot.
-export function readOnlyProcessesHtml(processes){
+// fed from either the live recipe or a frozen version snapshot. `parts` is
+// the recipe/snapshot's own ingredient tree, only needed for the Part-
+// based Component ingredient breakdown below — optional so any other
+// caller that doesn't have it handy can just omit it.
+export function readOnlyProcessesHtml(processes, parts){
   const list = (processes || []).filter(p =>
     (p.title||'').trim() !== '' ||
     (p.steps||[]).some(s => (s||'').trim() !== '') ||
@@ -3040,7 +3060,26 @@ export function readOnlyProcessesHtml(processes){
             <tbody>${components.map((c, cIdx) => {
               const wt = parseFloat(c.weight) || 0;
               const tol = parseFloat(c.tolerance) || 0;
-              return `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
+              const mainRow = `<tr><td>${cIdx+1}</td><td>${escapeHtml(c.name||'')}</td><td>${formatWeight(wt)}</td><td>±${tol}</td><td>${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g</td><td>${(parseFloat(c.percent)||0).toFixed(2)}%</td></tr>`;
+              // If this Component is a whole Part (not a single
+              // ingredient), show what's actually inside it underneath --
+              // same read-only, one-row-per-ingredient breakdown as the
+              // live editor's own Components table.
+              const matchedPart = findPartByNameForProcessView(parts, (c.name || '').trim());
+              const innerIngredients = matchedPart
+                ? allIngredientsInPart(matchedPart).filter(i => (i.name||'').trim() !== '')
+                : [];
+              const subRows = innerIngredients.map(ing => `
+                <tr class="comp-sublist-row">
+                  <td></td>
+                  <td class="comp-sublist-name">${escapeHtml(ing.name)}</td>
+                  <td class="comp-sublist-num">${formatWeight(parseFloat(ing.weight) || 0)}</td>
+                  <td></td>
+                  <td></td>
+                  <td class="comp-sublist-num">${(parseFloat(ing.percent) || 0).toFixed(2)}%</td>
+                </tr>
+              `).join('');
+              return mainRow + subRows;
             }).join('')}</tbody>
             <tfoot><tr class="total-row">
               <td></td><td>Total</td>
