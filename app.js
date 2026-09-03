@@ -633,7 +633,8 @@ const CHANGELOG = [
   { version: "3.0.324", date: "2026-09-03", note: "Reverted the printed recipe's design back to v3.0.310 again — dropped the 10mm margins, one-section-per-page break, Components/Process color shading and gradient, and the 62/38 column split — while keeping the Formula-total-row fix and the print-color-adjust:exact fix from the last two versions" },
   { version: "3.0.325", date: "2026-09-03", note: "Re-fit \"4. Components and Process\" onto a single printed page — the 62%/38% ingredient-table/Process-Flow split with aligned top edges, a fresh page for the section, and tighter margins/padding are back, but this time with no color/gradient highlighting on the group rows (plain, per the last request)" },
   { version: "3.0.326", date: "2026-09-03", note: "Widened the on-screen recipe page from the 210mm (A4) cap to 1300px (same width as Compare/Projects) — the Recipe Overview table's columns felt cramped at A4 width. Printing is unaffected, it already scales to the physical paper size" },
-  { version: "3.0.327", date: "2026-09-03", note: "Printed Process Flow steps now list their Components underneath each step name (English-only, the Thai half of each ingredient's bilingual name is dropped) so it's clear at a glance what goes into each step" }
+  { version: "3.0.327", date: "2026-09-03", note: "Printed Process Flow steps now list their Components underneath each step name (English-only, the Thai half of each ingredient's bilingual name is dropped) so it's clear at a glance what goes into each step" },
+  { version: "3.0.328", date: "2026-09-03", note: "Fixed Parts/Sub-parts in the ingredient tree auto-re-expanding after any drag-and-drop reorder — a manually collapsed Part now stays collapsed instead of snapping back open every time the tree re-renders" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

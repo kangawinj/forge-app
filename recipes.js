@@ -1787,6 +1787,18 @@ function updateTreeRoot(r){
   if(wtEl && document.activeElement !== wtEl) wtEl.value = (r.batchWeight || 0).toFixed(2);
 }
 
+// Remembers which Parts the user has explicitly expanded/collapsed by
+// clicking their toggle arrow, keyed by the Part object itself (stable
+// across a renderParts() re-render since drag-and-drop reordering moves
+// the same object references around rather than recreating them, and
+// resets naturally when a different recipe loads a fresh r.parts tree).
+// Without this, every renderParts() call -- including the one that runs
+// right after a drag-and-drop reorder -- recomputed each Part's collapsed
+// state from scratch (see renderPartNode's setCollapsed(!hasContent) call
+// below) and silently re-expanded anything the user had manually
+// collapsed.
+const manualPartCollapseState = new WeakMap();
+
 function renderParts(r){
   recomputeFromWeights(r);
 
@@ -2049,11 +2061,13 @@ function renderPartNode(r, part, container, siblingsCtx){
   }
 
   toggleBtn.addEventListener('click', () => {
-    setCollapsed(!block.classList.contains('collapsed'));
+    const next = !block.classList.contains('collapsed');
+    setCollapsed(next);
+    manualPartCollapseState.set(part, next);
   });
 
   const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '') || part.parts.length > 0;
-  setCollapsed(!hasContent);
+  setCollapsed(manualPartCollapseState.has(part) ? manualPartCollapseState.get(part) : !hasContent);
 
   function renderRows(){
     body.innerHTML = '';
