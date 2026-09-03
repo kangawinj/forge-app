@@ -1686,6 +1686,22 @@ export function allIngredientsInRecipe(r){
   return (r.parts || []).flatMap(allIngredientsInPart);
 }
 
+// Finds a Part anywhere in the recipe's tree (including nested Sub-parts)
+// by name -- used to look up what's actually inside a Process Step's
+// Component when that Component is a whole Part added as one lump entry
+// (see the "Add Component" picker's Parts group). Only ever a name match
+// against CURRENT live data, not something recorded at the time the
+// Component was added, since a Component only ever stores a name/weight/
+// tolerance snapshot, not a reference back to the Part itself.
+function findPartByName(parts, name){
+  for(const part of (parts || [])){
+    if((part.name || '').trim() === name) return part;
+    const found = findPartByName(part.parts, name);
+    if(found) return found;
+  }
+  return null;
+}
+
 // Scales every ingredient under a Part (including ones nested inside its
 // Sub-parts) by the same factor, so weights change but every ratio between
 // them — and so every %-of-parent at every level — doesn't.
@@ -2897,6 +2913,21 @@ function renderProcesses(r){
         });
 
         compBody.appendChild(tr);
+
+        // If this Component is a whole Part (not a single ingredient),
+        // show what's actually inside it -- read-only, just names, no
+        // weight/%/tolerance inputs -- so "Vegan Tartar Sauce" as one
+        // lumped-together 500g Component still lets you see at a glance
+        // what that 500g is actually made of, without duplicating the
+        // main ingredient tree's own editable fields here.
+        const matchedPart = findPartByName(r.parts, (comp.name || '').trim());
+        const innerNames = matchedPart ? allIngredientsInPart(matchedPart).map(i => (i.name||'').trim()).filter(Boolean) : [];
+        if(innerNames.length){
+          const subTr = document.createElement('tr');
+          subTr.className = 'comp-sublist-row';
+          subTr.innerHTML = `<td></td><td colspan="6"><div class="comp-sublist">${innerNames.map(n => `<span class="comp-sublist-item">${escapeHtml(n)}</span>`).join('')}</div></td>`;
+          compBody.appendChild(subTr);
+        }
       });
 
       recalcAllPercents();

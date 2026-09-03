@@ -634,7 +634,8 @@ const CHANGELOG = [
   { version: "3.0.325", date: "2026-09-03", note: "Re-fit \"4. Components and Process\" onto a single printed page — the 62%/38% ingredient-table/Process-Flow split with aligned top edges, a fresh page for the section, and tighter margins/padding are back, but this time with no color/gradient highlighting on the group rows (plain, per the last request)" },
   { version: "3.0.326", date: "2026-09-03", note: "Widened the on-screen recipe page from the 210mm (A4) cap to 1300px (same width as Compare/Projects) — the Recipe Overview table's columns felt cramped at A4 width. Printing is unaffected, it already scales to the physical paper size" },
   { version: "3.0.327", date: "2026-09-03", note: "Printed Process Flow steps now list their Components underneath each step name (English-only, the Thai half of each ingredient's bilingual name is dropped) so it's clear at a glance what goes into each step" },
-  { version: "3.0.328", date: "2026-09-03", note: "Fixed Parts/Sub-parts in the ingredient tree auto-re-expanding after any drag-and-drop reorder — a manually collapsed Part now stays collapsed instead of snapping back open every time the tree re-renders" }
+  { version: "3.0.328", date: "2026-09-03", note: "Fixed Parts/Sub-parts in the ingredient tree auto-re-expanding after any drag-and-drop reorder — a manually collapsed Part now stays collapsed instead of snapping back open every time the tree re-renders" },
+  { version: "3.0.329", date: "2026-09-03", note: "When a Process Step's Component is a whole Part (e.g. \"Vegan Tartar Sauce\" added as one lumped-together entry), its row now shows a read-only list of what's actually inside it — just the ingredient names as plain chips, no editable weight/tolerance/% fields, so a lumped Component's makeup is still visible at a glance" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
