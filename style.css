@@ -1246,7 +1246,13 @@
     position:relative;
     z-index:1;
   }
+  /* Wraps the label + component list so they stack vertically while the
+     circle (a sibling flex item on .print-process-flow-node) stays put --
+     min-width:0 lets a long component list actually wrap inside the 38%-
+     width Process Flow card instead of forcing the column wider. */
+  .print-process-flow-text{flex:1;min-width:0;}
   .print-process-flow-label{font-size:13px;font-weight:600;color:var(--text);}
+  .print-process-flow-components{font-size:11px;color:var(--text-dim);margin-top:2px;}
   /* Redesigned print ingredient table (see printIngredientTableHtml) --
      Part/Sub-part rows get a tinted background and bold group totals,
      plain padding-based indent (no box-drawing tree characters), "–" for

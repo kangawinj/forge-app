@@ -3534,10 +3534,11 @@ function renderPrintView(r){
   }
 
   // Compact companion to the ingredient tree above -- just the Process
-  // Steps' titles, connected top-to-bottom by a vertical line, so the
-  // printed recipe and its process flow sit side by side on one page (see
+  // Steps' titles (plus, per step, which Components go into it) connected
+  // top-to-bottom by a vertical line, so the printed recipe and its
+  // process flow sit side by side on one page (see
   // .components-process-print-grid). The full step detail (times,
-  // temperatures, components) still prints on its own page further down
+  // temperatures, tolerances) still prints on its own page further down
   // via printProcessesView/printProcessFlowchart -- this is a summary, not
   // a replacement. Every node renders the same neutral way (numbered
   // circle) -- there's no "step completed" concept in the data model, so
@@ -3550,12 +3551,26 @@ function renderPrintView(r){
     flowStepsEl.innerHTML = steps.length ? `
       <div class="simple-process-col-title">Process Flow</div>
       <div class="print-process-flow-stepper">
-        ${steps.map((p, idx) => `
+        ${steps.map((p, idx) => {
+          // A component's name is stored as the ingredient's full
+          // "English / Thai" library name (or, for a whole Part added as
+          // one component, just its plain English label already) -- only
+          // the part before the "/" is shown here, so this stays a quick
+          // "what goes in" glance instead of repeating the full bilingual
+          // ingredient table off to the left.
+          const componentNames = (p.components || [])
+            .map(c => (c.name || '').split('/')[0].trim())
+            .filter(Boolean);
+          return `
           <div class="print-process-flow-node">
             <div class="print-process-flow-circle">${idx+1}</div>
-            <div class="print-process-flow-label">${escapeHtml(p.title || 'Untitled process')}</div>
+            <div class="print-process-flow-text">
+              <div class="print-process-flow-label">${escapeHtml(p.title || 'Untitled process')}</div>
+              ${componentNames.length ? `<div class="print-process-flow-components">${escapeHtml(componentNames.join(', '))}</div>` : ''}
+            </div>
           </div>
-        `).join('')}
+        `;
+        }).join('')}
       </div>
     ` : '';
   }
