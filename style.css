@@ -762,6 +762,7 @@
   .col-no{width:34px;color:var(--text-dim);text-align:center;}
   .col-pct{width:100px;}
   .col-wt{width:110px;}
+  .col-yield{width:80px;}
   .col-cost{width:100px;}
   .col-del{width:34px;text-align:center;}
   .num-input{text-align:right;}
@@ -1105,7 +1106,14 @@
      needed since .overview-num-cell below shrink-wraps to the number's own
      width instead of stretching to fill the column, so it no longer sits
      at the column's right edge on its own. */
-  .overview-block .col-pct, .overview-block .col-wt, .overview-block .col-cost{text-align:right;}
+  .overview-block .col-pct, .overview-block .col-wt, .overview-block .col-yield, .overview-block .col-cost{text-align:right;}
+  /* Prep Yield / Prepare Wt. don't get the shrink-to-fit .overview-num-cell
+     treatment (see numCellHtml) -- plain right-aligned text is enough at
+     this size, and the highlight below is the actual signal to look at.
+     Only lit when the effective Yield is under 100% -- real prep loss to
+     flag, not a >100% rehydration case. */
+  .overview-block .col-wt.col-prepare-highlight{color:var(--accent);font-weight:700;}
+  .overview-ing-prep{font-size:12px;color:var(--text);}
   /* Recipe Overview's %/Weight/Cost columns -- a thin bar directly under
      the number itself (not a separate pill/track sitting beside it),
      scaled against that column's own values (see maxPct/maxWt/maxCost in
@@ -1414,7 +1422,7 @@
     word-break:break-word;
     max-width:160px;
   }
-  .ro-tree-pct, .ro-tree-wt{
+  .ro-tree-pct, .ro-tree-wt, .ro-tree-yield{
     text-align:right;
     white-space:nowrap;
     width:64px;
@@ -1506,6 +1514,40 @@
     font-size:12px;
     color:var(--text-dim);
   }
+  /* Ingredient Preparation Yield -- Yield stacks its input above the
+     "from library · editable" hint (column-direction override of the
+     row/row .row-value-col default above) so the hint doesn't need to
+     align against anything outside its own narrow column; Prepare is
+     read-only display text, not an input, styled like one for visual
+     consistency with its neighbors. */
+  .row-value-col.row-value-yield{
+    flex-direction:column;
+    align-items:stretch;
+    flex:0 0 92px;
+    gap:2px;
+  }
+  .row-value-yield-input-row{
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
+  .ing-yield-hint{
+    font-size:10px;
+    color:var(--text-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .row-value-col.row-value-prepare{
+    flex:0 0 80px;
+    font-size:13px;
+    font-weight:600;
+  }
+  .row-value-prepare .ing-prepare-display{flex:1;min-width:0;}
+  /* Only when the effective Yield is under 100% -- real prep loss to
+     flag, not a >100% rehydration case (see updatePrepareDisplay). */
+  .row-value-prepare.row-value-prepare-highlight{color:var(--accent);}
+  .ing-yield.invalid{border-color:var(--danger) !important;background:var(--danger-light);}
   /* Custom fuzzy-search dropdown for the ingredient name field — see
      fuzzyMaterialMatches/renderSuggestions in renderParts. Floats below
      the input rather than pushing the row's layout around. */
@@ -1626,7 +1668,7 @@
     font-weight:600;
     font-family:"Consolas","Courier New",monospace;
   }
-  .ing-wt:disabled, .ing-pct-display:disabled{
+  .ing-wt:disabled, .ing-pct-display:disabled, .ing-yield:disabled{
     background:#f1f3f0;
     color:var(--text-dim);
     cursor:not-allowed;

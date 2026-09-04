@@ -9,7 +9,7 @@ import {
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
   findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
-  openMaterialDetail
+  openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -390,7 +390,7 @@ export function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
 export const PART_COUNT = 4;
 
 export function blankPart(name){
-  return { name, ingredients: [ { name:"", percent:0, weight:0, note:"" } ], parts: [] };
+  return { name, ingredients: [ { id: uid(), name:"", percent:0, weight:0, note:"" } ], parts: [] };
 }
 
 export function blankRecipe(){
@@ -435,7 +435,7 @@ export function blankRecipe(){
 
 export function migrateRecipe(r){
   if(!Array.isArray(r.parts)){
-    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [{ name:"", percent:0, weight:0, note:"" }];
+    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [{ id: uid(), name:"", percent:0, weight:0, note:"" }];
     r.parts = [ { name:"Part 1", ingredients: oldIngredients } ];
     for(let i = r.parts.length; i < PART_COUNT; i++){
       r.parts.push(blankPart(`Part ${i+1}`));
@@ -447,9 +447,17 @@ export function migrateRecipe(r){
   // `p.parts` simply won't exist on them yet; this backfills it as empty.
   function migratePart(p){
     if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
-      p.ingredients = [{ name:"", percent:0, weight:0, note:"" }];
+      p.ingredients = [{ id: uid(), name:"", percent:0, weight:0, note:"" }];
     }
-    p.ingredients.forEach(ing => { if(ing.flowNodeId === undefined) ing.flowNodeId = null; });
+    p.ingredients.forEach(ing => {
+      if(ing.flowNodeId === undefined) ing.flowNodeId = null;
+      // Backfilled the same way Processes already get one above -- older
+      // saved ingredients never had a stable id, which quietly broke the
+      // Sub Ingredients panel's per-row expand/collapse state (it keys off
+      // ing.id) and is now also needed to know whether a row's Yield came
+      // from a picked library variant (see subIngredientId below).
+      if(!ing.id) ing.id = uid();
+    });
     const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
     if(oldPartName) p.name = `Part ${oldPartName[1]}`;
     if(!Array.isArray(p.parts)) p.parts = [];
@@ -993,13 +1001,17 @@ function ingSubIngredientsHtml(ing, matched){
 // Renders into subsEl and (re)wires its toggle button + selectable rows --
 // called again, recursively, from inside the click handlers themselves,
 // since replacing innerHTML drops whatever listeners were on the old ones.
-function renderIngSubsToggle(subsEl, ing, matched, noteInput){
+// `onPicked` (optional) fires after a variant is applied -- used to also
+// snapshot its %Yield into the row's Prepare Weight fields, which live
+// outside this function's own DOM (see the ing-yield/.ing-prepare-display
+// wiring in renderRows).
+function renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked){
   subsEl.innerHTML = ingSubIngredientsHtml(ing, matched);
   const btn = subsEl.querySelector('[data-role="toggle-ing-subs"]');
   if(!btn) return;
   btn.addEventListener('click', () => {
     if(ingSubsExpandedIds.has(ing.id)) ingSubsExpandedIds.delete(ing.id); else ingSubsExpandedIds.add(ing.id);
-    renderIngSubsToggle(subsEl, ing, matched, noteInput);
+    renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked);
   });
   const subs = matched?.subIngredients || [];
   subsEl.querySelectorAll('tr[data-sub-idx]').forEach(row => {
@@ -1008,9 +1020,17 @@ function renderIngSubsToggle(subsEl, ing, matched, noteInput){
       if(!si) return;
       ing.note = subIngredientSummary(si);
       noteInput.value = ing.note;
+      // Snapshot the variant's own %Yield onto this recipe row -- a plain
+      // copy, not a live reference, so editing the Library's Sub
+      // Ingredients later never changes an already-saved recipe (see
+      // subIngredientId, only used to know "this came from the library"
+      // for the from-library hint and to detect a variant change).
+      ing.subIngredientId = si.id;
+      ing.prepYieldPct = (si.yieldPct !== '' && si.yieldPct != null && isFinite(parseFloat(si.yieldPct))) ? parseFloat(si.yieldPct) : 100;
+      if(onPicked) onPicked();
       scheduleSave();
       ingSubsExpandedIds.delete(ing.id);
-      renderIngSubsToggle(subsEl, ing, matched, noteInput);
+      renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked);
     });
   });
 }
@@ -1031,9 +1051,11 @@ function overviewHeaderRowHtml(){
   };
   return `
     <th class="col-no">#</th>
-    ${th('Ingredient', '', 'name')}
+    ${th('Ingredient / Prep', '', 'name')}
     ${th('% of Recipe', 'col-pct', 'wt')}
-    ${th('Total Weight (g)', 'col-wt', 'wt')}
+    ${th('Formula Wt. (g)', 'col-wt', 'wt')}
+    ${th('Prep Yield', 'col-yield', 'yield')}
+    ${th('Prepare Wt. (g)', 'col-wt', 'prepareWt')}
     ${th('Cost (฿)', 'col-cost', 'cost')}
   `;
 }
@@ -1144,9 +1166,11 @@ export function renderRecipeEditor(r){
           <tfoot>
             <tr>
               <td></td>
-              <td>Total</td>
+              <td>Formula Total</td>
               <td class="col-pct" id="grandTotalPct"></td>
               <td class="col-wt" id="grandTotalWt"></td>
+              <td class="col-yield"></td>
+              <td class="col-wt" id="grandTotalPrepareWt" title="Preparation Total"></td>
               <td class="col-cost" id="grandTotalCost"></td>
             </tr>
           </tfoot>
@@ -1278,7 +1302,7 @@ export function renderRecipeEditor(r){
           </div>
         </div>
         <div>
-          <div class="batch-stat-label">Expected Yield (%) — production loss, e.g. cooking/trim</div>
+          <div class="batch-stat-label">Batch Process Yield (%) — loss during cooking/production</div>
           <div class="batch-scale-row">
             <input type="number" id="f-yieldPct" min="0" max="100" step="0.01" placeholder="e.g. 95" class="unit-input">
             <span class="unit-suffix">%</span>
@@ -2018,7 +2042,7 @@ function renderPartNode(r, part, container, siblingsCtx){
       // never sits completely empty, always at least one blank row to type
       // into, unless it still has Sub-parts of its own.
       if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
-        sourcePart.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+        sourcePart.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
       }
       part.ingredients.push(draggedIng);
     }
@@ -2131,6 +2155,17 @@ function renderPartNode(r, part, container, siblingsCtx){
             <input type="number" class="ing-wt num-input" step="0.01" min="0">
             <span class="ing-unit">g</span>
           </div>
+          <div class="row-value-col row-value-yield">
+            <div class="row-value-yield-input-row">
+              <input type="number" class="ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+              <span class="ing-unit">%</span>
+            </div>
+            <div class="ing-yield-hint"></div>
+          </div>
+          <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (Yield ÷ 100) — calculated automatically, not editable directly">
+            <span class="ing-prepare-display"></span>
+            <span class="ing-unit">g</span>
+          </div>
           <div class="row-value-col">
             <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
             <span class="ing-unit">%</span>
@@ -2153,6 +2188,9 @@ function renderPartNode(r, part, container, siblingsCtx){
       const wtInput = branch.querySelector('.ing-wt');
       const noteInput = branch.querySelector('.ing-note');
       const delBtn = branch.querySelector('.icon-btn');
+      const yieldInput = branch.querySelector('.ing-yield');
+      const yieldHintEl = branch.querySelector('.ing-yield-hint');
+      const prepareDisplay = branch.querySelector('.ing-prepare-display');
 
       // Optional link to a Process Flowchart node (see the Process
       // Flowchart section) — e.g. "this ingredient goes into step B".
@@ -2215,7 +2253,7 @@ function renderPartNode(r, part, container, siblingsCtx){
         if(sourceIdx === -1){ dragPayload = null; return; }
         sourcePart.ingredients.splice(sourceIdx, 1);
         if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
-          sourcePart.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+          sourcePart.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
         }
         // Re-found by reference AFTER the removal above, since if the
         // dragged ingredient came from this same Part, this row's own
@@ -2233,12 +2271,42 @@ function renderPartNode(r, part, container, siblingsCtx){
       pctDisplay.value = (ing.percent||0).toFixed(2);
       wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
       noteInput.value = ing.note || '';
+      yieldInput.value = ing.prepYieldPct != null ? ing.prepYieldPct : '';
+
+      // Prepare (gross) weight = Formula weight ÷ (Yield ÷ 100) --
+      // computePrepareWeight (app.js) already falls back to treating an
+      // empty/invalid/non-positive yield as 100%, so this never shows
+      // NaN/Infinity even mid-edit. Highlighted only when the effective
+      // yield is actually under 100% (i.e. there's real prep loss to flag)
+      // -- a >100% yield (rehydration) is a real, supported case but isn't
+      // "loss", so it prints in the normal neutral color.
+      function updatePrepareDisplay(){
+        const prepareWt = computePrepareWeight(ing.weight, ing.prepYieldPct);
+        prepareDisplay.textContent = formatWeight(prepareWt);
+        const y = parseFloat(ing.prepYieldPct);
+        const isLossy = isFinite(y) && y > 0 && y < 100;
+        prepareDisplay.parentElement.classList.toggle('row-value-prepare-highlight', isLossy);
+        const valid = isValidYieldPct(yieldInput.value);
+        yieldInput.classList.toggle('invalid', !valid);
+        yieldInput.title = valid ? '' : 'Yield must be between 0.01% and 999.99%';
+        yieldHintEl.textContent = ing.subIngredientId ? 'from library · editable' : '';
+      }
+      updatePrepareDisplay();
+
+      yieldInput.addEventListener('input', e => {
+        const v = e.target.value;
+        ing.prepYieldPct = v === '' ? null : (parseFloat(v) || null);
+        updatePrepareDisplay();
+        refreshDisplays(r);
+        scheduleSave();
+      });
 
       function syncMaterialLink(resetWeightIfUnlinked){
         const matched = findMaterialByLabel(nameInput.value);
         ing.materialId = matched ? matched.id : null;
         wtInput.disabled = !matched;
         pctDisplay.disabled = !matched;
+        yieldInput.disabled = !matched;
         nameInput.classList.remove('ing-linked', 'invalid');
         if(matched){
           nameInput.classList.add('ing-linked');
@@ -2261,7 +2329,11 @@ function renderPartNode(r, part, container, siblingsCtx){
             pctDisplay.value = (0).toFixed(2);
           }
         }
-        renderIngSubsToggle(subsEl, ing, matched, noteInput);
+        renderIngSubsToggle(subsEl, ing, matched, noteInput, () => {
+          yieldInput.value = ing.prepYieldPct != null ? ing.prepYieldPct : '';
+          updatePrepareDisplay();
+          refreshDisplays(r);
+        });
       }
       syncMaterialLink(false);
 
@@ -2369,7 +2441,7 @@ function renderPartNode(r, part, container, siblingsCtx){
 
       delBtn.addEventListener('click', () => {
         part.ingredients.splice(idx, 1);
-        if(part.ingredients.length === 0 && part.parts.length === 0) part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+        if(part.ingredients.length === 0 && part.parts.length === 0) part.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
         renderRows();
         refreshDisplays(r);
         renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
@@ -2405,7 +2477,7 @@ function renderPartNode(r, part, container, siblingsCtx){
       alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
       return;
     }
-    part.ingredients.push({ name:'', percent:0, weight:0, note:'' });
+    part.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
     renderRows();
     refreshDisplays(r);
     scheduleSave();
@@ -2439,6 +2511,7 @@ function renderPartNode(r, part, container, siblingsCtx){
     updatePartSubtotal();
     const pctEls = body.querySelectorAll('.ing-pct-display');
     const wtEls = body.querySelectorAll('.ing-wt');
+    const prepareEls = body.querySelectorAll('.ing-prepare-display');
     part.ingredients.forEach((ing, idx) => {
       // Skip the field the user is actively typing into — reformatting it
       // mid-keystroke (e.g. "30" -> "30.00" before they can type "30.5")
@@ -2452,6 +2525,12 @@ function renderPartNode(r, part, container, siblingsCtx){
       if(pctEl && document.activeElement !== pctEl) pctEl.value = (ing.percent||0).toFixed(2);
       const wtEl = wtEls[idx];
       if(wtEl && document.activeElement !== wtEl) wtEl.value = (parseFloat(ing.weight)||0).toFixed(2);
+      // Prepare weight only ever depends on THIS ingredient's own weight/
+      // yield, never on siblings — but Scale Recipe (partWtInput above)
+      // changes every ingredient's .weight without touching its <input>
+      // directly, same reason wtEl needs refreshing here too.
+      const prepareEl = prepareEls[idx];
+      if(prepareEl) prepareEl.textContent = formatWeight(computePrepareWeight(ing.weight, ing.prepYieldPct));
     });
   });
 
@@ -2481,7 +2560,7 @@ function renderOverview(allIngredients){
   const costEl = document.getElementById('grandTotalCost');
   const named = allIngredients.filter(i => (i.name||'').trim() !== '');
   if(named.length === 0){
-    body.innerHTML = '<tr><td colspan="5"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
     if(costEl){ costEl.innerHTML = ''; costEl.title = ''; }
     const per100El = document.getElementById('overviewCostPer100');
     const perKgEl = document.getElementById('overviewCostPerKg');
@@ -2517,9 +2596,13 @@ function renderOverview(allIngredients){
     return pricingCurrency === 'THB' ? `฿${converted.toFixed(2)}` : `${converted.toFixed(2)} ${pricingCurrency}`;
   };
 
+  // Grouped by name AND Prep (not just name) -- two occurrences of the same
+  // ingredient with a different Prep (and therefore, usually, a different
+  // Yield) are genuinely different amounts to weigh out, so they show as
+  // separate rows rather than being silently averaged/merged into one.
   const groups = new Map();
   named.forEach(i => {
-    const key = i.name.trim().toLowerCase();
+    const key = i.name.trim().toLowerCase() + '|' + (i.note || '').trim().toLowerCase();
     if(!groups.has(key)){
       const material = i.materialId ? ingredientMaster.find(m => m.id === i.materialId) : null;
       // null (not 0) when the matched Ingredient Library entry has no
@@ -2528,8 +2611,13 @@ function renderOverview(allIngredients){
       const pricePerKg = material && material.price !== '' && material.price != null ? parseFloat(material.price) : null;
       groups.set(key, {
         name: i.name.trim(),
+        note: i.note || '',
         pct: 0,
         wt: 0,
+        // Every ingredient sharing this exact name+Prep key is expected to
+        // share the same Yield too (it's the same prep); taken from
+        // whichever one is seen first, same as image/vendorName/etc. below.
+        prepYieldPct: i.prepYieldPct,
         image: material ? material.image : '',
         vendorName: material ? material.vendorName : '',
         manufacturer: material ? material.manufacturer : '',
@@ -2547,14 +2635,19 @@ function renderOverview(allIngredients){
 
   // % here is always of the whole recipe (not the ingredient's own part),
   // so it's computed straight from weight rather than summing the now
-  // per-part ing.percent values.
+  // per-part ing.percent values. Yield never enters this -- % of Recipe and
+  // Formula Wt. stay exactly what they'd be without the feature.
   const totalRecipeWeight = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
   groups.forEach(g => {
     g.pct = totalRecipeWeight > 0 ? (g.wt / totalRecipeWeight * 100) : 0;
-    g.cost = g.pricePerKg != null ? (g.wt / 1000) * g.pricePerKg : null;
+    g.prepareWt = computePrepareWeight(g.wt, g.prepYieldPct);
+    // Cost is based on Prepare (gross) weight, not Formula weight -- the
+    // Price/kg is the as-purchased price, so what's actually bought (and
+    // costed) is the gross amount before any prep loss.
+    g.cost = computeIngredientCost(g.prepareWt, g.pricePerKg);
   });
 
-  const OVERVIEW_SORT_ACCESSORS = { name: g => g.name.toLowerCase(), wt: g => g.wt, cost: g => g.cost ?? -1 };
+  const OVERVIEW_SORT_ACCESSORS = { name: g => g.name.toLowerCase(), wt: g => g.wt, cost: g => g.cost ?? -1, prepareWt: g => g.prepareWt, yield: g => g.prepYieldPct ?? 100 };
   const overviewSortAccessor = OVERVIEW_SORT_ACCESSORS[overviewSortKey] || OVERVIEW_SORT_ACCESSORS.wt;
   const rows = [...groups.values()].sort((a,b) => {
     const av = overviewSortAccessor(a), bv = overviewSortAccessor(b);
@@ -2588,6 +2681,8 @@ function renderOverview(allIngredients){
     const wtBarPct = maxWt > 0 ? Math.min(100, (g.wt / maxWt) * 100) : 0;
     const costBarPct = g.cost != null && maxCost > 0 ? Math.min(100, (g.cost / maxCost) * 100) : null;
     if(g.cost != null){ totalCost += g.cost; anyPriced = true; }else{ allPriced = false; }
+    const y = parseFloat(g.prepYieldPct);
+    const isLossy = isFinite(y) && y > 0 && y < 100;
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
       <td>
@@ -2597,12 +2692,15 @@ function renderOverview(allIngredients){
             : `<div class="overview-thumb overview-thumb-empty${g.material ? ' overview-thumb-clickable' : ''}" title="${g.material ? 'Click for ingredient details' : ''}"></div>`}
           <div class="overview-ing-info">
             <span>${escapeHtml(g.name)}</span>
+            ${g.note ? `<span class="overview-ing-prep">${escapeHtml(g.note)}</span>` : ''}
             ${(g.vendorName || g.manufacturer) ? `<span class="overview-ing-sub">${escapeHtml([g.vendorName, g.manufacturer].filter(Boolean).join(' · '))}</span>` : ''}
           </div>
         </div>
       </td>
       <td class="col-pct">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
       <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
+      <td class="col-yield">${(isFinite(y) && y > 0 ? y : 100).toFixed(2)}%</td>
+      <td class="col-wt${isLossy ? ' col-prepare-highlight' : ''}">${formatWeight(g.prepareWt)}</td>
       <td class="col-cost">${numCellHtml(money(g.cost) ?? '—', costBarPct)}</td>
     `;
     // Reuses the exact same Material Detail popup the Ingredient Library
@@ -2614,6 +2712,12 @@ function renderOverview(allIngredients){
     }
     body.appendChild(tr);
   });
+
+  // Preparation Total -- sum of every row's own Prepare (gross) weight,
+  // shown in its own column right next to Formula Total so the two never
+  // get conflated into a single number.
+  const prepareTotalEl = document.getElementById('grandTotalPrepareWt');
+  if(prepareTotalEl) prepareTotalEl.textContent = formatWeight(rows.reduce((s,g)=>s+g.prepareWt,0));
 
   const hasCost = totalRecipeWeight > 0 && anyPriced;
   const costSuffix = !allPriced ? '*' : '';
@@ -3567,25 +3671,49 @@ function printIngredientTableHtml(parts, totalWeight){
     const label = (part.name||'').trim() || 'Unnamed part';
     const partWeight = partTotalWeight(part);
     const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
+    // A Part is a group of ingredients, not a prep of its own -- Yield/
+    // Prepare only ever apply to an actual ingredient leaf, so those two
+    // columns stay blank on a group row (same as Prep/Note already does).
     const groupRow = `
       <tr class="print-ing-group-row">
         <td style="padding-left:${12 + depth*16}px">${escapeHtml(label)}</td>
         <td></td>
         <td class="print-ing-num">${fmtWt(partWeight)}</td>
+        <td class="print-ing-num"></td>
+        <td class="print-ing-num"></td>
+        <td class="print-ing-num">${partPct.toFixed(2)}%</td>
         <td class="print-ing-num">${partPct.toFixed(2)}%</td>
       </tr>
     `;
-    const ingRows = namedIngredients.map(ing => `
+    const ingRows = namedIngredients.map(ing => {
+      const formulaWt = parseFloat(ing.weight) || 0;
+      const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct);
+      const y = parseFloat(ing.prepYieldPct);
+      const yieldDisplay = (isFinite(y) && y > 0) ? y : 100;
+      const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
+      return `
       <tr class="print-ing-row">
         <td style="padding-left:${12 + (depth+1)*16}px">${escapeHtml(ing.name)}</td>
         <td>${escapeHtml(ing.note || '').trim() || '–'}</td>
-        <td class="print-ing-num">${fmtWt(parseFloat(ing.weight)||0)}</td>
+        <td class="print-ing-num">${fmtWt(formulaWt)}</td>
+        <td class="print-ing-num">${yieldDisplay.toFixed(2)}%</td>
+        <td class="print-ing-num">${fmtWt(prepareWt)}</td>
         <td class="print-ing-num">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
+        <td class="print-ing-num">${pctOfRecipe.toFixed(2)}%</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
     const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1)).join('');
     return groupRow + ingRows + subRows;
   }
+
+  // Preparation total -- summed independently of the recursive rows above
+  // via the same allIngredientsInPart flattening used everywhere else in
+  // this file, so it's exactly the sum of what actually prints per row.
+  const totalPrepareWeight = namedParts
+    .flatMap(allIngredientsInPart)
+    .filter(i => (i.name||'').trim() !== '')
+    .reduce((s,i) => s + computePrepareWeight(parseFloat(i.weight)||0, i.prepYieldPct), 0);
 
   // "Formula total" is a plain last row of <tbody>, not a <tfoot> --
   // browsers print a <tfoot> at the bottom of EVERY page a table spans
@@ -3593,10 +3721,10 @@ function printIngredientTableHtml(parts, totalWeight){
   // appearing a page early, mid-table, in addition to its correct spot at
   // the very end once the table actually finished on the next page.
   const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('')
-    + `<tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">100.00%</td></tr>`;
+    + `<tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num"></td><td class="print-ing-num">${fmtWt(totalPrepareWeight)} g</td><td class="print-ing-num">100.00%</td><td class="print-ing-num">100.00%</td></tr>`;
   return `
     <table class="print-ing-table">
-      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">g</th><th class="print-ing-num">%</th></tr></thead>
+      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">Formula (g)</th><th class="print-ing-num">Yield</th><th class="print-ing-num">Prepare (g)</th><th class="print-ing-num">%</th><th class="print-ing-num">% of Recipe</th></tr></thead>
       <tbody>${bodyRows}</tbody>
     </table>
   `;
