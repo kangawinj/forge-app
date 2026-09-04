@@ -1550,6 +1550,10 @@
   .overview-thumb-empty{
     background:var(--accent-light);
   }
+  /* Clicking opens the same Material Detail popup as the Ingredient
+     Library page (see openMaterialDetail, wired in renderOverview) --
+     only applied when the row is actually linked to a library entry. */
+  .overview-thumb-clickable{cursor:pointer;}
   .overview-ing-info{
     display:flex;
     flex-direction:column;

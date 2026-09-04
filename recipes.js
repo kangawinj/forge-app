@@ -8,7 +8,8 @@ import {
   renderReadOnlyProcessFlowchart, renderMain,
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
-  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements
+  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
+  openMaterialDetail
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -2532,7 +2533,12 @@ function renderOverview(allIngredients){
         image: material ? material.image : '',
         vendorName: material ? material.vendorName : '',
         manufacturer: material ? material.manufacturer : '',
-        pricePerKg
+        pricePerKg,
+        // Kept only so clicking the thumbnail below can open the same
+        // Material Detail popup the Ingredient Library page itself uses
+        // (see openMaterialDetail in materials.js) -- null when this
+        // ingredient isn't actually linked to a library entry.
+        material
       });
     }
     const g = groups.get(key);
@@ -2586,7 +2592,9 @@ function renderOverview(allIngredients){
       <td class="col-no">${idx+1}</td>
       <td>
         <div class="overview-ing-cell">
-          ${g.image ? `<img src="${escapeHtml(g.image)}" class="overview-thumb" alt="${escapeHtml(g.name)}">` : '<div class="overview-thumb overview-thumb-empty"></div>'}
+          ${g.image
+            ? `<img src="${escapeHtml(g.image)}" class="overview-thumb${g.material ? ' overview-thumb-clickable' : ''}" alt="${escapeHtml(g.name)}" title="${g.material ? 'Click for ingredient details' : ''}">`
+            : `<div class="overview-thumb overview-thumb-empty${g.material ? ' overview-thumb-clickable' : ''}" title="${g.material ? 'Click for ingredient details' : ''}"></div>`}
           <div class="overview-ing-info">
             <span>${escapeHtml(g.name)}</span>
             ${(g.vendorName || g.manufacturer) ? `<span class="overview-ing-sub">${escapeHtml([g.vendorName, g.manufacturer].filter(Boolean).join(' · '))}</span>` : ''}
@@ -2597,6 +2605,13 @@ function renderOverview(allIngredients){
       <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
       <td class="col-cost">${numCellHtml(money(g.cost) ?? '—', costBarPct)}</td>
     `;
+    // Reuses the exact same Material Detail popup the Ingredient Library
+    // page itself opens (see openMaterialDetail in materials.js) -- only
+    // wired when this ingredient is actually linked to a library entry
+    // (g.material), since there's nothing to show otherwise.
+    if(g.material){
+      tr.querySelector('.overview-thumb').addEventListener('click', () => openMaterialDetail(g.material));
+    }
     body.appendChild(tr);
   });
 

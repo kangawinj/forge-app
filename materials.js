@@ -277,7 +277,7 @@ export function mountMaterialsView(){
   playContentTransition(main);
 }
 
-function openMaterialDetail(m){
+export function openMaterialDetail(m){
   const body = document.getElementById('materialDetailBody');
   const rows = [
     ['Vendor Code', m.vendorCode],
