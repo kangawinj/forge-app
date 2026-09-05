@@ -35,6 +35,15 @@ export function mountSeriesMigrationView(){
       <div class="section-title-display">${icon('git-branch', 24)} Recipe Series Migration</div>
     </div>
     <div class="card">
+      <div class="card-title">Find Recipe IDs</div>
+      <p class="series-migration-help">
+        The JSON mapping below needs each recipe's actual Firestore Document ID (not its name or code) —
+        search by product name here to find it, then copy it into <code>recipeId</code> below.
+      </p>
+      <input type="text" id="seriesMigrationSearch" class="series-migration-input" placeholder="Search recipes by name...">
+      <div id="seriesMigrationSearchResults"></div>
+    </div>
+    <div class="card">
       <div class="card-title">Assign existing recipes to a Recipe Series</div>
       <p class="series-migration-help">
         Paste a JSON mapping of existing recipe IDs to Trial numbers under one Series, then click
@@ -64,7 +73,52 @@ export function mountSeriesMigrationView(){
 
   document.getElementById('btnSeriesMigrationPreview').addEventListener('click', runDryRun);
   document.getElementById('btnSeriesMigrationApply').addEventListener('click', applyMigration);
+  document.getElementById('seriesMigrationSearch').addEventListener('input', renderSearchResults);
   playContentTransition(main);
+}
+
+function renderSearchResults(){
+  const q = document.getElementById('seriesMigrationSearch').value.trim().toLowerCase();
+  const resultsEl = document.getElementById('seriesMigrationSearchResults');
+  if(!q){ resultsEl.innerHTML = ''; return; }
+  const matches = recipes.filter(r => (r.name || '').toLowerCase().includes(q)).slice(0, 25);
+  if(matches.length === 0){
+    resultsEl.innerHTML = '<div class="series-migration-help">No recipes match that name.</div>';
+    return;
+  }
+  resultsEl.innerHTML = `
+    <div style="overflow-x:auto;">
+      <table class="compare-table series-migration-table">
+        <thead><tr><th>Name</th><th>Current Code</th><th>Series</th><th>Recipe ID</th><th></th></tr></thead>
+        <tbody>
+          ${matches.map(r => `
+            <tr>
+              <td>${escapeHtml(r.name || 'Untitled recipe')}</td>
+              <td>${escapeHtml(fullCode(r) || '—')}</td>
+              <td>${r.seriesId ? escapeHtml(r.seriesKey || 'yes') : '—'}</td>
+              <td><code class="series-migration-id">${escapeHtml(r.id)}</code></td>
+              <td><button type="button" class="btn btn-sm series-migration-copy-btn" data-id="${escapeHtml(r.id)}">Copy</button></td>
+            </tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+  resultsEl.querySelectorAll('.series-migration-copy-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      try{
+        await navigator.clipboard.writeText(btn.dataset.id);
+        const original = btn.textContent;
+        btn.textContent = 'Copied!';
+        setTimeout(() => { btn.textContent = original; }, 1200);
+      } catch(err){
+        // Clipboard API can be blocked (permissions, non-HTTPS, etc.) --
+        // the ID is already shown as selectable text right next to the
+        // button, so this is a graceful degrade, not a dead end.
+        alert('Could not copy automatically — select the ID text next to this button and copy it manually.');
+      }
+    });
+  });
 }
 
 function parseInput(){

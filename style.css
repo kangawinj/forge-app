@@ -4465,3 +4465,11 @@
   .series-migration-row-error{background:var(--danger-light);}
   .series-migration-row-skip{color:var(--text-dim);}
   .series-migration-row-ok td:nth-child(6){color:var(--ok);font-weight:600;}
+  .series-migration-id{
+    font-family:"Consolas","Courier New",monospace;
+    font-size:12px;
+    background:#f1f3f0;
+    padding:2px 6px;
+    border-radius:4px;
+    user-select:all;
+  }
