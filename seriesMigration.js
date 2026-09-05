@@ -191,8 +191,29 @@ function addSelectedToMapping(){
   textarea.value = JSON.stringify(current, null, 2);
   checked.forEach(cb => { cb.checked = false; });
 
-  const fillInReminder = !current.seriesKey ? ' Fill in seriesKey/countryCode/year/productTypeCode/recipeSeq above before Preview.' : '';
+  const needsSeriesKey = !current.seriesKey;
+  const fillInReminder = needsSeriesKey ? ' Fill in seriesKey/countryCode/year/productTypeCode/recipeSeq at the top before Preview — the box below has jumped there for you.' : '';
   alert(`Added ${addedCount} recipe(s) to the mapping${skippedCount ? ` (${skippedCount} already in the list, skipped)` : ''}.${fillInReminder}`);
+
+  if(needsSeriesKey) focusSeriesKeyField();
+}
+
+// Scrolls the mapping box to the top and drops the cursor right inside the
+// (empty) seriesKey value -- used both right after Add Selected (which
+// otherwise leaves the box scrolled down to the recordIds it just
+// appended) and after a Preview that failed specifically because
+// seriesKey was never filled in, so either way the next keystroke can go
+// straight to fixing it.
+function focusSeriesKeyField(){
+  const textarea = document.getElementById('seriesMigrationInput');
+  textarea.focus();
+  textarea.scrollTop = 0;
+  const marker = '"seriesKey": "';
+  const idx = textarea.value.indexOf(marker);
+  if(idx !== -1){
+    const pos = idx + marker.length;
+    textarea.setSelectionRange(pos, pos);
+  }
 }
 
 function parseInput(){
@@ -216,7 +237,8 @@ function runDryRun(){
   if(!input) return;
 
   const errors = [];
-  if(!(input.seriesKey || '').trim()) errors.push('Missing seriesKey');
+  const missingSeriesKey = !(input.seriesKey || '').trim();
+  if(missingSeriesKey) errors.push('Missing seriesKey');
   if(!Array.isArray(input.recordIds) || input.recordIds.length === 0) errors.push('recordIds must be a non-empty array');
 
   const seenTrialNos = new Set();
@@ -257,6 +279,10 @@ function runDryRun(){
   const okCount = rows.filter(r => r.status === 'ok').length;
   const canApply = errors.length === 0 && okCount > 0;
   applyBtn.classList.toggle('series-migration-btn-inactive', !canApply);
+  // The report (below the box) already flags "Missing seriesKey," but the
+  // fix is scrolled out of view above it -- jump straight to the field
+  // that needs typing into, same as Add Selected does.
+  if(missingSeriesKey) focusSeriesKeyField();
 }
 
 function renderReportHtml(report){
