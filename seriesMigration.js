@@ -19,7 +19,7 @@ import {
   recipes, escapeHtml, icon, uid, currentUser, recipesCol, recipeSeriesCol,
   fullCode, playContentTransition
 } from './app.js';
-import { setDoc, doc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { setDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 // The most recent dry-run report — Apply only ever acts on this, never on
 // a freshly re-parsed textarea, so what gets written always matches
@@ -42,6 +42,9 @@ export function mountSeriesMigrationView(){
       </p>
       <input type="text" id="seriesMigrationSearch" class="series-migration-input" placeholder="Search recipes by name...">
       <div id="seriesMigrationSearchResults"></div>
+    </div>
+    <div class="card" id="seriesMigrationFixCard" style="display:none;">
+      <div id="seriesMigrationFixPanel"></div>
     </div>
     <div class="card">
       <div class="card-title">Assign existing recipes to a Recipe Series</div>
@@ -105,7 +108,7 @@ function renderSearchResults(){
               <td><input type="checkbox" class="series-migration-select-cb" data-id="${escapeHtml(r.id)}" ${r.seriesId ? 'disabled title="Already in a Series"' : ''}></td>
               <td>${escapeHtml(r.name || 'Untitled recipe')}</td>
               <td>${escapeHtml(fullCode(r) || '—')}</td>
-              <td>${r.seriesId ? escapeHtml(r.seriesKey || 'yes') : '—'}</td>
+              <td>${r.seriesId ? `${escapeHtml(r.seriesKey || 'yes')} <button type="button" class="btn btn-sm series-migration-fix-btn" data-series-id="${escapeHtml(r.seriesId)}">Fix</button>` : '—'}</td>
               <td><code class="series-migration-id">${escapeHtml(r.id)}</code></td>
               <td><button type="button" class="btn btn-sm series-migration-copy-btn" data-id="${escapeHtml(r.id)}">Copy</button></td>
               <td><input type="number" class="series-migration-trialno-input num-input" data-id="${escapeHtml(r.id)}" value="${guessTrialNo(r)}" style="width:64px;" ${r.seriesId ? 'disabled' : ''}></td>
@@ -138,6 +141,89 @@ function renderSearchResults(){
     resultsEl.querySelectorAll('.series-migration-select-cb:not(:disabled)').forEach(cb => { cb.checked = true; });
   });
   document.getElementById('btnSeriesMigrationAddSelected').addEventListener('click', addSelectedToMapping);
+  resultsEl.querySelectorAll('.series-migration-fix-btn').forEach(btn => {
+    btn.addEventListener('click', () => openFixSeriesPanel(btn.dataset.seriesId));
+  });
+}
+
+// Corrects an ALREADY-migrated Series' identity fields -- for when a typo
+// went through Apply (e.g. "SAU" typed into recipeSeq instead of "06").
+// Re-running the normal migration mapping can't fix this: applyMigration
+// skips any recipe that already has a seriesId, by design, so mistakes
+// baked in by a first Apply need this separate correction path instead.
+// Reads the recipeSeries doc fresh via getDoc (not just the cached values
+// on one recipe) so maxTrialNo/firstTrialId/createdAt/createdBy are
+// preserved exactly -- only the identity fields below are ever overwritten.
+async function openFixSeriesPanel(seriesId){
+  const cardEl = document.getElementById('seriesMigrationFixCard');
+  const panelEl = document.getElementById('seriesMigrationFixPanel');
+  cardEl.style.display = '';
+  panelEl.innerHTML = '<div class="series-migration-help">Loading current Series data...</div>';
+  cardEl.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  let seriesSnap;
+  try{
+    seriesSnap = await getDoc(doc(recipeSeriesCol, seriesId));
+  } catch(err){
+    panelEl.innerHTML = `<div class="series-migration-errors"><div>Could not load Series ${escapeHtml(seriesId)}: ${escapeHtml(err.message)}</div></div>`;
+    return;
+  }
+  if(!seriesSnap.exists()){
+    panelEl.innerHTML = `<div class="series-migration-errors"><div>No Series record found for ID ${escapeHtml(seriesId)}.</div></div>`;
+    return;
+  }
+  const series = seriesSnap.data();
+  const affectedTrials = recipes.filter(r => r.seriesId === seriesId).sort((a,b) => (a.trialNo||0) - (b.trialNo||0));
+  panelEl.innerHTML = `
+    <div class="card-title">Fix Series — ${escapeHtml(series.seriesKey || seriesId)}</div>
+    <p class="series-migration-help">
+      Affects ${affectedTrials.length} Trial(s): ${affectedTrials.map(t => `T${String(t.trialNo).padStart(2,'0')}`).join(', ') || '(none found in memory)'}.
+      Corrects the Series record AND every one of those Trials' cached copy of these fields — Trial numbers themselves are untouched.
+    </p>
+    <div class="grid-3">
+      <div class="field"><label>seriesKey</label><input type="text" id="fixSeriesKey" value="${escapeHtml(series.seriesKey || '')}"></div>
+      <div class="field"><label>countryCode</label><input type="text" id="fixCountryCode" value="${escapeHtml(series.countryCode || '')}"></div>
+      <div class="field"><label>year</label><input type="text" id="fixYear" value="${escapeHtml(series.year || '')}"></div>
+      <div class="field"><label>productTypeCode</label><input type="text" id="fixProductTypeCode" value="${escapeHtml(series.productTypeCode || '')}"></div>
+      <div class="field"><label>recipeSeq</label><input type="text" id="fixRecipeSeq" value="${escapeHtml(series.recipeSeq || '')}"></div>
+      <div class="field"><label>productType</label><input type="text" id="fixProductType" value="${escapeHtml(series.productType || '')}"></div>
+    </div>
+    <div class="series-migration-actions">
+      <button type="button" class="btn" id="btnCancelFixSeries">Cancel</button>
+      <button type="button" class="btn btn-primary" id="btnSaveFixSeries">Save Fix</button>
+    </div>
+  `;
+  document.getElementById('btnCancelFixSeries').addEventListener('click', () => { panelEl.innerHTML = ''; cardEl.style.display = 'none'; });
+  document.getElementById('btnSaveFixSeries').addEventListener('click', () => saveFixSeries(seriesId, series, affectedTrials));
+}
+
+function saveFixSeries(seriesId, existingSeries, affectedTrials){
+  const updated = {
+    seriesKey: document.getElementById('fixSeriesKey').value.trim(),
+    countryCode: document.getElementById('fixCountryCode').value.trim(),
+    year: document.getElementById('fixYear').value.trim(),
+    productTypeCode: document.getElementById('fixProductTypeCode').value.trim(),
+    recipeSeq: document.getElementById('fixRecipeSeq').value.trim(),
+    productType: document.getElementById('fixProductType').value.trim()
+  };
+  if(!updated.seriesKey){
+    alert('seriesKey can\'t be empty.');
+    return;
+  }
+  if(!confirm(`Apply this correction to the Series and all ${affectedTrials.length} affected Trial(s)? This writes to the database immediately (no dry run for this action).`)) return;
+
+  // Preserve everything NOT shown in the fix form (maxTrialNo, firstTrialId,
+  // createdAt/By) -- only the identity fields above are ever overwritten.
+  setDoc(doc(recipeSeriesCol, seriesId), { ...existingSeries, ...updated }, { merge: true });
+
+  affectedTrials.forEach(r => {
+    Object.assign(r, updated);
+    setDoc(doc(recipesCol, r.id), r);
+  });
+
+  alert(`Fixed. ${affectedTrials.length} Trial(s) now show ${updated.seriesKey} in their Recipe Code.`);
+  document.getElementById('seriesMigrationFixPanel').innerHTML = '';
+  document.getElementById('seriesMigrationFixCard').style.display = 'none';
+  renderSearchResults();
 }
 
 // Merges every checked search result (recipeId + its Trial No. input) into
