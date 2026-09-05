@@ -2553,7 +2553,7 @@
   }
   .process-actual-yield-fields{
     display:flex;
-    align-items:flex-end;
+    align-items:flex-start;
     gap:16px;
     flex-wrap:wrap;
   }
