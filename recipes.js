@@ -467,11 +467,11 @@ export function migrateRecipe(r){
 
   if(!Array.isArray(r.processes)){
     const oldSteps = Array.isArray(r.steps) ? r.steps.filter(s => (s||'').trim() !== '') : [];
-    r.processes = [ { id: uid(), title: "", steps: oldSteps } ];
+    r.processes = [ { id: uid(), title: "", steps: oldSteps.length > 0 ? oldSteps : [''] } ];
     delete r.steps;
   }
   if(r.processes.length === 0){
-    r.processes.push({ id: uid(), title: "", steps: [], components: [] });
+    r.processes.push({ id: uid(), title: "", steps: [''], components: [] });
   }
   r.processes.forEach(p => {
     // Backfilled so Process Flowchart nodes can live-link to a specific
@@ -1601,7 +1601,10 @@ export function renderRecipeEditor(r){
   });
 
   document.getElementById('btnAddProcess').addEventListener('click', () => {
-    r.processes.push({ id: uid(), title: '', steps: [], components: [] });
+    // Starts with one blank Step already in place, ready to type into --
+    // matches the same "never sits completely empty" convention a Part's
+    // ingredients already follow, so there's one less click before typing.
+    r.processes.push({ id: uid(), title: '', steps: [''], components: [] });
     renderProcesses(r);
     scheduleSave();
   });
@@ -2957,6 +2960,18 @@ function renderProcesses(r){
         </div>
       </div>
 
+      <div class="process-actual-yield">
+        <div class="process-components-title">Actual Yield</div>
+        <div class="process-actual-yield-fields">
+          <label>Weight Before (g)<input type="number" class="proc-wt-before num-input" step="0.01" min="0" placeholder="—"></label>
+          <label>Weight After (g)<input type="number" class="proc-wt-after num-input" step="0.01" min="0" placeholder="—"></label>
+          <div class="process-actual-yield-result">
+            <span>Yield</span>
+            <span class="proc-actual-yield-display">—</span>
+          </div>
+        </div>
+      </div>
+
       <div class="process-steps-list"></div>
       <button class="btn btn-sm add-row-btn" data-role="add-step">+ Add Step</button>
     `;
@@ -2964,6 +2979,39 @@ function renderProcesses(r){
     const titleInput = block.querySelector('.process-title');
     titleInput.value = proc.title || '';
     titleInput.addEventListener('input', e => { proc.title = e.target.value; scheduleSave(); });
+
+    // Actual Yield -- real measured weight going into/out of this whole
+    // Process (e.g. weigh the batch before and after Mixing), distinct from
+    // every other Yield figure in this app (those are all planned/
+    // theoretical, computed from the recipe's own data): this one is a
+    // manual production measurement, so it's just two plain numbers with a
+    // read-only Yield% derived from them -- After ÷ Before -- never
+    // touching any recipe weight/cost figure elsewhere.
+    const wtBeforeInput = block.querySelector('.proc-wt-before');
+    const wtAfterInput = block.querySelector('.proc-wt-after');
+    const actualYieldDisplay = block.querySelector('.proc-actual-yield-display');
+    wtBeforeInput.value = proc.weightBefore != null ? proc.weightBefore : '';
+    wtAfterInput.value = proc.weightAfter != null ? proc.weightAfter : '';
+    function updateActualYieldDisplay(){
+      const before = parseFloat(proc.weightBefore);
+      const after = parseFloat(proc.weightAfter);
+      if(!isFinite(before) || before <= 0 || !isFinite(after)){
+        actualYieldDisplay.textContent = '—';
+        return;
+      }
+      actualYieldDisplay.textContent = (after / before * 100).toFixed(2) + '%';
+    }
+    updateActualYieldDisplay();
+    wtBeforeInput.addEventListener('input', e => {
+      proc.weightBefore = e.target.value === '' ? null : (parseFloat(e.target.value) || null);
+      updateActualYieldDisplay();
+      scheduleSave();
+    });
+    wtAfterInput.addEventListener('input', e => {
+      proc.weightAfter = e.target.value === '' ? null : (parseFloat(e.target.value) || null);
+      updateActualYieldDisplay();
+      scheduleSave();
+    });
 
     const stepsListEl = block.querySelector('.process-steps-list');
 
@@ -3222,7 +3270,7 @@ function renderProcesses(r){
     deleteProcessBtn.addEventListener('click', () => {
       const deletedProc = r.processes[pIdx];
       r.processes.splice(pIdx, 1);
-      if(r.processes.length === 0) r.processes.push({ id: uid(), title: '', steps: [], components: [] });
+      if(r.processes.length === 0) r.processes.push({ id: uid(), title: '', steps: [''], components: [] });
       // Any Process Flowchart node currently live-linked to this Process
       // (see computeFlowNodeText) gets detached rather than losing its
       // content silently — its last-shown text is frozen as an ordinary

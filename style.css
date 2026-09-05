@@ -2543,6 +2543,40 @@
     color:var(--primary-dark);
     margin-bottom:8px;
   }
+  /* Actual Yield -- real measured weight before/after this whole Process
+     (e.g. weighing the batch before and after Mixing), sitting between the
+     planned Components table above and the free-text Steps below. */
+  .process-actual-yield{
+    margin-bottom:16px;
+    padding-bottom:14px;
+    border-bottom:1px solid var(--border);
+  }
+  .process-actual-yield-fields{
+    display:flex;
+    align-items:flex-end;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .process-actual-yield-fields label{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .process-actual-yield-fields input{width:110px;}
+  .process-actual-yield-result{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .process-actual-yield-result .proc-actual-yield-display{
+    font-size:15px;
+    font-weight:700;
+    color:var(--primary-dark);
+  }
   .process-comp-add-row{
     display:flex;
     gap:8px;
