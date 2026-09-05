@@ -30,6 +30,17 @@ service cloud.firestore {
       allow read, create, update: if isAllowedUser();
       allow delete: if request.auth != null && isAdmin();
     }
+    // One doc per Recipe Series (see recipeSeriesCol in app.js), holding
+    // the atomic Trial-number counter "+ New Trial" reads and increments
+    // inside a runTransaction. Any approved user can create/update, same
+    // shape as /recipes above — this has to stay non-admin-restricted
+    // since New Trial (an everyday action) writes here too, not just the
+    // admin-only Series migration tool. Only deletion is admin-only,
+    // matching every other collection's own delete rule in this file.
+    match /recipeSeries/{seriesId} {
+      allow read, create, update: if isAllowedUser();
+      allow delete: if request.auth != null && isAdmin();
+    }
     match /ingredientMaster/{materialId} {
       allow read, write: if isAllowedUser();
     }

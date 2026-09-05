@@ -7,12 +7,26 @@ import {
 let compareShowCodes = true;
 let compareShowWeights = false;
 
+// Set by Recipe Detail's "Compare Trials" button just before switching to
+// this view (via app.js's shared re-export hub, same pattern
+// recipes.js's own recipesListCategoryFilter uses) so the picker starts
+// scoped to one Recipe Series instead of every recipe in the app. Cleared
+// (null) by every plain "Compare Recipes" entry point, and by the "Show
+// All Recipes" button below — never sticky across an unrelated visit.
+export let compareSeriesPrefilter = null;
+export function setCompareSeriesPrefilter(v){
+  compareSeriesPrefilter = v;
+}
+
 export function mountCompareView(){
   const main = document.getElementById('mainArea');
   main.classList.add('main-wide');
+  const candidates = compareSeriesPrefilter
+    ? recipes.filter(r => r.seriesId === compareSeriesPrefilter.seriesId)
+    : recipes;
   // Alphabetical by product name, then by code, so recipes are easy to find
   // in the dropdown instead of jumping around by last-edited time.
-  const sorted = [...recipes].sort((a,b) =>
+  const sorted = [...candidates].sort((a,b) =>
     (a.name||'Untitled recipe').localeCompare(b.name||'Untitled recipe', undefined, {sensitivity:'base'}) ||
     (a.code||'').localeCompare(b.code||'', undefined, {numeric:true})
   );
@@ -31,8 +45,9 @@ export function mountCompareView(){
 
   main.innerHTML = `
     <div class="main-header">
-      <div class="section-title-display">${icon('scale', 24)} Compare Recipes</div>
+      <div class="section-title-display">${icon('scale', 24)} ${compareSeriesPrefilter ? 'Compare Trials' : 'Compare Recipes'}${compareSeriesPrefilter ? ` — ${escapeHtml(compareSeriesPrefilter.seriesKey || '')}` : ''}</div>
       <div class="toolbar">
+        ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnCompareShowAll">Show All Recipes</button>` : ''}
         <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
       </div>
     </div>
@@ -43,6 +58,10 @@ export function mountCompareView(){
   `;
 
   document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
+  document.getElementById('btnCompareShowAll')?.addEventListener('click', () => {
+    compareSeriesPrefilter = null;
+    mountCompareView();
+  });
   document.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
   });

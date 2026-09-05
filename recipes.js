@@ -1,7 +1,7 @@
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
   logActivityEvent, diffMainFields, showCloudError, playContentTransition,
-  renderSidebar, formatActivityDateTime, recipesCol, projects, metaLists,
+  renderSidebar, formatActivityDateTime, recipesCol, recipeSeriesCol, db, projects, metaLists,
   metaItemName, productTypeCode, ingredientMaster, migrateTrialsFromRecipes,
   countryToIso2, guardNavigation,
   readOnlyIngredientTreeHtml, readOnlyProcessesHtml,
@@ -9,10 +9,11 @@ import {
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
   findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
-  openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight
+  openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight,
+  setCompareSeriesPrefilter
 } from './app.js';
 import {
-  onSnapshot, setDoc, doc, deleteDoc
+  onSnapshot, setDoc, doc, deleteDoc, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export let recipes = [];
@@ -356,7 +357,7 @@ export function renderProductTypeSelect(r){
 export function refreshCodeProductTypeBadge(r){
   const badge = document.getElementById('codeProductTypeDisplay');
   if(!badge) return;
-  badge.textContent = recipeProductTypeCode(r) || 'TTT';
+  badge.textContent = (r.seriesId ? r.productTypeCode : recipeProductTypeCode(r)) || 'TTT';
 }
 
 export function bindComboField(r, fieldKey, inputId, deleteBtnId, metaKey){
@@ -426,6 +427,20 @@ export function blankRecipe(){
     customerMarginMin: '',
     customerMarginMax: '',
     versions: [],
+    // Recipe Series / Trial identity -- absent (null/'') means "legacy,
+    // no Series" everywhere this is checked (fullCode, recipeDisplayLabel,
+    // the Recipe Detail header/toolbar, sidebar grouping). Only ever set
+    // by createNewTrial(), duplicateAsNewRecipe(), or the Series migration
+    // tool -- never by ordinary editing. See recipes.js's "Recipe Series"
+    // section below for the full mechanism.
+    seriesId: null,
+    seriesKey: '',
+    countryCode: '',
+    year: '',
+    productTypeCode: '',
+    trialNo: null,
+    sourceTrialId: null,
+    legacyRecipeCode: '',
     createdBy: currentUser?.email || '',
     createdAt: Date.now(),
     updatedBy: currentUser?.email || '',
@@ -510,6 +525,21 @@ export function migrateRecipe(r){
   if(r.createdBy === undefined) r.createdBy = '';
   if(r.createdAt === undefined) r.createdAt = null;
   if(r.updatedBy === undefined) r.updatedBy = '';
+
+  // Recipe Series / Trial identity -- purely defensive, same as every
+  // backfill above: an old doc simply never has these, so it lands as
+  // "no Series" (seriesId absent), which every consumer already treats as
+  // "render exactly like before this feature existed." Actually assigning
+  // a recipe TO a Series is a separate, explicit, human-approved step (see
+  // the Series migration tool), never done automatically here.
+  if(r.seriesId === undefined) r.seriesId = null;
+  if(r.seriesKey === undefined) r.seriesKey = '';
+  if(r.countryCode === undefined) r.countryCode = '';
+  if(r.year === undefined) r.year = '';
+  if(r.productTypeCode === undefined) r.productTypeCode = '';
+  if(r.trialNo === undefined) r.trialNo = null;
+  if(r.sourceTrialId === undefined) r.sourceTrialId = null;
+  if(r.legacyRecipeCode === undefined) r.legacyRecipeCode = '';
 
   return r;
 }
@@ -709,6 +739,11 @@ export function renderRecipeCards(container, query, category){
 // on every edit) so toggling a category open doesn't collapse again on
 // the next keystroke elsewhere in the app.
 let sidebarExpandedCategories = new Set();
+// Which Recipe Series sub-groups are expanded within the sidebar — same
+// persists-across-re-renders reasoning as sidebarExpandedCategories, one
+// level deeper (only Series-enabled recipes ever get this second level;
+// legacy recipes render as flat items exactly as before this existed).
+let sidebarExpandedSeries = new Set();
 
 export function renderSidebarRecipeCards(container, query){
   if(!container) return;
@@ -717,23 +752,47 @@ export function renderSidebarRecipeCards(container, query){
     renderRecipeCards(container, q, null);
     return;
   }
-  // The currently open recipe's own category always shows expanded, so
-  // switching to it (from a link elsewhere, or reopening the app) never
-  // leaves it hidden behind a collapsed group.
+  // The currently open recipe's own category (and Series sub-group, if
+  // any) always shows expanded, so switching to it (from a link elsewhere,
+  // or reopening the app) never leaves it hidden behind a collapsed group.
   const current = recipes.find(r => r.id === currentId);
-  if(current) sidebarExpandedCategories.add((current.productType||'').trim() || 'Uncategorized');
+  if(current){
+    sidebarExpandedCategories.add((current.productType||'').trim() || 'Uncategorized');
+    if(current.seriesId) sidebarExpandedSeries.add(current.seriesId);
+  }
 
+  // Each category's entries are either a bare legacy recipe, or one
+  // collapsed "series" entry per distinct seriesId holding every Trial
+  // that belongs to it — purely an in-memory regrouping of the same
+  // `recipes` array every other view already reads fully into memory via
+  // onSnapshot, so this adds no new Firestore read pattern.
   const groups = new Map();
   [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt).forEach(r => {
     const cat = (r.productType||'').trim() || 'Uncategorized';
     if(!groups.has(cat)) groups.set(cat, []);
-    groups.get(cat).push(r);
+    const catEntries = groups.get(cat);
+    if(r.seriesId){
+      let entry = catEntries.find(e => e.kind === 'series' && e.seriesId === r.seriesId);
+      if(!entry){
+        entry = { kind: 'series', seriesId: r.seriesId, seriesKey: r.seriesKey, trials: [], updatedAt: 0 };
+        catEntries.push(entry);
+      }
+      entry.trials.push(r);
+      if((r.updatedAt||0) > entry.updatedAt) entry.updatedAt = r.updatedAt || 0;
+    } else {
+      catEntries.push({ kind: 'legacy', recipe: r, updatedAt: r.updatedAt || 0 });
+    }
+  });
+  groups.forEach(entries => {
+    entries.sort((a,b) => b.updatedAt - a.updatedAt);
+    entries.forEach(e => { if(e.kind === 'series') e.trials.sort((a,b) => (b.trialNo||0) - (a.trialNo||0)); });
   });
   const sortedCats = [...groups.keys()].sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'}));
 
   container.innerHTML = '';
   sortedCats.forEach(cat => {
-    const items = groups.get(cat);
+    const entries = groups.get(cat);
+    const totalCount = entries.reduce((s,e) => s + (e.kind === 'series' ? e.trials.length : 1), 0);
     const expanded = sidebarExpandedCategories.has(cat);
     const group = document.createElement('div');
     group.className = 'recipe-category-group';
@@ -743,7 +802,7 @@ export function renderSidebarRecipeCards(container, query){
     header.innerHTML = `
       ${icon(expanded ? 'chevron-down' : 'chevron-right', 14)}
       <span class="recipe-category-header-name">${escapeHtml(cat)}</span>
-      <span class="recipe-category-header-count">${items.length}</span>
+      <span class="recipe-category-header-count">${totalCount}</span>
     `;
     header.addEventListener('click', () => {
       if(sidebarExpandedCategories.has(cat)) sidebarExpandedCategories.delete(cat); else sidebarExpandedCategories.add(cat);
@@ -753,7 +812,35 @@ export function renderSidebarRecipeCards(container, query){
     if(expanded){
       const itemsWrap = document.createElement('div');
       itemsWrap.className = 'recipe-category-items';
-      items.forEach(r => appendRecipeItemEl(itemsWrap, r));
+      entries.forEach(entry => {
+        if(entry.kind === 'legacy'){
+          appendRecipeItemEl(itemsWrap, entry.recipe);
+          return;
+        }
+        const seriesExpanded = sidebarExpandedSeries.has(entry.seriesId);
+        const seriesGroup = document.createElement('div');
+        seriesGroup.className = 'recipe-series-group';
+        const seriesHeader = document.createElement('button');
+        seriesHeader.type = 'button';
+        seriesHeader.className = 'recipe-series-header' + (seriesExpanded ? ' open' : '');
+        seriesHeader.innerHTML = `
+          ${icon(seriesExpanded ? 'chevron-down' : 'chevron-right', 13)}
+          <span class="recipe-series-header-name">${escapeHtml(entry.trials[0]?.name || 'Untitled recipe')}</span>
+          <span class="recipe-series-header-meta">${escapeHtml(entry.seriesKey || '')} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
+        `;
+        seriesHeader.addEventListener('click', () => {
+          if(sidebarExpandedSeries.has(entry.seriesId)) sidebarExpandedSeries.delete(entry.seriesId); else sidebarExpandedSeries.add(entry.seriesId);
+          renderSidebarRecipeCards(container, query);
+        });
+        seriesGroup.appendChild(seriesHeader);
+        if(seriesExpanded){
+          const seriesItemsWrap = document.createElement('div');
+          seriesItemsWrap.className = 'recipe-series-items';
+          entry.trials.forEach(t => appendRecipeItemEl(seriesItemsWrap, t));
+          seriesGroup.appendChild(seriesItemsWrap);
+        }
+        itemsWrap.appendChild(seriesGroup);
+      });
       group.appendChild(itemsWrap);
     }
     container.appendChild(group);
@@ -806,6 +893,7 @@ export function mountRecipesListView(){
 
   document.getElementById('btnNewFromRecipesList').addEventListener('click', createNewRecipe);
   document.getElementById('btnCompareFromRecipesList').addEventListener('click', () => {
+    setCompareSeriesPrefilter(null); // plain "Compare Recipes" entry — unfiltered, unlike "Compare Trials"
     setMainFeatureView('compare');
     renderMain();
     renderSidebar();
@@ -901,7 +989,26 @@ export function suggestNextRecipeSeq(productTypeName, excludeId){
   return String(maxSeq + 1).padStart(2, '0');
 }
 
+// Trial number display padding — at least 2 digits (5 -> "05"), and grows
+// naturally past that for T100+ since padStart is a no-op once the string
+// is already at/above the target length. Shared by fullCode and the Trial
+// History / sidebar UI so every "T21"/"T05"/"T100" reads identically
+// everywhere.
+export function trialNoDisplay(trialNo){
+  return String(trialNo ?? 0).padStart(2, '0');
+}
+
 export function fullCode(r){
+  // Series path: every segment is a value FROZEN at Series/Trial-creation
+  // time (see createNewTrial/duplicateAsNewRecipe/the Series migration
+  // tool) rather than live-derived — required so every Trial in a Series
+  // keeps showing the identical country/year/product-type/Recipe No. even
+  // if, say, the linked Project's destination country is edited later.
+  if(r.seriesId){
+    return `${r.countryCode || ''}${r.year || 'YY'}-${r.productTypeCode || 'XXX'}${r.recipeSeq || 'XX'}-T${trialNoDisplay(r.trialNo)}`;
+  }
+  // Legacy path — unchanged, byte-for-byte identical to before this
+  // feature: every segment live-derived every time this is called.
   const yy = yearPrefix(r.date);
   const typeCode = recipeProductTypeCode(r);
   const seq = (r.recipeSeq || '').trim();
@@ -916,6 +1023,7 @@ export function fullCode(r){
    so near-duplicate names stay distinguishable at a glance. */
 export function recipeDisplayLabel(r){
   const name = r.name || 'Untitled recipe';
+  if(r.seriesId) return `${name} - T${trialNoDisplay(r.trialNo)}`;
   const suffix = (r.code || '').trim();
   return suffix ? `${name} - ${suffix}` : name;
 }
@@ -935,7 +1043,7 @@ export function refreshCodeCountryBadge(r){
   const row = document.getElementById('codeYearDisplay')?.closest('.code-row');
   const badge = document.getElementById('codeCountryDisplay');
   if(!row || !badge) return;
-  const iso = recipeDestinationIso2(r);
+  const iso = r.seriesId ? (r.countryCode || '') : recipeDestinationIso2(r);
   row.classList.toggle('has-country-badge', !!iso);
   badge.style.display = iso ? '' : 'none';
   badge.textContent = iso;
@@ -944,8 +1052,13 @@ export function refreshCodeCountryBadge(r){
 export function updateRecipeTitleDisplay(r){
   const el = document.getElementById('recipeTitleDisplay');
   if(!el) return;
-  const code = fullCode(r);
-  el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}`;
+  // Series recipes show the Series code and the Trial number as two
+  // visually distinct badges (name / AU26-SAU06 / [Trial T21]) rather than
+  // one combined string, since the Trial number is the part that changes
+  // Trial-to-Trial and is worth calling out on its own.
+  const trialBadge = r.seriesId ? `<span class="rt-trial-badge">Trial T${trialNoDisplay(r.trialNo)}</span>` : '';
+  const code = r.seriesId ? (r.seriesKey || '') : fullCode(r);
+  el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}${trialBadge}`;
 
   const activityEl = document.getElementById('recipeActivityDisplay');
   if(activityEl){
@@ -954,6 +1067,42 @@ export function updateRecipeTitleDisplay(r){
     if(r.updatedBy) parts.push(`Last edited by ${r.updatedBy}${r.updatedAt ? ' · ' + formatActivityDateTime(r.updatedAt) : ''}`);
     activityEl.textContent = parts.join('   |   ');
   }
+}
+
+// Horizontal T19 ── T20 ── T21 ── +T22 stepper on a Series recipe's own
+// page — every Trial in the Series, latest last, plus a trailing "+T{next}"
+// pill that triggers New Trial directly. Re-rendered on every
+// renderRecipeEditor() call (not registered in partDisplayUpdaters or
+// similar — this card only exists while a Series recipe is the one open,
+// same lifetime as the rest of the header).
+function renderTrialHistoryTrack(r){
+  const track = document.getElementById('trialHistoryTrack');
+  if(!track) return;
+  const seriesTrials = recipes.filter(x => x.seriesId === r.seriesId).sort((a,b) => (a.trialNo||0) - (b.trialNo||0));
+  const maxTrialNo = Math.max(0, ...seriesTrials.map(x => x.trialNo || 0));
+  const nodeHtml = t => `
+    <button type="button" class="trial-history-node${t.id === r.id ? ' active' : ''}" data-recipe-id="${escapeHtml(t.id)}">
+      T${trialNoDisplay(t.trialNo)}${t.trialNo === maxTrialNo ? '<span class="trial-history-latest">Latest</span>' : ''}
+    </button>
+  `;
+  track.innerHTML = seriesTrials.map(nodeHtml).join('<span class="trial-history-connector"></span>')
+    + `<span class="trial-history-connector"></span><button type="button" class="trial-history-node trial-history-add" id="trialHistoryAddBtn">+ T${trialNoDisplay(maxTrialNo+1)}</button>`;
+  track.querySelectorAll('.trial-history-node[data-recipe-id]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.recipeId;
+      if(id === r.id) return;
+      // Same "opening a different recipe locks it again" behavior as every
+      // other recipe-to-recipe navigation in this app (sidebar, Recipes
+      // list) — see appendRecipeItemEl/openRecipe.
+      guardNavigation(() => {
+        openRecipe(id);
+        setMainFeatureView(null);
+        renderMain();
+        renderSidebar();
+      });
+    });
+  });
+  document.getElementById('trialHistoryAddBtn')?.addEventListener('click', () => confirmAndCreateNewTrial(r));
 }
 
 let dragPayload = null;
@@ -1080,12 +1229,28 @@ export function renderRecipeEditor(r){
     <div class="recipe-header-actions">
       <div class="lock-banner" id="lockBanner"></div>
       <div class="toolbar">
-        <button class="btn" id="btnVersions">${icon('clock')} Versions</button>
-        <button class="btn" id="btnDuplicate">${icon('copy')} Duplicate</button>
-        <button class="btn" id="btnPreview">${icon('eye')} Preview</button>
-        <button class="btn" id="btnPrint">${icon('printer')} Print / PDF</button>
+        ${r.seriesId ? `
+          <button class="btn btn-primary" id="btnNewTrial">+ New Trial</button>
+          <button class="btn" id="btnCompareTrials">${icon('scale')} Compare Trials</button>
+        ` : ''}
+        <div class="hd2-create-wrap">
+          <button type="button" class="btn" id="btnRecipeMore">More ${icon('chevron-down', 14)}</button>
+          <div class="hd2-create-menu" id="recipeMoreMenu">
+            <button type="button" class="navbar-account-menu-item" id="btnDuplicateAsNewRecipe">${icon('copy')} Duplicate as New Recipe</button>
+            <button type="button" class="navbar-account-menu-item" id="btnVersions">${icon('clock')} Versions</button>
+            <button type="button" class="navbar-account-menu-item" id="btnPreview">${icon('eye')} Preview</button>
+            <button type="button" class="navbar-account-menu-item" id="btnPrint">${icon('printer')} Print / PDF</button>
+          </div>
+        </div>
       </div>
     </div>
+
+    ${r.seriesId ? `
+    <div class="card" id="trialHistoryCard">
+      <div class="card-title">Trial History — ${escapeHtml(r.seriesKey || '')}</div>
+      <div class="trial-history-track" id="trialHistoryTrack"></div>
+    </div>
+    ` : ''}
 
     <!-- Fixed, always in the DOM (not print-only) so it's available the
          instant preview-print-mode is toggled on -- see btnPreview's
@@ -1126,7 +1291,9 @@ export function renderRecipeEditor(r){
               <span class="code-prefix" id="codeRecipeSeqDisplay" title="Recipe sequence number for this product type — assigned automatically">NN</span>
               <span class="code-sep">-</span>
               <span class="code-prefix">T</span>
-              <input type="text" id="f-codeSuffix" class="code-suffix code-suffix-sm" placeholder="01" maxlength="6" title="Trial number for this recipe">
+              ${r.seriesId
+                ? `<span class="code-prefix code-trial-display" id="codeTrialDisplay" title="Trial number — assigned automatically by New Trial, part of this recipe's Series">${escapeHtml(trialNoDisplay(r.trialNo))}</span>`
+                : `<input type="text" id="f-codeSuffix" class="code-suffix code-suffix-sm" placeholder="01" maxlength="6" title="Trial number for this recipe">`}
             </div>
           </div>
         </div>
@@ -1357,17 +1524,28 @@ export function renderRecipeEditor(r){
   `;
 
   document.getElementById('f-name').value = r.name || '';
-  document.getElementById('f-codeSuffix').value = r.code || '';
-  // Safety net: a recipe that already has a Product Type but somehow never
-  // got a sequence number (shouldn't normally happen, since picking a Type
-  // always assigns one — see the change handler below) gets one now rather
-  // than showing blank forever, since this field is never manually editable.
-  if(r.productType && !r.recipeSeq){
-    r.recipeSeq = suggestNextRecipeSeq(r.productType, r.id);
-    scheduleSave();
+  const codeSuffixInput = document.getElementById('f-codeSuffix');
+  if(codeSuffixInput) codeSuffixInput.value = r.code || '';
+  if(r.seriesId){
+    // Series recipes: every code segment is frozen (see fullCode) — never
+    // recomputed here, never editable, and codeRecipeSeqDisplay/
+    // codeYearDisplay/codeProductTypeDisplay/codeCountryDisplay all just
+    // mirror the stored values instead of the live-derived helpers below.
+    document.getElementById('codeRecipeSeqDisplay').textContent = r.recipeSeq || 'NN';
+    document.getElementById('codeYearDisplay').textContent = r.year || 'YY';
+  } else {
+    // Safety net: a recipe that already has a Product Type but somehow
+    // never got a sequence number (shouldn't normally happen, since picking
+    // a Type always assigns one — see the change handler below) gets one
+    // now rather than showing blank forever, since this field is never
+    // manually editable.
+    if(r.productType && !r.recipeSeq){
+      r.recipeSeq = suggestNextRecipeSeq(r.productType, r.id);
+      scheduleSave();
+    }
+    document.getElementById('codeRecipeSeqDisplay').textContent = r.recipeSeq || 'NN';
+    document.getElementById('codeYearDisplay').textContent = yearPrefix(r.date);
   }
-  document.getElementById('codeRecipeSeqDisplay').textContent = r.recipeSeq || 'NN';
-  document.getElementById('codeYearDisplay').textContent = yearPrefix(r.date);
   document.getElementById('f-date').value = r.date || '';
   renderProductTypeSelect(r);
   refreshCodeProductTypeBadge(r);
@@ -1414,12 +1592,22 @@ export function renderRecipeEditor(r){
     updateRecipeTitleDisplay(r);
     scheduleSave();
   });
-  document.getElementById('f-codeSuffix').addEventListener('input', e => {
+  document.getElementById('f-codeSuffix')?.addEventListener('input', e => {
     r.code = e.target.value;
     updateRecipeTitleDisplay(r);
     scheduleSave();
   });
-  document.getElementById('f-productTypeMain').addEventListener('change', e => {
+  const productTypeSelect = document.getElementById('f-productTypeMain');
+  // Every Trial in a Series must share the same country/year/Product Type/
+  // Recipe No. (frozen at Series/Trial creation) -- locking the picker for
+  // a Series recipe is what actually guarantees that, rather than just
+  // hoping nobody changes it.
+  if(productTypeSelect && r.seriesId){
+    productTypeSelect.disabled = true;
+    productTypeSelect.title = 'Product Type is fixed for a Trial in a Recipe Series';
+  }
+  productTypeSelect?.addEventListener('change', e => {
+    if(r.seriesId) return; // defensive -- the select is disabled above, this should never fire
     r.productType = e.target.value;
     refreshCodeProductTypeBadge(r);
     // Re-assign the sequence number for the newly-picked type — whatever
@@ -1609,8 +1797,28 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
 
-  document.getElementById('btnVersions').addEventListener('click', () => openVersionsModal(r));
-  document.getElementById('btnDuplicate').addEventListener('click', duplicateCurrent);
+  const recipeMoreBtn = document.getElementById('btnRecipeMore');
+  const recipeMoreMenu = document.getElementById('recipeMoreMenu');
+  recipeMoreBtn?.addEventListener('click', e => {
+    e.stopPropagation();
+    recipeMoreMenu.classList.toggle('open');
+  });
+  document.getElementById('btnVersions').addEventListener('click', () => {
+    recipeMoreMenu?.classList.remove('open');
+    openVersionsModal(r);
+  });
+  document.getElementById('btnDuplicateAsNewRecipe').addEventListener('click', () => {
+    recipeMoreMenu?.classList.remove('open');
+    duplicateAsNewRecipe();
+  });
+  document.getElementById('btnNewTrial')?.addEventListener('click', () => confirmAndCreateNewTrial(r));
+  document.getElementById('btnCompareTrials')?.addEventListener('click', () => {
+    setCompareSeriesPrefilter({ seriesId: r.seriesId, seriesKey: r.seriesKey });
+    setMainFeatureView('compare');
+    renderMain();
+    renderSidebar();
+  });
+  if(r.seriesId) renderTrialHistoryTrack(r);
   document.getElementById('btnDelete').addEventListener('click', () => {
     const deletingId = r.id;
     if(!confirm(`Delete "${r.name || 'Untitled recipe'}"? This cannot be undone.`)) return;
@@ -1626,6 +1834,7 @@ export function renderRecipeEditor(r){
     );
   });
   document.getElementById('btnPrint').addEventListener('click', () => {
+    document.getElementById('recipeMoreMenu')?.classList.remove('open');
     renderPrintView(r);
     // Browsers default the "Save as PDF" filename to document.title, so set
     // it to "Recipe Product Name Recipe Code Forge" just for the print, then
@@ -1649,6 +1858,7 @@ export function renderRecipeEditor(r){
   // print-only visibility rules, just toggled by a class instead of an
   // actual @media print, so there's no window.print() dialog involved.
   document.getElementById('btnPreview').addEventListener('click', () => {
+    document.getElementById('recipeMoreMenu')?.classList.remove('open');
     renderPrintView(r);
     document.body.classList.add('preview-print-mode');
     window.scrollTo(0, 0);
@@ -4015,22 +4225,164 @@ function renderPrintView(r){
 }
 
 /* ---------- Recipe actions ---------- */
-function duplicateCurrent(){
+
+/* ---------- Recipe Series / Trials ----------
+   A "Trial" is just a regular recipe document, enriched with 8 identity
+   fields (see blankRecipe/migrateRecipe above) that group it under a
+   Recipe Series (a separate recipeSeries/{seriesId} doc holding the
+   collision-safe Trial-number counter, since Firestore transactions can
+   only read a specific document reference, never a query). Versions
+   (edit-history snapshots) and Test Results (the separate `trials`
+   collection, referencing recipes by their own r.id) are both completely
+   untouched by any of this -- see snapshotRecipeCore's whitelist above and
+   trials.js, respectively. */
+
+// Deep-clones a source recipe into a new Trial/Recipe document, applying
+// the same copy/don't-copy split every "branch off this recipe" action in
+// this app needs (New Trial and Duplicate as New Recipe both call this,
+// only their `overrides` differ) -- identity fields (seriesId/seriesKey/
+// countryCode/year/productTypeCode/recipeSeq/trialNo/sourceTrialId) always
+// come from `overrides`, never from the source's own live values, so a
+// Trial can never silently drift from its Series' frozen identity.
+function buildTrialClone(r, newId, overrides){
+  const clone = JSON.parse(JSON.stringify(r));
+  clone.id = newId;
+  // Never carried forward: each Trial/new Recipe gets its own edit history,
+  // its own (initially empty) free-text legacy code, and no inherited
+  // photos/audit trail from the source.
+  clone.versions = [];
+  clone.code = '';
+  clone.descPhotos = [];
+  clone.legacyRecipeCode = '';
+  clone.createdBy = currentUser?.email || '';
+  clone.createdAt = Date.now();
+  clone.updatedBy = currentUser?.email || '';
+  clone.updatedAt = Date.now();
+  // Identity — always frozen from the Series, per overrides.
+  clone.seriesId = overrides.seriesId;
+  clone.seriesKey = overrides.seriesKey;
+  clone.countryCode = overrides.countryCode;
+  clone.year = overrides.year;
+  clone.productTypeCode = overrides.productTypeCode;
+  clone.recipeSeq = overrides.recipeSeqOverride;
+  clone.trialNo = overrides.trialNo;
+  clone.sourceTrialId = overrides.sourceTrialId;
+  return clone;
+}
+
+// The atomic "+ New Trial" write. Firestore transactions can only tx.get()
+// a specific document reference (never run a query), so "the next Trial
+// number in this Series" has to come from a dedicated counter document
+// (recipeSeries.maxTrialNo) that this transaction reads AND increments in
+// the same atomic step -- two concurrent calls both read the current
+// value, but Firestore serializes the writes and auto-retries whichever
+// transaction loses the race, so its retried read picks up the winner's
+// new maxTrialNo. This is deliberately NOT the same pattern
+// suggestNextRecipeSeq (above) uses for Recipe No. -- that one scans the
+// in-memory `recipes` array with no lock, which is fine for the low-stakes
+// "two people duplicate into the same Product Type at the same instant"
+// case but not for a number this feature explicitly requires to never
+// collide.
+async function createNewTrial(r){
+  const newId = uid();
+  const seriesRef = doc(recipeSeriesCol, r.seriesId);
+  const newRecipeRef = doc(recipesCol, newId);
+  return runTransaction(db, async (tx) => {
+    const seriesSnap = await tx.get(seriesRef);
+    if(!seriesSnap.exists()) throw new Error('SERIES_NOT_FOUND');
+    const nextTrialNo = (seriesSnap.data().maxTrialNo || 0) + 1;
+    const clone = buildTrialClone(r, newId, {
+      trialNo: nextTrialNo,
+      sourceTrialId: r.id,
+      seriesId: r.seriesId,
+      seriesKey: r.seriesKey,
+      countryCode: r.countryCode,
+      year: r.year,
+      productTypeCode: r.productTypeCode,
+      recipeSeqOverride: r.recipeSeq
+    });
+    tx.update(seriesRef, { maxTrialNo: nextTrialNo });
+    tx.set(newRecipeRef, clone);
+    return clone;
+  });
+}
+
+// Double-click guard shared by every call site (just the Trial History
+// card's "+ T22" pill and the toolbar's "+ New Trial" button today).
+let newTrialInFlight = false;
+
+async function handleNewTrialClick(r){
+  if(newTrialInFlight || !r.seriesId) return;
+  newTrialInFlight = true;
+  const btn = document.getElementById('btnNewTrial');
+  const originalLabel = btn ? btn.textContent : '';
+  if(btn){ btn.disabled = true; btn.textContent = 'Creating...'; }
+  try{
+    const newTrial = await createNewTrial(r);
+    recipes.push(newTrial);
+    openRecipe(newTrial.id);
+    setUnlockedRecipeId(newTrial.id);
+    logActivityEvent('created', 'recipe', newTrial.name || 'Untitled recipe');
+    renderSidebar();
+    renderMain();
+    alert(`Created Trial T${trialNoDisplay(newTrial.trialNo)} in ${newTrial.seriesKey}.`);
+  } catch(err){
+    console.error('Forge: New Trial failed', err);
+    alert('Could not create the new Trial. Please try again.' + (err && err.message === 'SERIES_NOT_FOUND' ? ' (This recipe\'s Series record is missing.)' : ''));
+  } finally {
+    newTrialInFlight = false;
+    if(btn){ btn.disabled = false; btn.textContent = originalLabel || '+ New Trial'; }
+  }
+}
+
+// Shows Source Trial + a best-effort expected new number (the true number
+// can only be guaranteed once the transaction actually commits — see
+// createNewTrial) before creating anything, per spec.
+function confirmAndCreateNewTrial(r){
+  if(!r.seriesId) return;
+  const seriesTrials = recipes.filter(x => x.seriesId === r.seriesId);
+  const bestGuessNext = Math.max(0, ...seriesTrials.map(x => x.trialNo || 0)) + 1;
+  const ok = confirm(
+    `Create a new Trial in ${r.seriesKey}?\n\n` +
+    `Source: Trial T${trialNoDisplay(r.trialNo)}\n` +
+    `New Trial (expected): T${trialNoDisplay(bestGuessNext)}\n\n` +
+    `Ingredients, process steps, yield, and the linked project will be copied.\n` +
+    `Versions, Test Results, and trial photos will NOT be copied.`
+  );
+  if(ok) handleNewTrialClick(r);
+}
+
+// Moved to the recipe editor's "More" menu as "Duplicate as New Recipe" —
+// unlike New Trial, this always mints a BRAND NEW Series (fresh random
+// seriesId, maxTrialNo starting at 1), so two simultaneous clicks can never
+// collide with each other and no transaction is needed here (nothing
+// shared to contend over). Still reuses the same existing
+// suggestNextRecipeSeq race-condition-accepted pattern for the Recipe No.
+// itself, exactly as this function always has.
+function duplicateAsNewRecipe(){
   const r = getCurrent();
   if(!r) return;
-  const copy = JSON.parse(JSON.stringify(r));
-  copy.id = uid();
+  const newId = uid();
+  const newSeq = suggestNextRecipeSeq(r.productType, r.id);
+  const seriesRef = doc(recipeSeriesCol, uid());
+  // If the source is itself already Series-enabled, carry its frozen
+  // country/year/type forward (a duplicate of a Trial stays under the same
+  // country/product-type family); otherwise derive them once, live, from
+  // the source recipe exactly as fullCode() would today, then freeze them.
+  const countryCode = r.seriesId ? r.countryCode : (recipeDestinationIso2(r) || '');
+  const year = r.seriesId ? r.year : yearPrefix(r.date);
+  const prodTypeCode = r.seriesId ? r.productTypeCode : recipeProductTypeCode(r);
+  const seriesKey = `${countryCode}${year}-${prodTypeCode}${newSeq}`;
+  const seriesDoc = {
+    id: seriesRef.id, seriesKey, countryCode, year, productTypeCode: prodTypeCode,
+    productType: r.productType || '', recipeSeq: newSeq, maxTrialNo: 1,
+    firstTrialId: newId, createdAt: Date.now(), createdBy: currentUser?.email || ''
+  };
+  const copy = buildTrialClone(r, newId, {
+    trialNo: 1, sourceTrialId: null, seriesId: seriesRef.id, seriesKey,
+    countryCode, year, productTypeCode: prodTypeCode, recipeSeqOverride: newSeq
+  });
   copy.name = (r.name || 'Untitled recipe') + ' (Copy)';
-  copy.createdBy = currentUser?.email || '';
-  copy.createdAt = Date.now();
-  copy.updatedBy = currentUser?.email || '';
-  copy.updatedAt = Date.now();
-  // A duplicate is a distinct recipe, not the same one — carrying over the
-  // original's sequence number would give two recipes the identical code
-  // (e.g. both "BRE01"). Computed now, before push, so the count below
-  // doesn't include this copy — the original recipe (still in `recipes`)
-  // is what makes this land one past it.
-  if(copy.productType) copy.recipeSeq = suggestNextRecipeSeq(copy.productType, copy.id);
   recipes.push(copy);
   // The Project link isn't stored on the recipe itself (see
   // findProjectForRecipe) — it's the Project's own products list pointing
@@ -4042,6 +4394,7 @@ function duplicateCurrent(){
     oldLink.project.products.push(blankProduct(copy.id));
     scheduleProjectSave(oldLink.project);
   }
+  setDoc(seriesRef, seriesDoc);
   openRecipe(copy.id);
   setUnlockedRecipeId(copy.id);
   saveRecipeToCloud(copy);

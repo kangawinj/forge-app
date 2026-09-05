@@ -474,6 +474,35 @@
     padding-left:8px;
     margin-top:2px;
   }
+  /* Recipe Series sub-group within a Product Type category -- one Trial
+     History accordion per distinct seriesId, nested a level deeper than
+     .recipe-category-* above. Legacy (non-Series) recipes never get this
+     level, they render as a plain .recipe-item exactly as before. */
+  .recipe-series-group{margin-bottom:2px;}
+  .recipe-series-header{
+    width:100%;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    text-align:left;
+    background:none;
+    border:none;
+    border-radius:var(--radius);
+    padding:6px 8px;
+    cursor:pointer;
+    color:var(--text-dim);
+  }
+  .recipe-series-header:hover{background:var(--primary-light);color:var(--text);}
+  .recipe-series-header.open{color:var(--text);font-weight:600;}
+  .recipe-series-header-name{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .recipe-series-header-meta{margin-left:auto;font-size:10px;color:var(--text-dim);white-space:nowrap;flex:0 0 auto;}
+  .recipe-series-items{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    padding-left:8px;
+    margin-top:2px;
+  }
   .hidden-file{display:none;}
 
   /* Main */
@@ -561,6 +590,20 @@
     color:var(--text-dim);
     font-family:"Consolas","Courier New",monospace;
     margin-left:16px;
+    vertical-align:middle;
+  }
+  /* Trial number badge next to a Series recipe's title -- a distinct pill
+     (not just more of the same monospace code text) since the Trial number
+     is the one segment that changes Trial-to-Trial. */
+  .recipe-title-display .rt-trial-badge{
+    display:inline-block;
+    font-size:15px;
+    font-weight:700;
+    color:#fff;
+    background:var(--primary-dark);
+    border-radius:999px;
+    padding:4px 14px;
+    margin-left:12px;
     vertical-align:middle;
   }
   .toolbar{
@@ -704,6 +747,14 @@
     border:none !important;
     border-radius:0 8px 8px 0 !important;
     font-family:"Consolas","Courier New",monospace;
+  }
+  /* Read-only Trial-number badge replacing the free-text #f-codeSuffix
+     input for a Series recipe -- same rounded-right edge as .code-suffix,
+     since it takes that same trailing slot in the code row. */
+  .code-trial-display{
+    border-radius:0 8px 8px 0;
+    font-weight:700;
+    color:var(--primary-dark);
   }
   /* The country segment leads the code row (CCYY-TTTNN-TNN), so when it's
      showing, the year segment becomes a middle piece — no more rounded-left
@@ -2289,6 +2340,59 @@
      after the status text with a big gap before the toolbar — same
      position whether the recipe is locked or unlocked. */
   .lock-banner-action{margin-left:auto;}
+
+  /* Trial History card (Series recipes only) -- T19 ── T20 ── T21 ── +T22,
+     each a clickable pill, the Series' latest Trial marked, a trailing
+     "+T{next}" pill triggering New Trial directly. Horizontal scroll
+     rather than wrap on narrow screens, same reasoning as any other wide
+     row of same-size items in this app (see e.g. .proj-table-scroll). */
+  .trial-history-track{
+    display:flex;
+    align-items:center;
+    gap:0;
+    overflow-x:auto;
+    padding-bottom:4px;
+  }
+  .trial-history-node{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:6px;
+    padding:8px 16px;
+    border-radius:999px;
+    border:1px solid var(--border);
+    background:var(--panel);
+    font-weight:600;
+    font-size:13px;
+    cursor:pointer;
+    white-space:nowrap;
+  }
+  .trial-history-node:hover{background:var(--primary-light);}
+  .trial-history-node.active{
+    background:var(--primary-dark);
+    border-color:var(--primary-dark);
+    color:#fff;
+  }
+  .trial-history-latest{
+    font-size:10px;
+    font-weight:700;
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    color:var(--accent);
+  }
+  .trial-history-node.active .trial-history-latest{color:#fff;opacity:.85;}
+  .trial-history-node.trial-history-add{
+    background:none;
+    border-style:dashed;
+    color:var(--primary-dark);
+  }
+  .trial-history-node.trial-history-add:hover{background:var(--primary-light);}
+  .trial-history-connector{
+    flex:0 0 20px;
+    height:1px;
+    background:var(--border);
+  }
+
   .danger-zone{
     margin-top:24px;
     padding-top:16px;
@@ -3980,6 +4084,11 @@
     margin-left:12px !important;
     margin-top:0 !important;
   }
+  body.preview-print-mode .recipe-title-display .rt-trial-badge{
+    font-size:13px !important;
+    padding:2px 10px !important;
+    margin-left:8px !important;
+  }
   body.preview-print-mode .batch-summary{grid-template-columns:1fr 1fr !important;}
 
   /* Tighter than the browser's own default print margin (~1in on every
@@ -4065,6 +4174,11 @@
       font-size:16px !important;
       margin-left:12px !important;
       margin-top:0 !important;
+    }
+    .recipe-title-display .rt-trial-badge{
+      font-size:13px !important;
+      padding:2px 10px !important;
+      margin-left:8px !important;
     }
     .main{padding-top:0 !important;}
 
@@ -4273,6 +4387,12 @@
       margin-left:0;
       margin-top:4px;
     }
+    .recipe-title-display .rt-trial-badge{
+      display:inline-block;
+      font-size:13px;
+      margin-left:0;
+      margin-top:6px;
+    }
     .recipe-header-actions{flex-wrap:wrap;}
     .lock-banner{flex-wrap:wrap;}
     .version-item{flex-wrap:wrap;}
@@ -4321,3 +4441,27 @@
     .hd2-create-wrap,.hd2-create-wrap > .btn{width:100%;}
     .hd2-create-wrap > .btn{justify-content:center;}
   }
+
+  /* ---------- Recipe Series Migration (admin-only tool) ---------- */
+  .series-migration-help{color:var(--text-dim);font-size:13px;margin-bottom:10px;line-height:1.5;}
+  .series-migration-input{
+    width:100%;
+    font-family:"Consolas","Courier New",monospace;
+    font-size:12px;
+    min-height:220px;
+  }
+  .series-migration-actions{display:flex;gap:8px;margin-top:10px;}
+  .series-migration-errors{
+    background:var(--danger-light);
+    border:1px solid var(--danger);
+    color:var(--danger);
+    border-radius:var(--radius);
+    padding:10px 12px;
+    margin:14px 0;
+    font-size:13px;
+  }
+  .series-migration-table{table-layout:auto;margin-top:14px;}
+  .series-migration-table th, .series-migration-table td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;}
+  .series-migration-row-error{background:var(--danger-light);}
+  .series-migration-row-skip{color:var(--text-dim);}
+  .series-migration-row-ok td:nth-child(6){color:var(--ok);font-weight:600;}

@@ -13,7 +13,8 @@ import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
   query, orderBy, limit
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { mountCompareView } from './compare.js';
+import { mountCompareView, setCompareSeriesPrefilter } from './compare.js';
+import { mountSeriesMigrationView } from './seriesMigration.js';
 import {
   mountTrialsView, renderTrialsList, trialExpandedIds, trials, attachTrialsListener,
   unsubscribeTrials, migrateTrialsFromRecipes, resetTrialsState
@@ -66,7 +67,7 @@ export {
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
-  openMaterialDetail
+  openMaterialDetail, setCompareSeriesPrefilter
 };
 
 const firebaseConfig = {
@@ -81,8 +82,15 @@ const firebaseConfig = {
 
 const firebaseApp = initializeApp(firebaseConfig);
 const auth = getAuth(firebaseApp);
-const db = getFirestore(firebaseApp);
+export const db = getFirestore(firebaseApp);
 export const recipesCol = collection(db, "recipes");
+// One doc per Recipe Series (e.g. "AU26-SAU06"), holding the atomic Trial-
+// number counter (maxTrialNo) every "+ New Trial" runTransaction() reads
+// and increments — see createNewTrial() in recipes.js. Firestore
+// transactions can only read specific document references, never a query,
+// so this counter doc is the only way to make Trial numbering collision-
+// safe under concurrent creation.
+export const recipeSeriesCol = collection(db, "recipeSeries");
 export const materialsCol = collection(db, "ingredientMaster");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
@@ -652,7 +660,8 @@ const CHANGELOG = [
   { version: "3.0.342", date: "2026-09-05", note: "Added °Brix, %Salt, and pH readings to each Process, next to its Actual Yield fields — up to 3 replicate measurements per reading, with the average calculated automatically from whichever reps have a value entered" },
   { version: "3.0.343", date: "2026-09-05", note: "Lined up the labels across Weight Before/After, Yield, °Brix, %Salt, and pH on the same top row instead of some sitting lower than others" },
   { version: "3.0.344", date: "2026-09-05", note: "In Section 4 (Components and Process), a Part's Prepare (g) — and every ingredient's and Sub-part's Prepare (g) nested inside it — now updates live to include that Part's own Yield, cascading down through every level underneath it, instead of only showing up in Recipe Overview/Print/Version Preview. Formula weight and % figures are still completely unaffected" },
-  { version: "3.0.345", date: "2026-09-05", note: "Preview / Print now shows each Process Step's Actual Yield (Weight Before/After and the calculated Yield %) and °Brix/%Salt/pH readings, matching what's entered on the edit page — previously this whole section was missing from Preview. A Process with nothing measured yet still prints without it, same as before" }
+  { version: "3.0.345", date: "2026-09-05", note: "Preview / Print now shows each Process Step's Actual Yield (Weight Before/After and the calculated Yield %) and °Brix/%Salt/pH readings, matching what's entered on the edit page — previously this whole section was missing from Preview. A Process with nothing measured yet still prints without it, same as before" },
+  { version: "3.0.346", date: "2026-09-05", note: "Added Recipe Series — group related Trials (T01, T02, ... T21, T22) of the same recipe together instead of each Duplicate becoming a fully separate recipe. A Series-enabled recipe gets a \"+ New Trial\" button (collision-safe Trial numbering, even if two people click it at the same instant) and a Trial History card in its header, its Recipe Code shows the Trial number as its own badge, its sidebar entry groups every Trial under one collapsible \"Series · N Trials\" row, and \"Compare Trials\" opens Compare pre-filtered to just that Series (with a one-click \"Show All Recipes\" to escape it). \"Duplicate\" moved into a new \"More\" menu and renamed \"Duplicate as New Recipe\" — it now always starts a brand-new Series at Trial 01. An admin-only Recipe Series Migration tool (Account menu) lets existing recipes be assigned to a Series via an explicit, previewed, safely-re-runnable mapping — nothing is merged automatically by name or code. Versions and Test Results are completely unaffected; recipes with no Series (every existing recipe, until migrated) work exactly as before" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -739,6 +748,7 @@ function renderApp(){
   document.getElementById('navbarAccountEmail').textContent = currentUser ? currentUser.email : '';
   const isAdminUser = currentUser?.email === ADMIN_EMAIL;
   document.getElementById('btnOpenUserAdmin').style.display = isAdminUser ? '' : 'none';
+  document.getElementById('btnOpenSeriesMigration').style.display = isAdminUser ? '' : 'none';
   MODULE_PERMISSIONS.forEach(m => {
     const btn = document.getElementById(m.navBtnId);
     if(btn) btn.style.display = hasModuleAccess(m.key) ? '' : 'none';
@@ -1260,7 +1270,17 @@ function initDataManagementModal(){
 
 function initCompareView(){
   document.getElementById('btnCompare').addEventListener('click', () => {
+    setCompareSeriesPrefilter(null); // plain "Compare Recipes" entry — unfiltered, unlike "Compare Trials"
     mainFeatureView = 'compare';
+    renderMain();
+    renderSidebar();
+  });
+  // Admin-only, tucked in the account menu (same visibility gate as
+  // "Manage Users" — see isAdminUser above) rather than the main navbar,
+  // since this is a rare one-off tool, not a feature the whole team uses.
+  document.getElementById('btnOpenSeriesMigration').addEventListener('click', () => {
+    document.getElementById('navbarAccount').classList.remove('open');
+    mainFeatureView = 'seriesMigration';
     renderMain();
     renderSidebar();
   });
@@ -2955,7 +2975,8 @@ const FEATURE_VIEW_MOUNTERS = {
   materials: mountMaterialsView,
   refLists: mountRefListsView,
   projects: mountProjectsView,
-  trials: mountTrialsView
+  trials: mountTrialsView,
+  seriesMigration: mountSeriesMigrationView
 };
 
 // "Go" targets for dashboard action items / the Active Projects table —
@@ -3548,6 +3569,7 @@ document.addEventListener('click', () => {
   document.getElementById('navbarAccount').classList.remove('open');
   document.getElementById('navbarNotifications').classList.remove('open');
   document.getElementById('hdCreateMenu')?.classList.remove('open');
+  document.getElementById('recipeMoreMenu')?.classList.remove('open');
   document.getElementById('projectColumnsMenu')?.classList.remove('open');
   if(openProjectFilterMenuKey){
     closeProjectFilterMenu();
