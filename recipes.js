@@ -1919,8 +1919,21 @@ function renderParts(r){
 // parentPart.parts }) — the %/weight math only cares about "everything
 // else at my own level", not whether that level happens to be the recipe
 // root or another Part.
-function renderPartNode(r, part, container, siblingsCtx){
+// `getAncestorMultiplier` is a 0-arg function, not a plain number -- every
+// ancestor Part's own Yield can change independently AFTER this row is
+// first rendered (any edit anywhere just re-runs partDisplayUpdaters, see
+// refreshDisplays), so each level composes a NEW closure over its parent's
+// getter and this Part's own `prepYieldPct`, read live on every call,
+// rather than a number baked in once at initial render that could go
+// stale. Defaults to "no ancestors" (1) for a top-level Part.
+function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier = () => 1){
   const isNested = siblingsCtx.ingredients !== null;
+  // This Part's OWN multiplier -- its ancestors' combined Yield effect
+  // AND its own Yield -- is what a ROW belonging to THIS Part (its direct
+  // ingredients) needs; a row belonging to this Part ITSELF (its own
+  // Prepare display) needs just `getAncestorMultiplier()`, since
+  // partPrepareWeight(part) already folds in this Part's own Yield.
+  const getOwnMultiplier = () => computePrepareWeight(getAncestorMultiplier(), part.prepYieldPct);
 
   // A nested Sub-part's header uses the exact same column wrappers
   // (.row-handle-col/.row-value-col) as an ingredient row so the two line
@@ -2334,7 +2347,11 @@ function renderPartNode(r, part, container, siblingsCtx){
       // -- a >100% yield (rehydration) is a real, supported case but isn't
       // "loss", so it prints in the normal neutral color.
       function updatePrepareDisplay(){
-        const prepareWt = computePrepareWeight(ing.weight, ing.prepYieldPct);
+        // Includes every ancestor Part's own Yield too (getOwnMultiplier),
+        // not just this ingredient's own -- so this figure always matches
+        // what Recipe Overview/Print/Version Preview already show for the
+        // same ingredient.
+        const prepareWt = computePrepareWeight(ing.weight, ing.prepYieldPct) * getOwnMultiplier();
         prepareDisplay.textContent = formatWeight(prepareWt);
         const y = parseFloat(ing.prepYieldPct);
         const isLossy = isFinite(y) && y > 0 && y < 100;
@@ -2518,7 +2535,7 @@ function renderPartNode(r, part, container, siblingsCtx){
     if(document.activeElement !== partYieldInput) partYieldInput.value = part.prepYieldPct != null ? part.prepYieldPct : '';
     const py = parseFloat(part.prepYieldPct);
     const isLossy = isFinite(py) && py > 0 && py < 100;
-    partPrepareDisplay.textContent = formatWeight(partPrepareWeight(part));
+    partPrepareDisplay.textContent = formatWeight(partPrepareWeight(part) * getAncestorMultiplier());
     // Toggled on the display span itself (not a .row-value-prepare
     // wrapper) since the top-level Part header has no such wrapper --
     // .part-prepare-display.row-value-prepare-highlight covers both header
@@ -2533,7 +2550,7 @@ function renderPartNode(r, part, container, siblingsCtx){
 
   function renderSubParts(){
     subPartsContainer.innerHTML = '';
-    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }));
+    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }, getOwnMultiplier));
   }
   renderSubParts();
 
@@ -2595,7 +2612,7 @@ function renderPartNode(r, part, container, siblingsCtx){
       // changes every ingredient's .weight without touching its <input>
       // directly, same reason wtEl needs refreshing here too.
       const prepareEl = prepareEls[idx];
-      if(prepareEl) prepareEl.textContent = formatWeight(computePrepareWeight(ing.weight, ing.prepYieldPct));
+      if(prepareEl) prepareEl.textContent = formatWeight(computePrepareWeight(ing.weight, ing.prepYieldPct) * getOwnMultiplier());
     });
   });
 
