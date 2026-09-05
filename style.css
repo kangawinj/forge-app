@@ -2577,6 +2577,33 @@
     font-weight:700;
     color:var(--primary-dark);
   }
+  /* Quality Control readings (°Brix / %Salt / pH) -- 3 replicate inputs
+     per metric plus an auto-averaged result, laid out in the same flex row
+     as the Weight Before/After/Yield fields above (wraps onto its own line
+     on narrower widths via that row's own flex-wrap). */
+  .process-qc-group{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .process-qc-reps{
+    display:flex;
+    gap:4px;
+  }
+  .process-qc-reps input{width:64px;}
+  .process-qc-avg{
+    display:flex;
+    align-items:baseline;
+    gap:6px;
+  }
+  .process-qc-avg .proc-brix-avg-display,
+  .process-qc-avg .proc-salt-avg-display,
+  .process-qc-avg .proc-ph-avg-display{
+    font-weight:700;
+    color:var(--primary-dark);
+  }
   .process-comp-add-row{
     display:flex;
     gap:8px;

@@ -2969,6 +2969,17 @@ function renderProcesses(r){
             <span>Yield</span>
             <span class="proc-actual-yield-display">—</span>
           </div>
+          ${['brix','salt','ph'].map(field => `
+            <div class="process-qc-group">
+              <span>${field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH'}</span>
+              <div class="process-qc-reps">
+                <input type="number" class="proc-${field} num-input" data-idx="0" step="0.01" placeholder="Rep 1">
+                <input type="number" class="proc-${field} num-input" data-idx="1" step="0.01" placeholder="Rep 2">
+                <input type="number" class="proc-${field} num-input" data-idx="2" step="0.01" placeholder="Rep 3">
+              </div>
+              <div class="process-qc-avg"><span>Avg</span><span class="proc-${field}-avg-display">—</span></div>
+            </div>
+          `).join('')}
         </div>
       </div>
 
@@ -3011,6 +3022,32 @@ function renderProcesses(r){
       proc.weightAfter = e.target.value === '' ? null : (parseFloat(e.target.value) || null);
       updateActualYieldDisplay();
       scheduleSave();
+    });
+
+    // Quality Control readings -- °Brix, %Salt, pH -- each with up to 3
+    // replicate measurements (proc[field] = [rep1, rep2, rep3]) and an
+    // average shown alongside, computed from whichever reps actually have a
+    // value (blanks skipped rather than treated as 0, so 1 or 2 filled-in
+    // reps still average correctly while the recipe's waiting on the rest).
+    ['brix','salt','ph'].forEach(field => {
+      const repInputs = [...block.querySelectorAll(`.proc-${field}`)];
+      const avgDisplay = block.querySelector(`.proc-${field}-avg-display`);
+      if(!Array.isArray(proc[field])) proc[field] = [null, null, null];
+      repInputs.forEach((input, idx) => {
+        input.value = proc[field][idx] != null ? proc[field][idx] : '';
+      });
+      function updateAvgDisplay(){
+        const vals = proc[field].map(v => parseFloat(v)).filter(v => isFinite(v));
+        avgDisplay.textContent = vals.length > 0 ? (vals.reduce((s,v)=>s+v,0) / vals.length).toFixed(2) : '—';
+      }
+      updateAvgDisplay();
+      repInputs.forEach((input, idx) => {
+        input.addEventListener('input', e => {
+          proc[field][idx] = e.target.value === '' ? null : (parseFloat(e.target.value) || null);
+          updateAvgDisplay();
+          scheduleSave();
+        });
+      });
     });
 
     const stepsListEl = block.querySelector('.process-steps-list');
