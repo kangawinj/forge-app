@@ -77,6 +77,15 @@ export function mountSeriesMigrationView(){
   playContentTransition(main);
 }
 
+// The free-text legacy "Trial/Reference Code" (r.code) usually already
+// holds the intended Trial number as a human typed it (e.g. code="21" for
+// what should become T21) -- used only as a starting guess for the Trial
+// No. input next to each checkbox below, never written anywhere by itself.
+function guessTrialNo(r){
+  const n = parseInt((r.code || '').trim(), 10);
+  return Number.isFinite(n) && n > 0 ? n : '';
+}
+
 function renderSearchResults(){
   const q = document.getElementById('seriesMigrationSearch').value.trim().toLowerCase();
   const resultsEl = document.getElementById('seriesMigrationSearchResults');
@@ -89,19 +98,25 @@ function renderSearchResults(){
   resultsEl.innerHTML = `
     <div style="overflow-x:auto;">
       <table class="compare-table series-migration-table">
-        <thead><tr><th>Name</th><th>Current Code</th><th>Series</th><th>Recipe ID</th><th></th></tr></thead>
+        <thead><tr><th></th><th>Name</th><th>Current Code</th><th>Series</th><th>Recipe ID</th><th></th><th>Trial No.</th></tr></thead>
         <tbody>
           ${matches.map(r => `
             <tr>
+              <td><input type="checkbox" class="series-migration-select-cb" data-id="${escapeHtml(r.id)}" ${r.seriesId ? 'disabled title="Already in a Series"' : ''}></td>
               <td>${escapeHtml(r.name || 'Untitled recipe')}</td>
               <td>${escapeHtml(fullCode(r) || '—')}</td>
               <td>${r.seriesId ? escapeHtml(r.seriesKey || 'yes') : '—'}</td>
               <td><code class="series-migration-id">${escapeHtml(r.id)}</code></td>
               <td><button type="button" class="btn btn-sm series-migration-copy-btn" data-id="${escapeHtml(r.id)}">Copy</button></td>
+              <td><input type="number" class="series-migration-trialno-input num-input" data-id="${escapeHtml(r.id)}" value="${guessTrialNo(r)}" style="width:64px;" ${r.seriesId ? 'disabled' : ''}></td>
             </tr>
           `).join('')}
         </tbody>
       </table>
+    </div>
+    <div class="series-migration-actions">
+      <button type="button" class="btn" id="btnSeriesMigrationSelectAll">Select All</button>
+      <button type="button" class="btn btn-primary" id="btnSeriesMigrationAddSelected">+ Add Selected to Mapping</button>
     </div>
   `;
   resultsEl.querySelectorAll('.series-migration-copy-btn').forEach(btn => {
@@ -119,6 +134,65 @@ function renderSearchResults(){
       }
     });
   });
+  document.getElementById('btnSeriesMigrationSelectAll').addEventListener('click', () => {
+    resultsEl.querySelectorAll('.series-migration-select-cb:not(:disabled)').forEach(cb => { cb.checked = true; });
+  });
+  document.getElementById('btnSeriesMigrationAddSelected').addEventListener('click', addSelectedToMapping);
+}
+
+// Merges every checked search result (recipeId + its Trial No. input) into
+// the JSON textarea's recordIds array -- never touches seriesKey/
+// countryCode/year/productTypeCode/recipeSeq (those stay whatever the admin
+// already typed, or blank in a fresh mapping), since which Series identity
+// to use is a deliberate admin decision this tool shouldn't guess at.
+function addSelectedToMapping(){
+  const resultsEl = document.getElementById('seriesMigrationSearchResults');
+  const checked = [...resultsEl.querySelectorAll('.series-migration-select-cb:checked')];
+  if(checked.length === 0){
+    alert('Check at least one recipe in the results above first.');
+    return;
+  }
+  const picks = [];
+  const badTrialNoNames = [];
+  checked.forEach(cb => {
+    const id = cb.dataset.id;
+    const trialInput = resultsEl.querySelector(`.series-migration-trialno-input[data-id="${CSS.escape(id)}"]`);
+    const trialNo = parseInt(trialInput.value, 10);
+    const r = recipes.find(x => x.id === id);
+    if(!Number.isFinite(trialNo) || trialNo <= 0){
+      badTrialNoNames.push(r ? (r.name || id) : id);
+      return;
+    }
+    picks.push({ recipeId: id, trialNo });
+  });
+  if(badTrialNoNames.length){
+    alert(`Enter a valid Trial No. (a positive number) for: ${badTrialNoNames.join(', ')}`);
+    return;
+  }
+
+  const textarea = document.getElementById('seriesMigrationInput');
+  const raw = textarea.value.trim();
+  let current;
+  if(raw){
+    try{ current = JSON.parse(raw); }
+    catch(err){ alert('The mapping box already has text in it that isn\'t valid JSON — fix or clear it first, then add selected recipes again.'); return; }
+  } else {
+    current = { seriesKey: '', countryCode: '', year: '', productTypeCode: '', recipeSeq: '', productType: '', recordIds: [] };
+  }
+  if(!Array.isArray(current.recordIds)) current.recordIds = [];
+
+  let addedCount = 0, skippedCount = 0;
+  picks.forEach(pick => {
+    if(current.recordIds.some(e => e.recipeId === pick.recipeId)){ skippedCount++; return; }
+    current.recordIds.push(pick);
+    addedCount++;
+  });
+
+  textarea.value = JSON.stringify(current, null, 2);
+  checked.forEach(cb => { cb.checked = false; });
+
+  const fillInReminder = !current.seriesKey ? ' Fill in seriesKey/countryCode/year/productTypeCode/recipeSeq above before Preview.' : '';
+  alert(`Added ${addedCount} recipe(s) to the mapping${skippedCount ? ` (${skippedCount} already in the list, skipped)` : ''}.${fillInReminder}`);
 }
 
 function parseInput(){
