@@ -805,7 +805,10 @@ export function renderSidebarRecipeCards(container, query){
   container.innerHTML = '';
   sortedCats.forEach(cat => {
     const entries = groups.get(cat);
-    const totalCount = entries.reduce((s,e) => s + (e.kind === 'series' ? e.trials.length : 1), 0);
+    // One count per distinct recipe -- a Series (however many Trials it
+    // has) counts as 1, same as the category tile counts on the full-page
+    // Recipes view, not "however many Trial documents exist."
+    const totalCount = entries.length;
     const expanded = sidebarExpandedCategories.has(cat);
     const group = document.createElement('div');
     group.className = 'recipe-category-group';
@@ -974,11 +977,17 @@ export function mountRecipesListView(){
 // blank) with a recipe count each -- clicking one drills into that
 // category's own filtered recipe list via renderRecipeCards.
 function recipeCategoryTilesHtml(){
-  const counts = new Map();
+  // A count here means "distinct recipes," not "documents" -- every Trial
+  // of the same Series is one recipe, not one each, so this groups by
+  // Series (same as the list itself does once drilled in) before counting,
+  // instead of just counting every recipe document in the category.
+  const byCategory = new Map();
   recipes.forEach(r => {
     const cat = (r.productType||'').trim() || 'Uncategorized';
-    counts.set(cat, (counts.get(cat) || 0) + 1);
+    if(!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(r);
   });
+  const counts = new Map([...byCategory.entries()].map(([cat, list]) => [cat, groupRecipesBySeries(list).length]));
   const sorted = [...counts.entries()].sort((a,b) => a[0].localeCompare(b[0], undefined, {sensitivity:'base'}));
   return sorted.map(([cat, count]) => `
     <button type="button" class="recipe-category-tile" data-category="${escapeHtml(cat)}">
