@@ -651,7 +651,8 @@ const CHANGELOG = [
   { version: "3.0.341", date: "2026-09-05", note: "Each Process (Section 4, e.g. \"Mixing 1\") now has its own Actual Yield fields — Weight Before (g) and Weight After (g), with the Yield % calculated automatically — for recording real measured production loss, separate from every planned/calculated Yield figure elsewhere in the app. Also, adding a new Process now starts it with one blank Step already in place instead of an empty list" },
   { version: "3.0.342", date: "2026-09-05", note: "Added °Brix, %Salt, and pH readings to each Process, next to its Actual Yield fields — up to 3 replicate measurements per reading, with the average calculated automatically from whichever reps have a value entered" },
   { version: "3.0.343", date: "2026-09-05", note: "Lined up the labels across Weight Before/After, Yield, °Brix, %Salt, and pH on the same top row instead of some sitting lower than others" },
-  { version: "3.0.344", date: "2026-09-05", note: "In Section 4 (Components and Process), a Part's Prepare (g) — and every ingredient's and Sub-part's Prepare (g) nested inside it — now updates live to include that Part's own Yield, cascading down through every level underneath it, instead of only showing up in Recipe Overview/Print/Version Preview. Formula weight and % figures are still completely unaffected" }
+  { version: "3.0.344", date: "2026-09-05", note: "In Section 4 (Components and Process), a Part's Prepare (g) — and every ingredient's and Sub-part's Prepare (g) nested inside it — now updates live to include that Part's own Yield, cascading down through every level underneath it, instead of only showing up in Recipe Overview/Print/Version Preview. Formula weight and % figures are still completely unaffected" },
+  { version: "3.0.345", date: "2026-09-05", note: "Preview / Print now shows each Process Step's Actual Yield (Weight Before/After and the calculated Yield %) and °Brix/%Salt/pH readings, matching what's entered on the edit page — previously this whole section was missing from Preview. A Process with nothing measured yet still prints without it, same as before" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3058,9 +3059,39 @@ export function readOnlyProcessesHtml(processes, parts){
   // the parent .compare-steps-col's own gray background, that's the only
   // thing that actually reads as "here's where one Step ends and the next
   // begins" when there can be many of them stacked in a row.
+  // A rep is "present" only once it actually holds a number -- an
+  // all-empty [null,null,null] (the default on every Process, whether or
+  // not this feature's ever been touched) must never make the read-only
+  // Actual Yield block appear for a process nobody measured anything on.
+  const fmtReps = (arr) => (arr || []).map(v => { const n = parseFloat(v); return isFinite(n) ? n.toFixed(2) : null; });
+  const avgOf = (nums) => nums.length ? (nums.reduce((s,n)=>s+n,0) / nums.length).toFixed(2) : null;
+
   return list.map(p => {
     const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
     const components = p.components || [];
+
+    const wtBefore = parseFloat(p.weightBefore);
+    const wtAfter = parseFloat(p.weightAfter);
+    const hasWeights = isFinite(wtBefore) || isFinite(wtAfter);
+    const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
+
+    const qcRows = ['brix','salt','ph'].map(field => {
+      const reps = fmtReps(p[field]).filter(v => v != null);
+      if(reps.length === 0) return null;
+      const label = field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH';
+      return `<tr><td>${label}</td><td>${reps.join(', ')}</td><td>Avg ${avgOf(reps.map(Number))}</td></tr>`;
+    }).filter(Boolean).join('');
+
+    const actualYieldHtml = (hasWeights || qcRows) ? `
+      <table class="compare-table process-view-yield-table" style="margin-bottom:10px;">
+        <thead><tr><th colspan="3">Actual Yield</th></tr></thead>
+        <tbody>
+          ${hasWeights ? `<tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>` : ''}
+          ${qcRows}
+        </tbody>
+      </table>
+    ` : '';
+
     return `
       <div class="process-view-step-block">
         <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
@@ -3099,6 +3130,7 @@ export function readOnlyProcessesHtml(processes, parts){
             </tr></tfoot>
           </table>
         ` : ''}
+        ${actualYieldHtml}
         ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       </div>
     `;
