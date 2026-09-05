@@ -745,6 +745,33 @@ let sidebarExpandedCategories = new Set();
 // legacy recipes render as flat items exactly as before this existed).
 let sidebarExpandedSeries = new Set();
 
+// Groups a flat recipe list into "entries" -- either a bare legacy recipe,
+// or one collapsed Series entry per distinct seriesId holding every Trial
+// that belongs to it (latest Trial first). Shared by the sidebar's
+// Product-Type accordion (one call per category) and the full-page
+// Recipes view's own category-drilled list below -- both need the exact
+// same "group Trials of the same Series together" behavior, just nested
+// under a different outer container.
+function groupRecipesBySeries(recipeList){
+  const entries = [];
+  [...recipeList].sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0)).forEach(r => {
+    if(r.seriesId){
+      let entry = entries.find(e => e.kind === 'series' && e.seriesId === r.seriesId);
+      if(!entry){
+        entry = { kind: 'series', seriesId: r.seriesId, seriesKey: r.seriesKey, trials: [], updatedAt: 0 };
+        entries.push(entry);
+      }
+      entry.trials.push(r);
+      if((r.updatedAt||0) > entry.updatedAt) entry.updatedAt = r.updatedAt || 0;
+    } else {
+      entries.push({ kind: 'legacy', recipe: r, updatedAt: r.updatedAt || 0 });
+    }
+  });
+  entries.sort((a,b) => b.updatedAt - a.updatedAt);
+  entries.forEach(e => { if(e.kind === 'series') e.trials.sort((a,b) => (b.trialNo||0) - (a.trialNo||0)); });
+  return entries;
+}
+
 export function renderSidebarRecipeCards(container, query){
   if(!container) return;
   const q = (query || '').trim();
@@ -766,27 +793,13 @@ export function renderSidebarRecipeCards(container, query){
   // that belongs to it — purely an in-memory regrouping of the same
   // `recipes` array every other view already reads fully into memory via
   // onSnapshot, so this adds no new Firestore read pattern.
-  const groups = new Map();
-  [...recipes].sort((a,b)=>b.updatedAt-a.updatedAt).forEach(r => {
+  const byCategory = new Map();
+  recipes.forEach(r => {
     const cat = (r.productType||'').trim() || 'Uncategorized';
-    if(!groups.has(cat)) groups.set(cat, []);
-    const catEntries = groups.get(cat);
-    if(r.seriesId){
-      let entry = catEntries.find(e => e.kind === 'series' && e.seriesId === r.seriesId);
-      if(!entry){
-        entry = { kind: 'series', seriesId: r.seriesId, seriesKey: r.seriesKey, trials: [], updatedAt: 0 };
-        catEntries.push(entry);
-      }
-      entry.trials.push(r);
-      if((r.updatedAt||0) > entry.updatedAt) entry.updatedAt = r.updatedAt || 0;
-    } else {
-      catEntries.push({ kind: 'legacy', recipe: r, updatedAt: r.updatedAt || 0 });
-    }
+    if(!byCategory.has(cat)) byCategory.set(cat, []);
+    byCategory.get(cat).push(r);
   });
-  groups.forEach(entries => {
-    entries.sort((a,b) => b.updatedAt - a.updatedAt);
-    entries.forEach(e => { if(e.kind === 'series') e.trials.sort((a,b) => (b.trialNo||0) - (a.trialNo||0)); });
-  });
+  const groups = new Map([...byCategory.entries()].map(([cat, list]) => [cat, groupRecipesBySeries(list)]));
   const sortedCats = [...groups.keys()].sort((a,b) => a.localeCompare(b, undefined, {sensitivity:'base'}));
 
   container.innerHTML = '';
@@ -869,10 +882,63 @@ export function createNewRecipe(){
 // what the user is looking for.
 let recipesListCategoryFilter = null;
 
+// Which Series are expanded in the full-page Recipes view's own
+// category-drilled list -- same idea as sidebarExpandedSeries, kept
+// separate since the two views have entirely different DOM/lifetimes, and
+// reset alongside recipesListCategoryFilter on every fresh mount.
+let recipesListExpandedSeries = new Set();
+
+// Series-grouped version of renderRecipeCards for the full-page Recipes
+// view's own category-drilled list (query-free, one category at a time) --
+// mirrors renderSidebarRecipeCards' inner per-category rendering, just
+// without the outer Product-Type accordion layer (this list is already
+// scoped to one category by the time it's called).
+function renderCategoryRecipeList(container, category){
+  if(!container) return;
+  const current = recipes.find(r => r.id === currentId);
+  if(current && current.seriesId && ((current.productType||'').trim() || 'Uncategorized') === category){
+    recipesListExpandedSeries.add(current.seriesId);
+  }
+  const categoryRecipes = recipes.filter(r => ((r.productType||'').trim() || 'Uncategorized') === category);
+  const entries = groupRecipesBySeries(categoryRecipes);
+
+  container.innerHTML = '';
+  entries.forEach(entry => {
+    if(entry.kind === 'legacy'){
+      appendRecipeItemEl(container, entry.recipe);
+      return;
+    }
+    const seriesExpanded = recipesListExpandedSeries.has(entry.seriesId);
+    const seriesGroup = document.createElement('div');
+    seriesGroup.className = 'recipe-series-group';
+    const seriesHeader = document.createElement('button');
+    seriesHeader.type = 'button';
+    seriesHeader.className = 'recipe-series-header' + (seriesExpanded ? ' open' : '');
+    seriesHeader.innerHTML = `
+      ${icon(seriesExpanded ? 'chevron-down' : 'chevron-right', 13)}
+      <span class="recipe-series-header-name">${escapeHtml(entry.trials[0]?.name || 'Untitled recipe')}</span>
+      <span class="recipe-series-header-meta">${escapeHtml(entry.seriesKey || '')} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
+    `;
+    seriesHeader.addEventListener('click', () => {
+      if(recipesListExpandedSeries.has(entry.seriesId)) recipesListExpandedSeries.delete(entry.seriesId); else recipesListExpandedSeries.add(entry.seriesId);
+      renderCategoryRecipeList(container, category);
+    });
+    seriesGroup.appendChild(seriesHeader);
+    if(seriesExpanded){
+      const seriesItemsWrap = document.createElement('div');
+      seriesItemsWrap.className = 'recipe-series-items';
+      entry.trials.forEach(t => appendRecipeItemEl(seriesItemsWrap, t));
+      seriesGroup.appendChild(seriesItemsWrap);
+    }
+    container.appendChild(seriesGroup);
+  });
+}
+
 export function mountRecipesListView(){
   const main = document.getElementById('mainArea');
   main.classList.remove('main-wide');
   recipesListCategoryFilter = null;
+  recipesListExpandedSeries = new Set();
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
@@ -952,7 +1018,15 @@ export function renderRecipesListGrid(){
   const backBtn = document.getElementById('btnBackToRecipeCategories');
   if(backBtn) backBtn.addEventListener('click', () => { recipesListCategoryFilter = null; renderRecipesListGrid(); });
 
-  renderRecipeCards(listEl, query, q ? null : recipesListCategoryFilter);
+  // Typing a search query stays a flat filtered list across every recipe
+  // (matches the sidebar's own search behavior) -- browsing a category with
+  // no query groups its recipes by Series instead, so a Series' Trials can
+  // be drilled into one at a time rather than all listed loose together.
+  if(q){
+    renderRecipeCards(listEl, query, null);
+  } else {
+    renderCategoryRecipeList(listEl, recipesListCategoryFilter);
+  }
 }
 
 // r.date is always "YYYY-MM-DD" (a <input type="date"> value), so the year
