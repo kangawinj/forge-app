@@ -646,7 +646,8 @@ const CHANGELOG = [
   { version: "3.0.336", date: "2026-09-04", note: "Recipe Overview's %/Weight/Cost columns replaced the boxed bar-and-percentage widget with a thin bar directly under each number, on all three columns instead of just %, each scaled against that column's own values" },
   { version: "3.0.337", date: "2026-09-04", note: "Those under-number bars now shrink to exactly the width of the number above them instead of stretching across the whole column, so a short value like \"0.10%\" gets a short bar and a long one like \"40.95%\" gets a longer one" },
   { version: "3.0.338", date: "2026-09-04", note: "Clicking an ingredient's photo on the Recipe Overview table now opens the same Material Detail popup the Ingredient Library page itself uses — vendor, manufacturer, price, MOQ, usage notes, all of it — instead of doing nothing" },
-  { version: "3.0.339", date: "2026-09-04", note: "Added Ingredient Preparation Yield: picking a Sub Ingredient variant (Chop/Dice/etc.) now also snapshots its %Yield onto that recipe row, driving a new editable Yield (%) and an auto-calculated Prepare (gross) weight = Formula ÷ (Yield/100) next to every ingredient. Ingredient cost, Recipe Overview (new % of Recipe / Prep Yield / Prepare Wt. columns, split by Prep, plus a Preparation Total alongside Formula Total), the printed ingredient table, and Version Preview all now show and use Prepare weight; Formula weight and % of Recipe stay exactly as before. The old whole-batch \"Expected Yield\" is relabeled \"Batch Process Yield\" so the two concepts don't read as the same thing. Old recipes with no Yield set open and compute exactly as before (100%)" }
+  { version: "3.0.339", date: "2026-09-04", note: "Added Ingredient Preparation Yield: picking a Sub Ingredient variant (Chop/Dice/etc.) now also snapshots its %Yield onto that recipe row, driving a new editable Yield (%) and an auto-calculated Prepare (gross) weight = Formula ÷ (Yield/100) next to every ingredient. Ingredient cost, Recipe Overview (new % of Recipe / Prep Yield / Prepare Wt. columns, split by Prep, plus a Preparation Total alongside Formula Total), the printed ingredient table, and Version Preview all now show and use Prepare weight; Formula weight and % of Recipe stay exactly as before. The old whole-batch \"Expected Yield\" is relabeled \"Batch Process Yield\" so the two concepts don't read as the same thing. Old recipes with no Yield set open and compute exactly as before (100%)" },
+  { version: "3.0.340", date: "2026-09-05", note: "Extended Ingredient Preparation Yield to Parts and Sub-parts themselves, not just individual ingredients — each Part now has its own editable Yield (%) and Prepare (gross) weight, compounding with everything inside it (own ingredients' Yields and any nested Sub-part's own Yield). Flows through to cost, Recipe Overview's Preparation Total, the printed ingredient table, and Version Preview everywhere a Prepare weight is shown. Formula weight, % of Part, and % of Recipe stay completely unaffected; old recipes with no Part Yield set open and compute exactly as before" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3194,6 +3195,20 @@ export function isValidYieldPct(v){
   const y = parseFloat(v);
   return isFinite(y) && y >= 0.01 && y <= 999.99;
 }
+// Same recursive shape as partTotalWeight (recipes.js) but summing each
+// ingredient's Prepare (gross) weight instead of its Formula weight, then
+// dividing by the Part's OWN Yield too -- so a Part/Sub-part can carry its
+// own independent prep loss (e.g. the finished sub-assembly itself gets
+// strained/reduced) on top of whatever its individual ingredients already
+// lose. Compounds naturally through nesting since each level's own division
+// happens after summing children that have already had theirs applied.
+// Shared by the live editor (recipes.js), Print (recipes.js), and this
+// file's own read-only tree -- one place so all three always agree.
+export function partPrepareWeight(part){
+  const childrenSum = (part.ingredients || []).reduce((s,i) => s + computePrepareWeight(i.weight, i.prepYieldPct), 0)
+    + (part.parts || []).reduce((s,sub) => s + partPrepareWeight(sub), 0);
+  return computePrepareWeight(childrenSum, part.prepYieldPct);
+}
 
 // Shared by the Version Preview modal and Printing — the same Parts ->
 // Sub-parts -> Ingredients hierarchy as the live editable form (see
@@ -3227,7 +3242,7 @@ export function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
     </tr>
   `;
   const bodyRows = namedParts.map((part, idx) =>
-    readOnlyPartBranchRows(part, false, totalWeight, totalWeight, [], idx === namedParts.length - 1, nodeLabelById)
+    readOnlyPartBranchRows(part, false, totalWeight, totalWeight, [], idx === namedParts.length - 1, nodeLabelById, 1)
   ).join('');
   return `
     <table class="ro-tree-table">
@@ -3242,17 +3257,6 @@ export function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
 // which is used everywhere else that a weight stands alone).
 function fmtNum(n){
   return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-}
-
-// Same recursive shape as partTotalWeight (recipes.js) but summing each
-// ingredient's Prepare (gross) weight instead of its Formula weight --
-// used so a Part row in the read-only tree can show "how much do I need
-// to prep in total for everything under this Part", not just its own
-// direct children.
-function partPrepareWeight(part){
-  const direct = (part.ingredients || []).reduce((s,i) => s + computePrepareWeight(i.weight, i.prepYieldPct), 0);
-  const nested = (part.parts || []).reduce((s,sub) => s + partPrepareWeight(sub), 0);
-  return direct + nested;
 }
 
 // Box-drawing tree connector for one row: one "│  "/"   " segment per
@@ -3279,7 +3283,7 @@ function treeGuideHtml(ancestorContinues, isLast){
 // actual weights rather than trusting a stored .percent, since older
 // versions saved before Sub-parts existed never had one on their Part
 // objects.
-function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancestorContinues, isLast, nodeLabelById){
+function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancestorContinues, isLast, nodeLabelById, ancestorMultiplier){
   const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
   const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
   const label = (part.name||'').trim() || 'Unnamed part';
@@ -3287,16 +3291,22 @@ function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancesto
   const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
   const partPctOfRecipe = grandTotal > 0 ? (partWeight / grandTotal * 100) : 0;
   const showNodeCol = nodeLabelById && nodeLabelById.size > 0;
-  // A Part groups ingredients rather than being a prep of its own -- Yield
-  // stays blank on its row, same as Note already does, but Prepare shows
-  // the summed gross weight of everything under it (see partPrepareWeight).
+  // A Part can now carry its own Yield too (on top of any of its
+  // ingredients' own) -- shown here, and its Prepare column is this Part's
+  // own local rollup (partPrepareWeight), not further multiplied by any
+  // ancestor Part's yield -- that further loss shows on the ANCESTOR's own
+  // row instead, the same way %-of-Part and %-of-Recipe already coexist as
+  // two distinct, both-correct figures for the same row.
+  const ownMultiplier = computePrepareWeight(1, part.prepYieldPct);
+  const py = parseFloat(part.prepYieldPct);
+  const partYieldDisplay = (isFinite(py) && py > 0) ? py : 100;
   const partRow = `
     <tr class="ro-tree-row ro-tree-part">
       <td class="ro-tree-name">${treeGuideHtml(ancestorContinues, isLast)}${escapeHtml(label)}</td>
       <td class="ro-tree-note"></td>
       <td class="ro-tree-pct">${partPct.toFixed(2)}%</td>
       <td class="ro-tree-wt">${fmtNum(partWeight)}</td>
-      <td class="ro-tree-yield"></td>
+      <td class="ro-tree-yield">${partYieldDisplay.toFixed(2)}%</td>
       <td class="ro-tree-wt">${fmtNum(partPrepareWeight(part))}</td>
       <td class="ro-tree-pct">${partPctOfRecipe.toFixed(2)}%</td>
       ${showNodeCol ? '<td class="ro-tree-nodecol"></td>' : ''}
@@ -3304,6 +3314,7 @@ function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancesto
   `;
   const childAncestorContinues = [...ancestorContinues, !isLast];
   const childCount = namedIngredients.length + namedSubParts.length;
+  const childMultiplier = ancestorMultiplier * ownMultiplier;
   const ingRows = namedIngredients.map((ing, idx) => {
     const childIsLast = idx === childCount - 1;
     const nodeLabel = showNodeCol && ing.flowNodeId ? nodeLabelById.get(ing.flowNodeId) : null;
@@ -3318,7 +3329,7 @@ function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancesto
         <td class="ro-tree-pct">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
         <td class="ro-tree-wt">${fmtNum(formulaWt)}</td>
         <td class="ro-tree-yield">${yieldDisplay.toFixed(2)}%</td>
-        <td class="ro-tree-wt">${fmtNum(computePrepareWeight(formulaWt, ing.prepYieldPct))}</td>
+        <td class="ro-tree-wt">${fmtNum(computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier)}</td>
         <td class="ro-tree-pct">${pctOfRecipe.toFixed(2)}%</td>
         ${showNodeCol ? `<td class="ro-tree-nodecol">${nodeLabel ? '→' + escapeHtml(nodeLabel) : ''}</td>` : ''}
       </tr>
@@ -3326,7 +3337,7 @@ function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancesto
   }).join('');
   const subRows = namedSubParts.map((sub, idx) => {
     const childIsLast = namedIngredients.length + idx === childCount - 1;
-    return readOnlyPartBranchRows(sub, true, partWeight, grandTotal, childAncestorContinues, childIsLast, nodeLabelById);
+    return readOnlyPartBranchRows(sub, true, partWeight, grandTotal, childAncestorContinues, childIsLast, nodeLabelById, childMultiplier);
   }).join('');
   return partRow + ingRows + subRows;
 }

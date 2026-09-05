@@ -928,6 +928,8 @@
   }
   .part-header-fields .part-pct-display{width:64px;flex:0 0 auto;}
   .part-header-fields .part-wt-display{width:80px;flex:0 0 auto;}
+  .part-header-fields .part-yield-input{width:56px;flex:0 0 auto;}
+  .part-header-fields .part-prepare-display{display:inline-block;min-width:60px;text-align:right;font-weight:600;}
   .part-block.collapsed .part-body{display:none;}
   /* Data cells used to force nowrap, which made long Customer/Destination/
      Factory names push the whole table past the viewport width, requiring
@@ -1548,6 +1550,10 @@
      flag, not a >100% rehydration case (see updatePrepareDisplay). */
   .row-value-prepare.row-value-prepare-highlight{color:var(--accent);}
   .ing-yield.invalid{border-color:var(--danger) !important;background:var(--danger-light);}
+  /* Part-level Prepare highlight -- toggled on the display span itself
+     rather than a .row-value-prepare wrapper, since the top-level Part
+     header's Prepare span has no such wrapper (see updatePartSubtotal). */
+  .part-prepare-display.row-value-prepare-highlight{color:var(--accent);}
   /* Custom fuzzy-search dropdown for the ingredient name field — see
      fuzzyMaterialMatches/renderSuggestions in renderParts. Floats below
      the input rather than pushing the row's layout around. */
@@ -4174,6 +4180,12 @@
        the wrapped text instead of flowing to their own line below it. */
     .part-header{flex-wrap:wrap;}
     .part-header-summary{margin-left:0;white-space:normal;}
+    /* Yield + Prepare added two more fields to the top-level Part header's
+       already-tight row (weight, %, ingredient count) -- past ~380px wide
+       that no longer fits on one line even after .part-header itself wraps
+       .part-header-fields onto its own row, so it needs to wrap internally
+       too or its rightmost field (previously always %) runs off-screen. */
+    .part-header-fields{flex-wrap:wrap;margin-left:0;row-gap:4px;}
     .card{padding:18px 16px;}
     .home-dashboard{max-width:100%;}
     .hd2-greeting{margin-bottom:14px;}

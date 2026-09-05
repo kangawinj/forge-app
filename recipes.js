@@ -9,7 +9,7 @@ import {
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
   findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
-  openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct
+  openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -1737,6 +1737,27 @@ export function allIngredientsInRecipe(r){
   return (r.parts || []).flatMap(allIngredientsInPart);
 }
 
+// Same tree as allIngredientsInPart, but pairs each ingredient with its
+// fully-compounded Prepare (gross) weight -- own Yield AND every ancestor
+// Part's own Yield, chained -- since Recipe Overview groups a flattened
+// list across Part boundaries and needs each instance's own effective
+// value, not just a single Part-level aggregate. `ancestorMultiplier`
+// carries "1 / (ancestor Part's Yield / 100)" down the recursion, one
+// level compounding onto the next; computePrepareWeight is reused to fold
+// this Part's own Yield into it, treating the running multiplier itself as
+// a "weight" being divided -- same fallback-safe math, no new logic.
+// Mathematically equal, leaf by leaf, to partPrepareWeight's own bottom-up
+// recursion (app.js), so the two always agree.
+export function collectIngredientsWithPrepareWeight(part, ancestorMultiplier = 1){
+  const ownMultiplier = computePrepareWeight(ancestorMultiplier, part.prepYieldPct);
+  const direct = (part.ingredients || []).map(ing => ({
+    ing,
+    prepareWt: computePrepareWeight(ing.weight, ing.prepYieldPct) * ownMultiplier
+  }));
+  const nested = (part.parts || []).flatMap(sub => collectIngredientsWithPrepareWeight(sub, ownMultiplier));
+  return [...direct, ...nested];
+}
+
 // Finds a Part anywhere in the recipe's tree (including nested Sub-parts)
 // by name -- used to look up what's actually inside a Process Step's
 // Component when that Component is a whole Part added as one lump entry
@@ -1916,6 +1937,16 @@ function renderPartNode(r, part, container, siblingsCtx){
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span class="ing-unit">g</span>
       </div>
+      <div class="row-value-col row-value-yield">
+        <div class="row-value-yield-input-row">
+          <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+          <span class="ing-unit">%</span>
+        </div>
+      </div>
+      <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
+        <span class="part-prepare-display ing-prepare-display"></span>
+        <span class="ing-unit">g</span>
+      </div>
       <div class="row-value-col">
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span class="ing-unit">%</span>
@@ -1928,6 +1959,10 @@ function renderPartNode(r, part, container, siblingsCtx){
       <div class="part-header-fields">
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
+        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
+        <span>% yield</span>
+        <span class="part-prepare-display ing-prepare-display"></span>
+        <span>g prepare</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span>% of recipe</span>
         <span class="part-ing-count"></span>
@@ -2069,6 +2104,8 @@ function renderPartNode(r, part, container, siblingsCtx){
   const countEl = block.querySelector('.part-ing-count');
   const partPctInput = block.querySelector('.part-pct-display');
   const partWtInput = block.querySelector('.part-wt-display');
+  const partYieldInput = block.querySelector('.part-yield-input');
+  const partPrepareDisplay = block.querySelector('.part-prepare-display');
   const toggleBtn = block.querySelector('.part-toggle-btn');
 
   // Scales everything currently inside this Part — its own ingredients AND
@@ -2120,6 +2157,19 @@ function renderPartNode(r, part, container, siblingsCtx){
   partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
   partPctInput.addEventListener('focus', () => partPctInput.select());
   partPctInput.addEventListener('mouseup', e => { if(partPctJustFocused){ e.preventDefault(); partPctJustFocused = false; } });
+
+  // This Part's own Yield -- an independent prep loss/gain for everything
+  // inside it, on top of any of its ingredients' own. refreshDisplays(r)
+  // re-runs every registered partDisplayUpdaters entry (see below), which
+  // is what makes every ancestor Part's Prepare display -- not just this
+  // one's own -- correctly recompute, since partPrepareWeight always
+  // recomputes bottom-up from live model state.
+  partYieldInput.addEventListener('input', e => {
+    const v = e.target.value;
+    part.prepYieldPct = v === '' ? null : (parseFloat(v) || null);
+    refreshDisplays(r);
+    scheduleSave();
+  });
 
   function setCollapsed(collapsed){
     block.classList.toggle('collapsed', collapsed);
@@ -2462,6 +2512,18 @@ function renderPartNode(r, part, container, siblingsCtx){
     countEl.textContent = label.length ? label.join(' · ') : 'Empty';
     if(document.activeElement !== partPctInput) partPctInput.value = (part.percent || 0).toFixed(2);
     if(document.activeElement !== partWtInput) partWtInput.value = partTotalWeight(part).toFixed(2);
+    if(document.activeElement !== partYieldInput) partYieldInput.value = part.prepYieldPct != null ? part.prepYieldPct : '';
+    const py = parseFloat(part.prepYieldPct);
+    const isLossy = isFinite(py) && py > 0 && py < 100;
+    partPrepareDisplay.textContent = formatWeight(partPrepareWeight(part));
+    // Toggled on the display span itself (not a .row-value-prepare
+    // wrapper) since the top-level Part header has no such wrapper --
+    // .part-prepare-display.row-value-prepare-highlight covers both header
+    // variants with one rule (see style.css).
+    partPrepareDisplay.classList.toggle('row-value-prepare-highlight', isLossy);
+    const valid = isValidYieldPct(partYieldInput.value);
+    partYieldInput.classList.toggle('invalid', !valid);
+    partYieldInput.title = valid ? '' : 'Yield must be between 0.01% and 999.99%';
   }
 
   renderRows();
@@ -2549,10 +2611,18 @@ function updateGrandTotal(r){
   pctEl.className = 'col-pct totals-ok';
   wtEl.textContent = formatWeight(totalWt);
 
-  renderOverview(allIngredients);
+  // Each ingredient instance's own fully-compounded Prepare weight (its own
+  // Yield times every ancestor Part's own Yield) -- keyed by object
+  // reference since the same name+note key in renderOverview's grouping can
+  // now legitimately map to instances living under different Parts with
+  // different compounding.
+  const prepareWeightByIng = new Map();
+  (r.parts || []).forEach(part => collectIngredientsWithPrepareWeight(part).forEach(({ ing, prepareWt }) => prepareWeightByIng.set(ing, prepareWt)));
+
+  renderOverview(allIngredients, prepareWeightByIng);
 }
 
-function renderOverview(allIngredients){
+function renderOverview(allIngredients, prepareWeightByIng){
   const body = document.getElementById('overviewBody');
   if(!body) return;
   body.innerHTML = '';
@@ -2631,6 +2701,12 @@ function renderOverview(allIngredients){
     }
     const g = groups.get(key);
     g.wt += parseFloat(i.weight) || 0;
+    // Accumulated per-instance rather than recomputed once from the summed
+    // Formula weight -- two instances sharing this same name+Prep key can
+    // now live under different Parts with different compounding, so each
+    // needs its own effective Prepare weight added in, not one shared
+    // Yield% applied to the combined total.
+    g.prepareWt = (g.prepareWt || 0) + (prepareWeightByIng.get(i) ?? computePrepareWeight(i.weight, i.prepYieldPct));
   });
 
   // % here is always of the whole recipe (not the ingredient's own part),
@@ -2640,7 +2716,6 @@ function renderOverview(allIngredients){
   const totalRecipeWeight = allIngredients.reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
   groups.forEach(g => {
     g.pct = totalRecipeWeight > 0 ? (g.wt / totalRecipeWeight * 100) : 0;
-    g.prepareWt = computePrepareWeight(g.wt, g.prepYieldPct);
     // Cost is based on Prepare (gross) weight, not Formula weight -- the
     // Price/kg is the as-purchased price, so what's actually bought (and
     // costed) is the gross amount before any prep loss.
@@ -3665,29 +3740,38 @@ function printIngredientTableHtml(parts, totalWeight){
   if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
   const fmtWt = n => (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
-  function rowsForPart(part, depth){
+  function rowsForPart(part, depth, ancestorMultiplier){
     const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
     const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
     const label = (part.name||'').trim() || 'Unnamed part';
     const partWeight = partTotalWeight(part);
     const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
-    // A Part is a group of ingredients, not a prep of its own -- Yield/
-    // Prepare only ever apply to an actual ingredient leaf, so those two
-    // columns stay blank on a group row (same as Prep/Note already does).
+    // A Part can carry its own Yield now too -- its own row shows that
+    // Yield% and its own local partPrepareWeight rollup (not further
+    // multiplied by any ancestor Part's Yield -- that shows on the
+    // ANCESTOR's own row instead, same as %-of-Part vs %-of-Recipe already
+    // being two distinct, both-correct figures for the same row).
+    const ownMultiplier = computePrepareWeight(1, part.prepYieldPct);
+    const py = parseFloat(part.prepYieldPct);
+    const partYieldDisplay = (isFinite(py) && py > 0) ? py : 100;
     const groupRow = `
       <tr class="print-ing-group-row">
         <td style="padding-left:${12 + depth*16}px">${escapeHtml(label)}</td>
         <td></td>
         <td class="print-ing-num">${fmtWt(partWeight)}</td>
-        <td class="print-ing-num"></td>
-        <td class="print-ing-num"></td>
+        <td class="print-ing-num">${partYieldDisplay.toFixed(2)}%</td>
+        <td class="print-ing-num">${fmtWt(partPrepareWeight(part))}</td>
         <td class="print-ing-num">${partPct.toFixed(2)}%</td>
         <td class="print-ing-num">${partPct.toFixed(2)}%</td>
       </tr>
     `;
+    const childMultiplier = ancestorMultiplier * ownMultiplier;
     const ingRows = namedIngredients.map(ing => {
       const formulaWt = parseFloat(ing.weight) || 0;
-      const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct);
+      // Fully compounded -- own Yield AND every ancestor Part's own Yield --
+      // since this is the actionable "how much to actually pull" figure the
+      // printed sheet exists for.
+      const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
       const y = parseFloat(ing.prepYieldPct);
       const yieldDisplay = (isFinite(y) && y > 0) ? y : 100;
       const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
@@ -3703,24 +3787,21 @@ function printIngredientTableHtml(parts, totalWeight){
       </tr>
     `;
     }).join('');
-    const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1)).join('');
+    const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1, childMultiplier)).join('');
     return groupRow + ingRows + subRows;
   }
 
-  // Preparation total -- summed independently of the recursive rows above
-  // via the same allIngredientsInPart flattening used everywhere else in
-  // this file, so it's exactly the sum of what actually prints per row.
-  const totalPrepareWeight = namedParts
-    .flatMap(allIngredientsInPart)
-    .filter(i => (i.name||'').trim() !== '')
-    .reduce((s,i) => s + computePrepareWeight(parseFloat(i.weight)||0, i.prepYieldPct), 0);
+  // Preparation total -- the same shared partPrepareWeight rollup used by
+  // each Part's own group row above, summed across every top-level Part, so
+  // it's guaranteed to match what actually prints per row.
+  const totalPrepareWeight = namedParts.reduce((s,p) => s + partPrepareWeight(p), 0);
 
   // "Formula total" is a plain last row of <tbody>, not a <tfoot> --
   // browsers print a <tfoot> at the bottom of EVERY page a table spans
   // across (repeating like a <thead>), which showed up as the total row
   // appearing a page early, mid-table, in addition to its correct spot at
   // the very end once the table actually finished on the next page.
-  const bodyRows = namedParts.map(part => rowsForPart(part, 0)).join('')
+  const bodyRows = namedParts.map(part => rowsForPart(part, 0, 1)).join('')
     + `<tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num"></td><td class="print-ing-num">${fmtWt(totalPrepareWeight)} g</td><td class="print-ing-num">100.00%</td><td class="print-ing-num">100.00%</td></tr>`;
   return `
     <table class="print-ing-table">
