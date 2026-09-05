@@ -4465,6 +4465,11 @@
   .series-migration-row-error{background:var(--danger-light);}
   .series-migration-row-skip{color:var(--text-dim);}
   .series-migration-row-ok td:nth-child(6){color:var(--ok);font-weight:600;}
+  /* Visual-only "not ready yet" hint on Apply -- deliberately NOT a native
+     disabled button, so a click always reaches applyMigration() and always
+     gets an explicit alert() explaining why it can't proceed yet (no Preview
+     run, or the Preview found errors) rather than silently doing nothing. */
+  .series-migration-btn-inactive{opacity:.45;}
   .series-migration-id{
     font-family:"Consolas","Courier New",monospace;
     font-size:12px;

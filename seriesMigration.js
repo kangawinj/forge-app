@@ -65,7 +65,7 @@ export function mountSeriesMigrationView(){
 }'></textarea>
       <div class="series-migration-actions">
         <button class="btn" id="btnSeriesMigrationPreview">Preview (Dry Run)</button>
-        <button class="btn btn-primary" id="btnSeriesMigrationApply" disabled>Apply</button>
+        <button class="btn btn-primary series-migration-btn-inactive" id="btnSeriesMigrationApply">Apply</button>
       </div>
       <div id="seriesMigrationReport"></div>
     </div>
@@ -134,7 +134,7 @@ function parseInput(){
 function runDryRun(){
   const reportEl = document.getElementById('seriesMigrationReport');
   const applyBtn = document.getElementById('btnSeriesMigrationApply');
-  applyBtn.disabled = true;
+  applyBtn.classList.add('series-migration-btn-inactive');
   dryRunReport = null;
   reportEl.innerHTML = '';
 
@@ -181,7 +181,8 @@ function runDryRun(){
   dryRunReport = { input, rows, errors };
   reportEl.innerHTML = renderReportHtml(dryRunReport);
   const okCount = rows.filter(r => r.status === 'ok').length;
-  applyBtn.disabled = errors.length > 0 || okCount === 0;
+  const canApply = errors.length === 0 && okCount > 0;
+  applyBtn.classList.toggle('series-migration-btn-inactive', !canApply);
 }
 
 function renderReportHtml(report){
@@ -207,10 +208,23 @@ function renderReportHtml(report){
 }
 
 function applyMigration(){
-  if(!dryRunReport || dryRunReport.errors.length) return;
+  // Apply is always clickable (never a native `disabled` button) so it can
+  // never just silently do nothing — every reason it can't proceed yet is
+  // explained here instead.
+  if(!dryRunReport){
+    alert('Click "Preview (Dry Run)" first — Apply only ever acts on a mapping you\'ve already previewed.');
+    return;
+  }
+  if(dryRunReport.errors.length){
+    alert('Fix the errors shown in the Preview report first, then click "Preview (Dry Run)" again before Apply.');
+    return;
+  }
   const { input, rows } = dryRunReport;
   const okRows = rows.filter(r => r.status === 'ok');
-  if(okRows.length === 0) return;
+  if(okRows.length === 0){
+    alert('Nothing to apply — every recipe in this mapping is already in a Series (see the report above).');
+    return;
+  }
 
   const typed = prompt(`Type APPLY to confirm migrating ${okRows.length} recipe(s) into Series "${input.seriesKey}". This changes Recipe Code / Trial numbering for those recipes and is not easily undone.`);
   if(typed !== 'APPLY') return;
