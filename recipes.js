@@ -461,8 +461,17 @@ export function migrateRecipe(r){
   // inside a Part — older saved recipes never had Sub-parts at all, so
   // `p.parts` simply won't exist on them yet; this backfills it as empty.
   function migratePart(p){
-    if(!Array.isArray(p.ingredients) || p.ingredients.length === 0){
+    // Same "never sits completely empty" safety net the drag-drop/delete
+    // handlers already use elsewhere in this file -- but only when this
+    // Part has no Sub-parts of its own to fall back on instead. Without
+    // the p.parts check, a Part that legitimately holds only Sub-parts
+    // (no direct ingredients of its own, e.g. a root Part that's just an
+    // organizer for a couple of Sub-parts) got a phantom blank ingredient
+    // row forced onto it on every single load.
+    if((!Array.isArray(p.ingredients) || p.ingredients.length === 0) && !(Array.isArray(p.parts) && p.parts.length > 0)){
       p.ingredients = [{ id: uid(), name:"", percent:0, weight:0, note:"" }];
+    } else if(!Array.isArray(p.ingredients)){
+      p.ingredients = [];
     }
     p.ingredients.forEach(ing => {
       if(ing.flowNodeId === undefined) ing.flowNodeId = null;
