@@ -916,6 +916,17 @@
   }
   .part-header input:hover{border-color:var(--border);}
   .part-header input:focus{background:#fff;}
+  /* A top-level Part's own ingredient/sub-part count -- sits right after
+     the name, matching where a nested Sub-part already shows its own count
+     (see .sub-part-row > .part-header > .part-ing-count below); the more
+     specific nested rule still wins there, this just covers the top-level
+     case which has no wrapper of its own to hang a more specific selector on. */
+  .part-header > .part-ing-count{
+    font-size:13px;
+    color:var(--text-dim);
+    white-space:nowrap;
+    flex:0 0 auto;
+  }
   /* A Sub-part nested inside a Part should read as one more row in that
      Part's list, not a distinct titled section the way a top-level Part
      is — so its name field gets the same plain bordered-box look as an
