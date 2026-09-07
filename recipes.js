@@ -2264,11 +2264,14 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       <span class="drag-handle" draggable="true" title="Drag onto another Part's title to move this Part (and everything inside it) there">${icon('grip-vertical', 14)}</span>
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       <input type="text" class="part-name" placeholder="Part name">
+      <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
+        <span class="part-yield-chip-label">Yield</span>
+        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+        <span class="ing-unit">%</span>
+      </div>
       <div class="part-header-fields">
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
-        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
-        <span>% yield</span>
         <span class="part-prepare-display ing-prepare-display"></span>
         <span>g prepare</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
