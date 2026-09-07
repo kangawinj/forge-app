@@ -1623,6 +1623,22 @@
   }
   .part-yield-chip-label{white-space:nowrap;}
   .part-yield-chip .part-yield-input{width:48px;flex:none;}
+  /* A Sub-part's own Prepare cell gets the same "Prepare" text label a
+     top-level Part's does (see .part-header-fields' plain <span>Prepare</span>
+     above) -- an ingredient row's identical-looking cell has no such label,
+     so this widens the column for Sub-part rows only (same scoping pattern
+     as .sub-part-row > .part-header .part-name above), instead of the
+     shared fixed 80px .row-value-col.row-value-prepare width every
+     ingredient row also uses. */
+  .sub-part-row > .part-header .row-value-prepare{
+    flex:0 0 auto;
+    gap:4px;
+  }
+  .row-value-prepare-label{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
   /* Part-level Prepare highlight -- toggled on the display span itself
      rather than a .row-value-prepare wrapper, since the top-level Part
      header's Prepare span has no such wrapper (see updatePartSubtotal). */

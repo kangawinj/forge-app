@@ -677,7 +677,8 @@ const CHANGELOG = [
   { version: "3.0.359", date: "2026-09-07", note: "Fixed a blank ingredient search row appearing automatically on any Part that only holds Sub-parts and no ingredients of its own (e.g. a Part that's just an organizer for a couple of Sub-parts) — it now only appears on a Part that truly has neither ingredients nor Sub-parts" },
   { version: "3.0.360", date: "2026-09-07", note: "Removed the \"Batch Process Yield (%)\" and \"Adjusted Output Weight\" fields from Components and Process — superseded by the per-Part Yield fields. Also moved the °Brix/%Salt/pH quality-control readings in each Process Step's Actual Yield section to the right side of the row, away from Weight Before/After/Yield, instead of sitting right up against them" },
   { version: "3.0.361", date: "2026-09-07", note: "A top-level Part's own Yield field moved to sit right in front of its weight (g) instead of leaving a wide gap between them — now sits flush against the weight/Prepare/% fields, matching how close together they already are on a Sub-part's own row" },
-  { version: "3.0.362", date: "2026-09-07", note: "Swapped the top navbar's tab order so \"Ingredients\" comes before \"Test Results\"" }
+  { version: "3.0.362", date: "2026-09-07", note: "Swapped the top navbar's tab order so \"Ingredients\" comes before \"Test Results\"" },
+  { version: "3.0.363", date: "2026-09-07", note: "A Sub-part's own Prepare weight now shows the word \"Prepare\" before its number, same as a top-level Part's already does — ingredient rows are unchanged" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

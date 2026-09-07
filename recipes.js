@@ -2233,6 +2233,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         <span class="ing-unit">g</span>
       </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
+        <span class="row-value-prepare-label">Prepare</span>
         <span class="part-prepare-display ing-prepare-display"></span>
       </div>
       <div class="row-value-col">
