@@ -2253,7 +2253,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
         <span class="part-prepare-display ing-prepare-display"></span>
-        <span class="ing-unit">g</span>
       </div>
       <div class="row-value-col">
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
@@ -2273,10 +2272,10 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       <div class="part-header-fields">
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
+        <span>Prepare</span>
         <span class="part-prepare-display ing-prepare-display"></span>
-        <span>g prepare</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
-        <span>% of recipe</span>
+        <span>%</span>
       </div>
       <button class="icon-btn" title="Delete this part">${icon('x')}</button>
     `;
@@ -2518,7 +2517,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
           </div>
           <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (this ingredient's own Yield, from the Ingredient Library, ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) — calculated automatically, not editable per ingredient">
             <span class="ing-prepare-display"></span>
-            <span class="ing-unit">g</span>
           </div>
           <div class="row-value-col">
             <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
