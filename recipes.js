@@ -2228,13 +2228,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
         <span class="ing-unit">%</span>
       </div>
-      <div class="row-value-col row-value-wt">
-        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
-        <span class="ing-unit">g</span>
-      </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
         <span class="row-value-prepare-label">Prepare</span>
         <span class="part-prepare-display ing-prepare-display"></span>
+      </div>
+      <div class="row-value-col row-value-wt">
+        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
+        <span class="ing-unit">g</span>
       </div>
       <div class="row-value-col">
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
@@ -2252,10 +2252,10 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
           <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
           <span class="ing-unit">%</span>
         </div>
-        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
-        <span>g</span>
         <span>Prepare</span>
         <span class="part-prepare-display ing-prepare-display"></span>
+        <input type="number" class="part-wt-display num-input" step="0.01" min="0">
+        <span>g</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span>%</span>
       </div>
@@ -2493,12 +2493,12 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
             <div class="ing-suggestions"></div>
           </div>
           <input type="text" class="ing-note" placeholder="Note">
+          <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (this ingredient's own Yield, from the Ingredient Library, ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) — calculated automatically, not editable per ingredient">
+            <span class="ing-prepare-display"></span>
+          </div>
           <div class="row-value-col row-value-wt">
             <input type="number" class="ing-wt num-input" step="0.01" min="0">
             <span class="ing-unit">g</span>
-          </div>
-          <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (this ingredient's own Yield, from the Ingredient Library, ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) — calculated automatically, not editable per ingredient">
-            <span class="ing-prepare-display"></span>
           </div>
           <div class="row-value-col">
             <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
