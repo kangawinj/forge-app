@@ -2707,6 +2707,12 @@
      per metric plus an auto-averaged result, laid out in the same flex row
      as the Weight Before/After/Yield fields above (wraps onto its own line
      on narrower widths via that row's own flex-wrap). */
+  .process-qc-groups{
+    display:flex;
+    gap:16px;
+    flex-wrap:wrap;
+    margin-left:auto;
+  }
   .process-qc-group{
     display:flex;
     flex-direction:column;

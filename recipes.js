@@ -1560,17 +1560,6 @@ export function renderRecipeEditor(r){
             <button class="btn btn-sm" id="btnScale">Scale</button>
           </div>
         </div>
-        <div>
-          <div class="batch-stat-label">Batch Process Yield (%) — loss during cooking/production</div>
-          <div class="batch-scale-row">
-            <input type="number" id="f-yieldPct" min="0" max="100" step="0.01" placeholder="e.g. 95" class="unit-input">
-            <span class="unit-suffix">%</span>
-          </div>
-        </div>
-        <div>
-          <div class="batch-stat-label">Adjusted Output Weight (after yield loss)</div>
-          <div class="batch-stat-value" id="yieldAdjustedDisplay">—</div>
-        </div>
       </div>
       </div>
       </div>
@@ -1774,13 +1763,6 @@ export function renderRecipeEditor(r){
   treeRootWtInput.addEventListener('mousedown', () => { treeRootWtJustFocused = document.activeElement !== treeRootWtInput; });
   treeRootWtInput.addEventListener('focus', () => treeRootWtInput.select());
   treeRootWtInput.addEventListener('mouseup', e => { if(treeRootWtJustFocused){ e.preventDefault(); treeRootWtJustFocused = false; } });
-
-  document.getElementById('f-yieldPct').value = r.yieldPct ?? '';
-  document.getElementById('f-yieldPct').addEventListener('input', e => {
-    r.yieldPct = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
-    updateYieldDisplay(r);
-    scheduleSave();
-  });
 
   // Recipe Overview column sort — clicking a header toggles asc/desc on
   // that column (starting asc when switching to a different one), same
@@ -2143,14 +2125,6 @@ export function formatWeight(n){
   return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
 }
 
-function updateYieldDisplay(r){
-  const el = document.getElementById('yieldAdjustedDisplay');
-  if(!el) return;
-  const yieldPct = parseFloat(r.yieldPct);
-  if(!yieldPct || yieldPct <= 0){ el.textContent = '—'; return; }
-  el.textContent = formatWeight((r.batchWeight||0) * yieldPct / 100);
-}
-
 // One entry per rendered Part (at ANY depth — top-level or nested inside
 // another Part), pushed by renderPartNode as it builds each block. Rebuilt
 // from scratch on every full renderParts(r) call. Using per-part closures
@@ -2163,7 +2137,6 @@ function refreshDisplays(r){
   const totalWeight = recomputeFromWeights(r);
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(totalWeight);
-  updateYieldDisplay(r);
 
   partDisplayUpdaters.forEach(fn => fn());
 
@@ -2197,7 +2170,6 @@ function renderParts(r){
 
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(r.batchWeight);
-  updateYieldDisplay(r);
 
   partDisplayUpdaters = [];
   const container = document.getElementById('partsContainer');
@@ -3268,6 +3240,7 @@ function renderProcesses(r){
             <span>Yield</span>
             <span class="proc-actual-yield-display">—</span>
           </div>
+          <div class="process-qc-groups">
           ${['brix','salt','ph'].map(field => `
             <div class="process-qc-group">
               <span>${field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH'}</span>
@@ -3279,6 +3252,7 @@ function renderProcesses(r){
               <div class="process-qc-avg"><span>Avg</span><span class="proc-${field}-avg-display">—</span></div>
             </div>
           `).join('')}
+          </div>
         </div>
       </div>
 
