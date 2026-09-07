@@ -1567,30 +1567,11 @@
     font-size:12px;
     color:var(--text-dim);
   }
-  /* Ingredient Preparation Yield -- Yield stacks its input above the
-     "from library · editable" hint (column-direction override of the
-     row/row .row-value-col default above) so the hint doesn't need to
-     align against anything outside its own narrow column; Prepare is
-     read-only display text, not an input, styled like one for visual
-     consistency with its neighbors. */
-  .row-value-col.row-value-yield{
-    flex-direction:column;
-    align-items:stretch;
-    flex:0 0 92px;
-    gap:2px;
-  }
-  .row-value-yield-input-row{
-    display:flex;
-    align-items:center;
-    gap:2px;
-  }
-  .ing-yield-hint{
-    font-size:10px;
-    color:var(--text-dim);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
+  /* Ingredient Preparation Yield -- an ingredient's own Yield is never
+     manually editable (it only ever comes from picking a Sub Ingredient
+     variant in the Library, see renderIngSubsToggle), so there's no input
+     column for it here -- Prepare is read-only display text, not an
+     input, styled like one for visual consistency with its neighbors. */
   .row-value-col.row-value-prepare{
     flex:0 0 80px;
     font-size:13px;
@@ -1601,6 +1582,20 @@
      flag, not a >100% rehydration case (see updatePrepareDisplay). */
   .row-value-prepare.row-value-prepare-highlight{color:var(--accent);}
   .ing-yield.invalid{border-color:var(--danger) !important;background:var(--danger-light);}
+  /* A nested Sub-part's own Yield -- sits right after the Part name/count,
+     ahead of Weight/Prepare/%, as a compact labeled chip rather than a
+     bare number in the shared ingredient-row column grid (ingredient rows
+     have no Yield column of their own to line up with any more). */
+  .part-yield-chip{
+    flex:0 0 auto;
+    display:flex;
+    align-items:center;
+    gap:4px;
+    font-size:11px;
+    color:var(--text-dim);
+  }
+  .part-yield-chip-label{white-space:nowrap;}
+  .part-yield-chip .part-yield-input{width:48px;flex:none;}
   /* Part-level Prepare highlight -- toggled on the display span itself
      rather than a .row-value-prepare wrapper, since the top-level Part
      header's Prepare span has no such wrapper (see updatePartSubtotal). */

@@ -2242,15 +2242,14 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       </div>
       <input type="text" class="part-name" placeholder="Part name">
       <span class="part-ing-count"></span>
+      <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
+        <span class="part-yield-chip-label">Yield</span>
+        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+        <span class="ing-unit">%</span>
+      </div>
       <div class="row-value-col row-value-wt">
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span class="ing-unit">g</span>
-      </div>
-      <div class="row-value-col row-value-yield">
-        <div class="row-value-yield-input-row">
-          <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
-          <span class="ing-unit">%</span>
-        </div>
       </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
         <span class="part-prepare-display ing-prepare-display"></span>
@@ -2514,14 +2513,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
             <input type="number" class="ing-wt num-input" step="0.01" min="0">
             <span class="ing-unit">g</span>
           </div>
-          <div class="row-value-col row-value-yield">
-            <div class="row-value-yield-input-row">
-              <input type="number" class="ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
-              <span class="ing-unit">%</span>
-            </div>
-            <div class="ing-yield-hint"></div>
-          </div>
-          <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (Yield ÷ 100) — calculated automatically, not editable directly">
+          <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (this ingredient's own Yield, from the Ingredient Library, ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) — calculated automatically, not editable per ingredient">
             <span class="ing-prepare-display"></span>
             <span class="ing-unit">g</span>
           </div>
@@ -2547,8 +2539,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       const wtInput = branch.querySelector('.ing-wt');
       const noteInput = branch.querySelector('.ing-note');
       const delBtn = branch.querySelector('.icon-btn');
-      const yieldInput = branch.querySelector('.ing-yield');
-      const yieldHintEl = branch.querySelector('.ing-yield-hint');
       const prepareDisplay = branch.querySelector('.ing-prepare-display');
 
       // Optional link to a Process Flowchart node (see the Process
@@ -2630,15 +2620,18 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       pctDisplay.value = (ing.percent||0).toFixed(2);
       wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
       noteInput.value = ing.note || '';
-      yieldInput.value = ing.prepYieldPct != null ? ing.prepYieldPct : '';
 
-      // Prepare (gross) weight = Formula weight ÷ (Yield ÷ 100) --
+      // Prepare (gross) weight = Formula weight ÷ (this ingredient's own
+      // Yield ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) --
       // computePrepareWeight (app.js) already falls back to treating an
       // empty/invalid/non-positive yield as 100%, so this never shows
-      // NaN/Infinity even mid-edit. Highlighted only when the effective
-      // yield is actually under 100% (i.e. there's real prep loss to flag)
-      // -- a >100% yield (rehydration) is a real, supported case but isn't
-      // "loss", so it prints in the normal neutral color.
+      // NaN/Infinity. Highlighted only when the effective yield is
+      // actually under 100% (i.e. there's real prep loss to flag) -- a
+      // >100% yield (rehydration) is a real, supported case but isn't
+      // "loss", so it prints in the normal neutral color. There's no
+      // manual input for an ingredient's own Yield -- it only ever comes
+      // from picking a Sub Ingredient variant in the Ingredient Library
+      // (see renderIngSubsToggle below); everything else defaults to 100%.
       function updatePrepareDisplay(){
         // Includes every ancestor Part's own Yield too (getOwnMultiplier),
         // not just this ingredient's own -- so this figure always matches
@@ -2649,27 +2642,14 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         const y = parseFloat(ing.prepYieldPct);
         const isLossy = isFinite(y) && y > 0 && y < 100;
         prepareDisplay.parentElement.classList.toggle('row-value-prepare-highlight', isLossy);
-        const valid = isValidYieldPct(yieldInput.value);
-        yieldInput.classList.toggle('invalid', !valid);
-        yieldInput.title = valid ? '' : 'Yield must be between 0.01% and 999.99%';
-        yieldHintEl.textContent = ing.subIngredientId ? 'from library · editable' : '';
       }
       updatePrepareDisplay();
-
-      yieldInput.addEventListener('input', e => {
-        const v = e.target.value;
-        ing.prepYieldPct = v === '' ? null : (parseFloat(v) || null);
-        updatePrepareDisplay();
-        refreshDisplays(r);
-        scheduleSave();
-      });
 
       function syncMaterialLink(resetWeightIfUnlinked){
         const matched = findMaterialByLabel(nameInput.value);
         ing.materialId = matched ? matched.id : null;
         wtInput.disabled = !matched;
         pctDisplay.disabled = !matched;
-        yieldInput.disabled = !matched;
         nameInput.classList.remove('ing-linked', 'invalid');
         if(matched){
           nameInput.classList.add('ing-linked');
@@ -2693,7 +2673,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
           }
         }
         renderIngSubsToggle(subsEl, ing, matched, noteInput, () => {
-          yieldInput.value = ing.prepYieldPct != null ? ing.prepYieldPct : '';
           updatePrepareDisplay();
           refreshDisplays(r);
         });
