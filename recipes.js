@@ -2245,12 +2245,12 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       <input type="text" class="part-name" placeholder="Part name">
       <span class="part-ing-count"></span>
-      <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
-        <span class="part-yield-chip-label">Yield</span>
-        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
-        <span class="ing-unit">%</span>
-      </div>
       <div class="part-header-fields">
+        <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
+          <span class="part-yield-chip-label">Yield</span>
+          <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+          <span class="ing-unit">%</span>
+        </div>
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
         <span>Prepare</span>
