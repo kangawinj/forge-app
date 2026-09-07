@@ -1331,7 +1331,23 @@
      Part/Sub-part rows get a tinted background and bold group totals,
      plain padding-based indent (no box-drawing tree characters), "–" for
      an empty Prep/Note, grand total as its own bottom row. */
-  .print-ing-table{width:100%;border-collapse:collapse;font-size:12px;}
+  /* table-layout:fixed -- without it, a long ingredient name (e.g. "MC
+     (Methylcellulose) / เอ็มซี...") forces the table wider than its 100%,
+     spilling out of its 62%-width column and overlapping the Process Flow
+     card next to it (auto layout treats width:100% as a mere suggestion
+     once a column's content needs more room). Fixed layout makes width:100%
+     actually hold, with the name/note columns getting most of the room
+     and the 5 numeric columns split evenly — long names wrap onto a
+     second line inside their own column instead of pushing the table wider. */
+  .print-ing-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
+  .print-ing-table th:first-child, .print-ing-table td:first-child{width:26%;}
+  .print-ing-table th:nth-child(2), .print-ing-table td:nth-child(2){width:14%;}
+  .print-ing-table th.print-ing-num, .print-ing-table td.print-ing-num{width:12%;}
+  /* A single long unbroken word (e.g. "(Methylcellulose)") won't wrap at
+     all under plain word-wrapping once it's wider than its own narrow,
+     indented cell -- break-word lets it wrap mid-word as a last resort
+     instead of quietly overflowing past the cell into whatever's next to it. */
+  .print-ing-table td:first-child{overflow-wrap:break-word;word-break:break-word;}
   .print-ing-table th{
     text-align:left;
     font-size:10px;
