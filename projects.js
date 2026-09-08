@@ -260,6 +260,10 @@ function wireMuTranslateButton(wrapEl){
 // fields instead of creating a second one — editing the original Next
 // Action later keeps the auto-created entry showing the same thing,
 // rather than leaving it frozen at whatever it said at creation time.
+// Returns false only when the checkbox was checked but nothing could be
+// auto-created because Next Action Activity and/or its due date ("When")
+// are still blank — the caller alerts on that, since silently doing
+// nothing left the checkbox looking broken with no explanation.
 function maybeAutoCreateNextPlan(p, mu){
   if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
   const existing = p.monthlyUpdates.find(x => x.sourceUpdateId === mu.id);
@@ -273,9 +277,10 @@ function maybeAutoCreateNextPlan(p, mu){
       existing.planWith = mu.nextActionWith || '';
       existing.planOwner = mu.nextActionOwner || '';
     }
-    return;
+    return true;
   }
-  if(!mu.autoCreatePlan || !mu.nextAction || !mu.nextActionDue) return;
+  if(!mu.autoCreatePlan) return true;
+  if(!mu.nextAction || !mu.nextActionDue) return false;
   p.monthlyUpdates.push({
     id: uid(), date: mu.nextActionDue, time: mu.nextActionTime || '',
     planWho: mu.nextActionWho || '', plan: mu.nextAction, planWhere: mu.nextActionWhere || '',
@@ -284,6 +289,7 @@ function maybeAutoCreateNextPlan(p, mu){
     autoCreatePlan: false, sourceUpdateId: mu.id,
     createdBy: currentUser?.email || '', createdAt: Date.now()
   });
+  return true;
 }
 
 function captureMonthlyUpdateDraft(p, block){
@@ -334,7 +340,10 @@ function captureMonthlyUpdateDraft(p, block){
   };
   monthlyUpdateDraftAttachments = [];
   p.monthlyUpdates.push(mu);
-  maybeAutoCreateNextPlan(p, mu);
+  // Left for the caller to invoke -- callers need maybeAutoCreateNextPlan's
+  // own return value (whether it actually skipped auto-creating anything)
+  // to decide whether to warn the user, which calling it in here and
+  // discarding the result can't do.
   return mu;
 }
 
@@ -3520,6 +3529,7 @@ export function renderProjectsList(){
         // since Save re-renders the row and only "+ Add Update" used to
         // actually commit it.
         const newMuFromSave = captureMonthlyUpdateDraft(p, block);
+        const autoCreateOk = newMuFromSave ? maybeAutoCreateNextPlan(p, newMuFromSave) : true;
         projectEditingId = null;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
@@ -3530,6 +3540,7 @@ export function renderProjectsList(){
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(projectEditSnapshotBefore, p, PROJECT_DIFF_FIELDS));
         if(newMuFromSave) logMuAddedEvent(p, newMuFromSave);
+        if(!autoCreateOk) alert('"Create as Plan automatically" was checked, but no follow-up Plan was created — Next Action Activity and its due date ("When") must both be filled in first.');
         projectEditSnapshotBefore = null;
         renderProjectsList();
       });
@@ -3589,10 +3600,12 @@ export function renderProjectsList(){
           alert('Please pick a date and fill in at least one of What / Action Taken / Next Action.');
           return;
         }
+        const autoCreateOk = maybeAutoCreateNextPlan(p, newMu);
         monthlyUpdateAddOpen = false;
         scheduleProjectSave(p);
         logMuAddedEvent(p, newMu);
         renderProjectsList();
+        if(!autoCreateOk) alert('"Create as Plan automatically" was checked, but no follow-up Plan was created — Next Action Activity and its due date ("When") must both be filled in first.');
       });
 
       block.querySelectorAll('[data-role="delete-monthly-update"]').forEach(btn => {
@@ -3665,10 +3678,11 @@ export function renderProjectsList(){
         monthlyUpdateEditingId = null;
         monthlyUpdateDraftAttachments = [];
         muEditSnapshotBefore = null;
-        maybeAutoCreateNextPlan(p, mu);
+        const autoCreateOk = maybeAutoCreateNextPlan(p, mu);
         scheduleProjectSave(p);
         logActivityEvent('updated', 'project', p.name || 'Untitled project', muChanges);
         renderProjectsList();
+        if(!autoCreateOk) alert('"Create as Plan automatically" was checked, but no follow-up Plan was created — Next Action Activity and its due date ("When") must both be filled in first.');
       });
       block.querySelector('[data-role="cancel-monthly-update-edit"]')?.addEventListener('click', () => {
         monthlyUpdateEditingId = null;
@@ -4004,12 +4018,13 @@ function saveMuEditModal(){
   mu.attachments = muEditModalAttachments;
   mu.completedDate = completedDate;
   const muChanges = diffMainFields(muEditSnapshotBefore, mu, MU_DIFF_FIELDS);
-  maybeAutoCreateNextPlan(p, mu);
+  const autoCreateOk = maybeAutoCreateNextPlan(p, mu);
   scheduleProjectSave(p);
   logActivityEvent('updated', 'project', p.name || 'Untitled project', muChanges);
   muEditModalAttachments = [];
   closeMuEditModal();
   renderProjectsList();
+  if(!autoCreateOk) alert('"Create as Plan automatically" was checked, but no follow-up Plan was created — Next Action Activity and its due date ("When") must both be filled in first.');
 }
 
 // One-time wiring for the sidebar entry point plus the persistent nested
