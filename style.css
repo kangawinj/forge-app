@@ -1898,6 +1898,28 @@
   }
   .material-table tbody tr{cursor:pointer;}
   .material-table tbody tr:hover{background:var(--accent-light);}
+  /* Product List's two named image slots (RM / Idea Menu) sit side by
+     side in the add/edit form, same idea as .grid-3 above but always
+     exactly 2 equal columns regardless of card width. */
+  .grid-2-photos{
+    display:grid;
+    grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:14px;
+  }
+  .material-photo-preview-row{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    margin-top:6px;
+  }
+  /* Product Details modal shows both photos side by side above the field
+     list -- reuses .material-detail-photo's own 120px image sizing for
+     each one, just wrapped in a flex row instead of full-width. */
+  .product-detail-photos{
+    display:flex;
+    justify-content:center;
+    gap:16px;
+  }
 
   .material-detail-photo{
     display:flex;

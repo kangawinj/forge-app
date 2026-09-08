@@ -24,6 +24,10 @@ import {
   attachMaterialsListener, unsubscribeMaterials, resetMaterialsState
 } from './materials.js';
 import {
+  mountProductsView, closeProductDetail,
+  attachProductsListener, unsubscribeProducts, resetProductsState
+} from './products.js';
+import {
   metaLists, metaItemName, productTypeCode, mountRefListsView, attachMetaListsListener,
   unsubscribeMetaLists, resetRefListsState
 } from './reflists.js';
@@ -92,6 +96,7 @@ export const recipesCol = collection(db, "recipes");
 // safe under concurrent creation.
 export const recipeSeriesCol = collection(db, "recipeSeries");
 export const materialsCol = collection(db, "ingredientMaster");
+export const productsCol = collection(db, "productList");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
 // Draft project submissions from the public, no-login "share a link"
@@ -138,6 +143,7 @@ const approverAuth = getAuth(approverApp);
 const approverDb = getFirestore(approverApp);
 export const approverRecipesCol = collection(approverDb, "recipes");
 export const approverMaterialsCol = collection(approverDb, "ingredientMaster");
+export const approverProductsCol = collection(approverDb, "productList");
 
 /* New sign-ups are restricted to this company email domain (plus the
    approver email below) — enforced here client-side, and again in
@@ -179,6 +185,7 @@ const MODULE_PERMISSIONS = [
   { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
   { key: 'trials', label: 'Test Results', navBtnId: 'btnOpenTrials' },
   { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
+  { key: 'productList', label: 'Products', navBtnId: 'btnOpenProductsTab' },
   { key: 'refLists', label: 'Reference Lists', navBtnId: 'btnOpenRefLists' }
 ];
 // Missing/undefined defaults to true (granted) so existing approved users
@@ -689,7 +696,8 @@ const CHANGELOG = [
   { version: "3.0.371", date: "2026-09-08", note: "Reverted v3.0.369 — a Project's Plan and Next Action \"Owner\" fields, when adding a new Monthly Update, default to its Responsible Person (PD) again, not its Project Owner" },
   { version: "3.0.372", date: "2026-09-08", note: "Renamed the Plan and Next Action \"Owner\" field/label to \"PD\" throughout Projects (add form, edit form, summary card, activity log) — it always held the Responsible Person, so the label now matches" },
   { version: "3.0.373", date: "2026-09-08", note: "Fixed \"Create as Plan automatically\" silently doing nothing when Next Action Activity or its due date (\"When\") was left blank — checking it now shows a clear message explaining both are required, instead of no follow-up Plan appearing with no explanation" },
-  { version: "3.0.374", date: "2026-09-08", note: "Fixed a Sub-part's own Yield/Prepare/Weight/% columns sitting a few px left of where the same columns land on its ingredient rows below — a mismatched row spacing value between a Sub-part's header and an ingredient row is now the same 6px, so every row's Weight and % columns line up exactly regardless of nesting depth" }
+  { version: "3.0.374", date: "2026-09-08", note: "Fixed a Sub-part's own Yield/Prepare/Weight/% columns sitting a few px left of where the same columns land on its ingredient rows below — a mismatched row spacing value between a Sub-part's header and an ingredient row is now the same 6px, so every row's Weight and % columns line up exactly regardless of nesting depth" },
+  { version: "3.0.375", date: "2026-09-08", note: "Added a new \"Products\" page — a searchable Product List (name, sample code, type, factory, size, packing, MOQ, pricing, allergens, two photos per product) with the same add/edit/copy/delete workflow as the Ingredient Library, including the same admin-approver-password confirmation before a product can be deleted" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1321,7 +1329,7 @@ function initCompareView(){
 // recipe (e.g. the Ingredient Library button) leaves currentId untouched,
 // so closing the feature naturally resumes that recipe instead of bouncing
 // to home.
-export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'refLists' | 'projects' | 'trials'
+export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'productList' | 'refLists' | 'projects' | 'trials'
 // Lets a split module (e.g. projects.js's own nav-button wiring) change
 // mainFeatureView from outside app.js — a plain `mainFeatureView = ...`
 // assignment in an importing module isn't possible, since ES modules
@@ -1513,10 +1521,21 @@ function initMaterialLibrary(){
   wireModalOverlayClose('materialDetailModalOverlay', closeMaterialDetail);
 }
 
+function initProductsView(){
+  const openProductsView = () => {
+    mainFeatureView = 'productList';
+    renderMain();
+    renderSidebar();
+  };
+  document.getElementById('btnOpenProductsTab').addEventListener('click', () => guardNavigation(openProductsView));
+  document.getElementById('btnCloseProductDetail').addEventListener('click', closeProductDetail);
+  wireModalOverlayClose('productDetailModalOverlay', closeProductDetail);
+}
+
 
 /* ---------- Sidebar ---------- */
 const FEATURE_VIEW_BUTTON_IDS = {
-  compare: 'btnCompare', materials: 'btnOpenMaterialLibSidebar',
+  compare: 'btnCompare', materials: 'btnOpenMaterialLibSidebar', productList: 'btnOpenProductsTab',
   refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
 };
 
@@ -1841,6 +1860,7 @@ const LUCIDE_ICONS = {
   'lock': '<rect width="18" height="11" x="3" y="11" rx="2" ry="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />',
   'log-out': '<path d="m16 17 5-5-5-5" /><path d="M21 12H9" /><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />',
   'paperclip': '<path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48" />',
+  'package': '<path d="M16.5 9.4 7.55 4.24" /><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><path d="M3.29 7 12 12l8.71-5" /><path d="M12 22V12" />',
   'menu': '<path d="M4 5h16" /><path d="M4 12h16" /><path d="M4 19h16" />',
   'move': '<path d="M12 2v20" /><path d="m15 19-3 3-3-3" /><path d="m19 9 3 3-3 3" /><path d="M2 12h20" /><path d="m5 9-3 3 3 3" /><path d="m9 5 3-3 3 3" />',
   'party-popper': '<path d="M5.8 11.3 2 22l10.7-3.79" /><path d="M4 3h.01" /><path d="M22 8h.01" /><path d="M15 2h.01" /><path d="M22 20h.01" /><path d="m22 2-2.24.75a2.9 2.9 0 0 0-1.96 3.12c.1.86-.57 1.63-1.45 1.63h-.38c-.86 0-1.6.6-1.76 1.44L14 10" /><path d="m22 13-.82-.33c-.86-.34-1.82.2-1.98 1.11c-.11.7-.72 1.22-1.43 1.22H17" /><path d="m11 2 .33.82c.34.86-.2 1.82-1.11 1.98C9.52 4.9 9 5.52 9 6.23V7" /><path d="M11 13c1.93 1.93 2.83 4.17 2 5-.83.83-3.07-.07-5-2-1.93-1.93-2.83-4.17-2-5 .83-.83 3.07.07 5 2Z" />',
@@ -3001,6 +3021,7 @@ const FEATURE_VIEW_MOUNTERS = {
   recipesList: mountRecipesListView,
   compare: mountCompareView,
   materials: mountMaterialsView,
+  productList: mountProductsView,
   refLists: mountRefListsView,
   projects: mountProjectsView,
   trials: mountTrialsView,
@@ -3715,6 +3736,7 @@ initVersionsModal();
 initVersionPreviewModal();
 initRefListsView();
 initMaterialLibrary();
+initProductsView();
 initProjectsModal();
 initMuAttachmentPreviewModal();
 initTrialsView();
@@ -3795,6 +3817,7 @@ function saveCalendarPanes(){
 function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
+  if(!unsubscribeProducts) attachProductsListener();
   if(!unsubscribeMetaLists) attachMetaListsListener();
   if(!unsubscribeProjects) attachProjectsListener();
   if(!unsubscribeTrials) attachTrialsListener();
@@ -3864,6 +3887,7 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
     resetRecipesState();
     resetMaterialsState();
+    resetProductsState();
     resetRefListsState();
     resetProjectsState();
     resetTrialsState();

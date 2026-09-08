@@ -44,6 +44,9 @@ service cloud.firestore {
     match /ingredientMaster/{materialId} {
       allow read, write: if isAllowedUser();
     }
+    match /productList/{productId} {
+      allow read, write: if isAllowedUser();
+    }
     match /metaLists/{docId} {
       allow read, write: if isAllowedUser();
     }
