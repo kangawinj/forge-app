@@ -3161,7 +3161,7 @@ export function renderProjectsList(){
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>Owner</label>
-                        <input type="text" class="proj-mu-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.ownerSalesRep || '')}">
+                        <input type="text" class="proj-mu-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.responsiblePerson || '')}">
                       </div>
                     </div>
                     <div class="mu-plan-box">
@@ -3209,7 +3209,7 @@ export function renderProjectsList(){
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>Owner</label>
-                        <input type="text" class="proj-mu-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.ownerSalesRep || '')}">
+                        <input type="text" class="proj-mu-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.responsiblePerson || '')}">
                       </div>
                     </div>
                     <div class="field">
