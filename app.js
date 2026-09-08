@@ -679,7 +679,8 @@ const CHANGELOG = [
   { version: "3.0.361", date: "2026-09-07", note: "A top-level Part's own Yield field moved to sit right in front of its weight (g) instead of leaving a wide gap between them — now sits flush against the weight/Prepare/% fields, matching how close together they already are on a Sub-part's own row" },
   { version: "3.0.362", date: "2026-09-07", note: "Swapped the top navbar's tab order so \"Ingredients\" comes before \"Test Results\"" },
   { version: "3.0.363", date: "2026-09-07", note: "A Sub-part's own Prepare weight now shows the word \"Prepare\" before its number, same as a top-level Part's already does — ingredient rows are unchanged" },
-  { version: "3.0.364", date: "2026-09-07", note: "Swapped the Prepare and Weight (g) columns in Components and Process so Prepare comes first — applies to every row: top-level Parts, Sub-parts, and ingredients" }
+  { version: "3.0.364", date: "2026-09-07", note: "Swapped the Prepare and Weight (g) columns in Components and Process so Prepare comes first — applies to every row: top-level Parts, Sub-parts, and ingredients" },
+  { version: "3.0.365", date: "2026-09-08", note: "Preview and Print now always show each Process Step's \"Actual Yield\" section (Weight Before/After, Yield, °Brix/%Salt/pH) as a blank template, even before any measurements are recorded — so it can be printed and filled in by hand on the production floor, then keyed into the system afterward" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3098,10 +3099,11 @@ export function readOnlyProcessesHtml(processes, parts){
   // the parent .compare-steps-col's own gray background, that's the only
   // thing that actually reads as "here's where one Step ends and the next
   // begins" when there can be many of them stacked in a row.
-  // A rep is "present" only once it actually holds a number -- an
-  // all-empty [null,null,null] (the default on every Process, whether or
-  // not this feature's ever been touched) must never make the read-only
-  // Actual Yield block appear for a process nobody measured anything on.
+  // Always rendered, filled in or not -- printed as a blank template a
+  // production run can jot real measurements onto by hand, then have
+  // someone key in afterward. A rep only shows an actual number once it
+  // holds one; blank slots print as "—" so there's still a labeled spot to
+  // write each one in on paper.
   const fmtReps = (arr) => (arr || []).map(v => { const n = parseFloat(v); return isFinite(n) ? n.toFixed(2) : null; });
   const avgOf = (nums) => nums.length ? (nums.reduce((s,n)=>s+n,0) / nums.length).toFixed(2) : null;
 
@@ -3111,25 +3113,24 @@ export function readOnlyProcessesHtml(processes, parts){
 
     const wtBefore = parseFloat(p.weightBefore);
     const wtAfter = parseFloat(p.weightAfter);
-    const hasWeights = isFinite(wtBefore) || isFinite(wtAfter);
     const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
 
     const qcRows = ['brix','salt','ph'].map(field => {
-      const reps = fmtReps(p[field]).filter(v => v != null);
-      if(reps.length === 0) return null;
+      const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);
+      const validReps = reps.filter(v => v != null);
       const label = field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH';
-      return `<tr><td>${label}</td><td>${reps.join(', ')}</td><td>Avg ${avgOf(reps.map(Number))}</td></tr>`;
-    }).filter(Boolean).join('');
+      return `<tr><td>${label}</td><td>${reps.map(v => v != null ? v : '—').join(', ')}</td><td>Avg ${avgOf(validReps.map(Number)) || '—'}</td></tr>`;
+    }).join('');
 
-    const actualYieldHtml = (hasWeights || qcRows) ? `
+    const actualYieldHtml = `
       <table class="compare-table process-view-yield-table" style="margin-bottom:10px;">
         <thead><tr><th colspan="3">Actual Yield</th></tr></thead>
         <tbody>
-          ${hasWeights ? `<tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>` : ''}
+          <tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>
           ${qcRows}
         </tbody>
       </table>
-    ` : '';
+    `;
 
     return `
       <div class="process-view-step-block">
