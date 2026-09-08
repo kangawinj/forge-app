@@ -4116,9 +4116,9 @@ function printIngredientTableHtml(parts, totalWeight){
     const groupRow = `
       <tr class="print-ing-group-row">
         <td style="padding-left:${12 + depth*16}px">${escapeHtml(label)}</td>
+        <td class="print-ing-num">${partYieldDisplay.toFixed(2)}%</td>
         <td></td>
         <td class="print-ing-num">${fmtWt(partWeight)}</td>
-        <td class="print-ing-num">${partYieldDisplay.toFixed(2)}%</td>
         <td class="print-ing-num">${fmtWt(partPrepareWeight(part))}</td>
         <td class="print-ing-num">${partPct.toFixed(2)}%</td>
         <td class="print-ing-num">${partPct.toFixed(2)}%</td>
@@ -4129,17 +4129,18 @@ function printIngredientTableHtml(parts, totalWeight){
       const formulaWt = parseFloat(ing.weight) || 0;
       // Fully compounded -- own Yield AND every ancestor Part's own Yield --
       // since this is the actionable "how much to actually pull" figure the
-      // printed sheet exists for.
+      // printed sheet exists for. The Yield column itself is left blank on
+      // ingredient rows -- same as the live editor, where an ingredient's
+      // own Yield (from its Ingredient Library Sub Ingredient) has no
+      // visible field of its own any more, only Parts show a Yield.
       const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
-      const y = parseFloat(ing.prepYieldPct);
-      const yieldDisplay = (isFinite(y) && y > 0) ? y : 100;
       const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
       return `
       <tr class="print-ing-row">
         <td style="padding-left:${12 + (depth+1)*16}px">${escapeHtml(ing.name)}</td>
+        <td class="print-ing-num">–</td>
         <td>${escapeHtml(ing.note || '').trim() || '–'}</td>
         <td class="print-ing-num">${fmtWt(formulaWt)}</td>
-        <td class="print-ing-num">${yieldDisplay.toFixed(2)}%</td>
         <td class="print-ing-num">${fmtWt(prepareWt)}</td>
         <td class="print-ing-num">${(parseFloat(ing.percent)||0).toFixed(2)}%</td>
         <td class="print-ing-num">${pctOfRecipe.toFixed(2)}%</td>
@@ -4161,10 +4162,10 @@ function printIngredientTableHtml(parts, totalWeight){
   // appearing a page early, mid-table, in addition to its correct spot at
   // the very end once the table actually finished on the next page.
   const bodyRows = namedParts.map(part => rowsForPart(part, 0, 1)).join('')
-    + `<tr class="print-ing-total-row"><td>Formula total</td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num"></td><td class="print-ing-num">${fmtWt(totalPrepareWeight)} g</td><td class="print-ing-num">100.00%</td><td class="print-ing-num">100.00%</td></tr>`;
+    + `<tr class="print-ing-total-row"><td>Formula total</td><td class="print-ing-num"></td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">${fmtWt(totalPrepareWeight)} g</td><td class="print-ing-num">100.00%</td><td class="print-ing-num">100.00%</td></tr>`;
   return `
     <table class="print-ing-table">
-      <thead><tr><th>Ingredient</th><th>Prep / Note</th><th class="print-ing-num">Formula (g)</th><th class="print-ing-num">Yield</th><th class="print-ing-num">Prepare (g)</th><th class="print-ing-num">%</th><th class="print-ing-num">% of Recipe</th></tr></thead>
+      <thead><tr><th>Ingredient</th><th class="print-ing-num">Yield</th><th>Prep / Note</th><th class="print-ing-num">Formula (g)</th><th class="print-ing-num">Prepare (g)</th><th class="print-ing-num">%</th><th class="print-ing-num">% of Recipe</th></tr></thead>
       <tbody>${bodyRows}</tbody>
     </table>
   `;

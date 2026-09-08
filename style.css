@@ -1352,7 +1352,7 @@
      second line inside their own column instead of pushing the table wider. */
   .print-ing-table{width:100%;border-collapse:collapse;font-size:12px;table-layout:fixed;}
   .print-ing-table th:first-child, .print-ing-table td:first-child{width:26%;}
-  .print-ing-table th:nth-child(2), .print-ing-table td:nth-child(2){width:14%;}
+  .print-ing-table th:nth-child(3), .print-ing-table td:nth-child(3){width:14%;}
   .print-ing-table th.print-ing-num, .print-ing-table td.print-ing-num{width:12%;}
   /* A single long unbroken word (e.g. "(Methylcellulose)") won't wrap at
      all under plain word-wrapping once it's wider than its own narrow,
