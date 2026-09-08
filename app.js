@@ -688,7 +688,8 @@ const CHANGELOG = [
   { version: "3.0.370", date: "2026-09-08", note: "Centered the column header text in the printed \"4. Components and Process\" ingredient table (Ingredient, Yield, Prep/Note, Formula (g), Prepare (g), %, % of Recipe) — was left-aligned" },
   { version: "3.0.371", date: "2026-09-08", note: "Reverted v3.0.369 — a Project's Plan and Next Action \"Owner\" fields, when adding a new Monthly Update, default to its Responsible Person (PD) again, not its Project Owner" },
   { version: "3.0.372", date: "2026-09-08", note: "Renamed the Plan and Next Action \"Owner\" field/label to \"PD\" throughout Projects (add form, edit form, summary card, activity log) — it always held the Responsible Person, so the label now matches" },
-  { version: "3.0.373", date: "2026-09-08", note: "Fixed \"Create as Plan automatically\" silently doing nothing when Next Action Activity or its due date (\"When\") was left blank — checking it now shows a clear message explaining both are required, instead of no follow-up Plan appearing with no explanation" }
+  { version: "3.0.373", date: "2026-09-08", note: "Fixed \"Create as Plan automatically\" silently doing nothing when Next Action Activity or its due date (\"When\") was left blank — checking it now shows a clear message explaining both are required, instead of no follow-up Plan appearing with no explanation" },
+  { version: "3.0.374", date: "2026-09-08", note: "Fixed a Sub-part's own Yield/Prepare/Weight/% columns sitting a few px left of where the same columns land on its ingredient rows below — a mismatched row spacing value between a Sub-part's header and an ingredient row is now the same 6px, so every row's Weight and % columns line up exactly regardless of nesting depth" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -903,7 +903,17 @@
     margin-bottom:10px;
     display:flex;
     align-items:center;
-    gap:10px;
+    /* Matches .ing-edit-row's own 6px gap (not the 10px this used to be)
+       -- a nested Sub-part's Yield/Prepare/Weight/% cluster fully absorbs
+       the row's free space via its Name/count columns' flex-grow (see
+       those rules above), so this row's own gap total is the ONLY thing
+       left that can shift where Prepare/Weight/% land relative to the
+       same columns on an ingredient row one level down: 3 gaps at 10px
+       instead of 6px was worth 12px of drift, close to the ~11px offset
+       this fixed. Doesn't affect a top-level Part's header, which
+       right-aligns its own value cluster via .part-header-fields'
+       margin-left:auto regardless of gap size. */
+    gap:6px;
   }
   .part-header input{
     font-weight:700;
@@ -943,16 +953,16 @@
     /* Same flex sizing as .ing-name-wrap, so the name column ends up the
        same width as a sibling ingredient row's, not just styled to look
        alike. */
-    flex:2 1 160px;
-    min-width:120px;
+    flex:2 1 110px;
+    min-width:90px;
   }
   .sub-part-row > .part-header .part-name:focus{border-color:var(--primary);}
   /* Same flex sizing as .ing-note, so this column's boundary — and
      everything after it — lines up with a sibling ingredient row's,
      even though this holds a count instead of a note. */
   .sub-part-row > .part-header > .part-ing-count{
-    flex:1 1 120px;
-    min-width:100px;
+    flex:1 1 50px;
+    min-width:40px;
     font-size:13px;
   }
   .part-toggle-btn{
