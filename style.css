@@ -1360,7 +1360,7 @@
      instead of quietly overflowing past the cell into whatever's next to it. */
   .print-ing-table td:first-child{overflow-wrap:break-word;word-break:break-word;}
   .print-ing-table th{
-    text-align:left;
+    text-align:center;
     font-size:10px;
     text-transform:uppercase;
     letter-spacing:.03em;
