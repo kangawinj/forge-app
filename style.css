@@ -1367,6 +1367,12 @@
     color:var(--text-dim);
     padding:0 8px 6px 8px;
     border-bottom:1px solid var(--border);
+    /* Headers like "FORMULA (G)"/"PREPARE (G)" are wider than their own
+       narrow ~12%-width column -- white-space:nowrap (below) is meant for
+       the numeric DATA cells, never the header label, or the label runs
+       past its column and overlaps the next one instead of wrapping onto
+       a second line the way "PREP / NOTE" already does. */
+    white-space:normal;
   }
   /* Tighter than the app's other tables -- this one prints alongside the
      Process Flow column in "4. Components and Process" and a recipe can
@@ -1375,7 +1381,8 @@
      onto a second (see the #recipeCards .card:nth-of-type(4) break-before
      rule below, which gives it a full fresh page to fit into). */
   .print-ing-table td{padding:4px 8px;border-bottom:1px solid var(--border);}
-  .print-ing-num{text-align:right;white-space:nowrap;}
+  .print-ing-num{text-align:right;}
+  td.print-ing-num{white-space:nowrap;}
   .print-ing-group-row td{
     background:var(--bg);
     font-weight:700;
