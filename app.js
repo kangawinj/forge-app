@@ -681,7 +681,8 @@ const CHANGELOG = [
   { version: "3.0.363", date: "2026-09-07", note: "A Sub-part's own Prepare weight now shows the word \"Prepare\" before its number, same as a top-level Part's already does — ingredient rows are unchanged" },
   { version: "3.0.364", date: "2026-09-07", note: "Swapped the Prepare and Weight (g) columns in Components and Process so Prepare comes first — applies to every row: top-level Parts, Sub-parts, and ingredients" },
   { version: "3.0.365", date: "2026-09-08", note: "Preview and Print now always show each Process Step's \"Actual Yield\" section (Weight Before/After, Yield, °Brix/%Salt/pH) as a blank template, even before any measurements are recorded — so it can be printed and filled in by hand on the production floor, then keyed into the system afterward" },
-  { version: "3.0.366", date: "2026-09-08", note: "In Preview/Print's \"4. Components and Process\" ingredient table, moved the Yield column to sit right after the ingredient/Part name, matching where Yield sits in the live editor, and removed the Yield value from individual ingredient rows (only Parts show a Yield now, same as the live editor)" }
+  { version: "3.0.366", date: "2026-09-08", note: "In Preview/Print's \"4. Components and Process\" ingredient table, moved the Yield column to sit right after the ingredient/Part name, matching where Yield sits in the live editor, and removed the Yield value from individual ingredient rows (only Parts show a Yield now, same as the live editor)" },
+  { version: "3.0.367", date: "2026-09-08", note: "Widened the printed ingredient table against the Process Flow column in \"4. Components and Process\" from a 62/38 split to 70/30, giving the table more room" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

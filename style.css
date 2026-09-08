@@ -1283,13 +1283,13 @@
      renderPrintView. Screen layout is untouched since this whole grid only
      ever renders inside a .print-only wrapper. */
   .components-process-print-grid{
-    /* 62/38 fr split -- fr shares out the row's actual available width
+    /* 70/30 fr split -- fr shares out the row's actual available width
        proportionally (unlike the old fixed-320px right column), so the
        ratio holds regardless of the page's own width. align-items:start
        (unchanged) is what keeps both columns' top edges flush AND lets
        the Process Flow card sit at its own natural content height
        instead of stretching to match the taller ingredient table. */
-    grid-template-columns:minmax(0,62fr) minmax(0,38fr);
+    grid-template-columns:minmax(0,70fr) minmax(0,30fr);
     gap:16px;
     align-items:start;
   }
