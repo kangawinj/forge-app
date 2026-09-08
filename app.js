@@ -686,7 +686,8 @@ const CHANGELOG = [
   { version: "3.0.368", date: "2026-09-08", note: "Fixed the printed ingredient table's column headers (\"Formula (g)\", \"Prepare (g)\", etc.) overlapping each other in their narrow columns — they now wrap onto a second line the same way \"Prep / Note\" already did, instead of running past their own column into the next one" },
   { version: "3.0.369", date: "2026-09-08", note: "A Project's Plan and Next Action \"Owner\" fields, when adding a new Monthly Update, now default to that Project's own Project Owner instead of its Responsible Person (PD) — fills in automatically whenever the Project Owner field has been filled in" },
   { version: "3.0.370", date: "2026-09-08", note: "Centered the column header text in the printed \"4. Components and Process\" ingredient table (Ingredient, Yield, Prep/Note, Formula (g), Prepare (g), %, % of Recipe) — was left-aligned" },
-  { version: "3.0.371", date: "2026-09-08", note: "Reverted v3.0.369 — a Project's Plan and Next Action \"Owner\" fields, when adding a new Monthly Update, default to its Responsible Person (PD) again, not its Project Owner" }
+  { version: "3.0.371", date: "2026-09-08", note: "Reverted v3.0.369 — a Project's Plan and Next Action \"Owner\" fields, when adding a new Monthly Update, default to its Responsible Person (PD) again, not its Project Owner" },
+  { version: "3.0.372", date: "2026-09-08", note: "Renamed the Plan and Next Action \"Owner\" field/label to \"PD\" throughout Projects (add form, edit form, summary card, activity log) — it always held the Responsible Person, so the label now matches" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

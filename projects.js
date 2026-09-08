@@ -2655,7 +2655,7 @@ export function renderProjectsList(){
                             <select class="proj-select proj-mu-edit-where-location" style="display:none;margin-top:6px;"></select>
                           </div>
                           <div class="field" style="margin-bottom:0;">
-                            <label>Owner</label>
+                            <label>PD</label>
                             <input type="text" class="proj-mu-edit-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planOwner || '')}">
                           </div>
                         </div>
@@ -2703,7 +2703,7 @@ export function renderProjectsList(){
                             <select class="proj-select proj-mu-edit-nextaction-where-location" style="display:none;margin-top:6px;"></select>
                           </div>
                           <div class="field" style="margin-bottom:0;">
-                            <label>Owner</label>
+                            <label>PD</label>
                             <input type="text" class="proj-mu-edit-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionOwner || '')}">
                           </div>
                         </div>
@@ -2755,7 +2755,7 @@ export function renderProjectsList(){
                       <div class="mu-card-text">${mu.plan ? escapeHtml(mu.plan) : '<span class="mu-empty">No plan recorded</span>'}</div>
                       ${mu.planWith ? `<div class="mu-plan-detail-line"><b>With:</b> ${escapeHtml(mu.planWith)}</div>` : ''}
                       ${mu.planWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.planWhere)}</div>` : ''}
-                      ${mu.planOwner ? `<div class="mu-plan-detail-line"><b>Owner:</b> ${escapeHtml(mu.planOwner)}</div>` : ''}
+                      ${mu.planOwner ? `<div class="mu-plan-detail-line"><b>PD:</b> ${escapeHtml(mu.planOwner)}</div>` : ''}
                       ${source ? `<div class="mu-source-link">${icon('undo-2', 12)} From Next action · ${escapeHtml(formatDateLong(source.date))}${source.createdAt ? ', ' + escapeHtml(formatTimeOnly(source.createdAt)) : ''}</div>` : ''}
                     </div>
                     <div class="mu-card mu-card-clickable" data-section="action" title="Click to update">
@@ -2769,7 +2769,7 @@ export function renderProjectsList(){
                       <div class="mu-card-text">${escapeHtml(mu.nextAction)}</div>
                       ${mu.nextActionWith ? `<div class="mu-plan-detail-line"><b>With:</b> ${escapeHtml(mu.nextActionWith)}</div>` : ''}
                       ${mu.nextActionWhere ? `<div class="mu-plan-detail-line"><b>@</b> ${escapeHtml(mu.nextActionWhere)}</div>` : ''}
-                      ${mu.nextActionOwner ? `<div class="mu-plan-detail-line"><b>Owner:</b> ${escapeHtml(mu.nextActionOwner)}</div>` : ''}
+                      ${mu.nextActionOwner ? `<div class="mu-plan-detail-line"><b>PD:</b> ${escapeHtml(mu.nextActionOwner)}</div>` : ''}
                     </div>
                     ` : ''}
                   </div>
@@ -3160,7 +3160,7 @@ export function renderProjectsList(){
                         <select class="proj-select proj-mu-where-location" style="display:none;margin-top:6px;"></select>
                       </div>
                       <div class="field" style="margin-bottom:0;">
-                        <label>Owner</label>
+                        <label>PD</label>
                         <input type="text" class="proj-mu-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.responsiblePerson || '')}">
                       </div>
                     </div>
@@ -3208,7 +3208,7 @@ export function renderProjectsList(){
                         <select class="proj-select proj-mu-nextaction-where-location" style="display:none;margin-top:6px;"></select>
                       </div>
                       <div class="field" style="margin-bottom:0;">
-                        <label>Owner</label>
+                        <label>PD</label>
                         <input type="text" class="proj-mu-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(p.responsiblePerson || '')}">
                       </div>
                     </div>
@@ -4123,10 +4123,10 @@ const PROJECT_DIFF_FIELDS = {
 // everywhere else (they're refs/arrays, not something a plain before/after
 // string reads well for).
 const MU_DIFF_FIELDS = {
-  date: 'When (Date)', time: 'When (Time)', planWho: 'Person', plan: 'Activity', planWith: 'With', planWhere: 'Location / Channel', planOwner: 'Owner',
+  date: 'When (Date)', time: 'When (Time)', planWho: 'Person', plan: 'Activity', planWith: 'With', planWhere: 'Location / Channel', planOwner: 'PD',
   actionTaken: 'Action Taken', completedDate: 'Completed Date',
   nextActionDue: 'Next Action When (Date)', nextActionTime: 'Next Action When (Time)', nextActionWho: 'Next Action Person',
-  nextAction: 'Next Action Activity', nextActionWith: 'Next Action With', nextActionWhere: 'Next Action Location / Channel', nextActionOwner: 'Next Action Owner'
+  nextAction: 'Next Action Activity', nextActionWith: 'Next Action With', nextActionWhere: 'Next Action Location / Channel', nextActionOwner: 'Next Action PD'
 };
 
 // Auto-fills Completed Date with today the first time Action Taken gets
