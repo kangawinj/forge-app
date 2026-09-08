@@ -3,10 +3,10 @@ import {
   DELETE_APPROVER_EMAIL, approverProductsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  productsCol, showCloudError
+  productsCol, showCloudError, isCurrentUserAdmin, db
 } from './app.js';
 import {
-  onSnapshot, setDoc, doc, deleteDoc
+  onSnapshot, setDoc, doc, deleteDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export let productList = [];
@@ -248,6 +248,12 @@ export function mountProductsView(){
         <span class="ing-hint" id="productFormError"></span>
       </div>
 
+      ${isCurrentUserAdmin() ? `
+      <div style="margin-bottom:12px;">
+        <button type="button" class="btn btn-sm" id="btnImportLegacyProducts">${icon('upload', 14)} Import Legacy Product List (one-time)</button>
+        <span id="productImportStatus" class="ing-hint"></span>
+      </div>
+      ` : ''}
       <div class="material-search">
         <input type="text" id="productSearchInput" placeholder="Search products (name / code / sample code / type / factory)...">
       </div>
@@ -280,6 +286,7 @@ export function mountProductsView(){
 
   document.getElementById('productSearchInput').addEventListener('input', renderProductTable);
   document.getElementById('btnCancelEditProduct').addEventListener('click', cancelEditProduct);
+  document.getElementById('btnImportLegacyProducts')?.addEventListener('click', importLegacyProducts);
   document.getElementById('pf-rmImage').addEventListener('change', async e => {
     const file = e.target.files[0];
     if(!file) return;
@@ -353,6 +360,58 @@ export function mountProductsView(){
   cancelEditProduct();
   renderProductTable();
   playContentTransition(main);
+}
+
+// One-time admin tool: seeds the product list from the user's original
+// "UMIOS Product List & Information" reference spreadsheet (~40 real
+// products with photos, extracted and pre-resized offline into
+// products-import.json, deployed alongside the app as a temporary asset
+// and deleted once the import is confirmed). Each imported doc gets a
+// stable id derived from its own "PD01"-style code (not uid()) so
+// re-clicking this button is always safe -- already-imported products are
+// just overwritten with the same data instead of duplicating.
+async function importLegacyProducts(){
+  const statusEl = document.getElementById('productImportStatus');
+  const btn = document.getElementById('btnImportLegacyProducts');
+  statusEl.textContent = 'Loading products-import.json...';
+  let items;
+  try{
+    const res = await fetch('./products-import.json');
+    if(!res.ok) throw new Error('HTTP ' + res.status);
+    items = await res.json();
+  }catch(err){
+    statusEl.textContent = 'products-import.json not found (already removed, or this is a fresh checkout) — nothing to import.';
+    return;
+  }
+  if(!Array.isArray(items) || !items.length){
+    statusEl.textContent = 'products-import.json has no rows.';
+    return;
+  }
+  if(!confirm(`Import ${items.length} legacy products (with photos) into the Product List? Safe to run more than once -- already-imported products are just overwritten, never duplicated.`)) return;
+  btn.disabled = true;
+  statusEl.textContent = `Importing ${items.length} products...`;
+  const now = Date.now();
+  const batch = writeBatch(db);
+  items.forEach(item => {
+    const id = 'legacy-' + (item.code || uid());
+    batch.set(doc(productsCol, id), {
+      ...item,
+      id,
+      createdBy: currentUser?.email || '',
+      createdAt: now,
+      updatedBy: currentUser?.email || '',
+      updatedAt: now
+    });
+  });
+  try{
+    await batch.commit();
+    logActivityEvent('created', 'product', `Imported ${items.length} legacy products`);
+    statusEl.textContent = `Done — imported ${items.length} products.`;
+  }catch(err){
+    console.error('Forge: legacy product import failed', err);
+    statusEl.textContent = 'Import failed: ' + err.message;
+  }
+  btn.disabled = false;
 }
 
 export function openProductDetail(p){
