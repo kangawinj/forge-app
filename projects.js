@@ -2665,7 +2665,7 @@ export function renderProjectsList(){
                           </div>
                           <div class="field" style="margin-bottom:0;">
                             <label>PD</label>
-                            <input type="text" class="proj-mu-edit-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planOwner || '')}">
+                            <input type="text" class="proj-mu-edit-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.planOwner || p.responsiblePerson || '')}">
                           </div>
                         </div>
                         <div class="mu-plan-box">
@@ -2713,7 +2713,7 @@ export function renderProjectsList(){
                           </div>
                           <div class="field" style="margin-bottom:0;">
                             <label>PD</label>
-                            <input type="text" class="proj-mu-edit-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionOwner || '')}">
+                            <input type="text" class="proj-mu-edit-nextaction-owner" list="salesRepDatalist" placeholder="e.g. Yano-san" value="${escapeHtml(mu.nextActionOwner || p.responsiblePerson || '')}">
                           </div>
                         </div>
                         <div class="field">
@@ -3896,7 +3896,7 @@ function openMuEditModal(projectId, updateId, section){
   // Where value instead of whatever the previously-open entry left behind.
   document.getElementById('muEditModalWhere').dispatchEvent(new Event('input'));
   document.getElementById('muEditModalWith').value = mu.planWith || '';
-  document.getElementById('muEditModalOwner').value = mu.planOwner || '';
+  document.getElementById('muEditModalOwner').value = mu.planOwner || target.p.responsiblePerson || '';
   document.getElementById('muEditModalAction').value = mu.actionTaken || '';
   document.getElementById('muEditModalNextActionDue').value = mu.nextActionDue || '';
   document.getElementById('muEditModalNextActionTime').value = mu.nextActionTime || '';
@@ -3905,7 +3905,7 @@ function openMuEditModal(projectId, updateId, section){
   document.getElementById('muEditModalNextActionWhere').value = mu.nextActionWhere || '';
   document.getElementById('muEditModalNextActionWhere').dispatchEvent(new Event('input'));
   document.getElementById('muEditModalNextActionWith').value = mu.nextActionWith || '';
-  document.getElementById('muEditModalNextActionOwner').value = mu.nextActionOwner || '';
+  document.getElementById('muEditModalNextActionOwner').value = mu.nextActionOwner || target.p.responsiblePerson || '';
   document.getElementById('muEditModalCompletedDate').value = mu.completedDate || '';
   document.getElementById('muEditModalAutoCreate').checked = !!mu.autoCreatePlan;
   document.getElementById('muEditModalRecipe').innerHTML = muRecipeOptionsHtml(mu.linkedRecipeId);
