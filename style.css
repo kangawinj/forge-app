@@ -3485,6 +3485,15 @@
   }
   .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
+  /* Sample Submission's Acknowledgement section -- Prepared by / Received
+     by side by side, each its own Name+Date pair, same idea as
+     .trial-header-row above just with a labeled title over each side. */
+  .ssub-ack-grid{display:grid;grid-template-columns:1fr 1fr;gap:20px;}
+  .ssub-ack-title{font-weight:600;font-size:13px;color:var(--primary-dark);margin-bottom:8px;}
+  @media (max-width:700px){
+    .ssub-ack-grid{grid-template-columns:1fr;}
+  }
+  .ssub-samples-table input, .ssub-samples-table select{min-width:90px;}
   .trial-string-list-row input{flex:1;}
   .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:10px;}
   .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
@@ -4314,6 +4323,14 @@
     #trialsList > .part-block:not(.printing-only){display:none !important;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
+
+    /* Sample Submissions: same "print only the one card" mechanism as
+       Trial Results above. */
+    #btnAddSubmission{display:none !important;}
+    #submissionsList > .part-block:not(.printing-only){display:none !important;}
+    [data-role="edit-submission"], [data-role="save-submission"], [data-role="delete-submission"],
+    [data-role="print-submission"], [data-role="add-sample"], [data-role="remove-sample"],
+    .ing-suggestions{display:none !important;}
 
     /* Printing a Project (see .printing-project above) puts its whole
        read-only detail view inside one <tr class="proj-detail-row"> --

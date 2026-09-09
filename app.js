@@ -24,9 +24,13 @@ import {
   attachMaterialsListener, unsubscribeMaterials, resetMaterialsState
 } from './materials.js';
 import {
-  mountProductsView, closeProductDetail,
+  productList, mountProductsView, closeProductDetail,
   attachProductsListener, unsubscribeProducts, resetProductsState
 } from './products.js';
+import {
+  mountSampleSubmissionsView, attachSampleSubmissionsListener,
+  unsubscribeSubmissions, resetSampleSubmissionsState
+} from './sampleSubmissions.js';
 import {
   metaLists, metaItemName, productTypeCode, mountRefListsView, attachMetaListsListener,
   unsubscribeMetaLists, resetRefListsState
@@ -71,7 +75,7 @@ export {
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
-  openMaterialDetail, setCompareSeriesPrefilter
+  openMaterialDetail, setCompareSeriesPrefilter, productList
 };
 
 const firebaseConfig = {
@@ -99,6 +103,7 @@ export const materialsCol = collection(db, "ingredientMaster");
 export const productsCol = collection(db, "productList");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
+export const sampleSubmissionsCol = collection(db, "sampleSubmissions");
 // Draft project submissions from the public, no-login "share a link"
 // intake page (submit.html) — see the /pendingSubmissions rule in
 // firestore.rules for how a random per-link token (not auth) scopes
@@ -186,6 +191,7 @@ const MODULE_PERMISSIONS = [
   { key: 'trials', label: 'Test Results', navBtnId: 'btnOpenTrials' },
   { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
   { key: 'productList', label: 'Products', navBtnId: 'btnOpenProductsTab' },
+  { key: 'sampleSubmissions', label: 'Sample Submissions', navBtnId: 'btnOpenSampleSubmissionsTab' },
   { key: 'refLists', label: 'Reference Lists', navBtnId: 'btnOpenRefLists' }
 ];
 // Missing/undefined defaults to true (granted) so existing approved users
@@ -698,7 +704,8 @@ const CHANGELOG = [
   { version: "3.0.373", date: "2026-09-08", note: "Fixed \"Create as Plan automatically\" silently doing nothing when Next Action Activity or its due date (\"When\") was left blank — checking it now shows a clear message explaining both are required, instead of no follow-up Plan appearing with no explanation" },
   { version: "3.0.374", date: "2026-09-08", note: "Fixed a Sub-part's own Yield/Prepare/Weight/% columns sitting a few px left of where the same columns land on its ingredient rows below — a mismatched row spacing value between a Sub-part's header and an ingredient row is now the same 6px, so every row's Weight and % columns line up exactly regardless of nesting depth" },
   { version: "3.0.375", date: "2026-09-08", note: "Added a new \"Products\" page — a searchable Product List (name, sample code, type, factory, size, packing, MOQ, pricing, allergens, two photos per product) with the same add/edit/copy/delete workflow as the Ingredient Library, including the same admin-approver-password confirmation before a product can be deleted" },
-  { version: "3.0.376", date: "2026-09-08", note: "Added an admin-only \"Import Legacy Product List (one-time)\" button on the Products page to seed it from the ~40 real products (with photos) in the team's existing UMIOS Product List reference spreadsheet — safe to run more than once, already-imported products are overwritten, never duplicated" }
+  { version: "3.0.376", date: "2026-09-08", note: "Added an admin-only \"Import Legacy Product List (one-time)\" button on the Products page to seed it from the ~40 real products (with photos) in the team's existing UMIOS Product List reference spreadsheet — safe to run more than once, already-imported products are overwritten, never duplicated" },
+  { version: "3.0.377", date: "2026-09-09", note: "Added a new \"Sample Submissions\" page — track a shipment of product samples to a customer (delivery info, a sample-by-sample manifest with lot numbers/quantities, an auto-computed quantity summary, customer evaluation scoring with an auto-computed overall average, a follow-up decision summary, and a signable Prepared by/Received by acknowledgement). Each sample can be linked to a Product List entry — its cooking instructions, composition, allergens, factory, case pack, MOQ and price are then pulled live from there instead of being re-typed, so editing the Product later keeps every submission that references it current. Printable per-submission, same as Test Results" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1330,7 +1337,7 @@ function initCompareView(){
 // recipe (e.g. the Ingredient Library button) leaves currentId untouched,
 // so closing the feature naturally resumes that recipe instead of bouncing
 // to home.
-export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'productList' | 'refLists' | 'projects' | 'trials'
+export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'productList' | 'sampleSubmissions' | 'refLists' | 'projects' | 'trials'
 // Lets a split module (e.g. projects.js's own nav-button wiring) change
 // mainFeatureView from outside app.js — a plain `mainFeatureView = ...`
 // assignment in an importing module isn't possible, since ES modules
@@ -1533,10 +1540,20 @@ function initProductsView(){
   wireModalOverlayClose('productDetailModalOverlay', closeProductDetail);
 }
 
+function initSampleSubmissionsView(){
+  const openSampleSubmissionsView = () => {
+    mainFeatureView = 'sampleSubmissions';
+    renderMain();
+    renderSidebar();
+  };
+  document.getElementById('btnOpenSampleSubmissionsTab').addEventListener('click', () => guardNavigation(openSampleSubmissionsView));
+}
+
 
 /* ---------- Sidebar ---------- */
 const FEATURE_VIEW_BUTTON_IDS = {
   compare: 'btnCompare', materials: 'btnOpenMaterialLibSidebar', productList: 'btnOpenProductsTab',
+  sampleSubmissions: 'btnOpenSampleSubmissionsTab',
   refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
 };
 
@@ -3023,6 +3040,7 @@ const FEATURE_VIEW_MOUNTERS = {
   compare: mountCompareView,
   materials: mountMaterialsView,
   productList: mountProductsView,
+  sampleSubmissions: mountSampleSubmissionsView,
   refLists: mountRefListsView,
   projects: mountProjectsView,
   trials: mountTrialsView,
@@ -3738,6 +3756,7 @@ initVersionPreviewModal();
 initRefListsView();
 initMaterialLibrary();
 initProductsView();
+initSampleSubmissionsView();
 initProjectsModal();
 initMuAttachmentPreviewModal();
 initTrialsView();
@@ -3819,6 +3838,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
   if(!unsubscribeProducts) attachProductsListener();
+  if(!unsubscribeSubmissions) attachSampleSubmissionsListener();
   if(!unsubscribeMetaLists) attachMetaListsListener();
   if(!unsubscribeProjects) attachProjectsListener();
   if(!unsubscribeTrials) attachTrialsListener();
@@ -3889,6 +3909,7 @@ onAuthStateChanged(auth, user => {
     resetRecipesState();
     resetMaterialsState();
     resetProductsState();
+    resetSampleSubmissionsState();
     resetRefListsState();
     resetProjectsState();
     resetTrialsState();
