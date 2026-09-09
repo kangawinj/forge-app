@@ -4331,6 +4331,59 @@
     [data-role="edit-submission"], [data-role="save-submission"], [data-role="delete-submission"],
     [data-role="print-submission"], [data-role="add-sample"], [data-role="remove-sample"],
     .ing-suggestions{display:none !important;}
+    /* The Samples/Product-spec/Evaluation tables carry 13-16 columns each
+       -- .compare-table's screen sizing (13px font, 6-8px padding,
+       table-layout:fixed splitting the page evenly across all of them)
+       leaves each column only a few px on A4, and .ssub-samples-table's
+       own min-width:90px on its <input>/<select> (needed on screen so a
+       date/select field stays usable) then forces those fields wider
+       than their fixed-width cell, overflowing text into the next column
+       instead of wrapping. Printed, every field is already read-only
+       plain text (see the global input/select reset above), so the
+       min-width serves no purpose and just has to get out of the way. */
+    #submissionsList .compare-table{font-size:8px !important;table-layout:auto !important;}
+    #submissionsList .compare-table th, #submissionsList .compare-table td{
+      padding:3px 4px !important;
+      white-space:normal !important;
+      overflow-wrap:break-word !important;
+    }
+    #submissionsList .compare-table th{font-size:7.5px !important;}
+    /* input[type=date]/select etc. set their own font-size:14px (see the
+       base form-control rule) which the table-cell font-size above can't
+       override by inheritance -- a native date input then renders
+       "dd/mm/yyyy" too wide for its narrow print column and gets visually
+       clipped ("01/0...") instead of shrinking, since it's a replaced
+       control, not wrappable text. */
+    #submissionsList .compare-table input,
+    #submissionsList .compare-table select{font-size:8px !important;}
+    /* The calendar-icon button inside a native date input is fixed-size
+       regardless of font-size, eating a chunk of an already-narrow print
+       column's width for a control nobody can click on paper anyway. */
+    #submissionsList .compare-table input[type=date]::-webkit-calendar-picker-indicator{display:none !important;}
+    #submissionsList .ssub-samples-table input,
+    #submissionsList .ssub-samples-table select{min-width:0 !important;width:100% !important;}
+    /* table-layout:auto (above) sizes each column to its content, which
+       works for the Product-spec/Evaluation tables (mostly short values
+       or a couple of longer wrapped cells) but the Samples table packs 13
+       genuinely wide columns (2 full dates, Product, Remarks...) that
+       still add up past A4 width even wrapped -- same fix as
+       .print-ing-table elsewhere: pin every column to an explicit % of
+       the page so the table can never grow past 100%, forcing the long
+       columns to wrap instead of pushing the table wider than the page. */
+    #submissionsList .ssub-samples-table{table-layout:fixed !important;}
+    #submissionsList .ssub-samples-table th:nth-child(1), #submissionsList .ssub-samples-table td:nth-child(1){width:3% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(2), #submissionsList .ssub-samples-table td:nth-child(2){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(3), #submissionsList .ssub-samples-table td:nth-child(3){width:12% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(4), #submissionsList .ssub-samples-table td:nth-child(4){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(5), #submissionsList .ssub-samples-table td:nth-child(5){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(6), #submissionsList .ssub-samples-table td:nth-child(6){width:9% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(7), #submissionsList .ssub-samples-table td:nth-child(7){width:9% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(8), #submissionsList .ssub-samples-table td:nth-child(8){width:6% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(9), #submissionsList .ssub-samples-table td:nth-child(9){width:6% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(10), #submissionsList .ssub-samples-table td:nth-child(10){width:6% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(11), #submissionsList .ssub-samples-table td:nth-child(11){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(12), #submissionsList .ssub-samples-table td:nth-child(12){width:8% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(13), #submissionsList .ssub-samples-table td:nth-child(13){width:13% !important;}
 
     /* Printing a Project (see .printing-project above) puts its whole
        read-only detail view inside one <tr class="proj-detail-row"> --
