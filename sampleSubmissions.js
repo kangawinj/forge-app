@@ -354,26 +354,26 @@ export function renderSubmissionsList(){
         <label>Docs Request</label>
         <div style="margin-top:4px;">
           ${docCheck('Specification', 'specification')}
-          ${docCheck('ใบเสนอราคา', 'quotation')}
+          ${docCheck('Quotation', 'quotation')}
           ${docCheck('Tax Invoice', 'taxInvoice')}
-          ${docCheck('เอกสารอื่นๆ', 'other')}
+          ${docCheck('Other Documents', 'other')}
         </div>
       </div>
       ${ms.docs.taxInvoice ? `
         <div class="grid-3" style="margin-top:14px;">
-          ${docField('ชื่อผู้นำส่งสินค้า', 'carrierName')}
-          ${docField('หมายเลขไฟล์ท', 'flightNo')}
+          ${docField('Carrier / Shipper Name', 'carrierName')}
+          ${docField('Flight No.', 'flightNo')}
           ${docField('Port of Loading', 'portOfLoading')}
         </div>
         <div class="grid-3" style="margin-top:14px;">
           ${docField('Port of Destination', 'portOfDestination')}
-          ${docField('วันและเวลาเดินทางออกจากประเทศต้นทาง', 'departureDateTime', 'datetime-local')}
-          ${docField('วันและเวลาถึงประเทศปลายทาง', 'arrivalDateTime', 'datetime-local')}
+          ${docField('Departure Date & Time (Origin Country)', 'departureDateTime', 'datetime-local')}
+          ${docField('Arrival Date & Time (Destination Country)', 'arrivalDateTime', 'datetime-local')}
         </div>
       ` : ''}
       ${ms.docs.other ? `
         <div class="field" style="margin-top:14px;">
-          <label>รายละเอียดเอกสารอื่นๆ</label>
+          <label>Other Documents Details</label>
           <input type="text" class="ssub-doc-other-field" value="${escapeHtml(ms.docs.otherDetails || '')}" ${isEditing ? '' : 'readonly'}>
         </div>
       ` : ''}
