@@ -3049,15 +3049,17 @@
     margin-bottom:16px;
   }
   /* Food Allergens tab (reflists.js's renderFoodAllergensChart) -- a
-     snapshot of an external regulatory chart, reproduced at its own dark
-     card style (like an embedded figure) rather than forced into Forge's
-     light theme, since the chart's pastel highlight cells were designed
-     for a dark background and would read poorly reversed. */
+     snapshot of an external regulatory chart, reproduced as its own
+     white card (like an embedded figure) matching Forge's light theme.
+     The 8 legend highlight colors are pastel and stay readable with dark
+     text regardless of background, so no color-key values needed to
+     change when this flipped from an earlier dark-card version. */
   .food-allergen-caption{font-size:12px;color:var(--text-dim);padding:6px 6px 12px;}
   .food-allergen-caption a{color:var(--primary);}
   .food-allergen-chart{
-    background:#1b1b2f;
-    color:#e8e8f0;
+    background:#fff;
+    color:var(--text);
+    border:1px solid var(--border);
     border-radius:var(--radius);
     padding:20px;
     margin:0 6px 6px;
@@ -3065,7 +3067,7 @@
   .food-allergen-scroll{overflow-x:auto;padding-bottom:6px;}
   .food-allergen-chart table{border-collapse:collapse;font-size:11px;}
   .food-allergen-chart th, .food-allergen-chart td{
-    border:1px solid rgba(255,255,255,.12);
+    border:1px solid var(--border);
     padding:4px 6px;
     text-align:center;
     white-space:nowrap;
@@ -3085,7 +3087,7 @@
     min-width:26px;
     vertical-align:bottom;
     padding:0 2px 6px;
-    border-bottom:2px solid rgba(255,255,255,.3);
+    border-bottom:2px solid var(--text-dim);
   }
   .food-allergen-chart thead th:not(.food-allergen-corner) span{
     display:inline-block;
@@ -3100,20 +3102,20 @@
     white-space:nowrap;
     position:sticky;
     left:0;
-    background:#1b1b2f;
+    background:#fff;
   }
   .food-allergen-country sup{color:var(--text-dim);margin-left:1px;}
   .food-allergen-hit{
-    background:rgba(255,255,255,.08);
-    color:#e8e8f0;
+    background:var(--bg);
+    color:var(--text);
     font-weight:700;
   }
-  /* A colored exception cell sets its background inline (from
-     ALLERGEN_COLOR_KEY) -- all 8 legend colors are light/pastel, so the
-     light "X" that plain hits use would be unreadable on them; this wins
-     over .food-allergen-hit's own color by matching a more specific
-     selector (has an inline style attribute), not by source order. */
-  .food-allergen-hit[style]{color:#1b1b2f;}
+  /* A colored exception cell sets its own background inline (from
+     ALLERGEN_COLOR_KEY), which naturally wins over .food-allergen-hit's
+     background regardless of selector order -- an inline style always
+     beats a class rule. Unlike the dark-card version this replaced, no
+     separate text-color override is needed here: dark text reads fine
+     on both the plain hit's light gray and every pastel legend color. */
   .food-allergen-legend{
     display:flex;
     flex-wrap:wrap;
@@ -3126,13 +3128,14 @@
     width:14px;
     height:14px;
     border-radius:3px;
+    border:1px solid var(--border);
     flex-shrink:0;
     display:inline-block;
   }
   .food-allergen-footnotes{
     margin-top:16px;
     font-size:11px;
-    color:rgba(232,232,240,.7);
+    color:var(--text-dim);
     display:flex;
     flex-direction:column;
     gap:4px;
