@@ -233,7 +233,7 @@ export function mountProductsView(){
         </div>
         <div class="field">
           <label>16. Cooking Instruction</label>
-          <textarea id="pf-cookingInstruction" rows="2" placeholder="e.g. Update: 20260430 BAZZ"></textarea>
+          <textarea id="pf-cookingInstruction" rows="2" placeholder="e.g. ต้มในน้ำเดือด 10-15 นาที โดยไม่ต้องละลายสินค้า"></textarea>
         </div>
         <div class="field">
           <label>17. Composition (Approx.)</label>
