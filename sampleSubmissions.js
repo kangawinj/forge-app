@@ -13,12 +13,16 @@ let submissionExpandedIds = new Set();
 let submissionEditingId = null;
 let unsubscribeSubmissions = null;
 let submissionsLoaded = false;
+// docs (see blankDocs/normalizeDocs below) is a checklist object, not a
+// plain string like every other field here -- diffMainFields' generic
+// String(before) !== String(after) comparison would just show
+// "[object Object]" for it, so it's left out of the audit-log diff.
 const SUBMISSION_DIFF_FIELDS = {
   formNo: 'Form No.', docDate: 'Doc. Date', shipDate: 'Ship Date', courier: 'Courier',
   customer: 'Customer', projectLead: 'Project Lead', expectedReceipt: 'Expected Receipt',
   trackingNo: 'Tracking No.', destination: 'Destination', coordinator: 'Coordinator',
   deliveryLocation: 'Delivery Location', shipmentStorage: 'Storage', purpose: 'Purpose',
-  presentDate: 'Present. Date', receiver: 'Receiver', docs: 'Docs',
+  presentDate: 'Present. Date', receiver: 'Receiver',
   handling: 'Handling', status: 'Status', feedbackOwner: 'Feedback Owner',
   feedbackDue: 'Feedback Due', nextReview: 'Next Review', notes: 'Notes'
 };
@@ -42,12 +46,41 @@ function blankSample(){
   };
 }
 
+// Docs Request -- a checklist rather than free text, per the user's
+// requested format. taxInvoiceDetails only matters (and only renders)
+// when taxInvoice is checked; otherDetails only when other is checked.
+function blankDocs(){
+  return {
+    specification: false, quotation: false, taxInvoice: false, other: false,
+    taxInvoiceDetails: {
+      carrierName: '', flightNo: '', portOfLoading: '', portOfDestination: '',
+      departureDateTime: '', arrivalDateTime: ''
+    },
+    otherDetails: ''
+  };
+}
+// A submission saved before Docs became a checklist has `docs` as a plain
+// string -- rather than silently dropping whatever was typed there, it's
+// carried forward into the "Other documents" checkbox/detail field, the
+// closest equivalent in the new shape.
+function normalizeDocs(docs){
+  if(docs && typeof docs === 'object'){
+    return { ...blankDocs(), ...docs, taxInvoiceDetails: { ...blankDocs().taxInvoiceDetails, ...(docs.taxInvoiceDetails || {}) } };
+  }
+  const blank = blankDocs();
+  if(typeof docs === 'string' && docs.trim()){
+    blank.other = true;
+    blank.otherDetails = docs;
+  }
+  return blank;
+}
+
 function blankSubmission(){
   return {
     id: uid(), projectId: '',
     formNo: '', docDate: '', shipDate: '', courier: '', customer: '', projectLead: '',
     expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryLocation: '',
-    shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: '',
+    shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: blankDocs(),
     samples: [],
     handling: '', status: '',
     feedbackOwner: '', feedbackDue: '', nextReview: '', notes: '',
@@ -59,6 +92,7 @@ function blankSubmission(){
 function migrateSubmission(s){
   return {
     ...s,
+    docs: normalizeDocs(s.docs),
     samples: Array.isArray(s.samples) ? s.samples.map(row => ({ ...blankSample(), ...row })) : []
   };
 }
@@ -275,6 +309,53 @@ export function renderSubmissionsList(){
       </div>
     ` : '';
 
+    // Docs Request -- a checklist (see blankDocs/normalizeDocs) instead of
+    // free text. Tax Invoice's own 6 fields, and the Other-documents
+    // detail field, only render once their checkbox is ticked -- wired in
+    // the isEditing block below (.ssub-doc-check re-renders the whole list
+    // on toggle, same as the other checkbox-driven fields in this form).
+    const docCheck = (label, key) => `
+      <label style="display:inline-flex;align-items:center;gap:6px;font-weight:400;margin-right:20px;">
+        <input type="checkbox" class="ssub-doc-check" data-doc="${key}" ${ms.docs[key] ? 'checked' : ''} ${isEditing ? '' : 'disabled'}>
+        ${label}
+      </label>
+    `;
+    const docField = (label, field, type) => `
+      <div class="field" style="margin-bottom:0;">
+        <label>${label}</label>
+        <input type="${type || 'text'}" class="ssub-doc-field" data-field="${field}" value="${escapeHtml(ms.docs.taxInvoiceDetails[field] || '')}" ${isEditing ? '' : 'readonly'}>
+      </div>
+    `;
+    const docsBlock = `
+      <div class="field" style="margin-top:14px;">
+        <label>Docs Request</label>
+        <div style="margin-top:4px;">
+          ${docCheck('Specification', 'specification')}
+          ${docCheck('ใบเสนอราคา', 'quotation')}
+          ${docCheck('Tax Invoice', 'taxInvoice')}
+          ${docCheck('เอกสารอื่นๆ', 'other')}
+        </div>
+      </div>
+      ${ms.docs.taxInvoice ? `
+        <div class="grid-3" style="margin-top:14px;">
+          ${docField('ชื่อผู้นำส่งสินค้า', 'carrierName')}
+          ${docField('หมายเลขไฟล์ท', 'flightNo')}
+          ${docField('Port of Loading', 'portOfLoading')}
+        </div>
+        <div class="grid-3" style="margin-top:14px;">
+          ${docField('Port of Destination', 'portOfDestination')}
+          ${docField('วันและเวลาเดินทางออกจากประเทศต้นทาง', 'departureDateTime', 'datetime-local')}
+          ${docField('วันและเวลาถึงประเทศปลายทาง', 'arrivalDateTime', 'datetime-local')}
+        </div>
+      ` : ''}
+      ${ms.docs.other ? `
+        <div class="field" style="margin-top:14px;">
+          <label>รายละเอียดเอกสารอื่นๆ</label>
+          <input type="text" class="ssub-doc-other-field" value="${escapeHtml(ms.docs.otherDetails || '')}" ${isEditing ? '' : 'readonly'}>
+        </div>
+      ` : ''}
+    `;
+
     const qty = computeQuantitySummary(ms.samples);
     const followUp = computeFollowUpSummary(ms.samples);
 
@@ -398,9 +479,7 @@ export function renderSubmissionsList(){
             ${headerField('Present. Date', 'presentDate', 'date')}
             ${headerField('Receiver', 'receiver')}
           </div>
-          <div class="field" style="margin-top:14px;">
-            ${headerField('Docs (Specification / COA / Allergen declaration)', 'docs')}
-          </div>
+          ${docsBlock}
           ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
@@ -506,6 +585,7 @@ export function renderSubmissionsList(){
     if(!s) return;
     const isEditing = id === submissionEditingId;
     if(!Array.isArray(s.samples)) s.samples = [];
+    s.docs = normalizeDocs(s.docs);
 
     block.querySelector('.part-toggle-btn').addEventListener('click', () => {
       if(submissionExpandedIds.has(id)) submissionExpandedIds.delete(id);
@@ -580,6 +660,26 @@ export function renderSubmissionsList(){
         applyProjectAutofill(s, linkedProject(s));
         scheduleSubmissionSave(s);
         renderSubmissionsList();
+      });
+
+      // Docs Request checklist -- toggling any box re-renders so Tax
+      // Invoice's/Other's own detail fields appear or disappear.
+      block.querySelectorAll('.ssub-doc-check').forEach(el => {
+        el.addEventListener('change', () => {
+          s.docs[el.dataset.doc] = el.checked;
+          scheduleSubmissionSave(s);
+          renderSubmissionsList();
+        });
+      });
+      block.querySelectorAll('.ssub-doc-field').forEach(el => {
+        el.addEventListener('change', () => {
+          s.docs.taxInvoiceDetails[el.dataset.field] = el.value.trim();
+          scheduleSubmissionSave(s);
+        });
+      });
+      block.querySelector('.ssub-doc-other-field')?.addEventListener('change', e => {
+        s.docs.otherDetails = e.target.value.trim();
+        scheduleSubmissionSave(s);
       });
 
       block.querySelector('[data-role="add-sample"]')?.addEventListener('click', () => {
