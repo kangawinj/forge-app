@@ -43,6 +43,7 @@ export function mountRefListsView(){
         <button class="reflist-tab-btn" data-key="productTypes">Product Types</button>
         <button class="reflist-tab-btn" data-key="units">Units</button>
         <button class="reflist-tab-btn" data-key="cookingMethods">Cooking Method</button>
+        <button class="reflist-tab-btn" data-key="storageConditions">Storage Condition</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
         <button class="reflist-tab-btn" data-key="foodAllergens">Food Allergens</button>
       </div>
@@ -87,6 +88,7 @@ export function mountRefListsView(){
     else if(refListActiveTab === 'units') newInput.placeholder = 'e.g. kg, pcs, carton...';
     else if(refListActiveTab === 'salesReps') newInput.placeholder = 'Full Name';
     else if(refListActiveTab === 'cookingMethods') newInput.placeholder = 'e.g. Deep Fry, Steam, Microwave...';
+    else if(refListActiveTab === 'storageConditions') newInput.placeholder = 'e.g. Keep frozen at -18°C';
     else newInput.placeholder = isDestinationsTab ? 'Search world countries...' : 'Add a new entry...';
   };
   document.querySelectorAll('.reflist-tab-btn').forEach(btn => {
@@ -651,8 +653,8 @@ export function renderRefListItems(){
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [] };
-const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units', cookingMethods: 'Cooking Method' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [] };
+const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units', cookingMethods: 'Cooking Method', storageConditions: 'Storage Condition' };
 // Seeded into metaLists.units the first time it's ever missing from the
 // saved doc (see attachMetaListsListener) — the exact same values every
 // Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
@@ -698,7 +700,8 @@ export function attachMetaListsListener(){
       units: needsUnitSeed
         ? DEFAULT_UNIT_SEED.map(name => ({ id: uid(), name, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null }))
         : (Array.isArray(data.units) ? data.units : []).map(metaItem),
-      cookingMethods: (Array.isArray(data.cookingMethods) ? data.cookingMethods : []).map(metaItem)
+      cookingMethods: (Array.isArray(data.cookingMethods) ? data.cookingMethods : []).map(metaItem),
+      storageConditions: (Array.isArray(data.storageConditions) ? data.storageConditions : []).map(metaItem)
     };
     if(needsUnitSeed) setDoc(metaListsDoc, metaLists);
     renderMetaDatalists();
@@ -745,7 +748,7 @@ function removeMetaListItem(key, id){
   setDoc(metaListsDoc, metaLists);
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -766,7 +769,7 @@ let unsubscribeMetaLists = null;
 // but this resets the complete, current shape instead of a stale one.
 export function resetRefListsState(){
   if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
-  metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [] };
+  metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [] };
 }
 
 export { metaLists, unsubscribeMetaLists };

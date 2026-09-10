@@ -1080,7 +1080,7 @@ function renderSubmissionReviewForm(){
         <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Storage Condition</label>
-            <input type="text" id="subReviewStorageCondition" value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
+            <input type="text" id="subReviewStorageCondition" list="storageConditionDatalist" value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Shelf Life (from production date)</label>
@@ -2072,7 +2072,7 @@ function renderNewProjectPanel(){
         <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
           <div class="field" style="margin-bottom:0;">
             <label>Storage Condition</label>
-            <input type="text" id="newProjReqStorageCondition" placeholder="e.g. Keep frozen at -18°C">
+            <input type="text" id="newProjReqStorageCondition" list="storageConditionDatalist" placeholder="e.g. Keep frozen at -18°C">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Shelf Life (from production date)</label>
@@ -3164,7 +3164,7 @@ export function renderProjectsList(){
                     <div class="project-header-grid" style="grid-template-columns:repeat(2,1fr);margin-bottom:8px;">
                       <div class="field" style="margin-bottom:0;">
                         <label>Storage Condition</label>
-                        <input type="text" class="proj-req-storage-condition" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
+                        <input type="text" class="proj-req-storage-condition" list="storageConditionDatalist" ${ro} value="${escapeHtml(req.storageCondition)}" placeholder="e.g. Keep frozen at -18°C">
                       </div>
                       <div class="field" style="margin-bottom:0;">
                         <label>Shelf Life (from production date)</label>
