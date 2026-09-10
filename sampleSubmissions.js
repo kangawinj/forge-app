@@ -1,7 +1,7 @@
 import {
   uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
-  formatActivityDateTime, formatDateLong, sampleSubmissionsCol, showCloudError,
+  formatActivityDateTime, sampleSubmissionsCol, showCloudError,
   productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess
 } from './app.js';
 import {
@@ -18,7 +18,7 @@ let submissionsLoaded = false;
 // String(before) !== String(after) comparison would just show
 // "[object Object]" for it, so it's left out of the audit-log diff.
 const SUBMISSION_DIFF_FIELDS = {
-  formNo: 'Form No.', docDate: 'Doc. Date', shipDate: 'Ship Date', courier: 'Courier',
+  formNo: 'Form No.', docDate: 'Doc. Date', courier: 'Courier',
   customer: 'Customer', projectLead: 'Project Lead', expectedReceipt: 'Expected Receipt',
   trackingNo: 'Tracking No.', destination: 'Destination', coordinator: 'Coordinator',
   deliveryLocation: 'Delivery Location', shipmentStorage: 'Storage', purpose: 'Purpose',
@@ -78,7 +78,7 @@ function normalizeDocs(docs){
 function blankSubmission(){
   return {
     id: uid(), projectId: '',
-    formNo: '', docDate: '', shipDate: '', courier: '', customer: '', projectLead: '',
+    formNo: '', docDate: '', courier: '', customer: '', projectLead: '',
     expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryLocation: '',
     shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: blankDocs(),
     samples: [],
@@ -184,6 +184,29 @@ function fuzzyProductMatches(query, limit){
   }).filter(x => x.score > 0);
   scored.sort((a,b) => b.score - a.score || a.label.localeCompare(b.label));
   return scored.slice(0, limit || 8).map(x => x.p);
+}
+
+// One suggestion dropdown shared across every sample row's Product
+// picker, appended straight to <body> so it's never subject to an
+// ancestor's overflow clipping or transform-containing-block quirks --
+// see the product-picker wiring below for why that matters. Lazily
+// created once and reused for the page's lifetime (renderSubmissionsList
+// rebuilds #submissionsList often, but never touches <body> itself, so
+// this survives every re-render without leaking a fresh element each time).
+let sharedProductSuggestBox = null;
+function getSharedProductSuggestBox(){
+  if(!sharedProductSuggestBox){
+    sharedProductSuggestBox = document.createElement('div');
+    sharedProductSuggestBox.className = 'ing-suggestions ssample-suggestions';
+    document.body.appendChild(sharedProductSuggestBox);
+  }
+  return sharedProductSuggestBox;
+}
+function closeProductSuggestBox(){
+  if(sharedProductSuggestBox){
+    sharedProductSuggestBox.classList.remove('open');
+    sharedProductSuggestBox.innerHTML = '';
+  }
 }
 
 function toNum(v){
@@ -371,9 +394,8 @@ export function renderSubmissionsList(){
         <tr data-sample-id="${escapeHtml(row.id)}">
           <td>${idx + 1}</td>
           <td><input type="text" class="ssample-field" data-field="sampleId" value="${escapeHtml(row.sampleId)}" placeholder="SP-001" ${isEditing ? '' : 'readonly'}></td>
-          <td style="min-width:240px;position:relative;">
+          <td style="min-width:240px;">
             <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${isEditing ? '' : 'readonly'} autocomplete="off">
-            <div class="ing-suggestions ssample-suggestions"></div>
             ${isEditing ? `<div class="field-hint" style="margin-top:2px;">${specLine}</div>` : ''}
           </td>
           <td>
@@ -444,7 +466,7 @@ export function renderSubmissionsList(){
         <div class="part-header" style="margin-bottom:12px;">
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this submission">${icon('chevron-right')}</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(submissionLabel(s))}</span>
-          <span class="part-header-summary">${ms.samples.length} sample${ms.samples.length === 1 ? '' : 's'}${ms.shipDate ? ' · Shipped ' + escapeHtml(formatDateLong(ms.shipDate)) : ''}</span>
+          <span class="part-header-summary">${ms.samples.length} sample${ms.samples.length === 1 ? '' : 's'}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-submission">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-submission">${icon('pencil')} Edit</button>`}
           <button class="btn btn-sm" data-role="print-submission">${icon('printer')} Print</button>
           <button class="btn btn-sm btn-danger" data-role="delete-submission">${icon('x')} Delete</button>
@@ -457,6 +479,7 @@ export function renderSubmissionsList(){
             ${headerField('Doc. Date', 'docDate', 'date')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
+            ${headerField('Purpose', 'purpose')}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
           </div>
@@ -465,7 +488,6 @@ export function renderSubmissionsList(){
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
-            ${headerField('Ship Date', 'shipDate', 'date')}
             ${headerField('Expected Receipt', 'expectedReceipt', 'date')}
             ${headerField('Delivery Location', 'deliveryLocation')}
           </div>
@@ -475,7 +497,6 @@ export function renderSubmissionsList(){
             ${headerField('Storage', 'shipmentStorage')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
-            ${headerField('Purpose', 'purpose')}
             ${headerField('Present. Date', 'presentDate', 'date')}
             ${headerField('Receiver', 'receiver')}
           </div>
@@ -712,50 +733,43 @@ export function renderSubmissionsList(){
     });
 
     // Product picker: fuzzy-search suggestion box, same "mousedown before
-    // blur" trick as recipes.js's ingredient picker (recipes.js:2665-2717).
+    // blur" trick as recipes.js's ingredient picker (recipes.js:2665-2717),
+    // but sharing ONE dropdown element appended to <body> (see
+    // getSharedProductSuggestBox) instead of one per row. A per-row
+    // position:fixed dropdown was still getting silently misplaced/clipped
+    // in real use -- ANY ancestor with an active transform (this app's own
+    // page-transition animation on #mainArea, for instance) makes itself
+    // the containing block for position:fixed descendants too, so "fixed"
+    // wasn't reliably fixed to the viewport. A <body> child has no such
+    // ancestor, ever, so this sidesteps the whole class of bug rather than
+    // chasing each cause of it.
     if(isEditing){
       block.querySelectorAll('.ssample-product-input').forEach(input => {
         const row = input.closest('tr[data-sample-id]');
         const sample = s.samples.find(x => x.id === row.dataset.sampleId);
         if(!sample) return;
-        const suggestBox = row.querySelector('.ssample-suggestions');
-        // The Samples table's own horizontal-scroll wrapper (overflow-x:
-        // auto) forces its overflow-y to auto too (per the CSS Overflow
-        // spec, an axis left "visible" next to a non-visible one is
-        // coerced to auto), which was silently clipping this dropdown's
-        // plain position:absolute -- position:fixed (see .ssample-
-        // suggestions in style.css) escapes that, positioned here from
-        // the input's own on-screen rect each time it opens. Closing on
-        // scroll avoids it drifting away from the input it belongs to.
-        function positionSuggestBox(){
-          const r = input.getBoundingClientRect();
-          suggestBox.style.left = r.left + 'px';
-          suggestBox.style.top = (r.bottom + 4) + 'px';
-          suggestBox.style.width = r.width + 'px';
-        }
-        input.closest('table')?.parentElement?.addEventListener('scroll', () => {
-          suggestBox.classList.remove('open');
-        }, { passive: true });
         function renderSuggestions(){
           if(document.activeElement !== input){
-            suggestBox.innerHTML = '';
-            suggestBox.classList.remove('open');
+            closeProductSuggestBox();
             return;
           }
           const matches = fuzzyProductMatches(input.value, 8);
           if(matches.length === 0){
-            suggestBox.innerHTML = '';
-            suggestBox.classList.remove('open');
+            closeProductSuggestBox();
             return;
           }
-          suggestBox.innerHTML = matches.map(p => `
+          const box = getSharedProductSuggestBox();
+          box.innerHTML = matches.map(p => `
             <div class="ing-suggestion-item" data-id="${escapeHtml(p.id)}">
               <span class="ing-suggestion-name">${escapeHtml(productPickerLabel(p))}</span>
             </div>
           `).join('');
-          positionSuggestBox();
-          suggestBox.classList.add('open');
-          suggestBox.querySelectorAll('.ing-suggestion-item').forEach(item => {
+          const r = input.getBoundingClientRect();
+          box.style.left = (window.scrollX + r.left) + 'px';
+          box.style.top = (window.scrollY + r.bottom + 4) + 'px';
+          box.style.width = r.width + 'px';
+          box.classList.add('open');
+          box.querySelectorAll('.ing-suggestion-item').forEach(item => {
             item.addEventListener('mousedown', e => {
               e.preventDefault();
               const matched = productList.find(x => x.id === item.dataset.id);
@@ -764,8 +778,7 @@ export function renderSubmissionsList(){
                 sample.manualProductName = '';
                 scheduleSubmissionSave(s);
               }
-              suggestBox.innerHTML = '';
-              suggestBox.classList.remove('open');
+              closeProductSuggestBox();
               renderSubmissionsList();
             });
           });
@@ -777,10 +790,11 @@ export function renderSubmissionsList(){
           renderSuggestions();
         });
         input.addEventListener('focus', renderSuggestions);
-        input.addEventListener('blur', () => {
-          suggestBox.innerHTML = '';
-          suggestBox.classList.remove('open');
-        });
+        input.addEventListener('blur', closeProductSuggestBox);
+        // The table's own horizontal-scroll wrapper can move the input out
+        // from under an already-open dropdown -- just close it rather than
+        // trying to track a moving target.
+        input.closest('table')?.parentElement?.addEventListener('scroll', closeProductSuggestBox, { passive: true });
       });
     }
   });

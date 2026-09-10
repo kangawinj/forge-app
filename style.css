@@ -3507,17 +3507,21 @@
      table ends up wider than its card -- same tradeoff already accepted
      for every other wide table in this app (Recipes/Trials comparisons). */
   .ssub-samples-table{table-layout:auto;}
-  /* The product picker's suggestion dropdown (.ing-suggestions, shared
-     with recipes.js's ingredient picker) normally floats via
-     position:absolute -- fine there, but here it sits inside the
-     horizontal-scroll wrapper above, whose overflow-x:auto silently
-     coerces overflow-y to auto too (CSS Overflow spec), clipping the
-     dropdown instead of letting it float over the rest of the page.
-     position:fixed escapes that; sampleSubmissions.js sets its
-     left/top/width from the input's own screen position each time it
-     opens (see positionSuggestBox). Later in the cascade than
-     .ing-suggestions so this wins on the shared `position` property. */
-  .ssample-suggestions{position:fixed;right:auto;}
+  /* The product picker's dropdown (getSharedProductSuggestBox in
+     sampleSubmissions.js) is appended straight to <body>, not nested in
+     this table, specifically to escape both this wrapper's overflow
+     clipping AND any ancestor's transform (which would otherwise make
+     itself the containing block for a plain position:fixed dropdown --
+     this app's own page-transition animation on #mainArea does exactly
+     that while it's running). .ing-suggestions itself still defaults to
+     position:absolute, which is what we want here: as a <body> child
+     with no positioned ancestor, "absolute" resolves against the
+     document itself, so JS can position it in document coordinates
+     (scrollY/scrollX + the input's own rect) and it naturally scrolls
+     with the page instead of needing to be kept in sync on every scroll
+     event the way position:fixed would. right:auto keeps the inherited
+     right:0 from fighting the explicit left/width JS sets. */
+  .ssample-suggestions{right:auto;}
   .trial-string-list-row input{flex:1;}
   .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:10px;}
   .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
