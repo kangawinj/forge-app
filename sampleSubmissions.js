@@ -35,10 +35,39 @@ function submissionLabel(s){
   return s.formNo ? `${s.formNo}${s.customer ? ' — ' + s.customer : ''}` : (s.customer || 'Untitled submission');
 }
 
+// Sample ID is always derived from the submission's own Form No. (so a
+// sample can be traced back to which shipment it came from at a glance),
+// never typed by hand -- see the "seq" field on each sample below. It's
+// stable once assigned: a sample keeps its seq for life regardless of
+// where it sits in the list, so deleting or reordering other rows never
+// changes it, and it's never reused once assigned even after a delete
+// (nextSampleSeq only ever counts up, matching issueSubmissionFormNo's
+// own never-reused-number guarantee).
+function sampleIdFor(s, sample){
+  return sample.seq ? `${s.formNo || 'SS-----'}-S${String(sample.seq).padStart(2, '0')}` : '—';
+}
+// Defensive fix-up for a sample that predates this feature (seq missing)
+// -- assigns it the next number in this submission's own sequence,
+// exactly like a freshly-added sample would get (see "+ Add Sample"
+// below), and reports whether anything actually changed so the caller
+// only re-saves when needed.
+function backfillSampleSeqs(s){
+  let changed = false;
+  if(typeof s.nextSampleSeq !== 'number'){ s.nextSampleSeq = 0; changed = true; }
+  s.samples.forEach(sample => {
+    if(!sample.seq){
+      s.nextSampleSeq += 1;
+      sample.seq = s.nextSampleSeq;
+      changed = true;
+    }
+  });
+  return changed;
+}
+
 function blankSample(){
   return {
-    id: uid(), productId: '', manualProductName: '',
-    sampleId: '', developmentStatus: '', lotNo: '',
+    id: uid(), seq: null, productId: '', manualProductName: '',
+    developmentStatus: '', lotNo: '',
     requestedQty: '', actualQtySent: '', netWtPerBag: '', storage: '', remarks: '',
     taste: '', texture: '', appearance: '', convenience: '',
     decision: '', feedback: '', owner: '', dueDate: '', nextAction: '',
@@ -81,7 +110,7 @@ function blankSubmission(){
     formNo: '', docDate: '', courier: '', customer: '', projectLead: '',
     expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryLocation: '',
     shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: blankDocs(),
-    samples: [],
+    samples: [], nextSampleSeq: 0,
     handling: '', status: '',
     feedbackOwner: '', feedbackDue: '', nextReview: '', notes: '',
     preparedByName: '', preparedByDate: '', receivedByName: '', receivedByDate: '',
@@ -285,6 +314,8 @@ export function renderSubmissionsList(){
   container.innerHTML = sorted.map(s => {
     const isEditing = s.id === submissionEditingId;
     const isExpanded = isEditing || submissionExpandedIds.has(s.id);
+    if(!Array.isArray(s.samples)) s.samples = [];
+    if(backfillSampleSeqs(s)) scheduleSubmissionSave(s);
     const ms = migrateSubmission(s);
     const activity = [];
     if(s.createdBy) activity.push(`Created by ${escapeHtml(s.createdBy)}${s.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(s.createdAt)) : ''}`);
@@ -393,7 +424,7 @@ export function renderSubmissionsList(){
       return `
         <tr data-sample-id="${escapeHtml(row.id)}">
           <td>${idx + 1}</td>
-          <td><input type="text" class="ssample-field" data-field="sampleId" value="${escapeHtml(row.sampleId)}" placeholder="SP-001" ${isEditing ? '' : 'readonly'}></td>
+          <td><input type="text" value="${escapeHtml(sampleIdFor(ms, row))}" readonly></td>
           <td style="min-width:240px;">
             <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${isEditing ? '' : 'readonly'} autocomplete="off">
             ${isEditing ? `<div class="field-hint" style="margin-top:2px;">${specLine}</div>` : ''}
@@ -420,7 +451,7 @@ export function renderSubmissionsList(){
       return `
         <tr>
           <td>${idx + 1}</td>
-          <td>${escapeHtml(row.sampleId || '-')}</td>
+          <td>${escapeHtml(sampleIdFor(ms, row))}</td>
           <td>${escapeHtml(p ? p.code : '-')}</td>
           <td>${escapeHtml(sampleProductName(row) || '-')}</td>
           <td>${escapeHtml(p?.cookingInstruction || '-')}</td>
@@ -444,7 +475,7 @@ export function renderSubmissionsList(){
       return `
         <tr data-sample-id="${escapeHtml(row.id)}">
           <td>${idx + 1}</td>
-          <td>${escapeHtml(row.sampleId || '-')}</td>
+          <td>${escapeHtml(sampleIdFor(ms, row))}</td>
           <td>${escapeHtml(sampleProductName(row) || '-')}</td>
           ${['taste','texture','appearance','convenience'].map(field => `
             <td><input type="number" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" min="1" max="5" step="1" ${isEditing ? '' : 'readonly'}></td>
@@ -704,7 +735,10 @@ export function renderSubmissionsList(){
       });
 
       block.querySelector('[data-role="add-sample"]')?.addEventListener('click', () => {
-        s.samples.push(blankSample());
+        const sample = blankSample();
+        s.nextSampleSeq = (s.nextSampleSeq || 0) + 1;
+        sample.seq = s.nextSampleSeq;
+        s.samples.push(sample);
         scheduleSubmissionSave(s);
         renderSubmissionsList();
       });
