@@ -174,11 +174,11 @@ export function mountProductsView(){
           </div>
           <div class="field">
             <label>5. Processed Area</label>
-            <input type="text" id="pf-processedArea" placeholder="e.g. Thailand">
+            <input type="text" id="pf-processedArea" list="worldCountriesDatalist" placeholder="e.g. Thailand">
           </div>
           <div class="field">
             <label>6. Factory</label>
-            <input type="text" id="pf-factory" list="productListFactoryDatalist" placeholder="e.g. KF Food">
+            <input type="text" id="pf-factory" list="customerDatalist" placeholder="e.g. KF Food">
           </div>
         </div>
         <div class="grid-3">
@@ -278,9 +278,6 @@ export function mountProductsView(){
     <datalist id="productListTypeDatalist">
       <option value="Existing Product">
       <option value="New Development">
-    </datalist>
-    <datalist id="productListFactoryDatalist">
-      ${[...new Set(productList.map(p => p.factory).filter(Boolean))].map(f => `<option value="${escapeHtml(f)}">`).join('')}
     </datalist>
   `;
 
