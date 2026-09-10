@@ -455,6 +455,86 @@ function parseLegacyRequirements(text){
   return result;
 }
 
+// Requirements' Certificate field -- a checklist (per the user's request,
+// same idea as Sample Submissions' Docs Request) instead of free text.
+// "Other" covers anything not in this fixed list without needing a new
+// checkbox added here every time a one-off certificate comes up.
+const CERTIFICATE_TYPES = [
+  { key: 'halal', label: 'Halal' },
+  { key: 'haccp', label: 'HACCP' },
+  { key: 'gmp', label: 'GMP' },
+  { key: 'brc', label: 'BRC' },
+  { key: 'kosher', label: 'Kosher' },
+  { key: 'iso22000', label: 'ISO 22000' }
+];
+function blankCertificate(){
+  const c = { other: false, otherDetails: '' };
+  CERTIFICATE_TYPES.forEach(t => { c[t.key] = false; });
+  return c;
+}
+// A project saved before Certificate became a checklist has it as a plain
+// string -- carried forward into the "Other" checkbox/detail field rather
+// than dropped, same treatment as Sample Submissions' normalizeDocs gives
+// its own pre-checklist Docs value.
+function getCertificate(cert){
+  if(cert && typeof cert === 'object') return { ...blankCertificate(), ...cert };
+  const blank = blankCertificate();
+  if(typeof cert === 'string' && cert.trim()){
+    blank.other = true;
+    blank.otherDetails = cert;
+  }
+  return blank;
+}
+// Plain-text summary for read-only/print-style contexts that expect a
+// single string (the detail-view row, CSV-style exports, etc.).
+function certificateSummaryText(cert){
+  const picked = CERTIFICATE_TYPES.filter(t => cert[t.key]).map(t => t.label);
+  if(cert.other) picked.push(cert.otherDetails || 'Other');
+  return picked.join(', ');
+}
+// Shared markup for all 3 places Certificate is edited (Submit Review
+// modal, New Project panel, main project edit view) -- the "Other" detail
+// field is always in the DOM (never re-rendered in/out) so a plain
+// show/hide listener is enough; see wireCertificateChecklist below.
+function certificateChecklistHtml(cert, isEditing){
+  return `
+    <div class="proj-cert-wrap">
+      <div class="proj-cert-checklist">
+        ${CERTIFICATE_TYPES.map(t => `
+          <label class="proj-cert-check-label">
+            <input type="checkbox" class="proj-cert-check" data-cert="${t.key}" ${cert[t.key] ? 'checked' : ''} ${isEditing ? '' : 'disabled'}>
+            ${escapeHtml(t.label)}
+          </label>
+        `).join('')}
+        <label class="proj-cert-check-label">
+          <input type="checkbox" class="proj-cert-check proj-cert-other-check" data-cert="other" ${cert.other ? 'checked' : ''} ${isEditing ? '' : 'disabled'}>
+          Other
+        </label>
+      </div>
+      <input type="text" class="proj-cert-other-field" value="${escapeHtml(cert.otherDetails || '')}" placeholder="e.g. FSSC 22000" ${isEditing ? '' : 'readonly'} style="margin-top:8px;${cert.other ? '' : 'display:none;'}">
+    </div>
+  `;
+}
+// Toggles the "Other" detail field's visibility as its checkbox is
+// ticked/unticked -- call once per rendered .proj-cert-wrap (there's
+// exactly one per form: Submit Review modal, New Project panel, or one
+// per project card in the main edit view).
+function wireCertificateChecklist(root){
+  root.querySelectorAll('.proj-cert-wrap').forEach(wrap => {
+    wrap.querySelector('.proj-cert-other-check')?.addEventListener('change', e => {
+      wrap.querySelector('.proj-cert-other-field').style.display = e.target.checked ? '' : 'none';
+    });
+  });
+}
+// Reads a .proj-cert-wrap's current checkbox/text state back into a
+// certificate object -- shared by all 3 save handlers.
+function readCertificateChecklist(wrap){
+  const cert = blankCertificate();
+  wrap.querySelectorAll('.proj-cert-check').forEach(cb => { cert[cb.dataset.cert] = cb.checked; });
+  cert.otherDetails = wrap.querySelector('.proj-cert-other-field').value.trim();
+  return cert;
+}
+
 // Returns p.requirements as the structured object, parsing on the fly if
 // it's still the legacy string (or defaulting if missing/blank). Never
 // mutates `p` -- called at render time only; the object shape only gets
@@ -467,6 +547,7 @@ function getRequirements(p){
   result.cookingCondition = getCookingConditions(result.cookingCondition);
   result.referenceImages = Array.isArray(result.referenceImages) ? result.referenceImages : [];
   result.recipeAttachments = Array.isArray(result.recipeAttachments) ? result.recipeAttachments : [];
+  result.certificate = getCertificate(result.certificate);
   return result;
 }
 
@@ -1024,7 +1105,7 @@ function renderSubmissionReviewForm(){
         </div>
         <div class="field requirements-box-divider" style="margin-bottom:0;">
           <label>Certificate</label>
-          <input type="text" id="subReviewCertificate" value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
+          ${certificateChecklistHtml(getCertificate(req.certificate), true)}
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -1038,6 +1119,7 @@ function renderSubmissionReviewForm(){
   `;
   wireReviewCookingGuidelines();
   wireReviewFlavorTable();
+  wireCertificateChecklist(panel);
   document.getElementById('btnSaveSubmissionReview').addEventListener('click', saveSubmissionReview);
   document.getElementById('btnCancelSubmissionReview').addEventListener('click', () => {
     reviewingSubmission = null;
@@ -1223,7 +1305,8 @@ function readSubmissionReviewForm(){
         method: g.querySelector('.sub-review-cooking-method-input').value.trim(),
         steps: [...g.querySelectorAll('.sub-review-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
       })),
-      note: v('subReviewNote'), certificate: v('subReviewCertificate')
+      note: v('subReviewNote'),
+      certificate: readCertificateChecklist(document.querySelector('#pendingSubmissionsPanel .proj-cert-wrap'))
     }
   };
 }
@@ -1292,7 +1375,19 @@ async function importSubmission(){
   setVal('newProjReqComposition', data.requirements.composition);
   setVal('newProjReqRecipe', data.requirements.recipe);
   setVal('newProjReqNote', data.requirements.note);
-  setVal('newProjReqCertificate', data.requirements.certificate);
+  // Not a plain setVal -- the panel just rendered a blank checklist (it
+  // has no way to know about this imported data at render time), so the
+  // imported certificate is applied straight onto the checkboxes/text
+  // field afterward, same "render then patch" order as everything else
+  // in this import flow.
+  const certWrap = document.querySelector('#newProjectPanel .proj-cert-wrap');
+  if(certWrap){
+    const cert = getCertificate(data.requirements.certificate);
+    certWrap.querySelectorAll('.proj-cert-check').forEach(cb => { cb.checked = !!cert[cb.dataset.cert]; });
+    const otherField = certWrap.querySelector('.proj-cert-other-field');
+    otherField.value = cert.otherDetails || '';
+    otherField.style.display = cert.other ? '' : 'none';
+  }
   reviewingSubmission = null;
   pendingSubmissionsList = (pendingSubmissionsList || []).filter(s => s.id !== submissionId);
   renderPendingSubmissionsPanel();
@@ -2017,7 +2112,7 @@ function renderNewProjectPanel(){
         </div>
         <div class="field requirements-box-divider" style="margin-bottom:0;">
           <label>Certificate</label>
-          <input type="text" id="newProjReqCertificate" placeholder="e.g. Halal certificate">
+          ${certificateChecklistHtml(blankCertificate(), true)}
         </div>
       </div>
       <div style="display:flex;gap:8px;margin-top:12px;">
@@ -2099,6 +2194,7 @@ function renderNewProjectPanel(){
     cookingGuidelinesEditing.push(blankCookingCondition());
     renderNewProjectPanel();
   });
+  wireCertificateChecklist(panel);
 
   // Idea / Reference Images -- same upload/remove/caption wiring as the
   // main edit form, scoped to this panel and sharing the same
@@ -2215,7 +2311,7 @@ function renderNewProjectPanel(){
         method: g.querySelector('.proj-req-cooking-method').value.trim(),
         steps: [...g.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
       })),
-      certificate: document.getElementById('newProjReqCertificate').value.trim(),
+      certificate: readCertificateChecklist(panel.querySelector('.proj-cert-wrap')),
       note: document.getElementById('newProjReqNote').value.trim(),
       referenceImages: referenceImagesEditing,
       recipeAttachments: recipeAttachmentsEditing
@@ -2810,6 +2906,7 @@ export function renderProjectsList(){
             <td data-col="requirements">${Object.entries(req).some(([k, v]) => {
               if(k === 'cookingCondition') return v.some(g => g.method || g.steps.length);
               if(k === 'referenceImages' || k === 'recipeAttachments') return v.length > 0;
+              if(k === 'certificate') return CERTIFICATE_TYPES.some(t => v[t.key]) || v.other;
               return (v || '').trim();
             }) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
@@ -2902,7 +2999,7 @@ export function renderProjectsList(){
             ${req.packagingCondition ? `<div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div>` : ''}
             ${req.note ? `<div class="material-detail-notes-label">Note</div><div class="material-detail-notes">${escapeHtml(req.note)}</div>` : ''}
             <dl class="material-detail-list requirements-box-divider">${detailRowsHtml([
-              ['Certificate', req.certificate]
+              ['Certificate', certificateSummaryText(req.certificate)]
             ])}</dl>
           </div>
         `;
@@ -3109,7 +3206,7 @@ export function renderProjectsList(){
                     </div>
                     <div class="field requirements-box-divider" style="margin-bottom:0;">
                       <label>Certificate</label>
-                      <input type="text" class="proj-req-certificate" ${ro} value="${escapeHtml(req.certificate)}" placeholder="e.g. Halal certificate">
+                      ${certificateChecklistHtml(req.certificate, isEditing)}
                     </div>
                   </div>
               ` : readOnlyDetailView}
@@ -3454,6 +3551,7 @@ export function renderProjectsList(){
         cookingGuidelinesEditing.push(blankCookingCondition());
         renderProjectsList();
       });
+      wireCertificateChecklist(block);
 
       block.querySelector('.proj-ref-image-input')?.addEventListener('change', async e => {
         const file = e.target.files[0];
@@ -3518,7 +3616,7 @@ export function renderProjectsList(){
             method: g.querySelector('.proj-req-cooking-method').value.trim(),
             steps: [...g.querySelectorAll('.proj-cooking-step-input')].map(el => el.value.trim()).filter(Boolean)
           })),
-          certificate: block.querySelector('.proj-req-certificate').value.trim(),
+          certificate: readCertificateChecklist(block.querySelector('.proj-cert-wrap')),
           note: block.querySelector('.proj-req-note').value.trim(),
           referenceImages: referenceImagesEditing,
           recipeAttachments: recipeAttachmentsEditing

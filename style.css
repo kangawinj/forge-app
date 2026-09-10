@@ -2010,6 +2010,11 @@
     padding-bottom:12px;
     border-bottom:1px solid var(--border);
   }
+  /* Requirements' Certificate checklist (projects.js's
+     certificateChecklistHtml) -- same checkbox-row idea as Sample
+     Submissions' Docs Request. */
+  .proj-cert-checklist{display:flex;flex-wrap:wrap;gap:6px 20px;margin-top:4px;}
+  .proj-cert-check-label{display:inline-flex;align-items:center;gap:6px;font-weight:400;}
   /* Read-only Cooking Condition -- split on the " -> " the Cooking Method
      autofill joins its Steps with (see projects.js), so a filled-in method
      reads as the same numbered list Reference Lists shows it as, instead
