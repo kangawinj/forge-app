@@ -372,14 +372,14 @@ export function renderSubmissionsList(){
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
           ${projectField}
           <div class="grid-3">
-            ${formNoField}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
+            ${formNoField}
           </div>
           <div class="grid-3" style="margin-top:14px;">
-            ${headerField('Doc. Date', 'docDate', 'date')}
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
+            ${headerField('Doc. Date', 'docDate', 'date')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Ship Date', 'shipDate', 'date')}
