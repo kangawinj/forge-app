@@ -378,7 +378,7 @@ export function renderRefListItems(){
   const isProductTypes = refListActiveTab === 'productTypes';
   const isContacts = refListActiveTab === 'salesReps';
   const isCookingMethods = refListActiveTab === 'cookingMethods';
-  const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
+  const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b), undefined, { sensitivity: 'base', numeric: true }));
   if(items.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
     return;
@@ -409,15 +409,24 @@ export function renderRefListItems(){
         <input type="tel" class="reflist-contact-phone-input" placeholder="Phone Number" value="${escapeHtml(item.phone || '')}">
       </div>
     ` : '';
-    // Steps (Cooking Method only) — an ordered, add/remove-one-at-a-time
-    // list, same wiring shape as Company Directory's Locations and Test
-    // Results' Cooking Method steps (see trialStringListHtml).
-    const cookingStepsHtml = isCookingMethods ? `
-      <div class="reflist-locations-edit">
-        <label class="reflist-locations-label">Steps (optional)</label>
-        ${trialStringListHtml(isEditing ? refListEditingSteps : (item.steps || []), isEditing, 'reflist-cooking-step-input', 'cooking-method-step', 'e.g. Deep fry 170°C, 5 min')}
-      </div>
-    ` : '';
+    // Steps (Cooking Method only). While editing, an ordered add/remove-
+    // one-at-a-time list, same wiring shape as Company Directory's
+    // Locations and Test Results' Cooking Method steps (see
+    // trialStringListHtml). Otherwise just a plain numbered list — the
+    // same read-only .cooking-steps-list style a filled-in Cooking
+    // Condition renders on the Projects side — instead of a row of
+    // boxed, input-styled fields that make the plain list view look like
+    // a data-entry table.
+    const cookingStepsHtml = isCookingMethods
+      ? (isEditing
+        ? `
+          <div class="reflist-locations-edit">
+            <label class="reflist-locations-label">Steps (optional)</label>
+            ${trialStringListHtml(refListEditingSteps, true, 'reflist-cooking-step-input', 'cooking-method-step', 'e.g. Deep fry 170°C, 5 min')}
+          </div>
+        `
+        : ((item.steps || []).length ? `<ol class="cooking-steps-list">${item.steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : ''))
+      : '';
     // Company Directory's optional logo — a plain preview circle when not
     // editing, or a small upload/remove control (reading from
     // refListEditingCustomerImage, staged the same way editingProjectImage
