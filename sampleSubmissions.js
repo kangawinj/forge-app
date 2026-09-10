@@ -34,7 +34,7 @@ function submissionLabel(s){
 function blankSample(){
   return {
     id: uid(), productId: '', manualProductName: '',
-    sampleId: '', developmentStatus: '', lotNo: '', mfgDate: '', expiryDate: '',
+    sampleId: '', developmentStatus: '', lotNo: '',
     requestedQty: '', actualQtySent: '', netWtPerBag: '', storage: '', remarks: '',
     taste: '', texture: '', appearance: '', convenience: '',
     decision: '', feedback: '', owner: '', dueDate: '', nextAction: '',
@@ -290,7 +290,7 @@ export function renderSubmissionsList(){
         <tr data-sample-id="${escapeHtml(row.id)}">
           <td>${idx + 1}</td>
           <td><input type="text" class="ssample-field" data-field="sampleId" value="${escapeHtml(row.sampleId)}" placeholder="SP-001" ${isEditing ? '' : 'readonly'}></td>
-          <td style="min-width:200px;position:relative;">
+          <td style="min-width:240px;position:relative;">
             <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${isEditing ? '' : 'readonly'} autocomplete="off">
             <div class="ing-suggestions ssample-suggestions"></div>
             ${isEditing ? `<div class="field-hint" style="margin-top:2px;">${specLine}</div>` : ''}
@@ -301,8 +301,6 @@ export function renderSubmissionsList(){
               : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}
           </td>
           <td><input type="text" class="ssample-field" data-field="lotNo" value="${escapeHtml(row.lotNo)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="date" class="ssample-field" data-field="mfgDate" value="${escapeHtml(row.mfgDate)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="date" class="ssample-field" data-field="expiryDate" value="${escapeHtml(row.expiryDate)}" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="number" class="ssample-field" data-field="requestedQty" value="${escapeHtml(row.requestedQty)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="number" class="ssample-field" data-field="actualQtySent" value="${escapeHtml(row.actualQtySent)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
           <td>${variance !== null ? variance : '-'}</td>
@@ -410,10 +408,10 @@ export function renderSubmissionsList(){
             <table class="compare-table ssub-samples-table">
               <thead><tr>
                 <th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. Status</th><th>Lot No.</th>
-                <th>MFG Date</th><th>Expiry Date</th><th>Requested Qty</th><th>Actual Qty Sent</th>
+                <th>Requested Qty</th><th>Actual Qty Sent</th>
                 <th>Variance</th><th>Net Wt./Bag (g)</th><th>Storage</th><th>Remarks</th>${isEditing ? '<th></th>' : ''}
               </tr></thead>
-              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${isEditing ? 14 : 13}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
+              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${isEditing ? 12 : 11}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
             </table>
           </div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}

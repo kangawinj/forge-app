@@ -3494,6 +3494,19 @@
     .ssub-ack-grid{grid-template-columns:1fr;}
   }
   .ssub-samples-table input, .ssub-samples-table select{min-width:90px;}
+  /* .compare-table's own table-layout:fixed (screen, not just print) splits
+     every column equally regardless of content -- fine for a handful of
+     short numeric columns, but this table's Product cell also carries the
+     product picker's field-hint text (the linked product's spec summary,
+     or "No Product List item linked...") which has nothing like an
+     <input>'s own min-width to force room for it, so it was wrapping down
+     to 6-7 lines in a column barely wider than the picker's own 90px
+     input. table-layout:auto lets Product/Remarks grow to fit their
+     actual content instead, and the existing overflow-x:auto wrapper
+     (see the markup) scrolls the rest of the row horizontally if the
+     table ends up wider than its card -- same tradeoff already accepted
+     for every other wide table in this app (Recipes/Trials comparisons). */
+  .ssub-samples-table{table-layout:auto;}
   .trial-string-list-row input{flex:1;}
   .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:10px;}
   .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
@@ -4364,26 +4377,24 @@
     #submissionsList .ssub-samples-table select{min-width:0 !important;width:100% !important;}
     /* table-layout:auto (above) sizes each column to its content, which
        works for the Product-spec/Evaluation tables (mostly short values
-       or a couple of longer wrapped cells) but the Samples table packs 13
-       genuinely wide columns (2 full dates, Product, Remarks...) that
-       still add up past A4 width even wrapped -- same fix as
-       .print-ing-table elsewhere: pin every column to an explicit % of
-       the page so the table can never grow past 100%, forcing the long
-       columns to wrap instead of pushing the table wider than the page. */
+       or a couple of longer wrapped cells) but the Samples table packs 11
+       genuinely wide columns (Product, Remarks...) that still add up past
+       A4 width even wrapped -- same fix as .print-ing-table elsewhere:
+       pin every column to an explicit % of the page so the table can
+       never grow past 100%, forcing the long columns to wrap instead of
+       pushing the table wider than the page. */
     #submissionsList .ssub-samples-table{table-layout:fixed !important;}
     #submissionsList .ssub-samples-table th:nth-child(1), #submissionsList .ssub-samples-table td:nth-child(1){width:3% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(2), #submissionsList .ssub-samples-table td:nth-child(2){width:7% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(3), #submissionsList .ssub-samples-table td:nth-child(3){width:12% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(4), #submissionsList .ssub-samples-table td:nth-child(4){width:7% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(5), #submissionsList .ssub-samples-table td:nth-child(5){width:7% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(6), #submissionsList .ssub-samples-table td:nth-child(6){width:9% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(7), #submissionsList .ssub-samples-table td:nth-child(7){width:9% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(8), #submissionsList .ssub-samples-table td:nth-child(8){width:6% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(9), #submissionsList .ssub-samples-table td:nth-child(9){width:6% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(10), #submissionsList .ssub-samples-table td:nth-child(10){width:6% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(11), #submissionsList .ssub-samples-table td:nth-child(11){width:7% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(12), #submissionsList .ssub-samples-table td:nth-child(12){width:8% !important;}
-    #submissionsList .ssub-samples-table th:nth-child(13), #submissionsList .ssub-samples-table td:nth-child(13){width:13% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(2), #submissionsList .ssub-samples-table td:nth-child(2){width:8% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(3), #submissionsList .ssub-samples-table td:nth-child(3){width:20% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(4), #submissionsList .ssub-samples-table td:nth-child(4){width:8% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(5), #submissionsList .ssub-samples-table td:nth-child(5){width:8% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(6), #submissionsList .ssub-samples-table td:nth-child(6){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(7), #submissionsList .ssub-samples-table td:nth-child(7){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(8), #submissionsList .ssub-samples-table td:nth-child(8){width:7% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(9), #submissionsList .ssub-samples-table td:nth-child(9){width:8% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(10), #submissionsList .ssub-samples-table td:nth-child(10){width:9% !important;}
+    #submissionsList .ssub-samples-table th:nth-child(11), #submissionsList .ssub-samples-table td:nth-child(11){width:15% !important;}
 
     /* Printing a Project (see .printing-project above) puts its whole
        read-only detail view inside one <tr class="proj-detail-row"> --
