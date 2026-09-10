@@ -2,10 +2,10 @@ import {
   uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, formatDateLong, sampleSubmissionsCol, showCloudError,
-  productList
+  productList, db, sampleSubmissionCountersCol
 } from './app.js';
 import {
-  onSnapshot, setDoc, doc, deleteDoc
+  onSnapshot, setDoc, doc, deleteDoc, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let submissions = [];
@@ -70,6 +70,26 @@ function scheduleSubmissionSave(s){
   s.updatedAt = Date.now();
   s.updatedBy = currentUser?.email || '';
   saveSubmissionToCloud(s);
+}
+
+// Atomic "SS-<year>-<seq>" Form No., collision-safe even when two people
+// hit "+ New Submission" at the same instant -- same runTransaction()
+// read-and-increment-in-one-step pattern as recipes.js's createNewTrial(),
+// against a per-year counter doc (sampleSubmissionCounters/<year>.maxSeq)
+// instead of per-Series, so numbering restarts at 0001 every new year.
+// tx.set(...,{merge:true}) (rather than tx.update, which createNewTrial
+// can use) because the very first submission of a new year has no counter
+// doc yet to update.
+async function issueSubmissionFormNo(){
+  const year = new Date().getFullYear();
+  const counterRef = doc(sampleSubmissionCountersCol, String(year));
+  const nextSeq = await runTransaction(db, async (tx) => {
+    const snap = await tx.get(counterRef);
+    const seq = (snap.exists() ? (snap.data().maxSeq || 0) : 0) + 1;
+    tx.set(counterRef, { maxSeq: seq }, { merge: true });
+    return seq;
+  });
+  return `SS-${year}-${String(nextSeq).padStart(4, '0')}`;
 }
 
 // Looks up a sample row's linked Product List item live (never copied onto
@@ -151,14 +171,25 @@ export function mountSampleSubmissionsView(){
     </div>
   `;
 
-  document.getElementById('btnAddSubmission').addEventListener('click', () => {
-    const s = blankSubmission();
-    submissions.push(s);
-    saveSubmissionToCloud(s);
-    logActivityEvent('created', 'sample submission', submissionLabel(s));
-    submissionEditingId = s.id;
-    submissionExpandedIds.add(s.id);
-    renderSubmissionsList();
+  const btnAddSubmission = document.getElementById('btnAddSubmission');
+  btnAddSubmission.addEventListener('click', async () => {
+    if(btnAddSubmission.disabled) return;
+    btnAddSubmission.disabled = true;
+    const originalLabel = btnAddSubmission.textContent;
+    btnAddSubmission.textContent = 'Creating...';
+    try{
+      const s = blankSubmission();
+      s.formNo = await issueSubmissionFormNo();
+      submissions.push(s);
+      saveSubmissionToCloud(s);
+      logActivityEvent('created', 'sample submission', submissionLabel(s));
+      submissionEditingId = s.id;
+      submissionExpandedIds.add(s.id);
+      renderSubmissionsList();
+    } finally {
+      btnAddSubmission.disabled = false;
+      btnAddSubmission.textContent = originalLabel;
+    }
   });
 
   renderSubmissionsList();
@@ -185,6 +216,17 @@ export function renderSubmissionsList(){
       <div class="field" style="margin-bottom:0;">
         <label>${label}</label>
         <input type="${type || 'text'}" class="ssub-field" data-field="${field}" value="${escapeHtml(ms[field] || '')}" ${isEditing ? '' : 'readonly'}>
+      </div>
+    `;
+    // Form No. is always system-issued (see issueSubmissionFormNo) --
+    // never a plain .ssub-field a person can type into, editing or not.
+    // A submission created before this feature existed (formNo still '')
+    // shows the placeholder here and gets a real number backfilled the
+    // next time someone saves it (see the save-submission handler below).
+    const formNoField = `
+      <div class="field" style="margin-bottom:0;">
+        <label>Form No.</label>
+        <input type="text" value="${escapeHtml(ms.formNo || 'ระบบจะออกเลขอัตโนมัติ')}" readonly ${ms.formNo ? '' : 'style="color:var(--text-dim);font-style:italic;"'}>
       </div>
     `;
 
@@ -286,7 +328,7 @@ export function renderSubmissionsList(){
         <div class="part-body">
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
           <div class="grid-3">
-            ${headerField('Form No.', 'formNo')}
+            ${formNoField}
             ${headerField('Customer', 'customer')}
             ${headerField('Destination', 'destination')}
           </div>
@@ -426,11 +468,24 @@ export function renderSubmissionsList(){
     });
 
     if(isEditing){
-      block.querySelector('[data-role="save-submission"]').addEventListener('click', () => {
-        submissionEditingId = null;
-        logActivityEvent('updated', 'sample submission', submissionLabel(s), diffMainFields(submissionEditSnapshotBefore, s, SUBMISSION_DIFF_FIELDS));
-        submissionEditSnapshotBefore = null;
-        renderSubmissionsList();
+      block.querySelector('[data-role="save-submission"]').addEventListener('click', async (e) => {
+        const btn = e.currentTarget;
+        btn.disabled = true;
+        try{
+          // Backfill for a submission created before Form No. was
+          // system-issued (see formNoField above) -- everything created
+          // through "+ New Submission" already has one by now.
+          if(!s.formNo){
+            s.formNo = await issueSubmissionFormNo();
+            scheduleSubmissionSave(s);
+          }
+          submissionEditingId = null;
+          logActivityEvent('updated', 'sample submission', submissionLabel(s), diffMainFields(submissionEditSnapshotBefore, s, SUBMISSION_DIFF_FIELDS));
+          submissionEditSnapshotBefore = null;
+          renderSubmissionsList();
+        } finally {
+          btn.disabled = false;
+        }
       });
     }else{
       block.querySelector('[data-role="edit-submission"]').addEventListener('click', () => {

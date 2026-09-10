@@ -59,6 +59,13 @@ service cloud.firestore {
     match /sampleSubmissions/{submissionId} {
       allow read, write: if isAllowedUser();
     }
+    // Atomic per-year Form No. counter (id = "2026", field maxSeq) that
+    // issueSubmissionFormNo()'s runTransaction() reads and increments —
+    // same access level as /sampleSubmissions itself, since only that
+    // transaction ever touches this collection.
+    match /sampleSubmissionCounters/{year} {
+      allow read, write: if isAllowedUser();
+    }
     // Append-only sign-in audit log: any team member can read the whole
     // log (shown via the notification bell), but a client can only ever
     // create an event for its own account — never someone else's — and

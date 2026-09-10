@@ -104,6 +104,12 @@ export const productsCol = collection(db, "productList");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
 export const sampleSubmissionsCol = collection(db, "sampleSubmissions");
+// One doc per calendar year (id = "2026"), holding the atomic Form No.
+// counter (maxSeq) every "+ New Submission"/first-save runTransaction()
+// reads and increments — see issueSubmissionFormNo() in
+// sampleSubmissions.js. Same collision-safe-counter reasoning as
+// recipeSeriesCol above.
+export const sampleSubmissionCountersCol = collection(db, "sampleSubmissionCounters");
 // Draft project submissions from the public, no-login "share a link"
 // intake page (submit.html) — see the /pendingSubmissions rule in
 // firestore.rules for how a random per-link token (not auth) scopes
@@ -707,7 +713,8 @@ const CHANGELOG = [
   { version: "3.0.376", date: "2026-09-08", note: "Added an admin-only \"Import Legacy Product List (one-time)\" button on the Products page to seed it from the ~40 real products (with photos) in the team's existing UMIOS Product List reference spreadsheet — safe to run more than once, already-imported products are overwritten, never duplicated" },
   { version: "3.0.377", date: "2026-09-09", note: "Added a new \"Sample Submissions\" page — track a shipment of product samples to a customer (delivery info, a sample-by-sample manifest with lot numbers/quantities, an auto-computed quantity summary, customer evaluation scoring with an auto-computed overall average, a follow-up decision summary, and a signable Prepared by/Received by acknowledgement). Each sample can be linked to a Product List entry — its cooking instructions, composition, allergens, factory, case pack, MOQ and price are then pulled live from there instead of being re-typed, so editing the Product later keeps every submission that references it current. Printable per-submission, same as Test Results" },
   { version: "3.0.378", date: "2026-09-09", note: "Fixed a Monthly Update's PD field showing blank when editing an existing entry that never had one filled in — it now defaults to the Project's current Responsible Person (PD), same as it already did when adding a brand-new update" },
-  { version: "3.0.379", date: "2026-09-09", note: "Fixed a printed Sample Submission's wide tables (Samples included, Product specification, Customer evaluation) overlapping/overflowing instead of fitting on an A4 page — every column now shrinks and wraps to fit the printed page width, with dates displaying in full instead of getting cut off" }
+  { version: "3.0.379", date: "2026-09-09", note: "Fixed a printed Sample Submission's wide tables (Samples included, Product specification, Customer evaluation) overlapping/overflowing instead of fitting on an A4 page — every column now shrinks and wraps to fit the printed page width, with dates displaying in full instead of getting cut off" },
+  { version: "3.0.380", date: "2026-09-10", note: "Sample Submissions' Form No. is now issued automatically as \"SS-<year>-<sequence>\" (e.g. SS-2026-0001) instead of typed by hand — assigned the moment a new submission is created, collision-safe even when two people save at the same instant, kept unchanged for the life of that submission, and never reused once issued" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
