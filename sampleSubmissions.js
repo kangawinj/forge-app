@@ -619,6 +619,23 @@ export function renderSubmissionsList(){
         const sample = s.samples.find(x => x.id === row.dataset.sampleId);
         if(!sample) return;
         const suggestBox = row.querySelector('.ssample-suggestions');
+        // The Samples table's own horizontal-scroll wrapper (overflow-x:
+        // auto) forces its overflow-y to auto too (per the CSS Overflow
+        // spec, an axis left "visible" next to a non-visible one is
+        // coerced to auto), which was silently clipping this dropdown's
+        // plain position:absolute -- position:fixed (see .ssample-
+        // suggestions in style.css) escapes that, positioned here from
+        // the input's own on-screen rect each time it opens. Closing on
+        // scroll avoids it drifting away from the input it belongs to.
+        function positionSuggestBox(){
+          const r = input.getBoundingClientRect();
+          suggestBox.style.left = r.left + 'px';
+          suggestBox.style.top = (r.bottom + 4) + 'px';
+          suggestBox.style.width = r.width + 'px';
+        }
+        input.closest('table')?.parentElement?.addEventListener('scroll', () => {
+          suggestBox.classList.remove('open');
+        }, { passive: true });
         function renderSuggestions(){
           if(document.activeElement !== input){
             suggestBox.innerHTML = '';
@@ -636,6 +653,7 @@ export function renderSubmissionsList(){
               <span class="ing-suggestion-name">${escapeHtml(productPickerLabel(p))}</span>
             </div>
           `).join('');
+          positionSuggestBox();
           suggestBox.classList.add('open');
           suggestBox.querySelectorAll('.ing-suggestion-item').forEach(item => {
             item.addEventListener('mousedown', e => {
