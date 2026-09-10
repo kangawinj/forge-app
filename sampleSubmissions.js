@@ -2,7 +2,7 @@ import {
   uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess
+  productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess, compositionSummaryText
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, runTransaction
@@ -455,7 +455,7 @@ export function renderSubmissionsList(){
           <td>${escapeHtml(p ? p.code : '-')}</td>
           <td>${escapeHtml(sampleProductName(row) || '-')}</td>
           <td>${escapeHtml(p?.cookingInstruction || '-')}</td>
-          <td>${escapeHtml(p?.composition || '-')}</td>
+          <td>${escapeHtml(p ? (compositionSummaryText(p.composition) || '-') : '-')}</td>
           <td>${escapeHtml(p?.allergens || '-')}</td>
           <td>${escapeHtml(p?.processedArea || '-')}</td>
           <td>${escapeHtml(p?.factory || '-')}</td>

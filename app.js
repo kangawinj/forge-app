@@ -25,7 +25,7 @@ import {
 } from './materials.js';
 import {
   productList, mountProductsView, closeProductDetail,
-  attachProductsListener, unsubscribeProducts, resetProductsState
+  attachProductsListener, unsubscribeProducts, resetProductsState, compositionSummaryText
 } from './products.js';
 import {
   mountSampleSubmissionsView, attachSampleSubmissionsListener,
@@ -75,7 +75,7 @@ export {
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
-  openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess
+  openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText
 };
 
 const firebaseConfig = {
@@ -730,7 +730,8 @@ const CHANGELOG = [
   { version: "3.0.393", date: "2026-09-10", note: "Sample ID is now auto-generated on Sample Submissions instead of typed by hand — \"<Form No.>-S01\", \"-S02\", ... in the order each sample is added. Deleting or reordering rows never changes another sample's ID, a deleted number is never reused, and it works the same whether the sample is linked to a Product List item or typed in manually" },
   { version: "3.0.394", date: "2026-09-10", note: "Added a \"Food Allergens\" tab to Reference Lists — the FARRP International Regulatory Chart (43 countries x 25 allergen categories, with color-coded country-specific exceptions and a legend), reproduced from a snapshot captured today. It's not a live feed from the source site (not technically possible for this app) — ask to re-check the source and refresh it whenever it may be out of date" },
   { version: "3.0.395", date: "2026-09-10", note: "Turned a Project's Requirements \"Certificate\" field into a checklist (Halal, HACCP, GMP, BRC, Kosher, ISO 22000, Other) instead of free text — same idea as Sample Submissions' Docs Request, and available everywhere Certificate appears: the main project edit view, the New Project panel, and the Pending Submission review form. A project saved before this change keeps its old Certificate text, carried into the Other field automatically" },
-  { version: "3.0.396", date: "2026-09-10", note: "Changed the Food Allergens chart's background from dark to white, matching the rest of Forge's light theme" }
+  { version: "3.0.396", date: "2026-09-10", note: "Changed the Food Allergens chart's background from dark to white, matching the rest of Forge's light theme" },
+  { version: "3.0.397", date: "2026-09-10", note: "Turned Products' \"Composition (Approx.)\" field into a table instead of free text — one row per main ingredient, with up to 2 sub-levels and a % column, plus Add/Remove Row. A product saved before this change keeps its old composition text as the first row. The composition summary now also shows correctly in the product detail view and in Sample Submissions' linked-product specification table" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

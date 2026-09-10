@@ -16,15 +16,82 @@ let editingProductId = null;
 let editingRmImage = null; // staged photo as a data URL, or null for no photo
 let editingIdeaMenuImage = null;
 
+// Composition (Approx.) -- a table of rows instead of free text, per the
+// user's request: each row is one composition item, optionally broken
+// down into up to 2 further sub-ingredient levels (e.g. Main="Sauce Mix",
+// Sub 1="Soy Sauce", Sub 2="Dark Soy Sauce", %=15), plus its own %. Staged
+// in this array while the add/edit form is open, same "editing draft"
+// pattern as editingRmImage/editingIdeaMenuImage above -- there's only
+// ever one Product form on screen at a time (materials.js's "always-open
+// single form" pattern), so one module-level array is enough.
+let compositionRowsEditing = [];
+function blankCompositionRow(){
+  return { id: uid(), main: '', sub1: '', sub2: '', pct: '' };
+}
+// A product saved before Composition became a table has it as a plain
+// string -- carried forward as a single row's Main Ingredient (with Sub
+// 1/Sub 2/% left blank) rather than dropped, same treatment Sample
+// Submissions' Docs and Projects' Certificate give their own
+// pre-checklist/table values.
+function getComposition(comp){
+  if(Array.isArray(comp)){
+    return comp.length ? comp.map(r => ({ id: r?.id || uid(), main: r?.main || '', sub1: r?.sub1 || '', sub2: r?.sub2 || '', pct: r?.pct ?? '' })) : [blankCompositionRow()];
+  }
+  if(typeof comp === 'string' && comp.trim()) return [{ id: uid(), main: comp, sub1: '', sub2: '', pct: '' }];
+  return [blankCompositionRow()];
+}
+// Plain-text summary for the read-only detail modal.
+function compositionSummaryText(comp){
+  return getComposition(comp)
+    .filter(r => r.main || r.sub1 || r.sub2 || r.pct !== '')
+    .map(r => {
+      const name = [r.main, r.sub1, r.sub2].filter(Boolean).join(' > ');
+      return (r.pct !== '' && r.pct != null) ? `${name} ${r.pct}%` : name;
+    })
+    .join(', ');
+}
+function renderCompositionRows(){
+  const body = document.getElementById('pf-compositionRows');
+  if(!body) return;
+  body.innerHTML = compositionRowsEditing.map(row => `
+    <tr data-row-id="${escapeHtml(row.id)}">
+      <td><input type="text" class="pf-comp-field" data-field="main" value="${escapeHtml(row.main)}" placeholder="e.g. Sauce Mix"></td>
+      <td><input type="text" class="pf-comp-field" data-field="sub1" value="${escapeHtml(row.sub1)}" placeholder="e.g. Soy Sauce"></td>
+      <td><input type="text" class="pf-comp-field" data-field="sub2" value="${escapeHtml(row.sub2)}" placeholder="optional"></td>
+      <td><input type="number" class="pf-comp-field" data-field="pct" value="${escapeHtml(row.pct)}" min="0" max="100" step="any" placeholder="%"></td>
+      <td>${compositionRowsEditing.length > 1 ? `<button type="button" class="icon-btn" data-role="remove-composition-row" title="Remove this row">${icon('x')}</button>` : ''}</td>
+    </tr>
+  `).join('');
+  body.querySelectorAll('.pf-comp-field').forEach(el => {
+    el.addEventListener('change', () => {
+      const row = compositionRowsEditing.find(r => r.id === el.closest('tr').dataset.rowId);
+      if(row) row[el.dataset.field] = el.value.trim();
+    });
+  });
+  body.querySelectorAll('[data-role="remove-composition-row"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const rowId = btn.closest('tr').dataset.rowId;
+      compositionRowsEditing = compositionRowsEditing.filter(r => r.id !== rowId);
+      if(!compositionRowsEditing.length) compositionRowsEditing = [blankCompositionRow()];
+      renderCompositionRows();
+    });
+  });
+}
+
 const PRODUCT_FORM_FIELD_IDS = [
   'pf-name', 'pf-sampleCode', 'pf-productType', 'pf-ideaMenuName', 'pf-description',
-  'pf-cookingInstruction', 'pf-composition', 'pf-allergens', 'pf-processedArea',
+  'pf-cookingInstruction', 'pf-allergens', 'pf-processedArea',
   'pf-factory', 'pf-size', 'pf-packingStyle', 'pf-moq', 'pf-exwPrice', 'pf-salesPrice', 'pf-remarks'
 ];
+// composition is deliberately not in PRODUCT_DIFF_FIELDS -- it's a
+// structured array of rows now (see getComposition below), and
+// diffMainFields' generic String(before) !== String(after) comparison
+// would just show "[object Object]" for it, same reasoning as Sample
+// Submissions leaving its own checklist-shaped docs field out of its diff.
 const PRODUCT_DIFF_FIELDS = {
   name: 'Product Name', sampleCode: 'Sample Code', productType: 'Product Type',
   ideaMenuName: 'Product (Idea Menu)', description: 'Description', cookingInstruction: 'Cooking Instruction',
-  composition: 'Composition', allergens: 'Allergens', processedArea: 'Processed Area', factory: 'Factory',
+  allergens: 'Allergens', processedArea: 'Processed Area', factory: 'Factory',
   size: 'Size', packingStyle: 'Standards/Packing Style', moq: 'MOQ', exwPrice: 'EXW Price (THB)',
   salesPrice: 'Sales Price', remarks: 'Remarks'
 };
@@ -237,7 +304,13 @@ export function mountProductsView(){
         </div>
         <div class="field">
           <label>17. Composition (Approx.)</label>
-          <textarea id="pf-composition" rows="2" placeholder="Approximate composition breakdown"></textarea>
+          <div style="overflow-x:auto;">
+            <table class="compare-table pf-composition-table">
+              <thead><tr><th>Main Ingredient</th><th>Sub 1</th><th>Sub 2</th><th>%</th><th></th></tr></thead>
+              <tbody id="pf-compositionRows"></tbody>
+            </table>
+          </div>
+          <button type="button" class="btn btn-sm add-row-btn" id="btnAddCompositionRow" style="margin-top:6px;">+ Add Row</button>
         </div>
         <div class="field">
           <label>18. Remarks</label>
@@ -284,6 +357,10 @@ export function mountProductsView(){
   document.getElementById('productSearchInput').addEventListener('input', renderProductTable);
   document.getElementById('btnCancelEditProduct').addEventListener('click', cancelEditProduct);
   document.getElementById('btnImportLegacyProducts')?.addEventListener('click', importLegacyProducts);
+  document.getElementById('btnAddCompositionRow').addEventListener('click', () => {
+    compositionRowsEditing.push(blankCompositionRow());
+    renderCompositionRows();
+  });
   document.getElementById('pf-rmImage').addEventListener('change', async e => {
     const file = e.target.files[0];
     if(!file) return;
@@ -332,7 +409,9 @@ export function mountProductsView(){
       ideaMenuName: document.getElementById('pf-ideaMenuName').value.trim(),
       description: document.getElementById('pf-description').value.trim(),
       cookingInstruction: document.getElementById('pf-cookingInstruction').value.trim(),
-      composition: document.getElementById('pf-composition').value.trim(),
+      composition: compositionRowsEditing
+        .filter(r => r.main || r.sub1 || r.sub2 || r.pct !== '')
+        .map(r => ({ main: r.main, sub1: r.sub1, sub2: r.sub2, pct: r.pct })),
       allergens: document.getElementById('pf-allergens').value.trim(),
       processedArea: document.getElementById('pf-processedArea').value.trim(),
       factory: document.getElementById('pf-factory').value.trim(),
@@ -448,7 +527,7 @@ export function openProductDetail(p){
     <dl class="material-detail-list">${rows}</dl>
     ${notesBlock('Description', p.description)}
     ${notesBlock('Cooking Instruction', p.cookingInstruction)}
-    ${notesBlock('Composition (Approx.)', p.composition)}
+    ${notesBlock('Composition (Approx.)', compositionSummaryText(p.composition))}
     ${notesBlock('Remarks', p.remarks)}
     <div class="material-detail-activity">
       ${p.createdBy ? `<div>Created by ${escapeHtml(p.createdBy)}${p.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(p.createdAt)) : ''}</div>` : ''}
@@ -485,7 +564,8 @@ function fillProductForm(p){
   document.getElementById('pf-ideaMenuName').value = p.ideaMenuName || '';
   document.getElementById('pf-description').value = p.description || '';
   document.getElementById('pf-cookingInstruction').value = p.cookingInstruction || '';
-  document.getElementById('pf-composition').value = p.composition || '';
+  compositionRowsEditing = getComposition(p.composition);
+  renderCompositionRows();
   document.getElementById('pf-allergens').value = p.allergens || '';
   document.getElementById('pf-processedArea').value = p.processedArea || '';
   document.getElementById('pf-factory').value = p.factory || '';
@@ -529,6 +609,8 @@ function cancelEditProduct(){
   editingProductId = null;
   productEditSnapshotBefore = null;
   PRODUCT_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+  compositionRowsEditing = [blankCompositionRow()];
+  renderCompositionRows();
   document.getElementById('pf-rmImage').value = '';
   document.getElementById('pf-ideaMenuImage').value = '';
   setProductImagePreview('rm', null);
@@ -548,4 +630,4 @@ export function resetProductsState(){
   productList = [];
 }
 
-export { unsubscribeProducts };
+export { unsubscribeProducts, compositionSummaryText };
