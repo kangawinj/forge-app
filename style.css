@@ -3034,6 +3034,12 @@
   .reflist-locations-label{display:block;font-size:11px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:.02em;margin-bottom:4px;}
   .reflist-company-locations{display:flex;flex-wrap:wrap;gap:5px;margin-top:5px;padding:0 6px;}
   .reflist-location-chip{background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:2px 9px;font-size:11px;color:var(--text-dim);}
+  /* Cooking Method's optional Note -- a single field revealed on demand via
+     "+ Note" (see reflists.js), same row/remove-button shape as one
+     trial-string-list-row but for one field instead of a list. */
+  .reflist-cooking-note-row{display:flex;align-items:center;gap:8px;}
+  .reflist-cooking-note-row input{flex:1;}
+  .reflist-cooking-note-display{margin-top:8px;padding:0 6px;font-size:13px;color:var(--text-dim);}
   .reflist-code-guide{padding:6px 6px 0;}
   .reflist-code-guide-example{
     font-family:monospace;
