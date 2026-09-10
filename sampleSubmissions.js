@@ -2,7 +2,7 @@ import {
   uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, formatDateLong, sampleSubmissionsCol, showCloudError,
-  productList, db, sampleSubmissionCountersCol
+  productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, runTransaction
@@ -44,7 +44,7 @@ function blankSample(){
 
 function blankSubmission(){
   return {
-    id: uid(),
+    id: uid(), projectId: '',
     formNo: '', docDate: '', shipDate: '', courier: '', customer: '', projectLead: '',
     expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryLocation: '',
     shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: '',
@@ -90,6 +90,27 @@ async function issueSubmissionFormNo(){
     return seq;
   });
   return `SS-${year}-${String(nextSeq).padStart(4, '0')}`;
+}
+
+// Looks up a submission's linked Project (for the "Project" picker's
+// auto-fill, see applyProjectAutofill below). Only meaningful for a user
+// who can see Projects at all -- callers must check hasModuleAccess
+// ('projects') before rendering the picker in the first place.
+function linkedProject(s){
+  return s.projectId ? (projects.find(p => p.id === s.projectId) || null) : null;
+}
+// One-shot copy (not a live lookup like linkedProduct below) -- picking a
+// Project is meant to pre-fill a starting point for these fields, which
+// the user can then freely edit without it snapping back if the Project
+// record changes later. customerName/destinationCountry are a direct
+// match; Project Lead/Coordinator map to a Project's PD (Responsible
+// Person) and Sales Rep, the closest existing equivalents.
+function applyProjectAutofill(s, project){
+  if(!project) return;
+  s.customer = project.customerName || '';
+  s.destination = project.destinationCountry || '';
+  s.projectLead = project.responsiblePerson || '';
+  s.coordinator = project.ownerSalesRep || '';
 }
 
 // Looks up a sample row's linked Product List item live (never copied onto
@@ -235,6 +256,22 @@ export function renderSubmissionsList(){
         <input type="text" value="${escapeHtml(ms.formNo || 'ระบบจะออกเลขอัตโนมัติ')}" readonly ${ms.formNo ? '' : 'style="color:var(--text-dim);font-style:italic;"'}>
       </div>
     `;
+    // Project picker -- only rendered at all for a user with Projects
+    // module access (see hasModuleAccess import); everyone else never
+    // gets this field in the DOM, not just a CSS-hidden one. Picking a
+    // project pre-fills Customer/Destination/Project Lead/Coordinator
+    // (see applyProjectAutofill) -- wired in the isEditing block below.
+    const projectField = hasModuleAccess('projects') ? `
+      <div class="field" style="margin-bottom:14px;max-width:340px;">
+        <label>Project</label>
+        <select class="ssub-project-select" ${isEditing ? '' : 'disabled'}>
+          <option value="">— Not linked —</option>
+          ${[...projects].sort((a,b) => (a.name || '').localeCompare(b.name || '', undefined, {sensitivity:'base'})).map(p => `
+            <option value="${escapeHtml(p.id)}" ${p.id === ms.projectId ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>
+          `).join('')}
+        </select>
+      </div>
+    ` : '';
 
     const qty = computeQuantitySummary(ms.samples);
     const followUp = computeFollowUpSummary(ms.samples);
@@ -333,6 +370,7 @@ export function renderSubmissionsList(){
         </div>
         <div class="part-body">
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
+          ${projectField}
           <div class="grid-3">
             ${formNoField}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
@@ -533,6 +571,13 @@ export function renderSubmissionsList(){
           s[el.dataset.field] = el.value.trim();
           scheduleSubmissionSave(s);
         });
+      });
+
+      block.querySelector('.ssub-project-select')?.addEventListener('change', e => {
+        s.projectId = e.target.value;
+        applyProjectAutofill(s, linkedProject(s));
+        scheduleSubmissionSave(s);
+        renderSubmissionsList();
       });
 
       block.querySelector('[data-role="add-sample"]')?.addEventListener('click', () => {

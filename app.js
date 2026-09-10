@@ -75,7 +75,7 @@ export {
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
-  openMaterialDetail, setCompareSeriesPrefilter, productList
+  openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess
 };
 
 const firebaseConfig = {
@@ -716,7 +716,8 @@ const CHANGELOG = [
   { version: "3.0.379", date: "2026-09-09", note: "Fixed a printed Sample Submission's wide tables (Samples included, Product specification, Customer evaluation) overlapping/overflowing instead of fitting on an A4 page — every column now shrinks and wraps to fit the printed page width, with dates displaying in full instead of getting cut off" },
   { version: "3.0.380", date: "2026-09-10", note: "Sample Submissions' Form No. is now issued automatically as \"SS-<year>-<sequence>\" (e.g. SS-2026-0001) instead of typed by hand — assigned the moment a new submission is created, collision-safe even when two people save at the same instant, kept unchanged for the life of that submission, and never reused once issued" },
   { version: "3.0.381", date: "2026-09-10", note: "Fixed Products and Sample Submissions sometimes still running yesterday's code after a Deploy — those two page files (plus the admin Series Migration tool) were missing from the app's no-cache list, so a browser could keep serving an old cached copy of them indefinitely instead of picking up new fixes" },
-  { version: "3.0.382", date: "2026-09-10", note: "Sample Submission fields that match an existing Reference List now suggest from it as you type — Customer/Destination reuse the same company and country lists Projects already draws from, and Project Lead/Coordinator/Feedback Owner reuse the Contact Directory (same as the sample row's own Owner field). Fields with no matching list (Courier, Storage, Tracking No., etc.) are left as plain free text" }
+  { version: "3.0.382", date: "2026-09-10", note: "Sample Submission fields that match an existing Reference List now suggest from it as you type — Customer/Destination reuse the same company and country lists Projects already draws from, and Project Lead/Coordinator/Feedback Owner reuse the Contact Directory (same as the sample row's own Owner field). Fields with no matching list (Courier, Storage, Tracking No., etc.) are left as plain free text" },
+  { version: "3.0.383", date: "2026-09-10", note: "Added a \"Project\" picker to Sample Submissions — pick a project and Customer, Destination, Project Lead and Coordinator fill in automatically from it (still freely editable afterward). Only visible to someone with permission to see the Projects module; a person without it never sees the picker at all" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
