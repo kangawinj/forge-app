@@ -212,10 +212,16 @@ export function renderSubmissionsList(){
     if(s.createdBy) activity.push(`Created by ${escapeHtml(s.createdBy)}${s.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(s.createdAt)) : ''}`);
     if(s.updatedBy && s.updatedAt !== s.createdAt) activity.push(`Last edited by ${escapeHtml(s.updatedBy)}${s.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(s.updatedAt)) : ''}`);
 
-    const headerField = (label, field, type) => `
+    // listId hooks a field up to an existing Reference Lists datalist (see
+    // reflists.js's renderMetaDatalists) when one genuinely matches the
+    // field's meaning -- e.g. Customer/Destination reuse the same company
+    // and country lists Projects already draws from. A field with no real
+    // matching list (Courier, Storage, Tracking No., ...) is left as plain
+    // free text rather than inventing a new admin-managed list for it.
+    const headerField = (label, field, type, listId) => `
       <div class="field" style="margin-bottom:0;">
         <label>${label}</label>
-        <input type="${type || 'text'}" class="ssub-field" data-field="${field}" value="${escapeHtml(ms[field] || '')}" ${isEditing ? '' : 'readonly'}>
+        <input type="${type || 'text'}" class="ssub-field" data-field="${field}" value="${escapeHtml(ms[field] || '')}" ${listId ? `list="${listId}"` : ''} ${isEditing ? '' : 'readonly'}>
       </div>
     `;
     // Form No. is always system-issued (see issueSubmissionFormNo) --
@@ -329,13 +335,13 @@ export function renderSubmissionsList(){
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
           <div class="grid-3">
             ${formNoField}
-            ${headerField('Customer', 'customer')}
-            ${headerField('Destination', 'destination')}
+            ${headerField('Customer', 'customer', null, 'customerDatalist')}
+            ${headerField('Destination', 'destination', null, 'destinationDatalist')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Doc. Date', 'docDate', 'date')}
-            ${headerField('Project Lead', 'projectLead')}
-            ${headerField('Coordinator', 'coordinator')}
+            ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
+            ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Ship Date', 'shipDate', 'date')}
@@ -423,7 +429,7 @@ export function renderSubmissionsList(){
             <div><div class="batch-stat-label">No decision</div><div class="batch-stat-value">${followUp['No decision']}</div></div>
           </div>
           <div class="grid-3" style="margin-top:14px;">
-            ${headerField('Feedback Owner', 'feedbackOwner')}
+            ${headerField('Feedback Owner', 'feedbackOwner', null, 'salesRepDatalist')}
             ${headerField('Feedback Due', 'feedbackDue', 'date')}
             ${headerField('Next Review', 'nextReview', 'date')}
           </div>
