@@ -261,8 +261,10 @@ export function renderSubmissionsList(){
     // gets this field in the DOM, not just a CSS-hidden one. Picking a
     // project pre-fills Customer/Destination/Project Lead/Coordinator
     // (see applyProjectAutofill) -- wired in the isEditing block below.
+    // Sits as the first cell of the grid-3 row (not a standalone row) so
+    // it doesn't leave a wasted 2/3-width gap next to it.
     const projectField = hasModuleAccess('projects') ? `
-      <div class="field" style="margin-bottom:14px;max-width:340px;">
+      <div class="field" style="margin-bottom:0;">
         <label>Project</label>
         <select class="ssub-project-select" ${isEditing ? '' : 'disabled'}>
           <option value="">— Not linked —</option>
@@ -370,16 +372,18 @@ export function renderSubmissionsList(){
         </div>
         <div class="part-body">
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
-          ${projectField}
           <div class="grid-3">
+            ${projectField}
+            ${formNoField}
+            ${headerField('Doc. Date', 'docDate', 'date')}
+          </div>
+          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
-            ${formNoField}
           </div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
-            ${headerField('Doc. Date', 'docDate', 'date')}
           </div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Ship Date', 'shipDate', 'date')}
