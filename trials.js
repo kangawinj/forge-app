@@ -62,7 +62,8 @@ function migrateTrial(t){
     testLocation: t.testLocation || '',
     cookingMethod: t.cookingMethod || '',
     cookingMethodSteps: Array.isArray(t.cookingMethodSteps) ? t.cookingMethodSteps : [],
-    productData: (t.productData && typeof t.productData === 'object') ? t.productData : {}
+    productData: (t.productData && typeof t.productData === 'object') ? t.productData : {},
+    note: t.note || ''
   };
 }
 // Lazily creates the per-product data bucket (photos + fixed scores) keyed
@@ -573,6 +574,11 @@ export function renderTrialsList(){
               </div>
               ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>
+
+            <div class="field" style="margin-bottom:0;">
+              <label>Note</label>
+              <textarea class="trial-part2-note" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(mt.note)}</textarea>
+            </div>
           </div>
         </div>
       </div>
@@ -732,6 +738,10 @@ export function renderTrialsList(){
         scheduleTrialSave(t);
         renderTrialsList();
       });
+      block.querySelector('.trial-part2-note')?.addEventListener('change', e => {
+        t.note = e.target.value.trim();
+        scheduleTrialSave(t);
+      });
 
       // Test Participants and Cooking Method are both a plain numbered list
       // of strings — same add/remove/edit wiring, just different field
@@ -827,10 +837,21 @@ export function renderTrialsList(){
       scheduleTrialSave(t);
       renderTrialsList();
     });
+    // Click rather than change -- clicking a radio that's already checked
+    // doesn't fire 'change' natively (its checked state never actually
+    // changes), but it does still fire 'click' every time, which is
+    // exactly the case this needs to catch: clicking the already-selected
+    // option clears it, so a mis-click can be undone without being forced
+    // to pick a different option just to back out.
     block.querySelectorAll('.teval-testresult').forEach(el => {
-      el.addEventListener('change', () => {
+      el.addEventListener('click', () => {
         const pd = getTrialProductData(t, el.dataset.productId);
-        pd.testResult = el.value;
+        if(pd.testResult === el.value){
+          pd.testResult = '';
+          el.checked = false;
+        }else{
+          pd.testResult = el.value;
+        }
         scheduleTrialSave(t);
         renderTrialsList(); // re-render so the accepted/not-accepted color applies right away
       });
