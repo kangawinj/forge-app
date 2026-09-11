@@ -3681,11 +3681,15 @@
   .trial-photo-slot{display:flex;flex-direction:column;gap:4px;align-items:flex-start;margin-top:10px;}
   .trial-photo-empty{width:100px;height:100px;border:1px dashed var(--border);border-radius:var(--radius);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--text-dim);text-align:center;}
   .trial-photo-slot input[type="file"]{width:100px;font-size:11px;}
-  .trial-result-accepted{background:color-mix(in srgb, var(--ok) 12%, transparent);}
+  /* Also doubles as a per-evaluator "chip" in Test Result's combined
+     Overall view now (see combinedEvaluationEntries) -- padding/radius/
+     margin only matter there; a bare div with no siblings (the old,
+     still-supported single-value case) just reads as a tinted line. */
+  .trial-result-accepted{background:color-mix(in srgb, var(--ok) 12%, transparent);padding:2px 6px;border-radius:4px;margin-bottom:3px;}
   .trial-result-accepted b{color:var(--ok);}
-  .trial-result-needs-revision{background:color-mix(in srgb, var(--accent) 12%, transparent);}
+  .trial-result-needs-revision{background:color-mix(in srgb, var(--accent) 12%, transparent);padding:2px 6px;border-radius:4px;margin-bottom:3px;}
   .trial-result-needs-revision b{color:var(--accent);}
-  .trial-result-not-accepted{background:color-mix(in srgb, var(--danger) 10%, transparent);}
+  .trial-result-not-accepted{background:color-mix(in srgb, var(--danger) 10%, transparent);padding:2px 6px;border-radius:4px;margin-bottom:3px;}
   .trial-result-not-accepted b{color:var(--danger);}
   /* Test Result -- one pick only, so radios rather than the Certificate/
      Docs checklists' checkboxes (see .proj-cert-checklist). Stacked, not
@@ -3697,6 +3701,14 @@
      is Needs Revision -- Accepted/Not accepted are already a final call.
      Muted to read as "not needed" rather than "still blank". */
   .trial-improve-na textarea{background:var(--bg);color:var(--text-dim);}
+  /* Sensory Evaluation/Test Result's combined "Overall" view (see
+     combinedEvaluationEntries in trials.js) -- one line per evaluator who
+     weighed in, instead of a single shared textarea anyone could
+     overwrite. Padding matches .teval-fixed's old textarea so the column
+     doesn't visibly shift between the two views. */
+  .teval-overall-entry{font-size:13px;padding:2px 0;}
+  .teval-overall-entry:not(:last-child){margin-bottom:4px;padding-bottom:4px;border-bottom:1px dashed var(--border);}
+  .teval-overall-entry b{font-weight:600;color:var(--text-dim);}
 
   .empty-state{
     text-align:center;

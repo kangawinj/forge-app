@@ -13,6 +13,14 @@ import {
 let trials = [];
 let trialExpandedIds = new Set();
 let trialEditingId = null;
+// "Perform Evaluation" is its own mode, separate from (and mutually
+// exclusive with) the regular Edit above -- Sensory Evaluation and Test
+// Result are personal, per-evaluator opinions now (see pd.evaluations),
+// so filling them in is scoped to whoever is logged in (currentUser),
+// not a shared Edit anyone can overwrite. Everything else on the trial
+// (Part 1, Products, Criteria list, Improvement Guidelines, Note) still
+// goes through the regular Edit.
+let trialEvaluatingId = null;
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
@@ -75,6 +83,51 @@ function getTrialProductData(t, productId){
   if(!t.productData[productId]) t.productData[productId] = {};
   return t.productData[productId];
 }
+// Sensory Evaluation and Test Result are personal opinions now -- each
+// evaluator's own answers live under pd.evaluations[email], never
+// overwriting anyone else's (see the "Perform Evaluation" wiring below).
+// Mutates `t`/`pd` in place, same lazy-init shape as getTrialProductData.
+function getMyEvaluation(pd){
+  if(!currentUser?.email) return {};
+  if(!pd.evaluations || typeof pd.evaluations !== 'object') pd.evaluations = {};
+  if(!pd.evaluations[currentUser.email]) pd.evaluations[currentUser.email] = {};
+  return pd.evaluations[currentUser.email];
+}
+// One { who, value } per person who has weighed in on this product's
+// given criteria (or Test Result, when criteriaId is null) -- feeds the
+// combined "Overall" view. A trial saved before this feature has its
+// Sensory Evaluation/Test Result as a flat pd[criteriaId]/pd.testResult
+// value instead of pd.evaluations -- rather than silently dropping that
+// history, it's folded in as one more entry (attributed to whoever the
+// trial's updatedBy was, the closest thing to "who" that data has)
+// unless a real evaluator already recorded the exact same value.
+function combinedEvaluationEntries(pd, criteriaId, legacyAttributedTo){
+  const entries = [];
+  if(pd.evaluations && typeof pd.evaluations === 'object'){
+    Object.entries(pd.evaluations).forEach(([email, ans]) => {
+      const value = criteriaId ? ans?.[criteriaId] : ans?.testResult;
+      if(value) entries.push({ who: email, value });
+    });
+  }
+  const legacyValue = criteriaId ? pd[criteriaId] : pd.testResult;
+  if(legacyValue && !entries.some(e => e.value === legacyValue)){
+    entries.push({ who: legacyAttributedTo || 'Unspecified', value: legacyValue });
+  }
+  return entries;
+}
+function shortEvaluatorName(who){
+  return (who || '').split('@')[0] || who || 'Unspecified';
+}
+// Improvement Guidelines gates on whether *anyone* flagged Needs Revision
+// now that Test Result is per-evaluator -- one taster catching a problem
+// is enough to need an improvement note, even if others accepted it.
+function productNeedsRevision(pd){
+  if(pd.testResult === 'Needs Revision') return true;
+  if(pd.evaluations && typeof pd.evaluations === 'object'){
+    return Object.values(pd.evaluations).some(ans => ans?.testResult === 'Needs Revision');
+  }
+  return false;
+}
 // A per-criteria-row Note, spanning all products rather than one per
 // product -- e.g. a general remark about "Odor" that applies across every
 // sample being compared. Sensory Evaluation and Improvement Guidelines
@@ -133,8 +186,8 @@ function getEvaluationCriteria(t){
 // prefixed "improve_" to keep the two tables' values separate per
 // criterion -- this bridges the 3 that overlap so existing notes keep
 // showing up. A write always goes to the new prefixed key (see the
-// shared .teval-fixed/.teval-improve wiring), so this fallback is
-// read-only; the old fields are left untouched, just unused going forward.
+// .teval-improve wiring), so this fallback is read-only; the old fields
+// are left untouched, just unused going forward.
 const LEGACY_IMPROVEMENT_KEYS = { appearanceInterior: 'improveAppearanceInterior', odor: 'improveOdor', texture: 'improveTexture' };
 function improvementFieldValue(pd, criteriaId){
   const key = 'improve_' + criteriaId;
@@ -241,7 +294,8 @@ export function renderTrialsList(){
   const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
   container.innerHTML = sorted.map(t => {
     const isEditing = t.id === trialEditingId;
-    const isExpanded = isEditing || trialExpandedIds.has(t.id);
+    const isEvaluating = t.id === trialEvaluatingId;
+    const isExpanded = isEditing || isEvaluating || trialExpandedIds.has(t.id);
     // Migrated view used only for building this HTML string below — the
     // wiring block further down re-fetches the raw trial from `trials` and
     // guards each field defensively instead, same split used for Projects'
@@ -412,38 +466,58 @@ export function renderTrialsList(){
           : `<b>${escapeHtml(c.label)}</b>`}</td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.id] || '')}</textarea></td>`;
+          if(isEvaluating){
+            const mine = getMyEvaluation(pd);
+            return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-my-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${escapeHtml(c.id)}" placeholder="-">${escapeHtml(mine[c.id] || '')}</textarea></td>`;
+          }
+          // Sensory Evaluation is no longer editable through the regular
+          // Edit flow -- filling it in is "Perform Evaluation" above,
+          // scoped to whoever is logged in. This is the combined view:
+          // every evaluator's own answer, listed together (see
+          // combinedEvaluationEntries), not a single shared value anyone
+          // could silently overwrite.
+          const entries = combinedEvaluationEntries(pd, c.id, t.updatedBy);
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
+            ? entries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(e.value)}</div>`).join('')
+            : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
     `).join('');
     const addCriteriaBtnHtml = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-trial-criteria" style="margin-top:8px;">+ Add Criteria</button>` : '';
-    // Test Result is a dropdown (not free text) so Accepted/Not accepted
-    // can be colored — matches the sample report's red "Not accepted" text.
+    // Test Result is a per-evaluator pick now, same as the Sensory
+    // Evaluation criteria above. Perform Evaluation shows a radio picker
+    // scoped to your own pick; every other view shows everyone's picks
+    // together (see combinedEvaluationEntries), each line colored via the
+    // existing accepted/needs-revision/not-accepted classes.
     const testResultRowHtml = `
       <tr>
         <td><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          const val = pd.testResult || '';
-          const resultClass = TRIAL_TEST_RESULT_CLASSES[val] || '';
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''} ${resultClass}">${isEditing
-            ? `<div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
+          if(isEvaluating){
+            const mine = getMyEvaluation(pd);
+            const val = mine.testResult || '';
+            return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
+              <div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
                 <label class="trial-testresult-radio-label">
                   <input type="radio" name="teval-testresult-${escapeHtml(p.id)}" class="teval-testresult" data-product-id="${escapeHtml(p.id)}" value="${o}" ${val === o ? 'checked' : ''}>
                   ${o}
                 </label>
-              `).join('')}</div>`
-            // Read-only view (also what Print shows -- see printing-only)
-            // keeps the same tick list instead of collapsing to plain
-            // text, so a paper printout still has all 3 options to mark
-            // by hand for someone outside the system, with whichever one
-            // is already recorded pre-ticked. disabled (not readonly --
-            // readonly has no effect on radio inputs) since this isn't
-            // the editable copy.
+              `).join('')}</div>
+            </td>`;
+          }
+          const entries = combinedEvaluationEntries(pd, null, t.updatedBy);
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
+            ? entries.map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(shortEvaluatorName(e.who))}: ${escapeHtml(e.value)}</b></div>`).join('')
+            // Print (see printing-only) still gets an empty tick list on a
+            // product nobody has evaluated yet, so a paper printout has
+            // all 3 options for someone outside the system to mark by
+            // hand -- disabled (not readonly -- readonly has no effect on
+            // radio inputs) since this isn't the editable copy.
             : `<div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
                 <label class="trial-testresult-radio-label">
-                  <input type="radio" disabled ${val === o ? 'checked' : ''}>
+                  <input type="radio" disabled>
                   ${o}
                 </label>
               `).join('')}</div>`}</td>`;
@@ -451,17 +525,17 @@ export function renderTrialsList(){
         <td class="recipe-boundary"></td>
       </tr>
     `;
-    // Improvement notes only make sense for a product still Needs Revision
-    // -- Accepted/Not accepted are already a final call, nothing left to
-    // improve toward. Locked (readonly, muted) for every other Test Result,
-    // including not-yet-picked.
+    // Improvement notes only make sense for a product at least one
+    // evaluator flagged Needs Revision -- Accepted/Not accepted from
+    // everyone is already a final call, nothing left to improve toward.
+    // Locked (readonly, muted) otherwise, including not-yet-evaluated.
     const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
     const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          const needsRevision = pd.testResult === 'Needs Revision';
+          const needsRevision = productNeedsRevision(pd);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? '' : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
         }).join('')}
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea></td>
@@ -480,7 +554,10 @@ export function renderTrialsList(){
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
           <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
-          ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
+          ${!isEvaluating ? (isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`) : ''}
+          ${!isEditing && combinedCount > 0 ? (isEvaluating
+            ? `<button class="btn btn-sm" data-role="finish-evaluation">${icon('check')} Done Evaluating</button>`
+            : `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>`) : ''}
           <button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>
           <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
@@ -617,6 +694,7 @@ export function renderTrialsList(){
     const t = trials.find(x => x.id === id);
     if(!t) return;
     const isEditing = id === trialEditingId;
+    const isEvaluating = id === trialEvaluatingId;
 
     block.querySelector('.part-toggle-btn').addEventListener('click', () => {
       if(trialExpandedIds.has(id)) trialExpandedIds.delete(id);
@@ -624,18 +702,45 @@ export function renderTrialsList(){
       renderTrialsList();
     });
 
+    // Edit/Save aren't rendered at all while isEvaluating (mutually
+    // exclusive with Perform Evaluation -- see the header markup above),
+    // so both queries below need the null-safe form.
     if(isEditing){
-      block.querySelector('[data-role="save-trial"]').addEventListener('click', () => {
+      block.querySelector('[data-role="save-trial"]')?.addEventListener('click', () => {
         trialEditingId = null;
         logActivityEvent('updated', 'trial', trialLabel(t), diffMainFields(trialEditSnapshotBefore, { label: trialLabel(t) }, TRIAL_DIFF_FIELDS));
         trialEditSnapshotBefore = null;
         renderTrialsList();
       });
     }else{
-      block.querySelector('[data-role="edit-trial"]').addEventListener('click', () => {
+      block.querySelector('[data-role="edit-trial"]')?.addEventListener('click', () => {
         trialEditingId = id;
         trialExpandedIds.add(id);
         trialEditSnapshotBefore = { label: trialLabel(t) };
+        renderTrialsList();
+      });
+    }
+
+    if(isEvaluating){
+      block.querySelector('[data-role="finish-evaluation"]')?.addEventListener('click', () => {
+        trialEvaluatingId = null;
+        renderTrialsList();
+      });
+    }else{
+      block.querySelector('[data-role="start-evaluation"]')?.addEventListener('click', () => {
+        if(!currentUser?.email) return;
+        trialEvaluatingId = id;
+        trialExpandedIds.add(id);
+        // Anyone who actually submits an evaluation should show up in
+        // Test Participants, even if they weren't added ahead of time --
+        // keeps that list matching who really weighed in without
+        // requiring a coordinator to pre-register every taster first.
+        if(!Array.isArray(t.testParticipants)) t.testParticipants = [];
+        const already = t.testParticipants.some(name => name === currentUser.email || name === shortEvaluatorName(currentUser.email));
+        if(!already){
+          t.testParticipants.push(shortEvaluatorName(currentUser.email));
+          scheduleTrialSave(t);
+        }
         renderTrialsList();
       });
     }
@@ -835,7 +940,7 @@ export function renderTrialsList(){
       });
     });
 
-    block.querySelectorAll('.teval-fixed, .teval-improve').forEach(el => {
+    block.querySelectorAll('.teval-improve').forEach(el => {
       el.addEventListener('change', () => {
         const pd = getTrialProductData(t, el.dataset.productId);
         pd[el.dataset.field] = el.value.trim();
@@ -880,14 +985,22 @@ export function renderTrialsList(){
     block.querySelectorAll('.teval-testresult').forEach(el => {
       el.addEventListener('click', () => {
         const pd = getTrialProductData(t, el.dataset.productId);
-        if(pd.testResult === el.value){
-          pd.testResult = '';
+        const mine = getMyEvaluation(pd);
+        if(mine.testResult === el.value){
+          mine.testResult = '';
           el.checked = false;
         }else{
-          pd.testResult = el.value;
+          mine.testResult = el.value;
         }
         scheduleTrialSave(t);
         renderTrialsList(); // re-render so the accepted/not-accepted color applies right away
+      });
+    });
+    block.querySelectorAll('.teval-my-fixed').forEach(el => {
+      el.addEventListener('change', () => {
+        const pd = getTrialProductData(t, el.dataset.productId);
+        getMyEvaluation(pd)[el.dataset.field] = el.value.trim();
+        scheduleTrialSave(t);
       });
     });
   });
