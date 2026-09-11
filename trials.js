@@ -690,10 +690,14 @@ export function renderTrialsList(){
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
-    const fixedCriteriaRowsHtml = evaluationCriteria.map(c => `
+    const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => `
       <tr>
         <td>${isEditing
           ? `<div style="display:flex;align-items:center;gap:6px;">
+              <div style="display:flex;flex-direction:column;">
+                <button type="button" class="icon-btn" data-role="move-trial-criteria-up" data-criteria-id="${escapeHtml(c.id)}" title="Move up" ${ci === 0 ? 'disabled' : ''}>${icon('chevron-up', 12)}</button>
+                <button type="button" class="icon-btn" data-role="move-trial-criteria-down" data-criteria-id="${escapeHtml(c.id)}" title="Move down" ${ci === evaluationCriteria.length - 1 ? 'disabled' : ''}>${icon('chevron-down', 12)}</button>
+              </div>
               <input type="text" class="trial-criteria-label-input" data-criteria-id="${escapeHtml(c.id)}" value="${escapeHtml(c.label)}" placeholder="Criteria name">
               <button type="button" class="icon-btn" data-role="remove-trial-criteria" data-criteria-id="${escapeHtml(c.id)}" title="Remove this criteria">${icon('x')}</button>
             </div>`
@@ -1168,6 +1172,24 @@ export function renderTrialsList(){
         scheduleTrialSave(t);
         renderTrialsList();
       });
+    });
+    // Sensory Evaluation and Improvement Guidelines both read the same
+    // ordered list (see getEvaluationCriteria), so reordering a row here
+    // reorders both tables' rows at once.
+    const moveTrialCriteria = (criteriaId, delta) => {
+      const criteria = getEvaluationCriteria(t);
+      const idx = criteria.findIndex(x => x.id === criteriaId);
+      const target = idx + delta;
+      if(idx === -1 || target < 0 || target >= criteria.length) return;
+      [criteria[idx], criteria[target]] = [criteria[target], criteria[idx]];
+      scheduleTrialSave(t);
+      renderTrialsList();
+    };
+    block.querySelectorAll('[data-role="move-trial-criteria-up"]').forEach(btn => {
+      btn.addEventListener('click', () => moveTrialCriteria(btn.dataset.criteriaId, -1));
+    });
+    block.querySelectorAll('[data-role="move-trial-criteria-down"]').forEach(btn => {
+      btn.addEventListener('click', () => moveTrialCriteria(btn.dataset.criteriaId, 1));
     });
     block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', () => {
       getEvaluationCriteria(t).push({ id: uid(), label: '' });

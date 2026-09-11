@@ -760,7 +760,8 @@ const CHANGELOG = [
   { version: "3.0.422", date: "2026-09-11", note: "Perform Evaluation wizard: answer text (JAR score buttons, Test Result buttons, Comments, Review values) is now pure white for better readability against the dark background" },
   { version: "3.0.423", date: "2026-09-11", note: "Perform Evaluation wizard now uses a white background matching the rest of Forge, instead of the dark theme it launched with" },
   { version: "3.0.424", date: "2026-09-11", note: "Fixed the Sensory Evaluation criteria label on tests created before \"(Interior)\" was dropped from the default — they now show \"Appearance\" instead of \"Appearance (Interior)\", same as new tests" },
-  { version: "3.0.425", date: "2026-09-11", note: "Perform Evaluation wizard now shows a legend explaining what each JAR score (1-5) means, right above the questions on every sample's page" }
+  { version: "3.0.425", date: "2026-09-11", note: "Perform Evaluation wizard now shows a legend explaining what each JAR score (1-5) means, right above the questions on every sample's page" },
+  { version: "3.0.426", date: "2026-09-11", note: "Test Results' Sensory Evaluation criteria can now be reordered with up/down arrows while editing — Improvement Guidelines' rows follow the same order automatically" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

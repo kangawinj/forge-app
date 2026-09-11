@@ -836,6 +836,14 @@
     line-height:1;
   }
   .icon-btn:hover{background:var(--danger-light);color:var(--danger);}
+  /* Reorder arrows aren't a destructive action like the rest of .icon-btn
+     (remove/delete), so they get their own neutral hover instead of the
+     danger red -- and a plain disabled look at the top/bottom of the list
+     where there's nowhere further to move. */
+  [data-role="move-trial-criteria-up"], [data-role="move-trial-criteria-down"]{padding:1px;}
+  [data-role="move-trial-criteria-up"]:hover, [data-role="move-trial-criteria-down"]:hover{background:var(--primary-light);color:var(--primary);}
+  [data-role="move-trial-criteria-up"]:disabled, [data-role="move-trial-criteria-down"]:disabled{opacity:.3;cursor:default;}
+  [data-role="move-trial-criteria-up"]:disabled:hover, [data-role="move-trial-criteria-down"]:disabled:hover{background:none;color:var(--text-dim);}
   .add-row-btn{margin-top:10px;}
   /* Sub-parts nest one more .tree-children/.tree-branch level under a
      Part's own ingredient rows — same indent + connector-line treatment,
