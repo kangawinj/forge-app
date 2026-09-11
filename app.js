@@ -739,7 +739,8 @@ const CHANGELOG = [
   { version: "3.0.401", date: "2026-09-11", note: "Products' Cooking Instruction now has a \"Pick a Cooking Method\" dropdown above it, sourced from Reference Lists — picking a method that has Steps on file fills them into Cooking Instruction as a numbered starting point, same idea as Projects' Cooking Guidelines autofill" },
   { version: "3.0.402", date: "2026-09-11", note: "Moved Allergens on the Products form to right after Composition (Approx.), instead of next to EXW/Sales Price — fields renumbered accordingly" },
   { version: "3.0.403", date: "2026-09-11", note: "Fixed Products' Cooking Instruction, Description, and Remarks boxes not growing to fit their content when filled in by the Cooking Method quick-fill or when opening an existing product to edit — they now expand the same way they already do while typing" },
-  { version: "3.0.404", date: "2026-09-11", note: "Products' Allergens is now a search-and-tick picker sourced from the Food Allergens reference chart's 25 categories, instead of free text — type to search, click to add as many as apply, or press Enter to add something not on the list. Shows as removable tags; saved the same way as before, so nothing else needs to change" }
+  { version: "3.0.404", date: "2026-09-11", note: "Products' Allergens is now a search-and-tick picker sourced from the Food Allergens reference chart's 25 categories, instead of free text — type to search, click to add as many as apply, or press Enter to add something not on the list. Shows as removable tags; saved the same way as before, so nothing else needs to change" },
+  { version: "3.0.405", date: "2026-09-11", note: "Fixed the Allergens search dropdown staying open and overlapping the page below it after scrolling away — it now closes on scroll or on clicking anywhere outside it" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

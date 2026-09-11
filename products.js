@@ -137,6 +137,30 @@ function renderAllergenSuggestions(query){
     });
   });
 }
+// The suggestions box only reliably closes on blur when focus actually
+// moves to another focusable element -- scrolling the page doesn't blur
+// the search input, so without this a still-open dropdown stays pinned in
+// place (position:absolute tracks the page, not the viewport) and ends up
+// overlapping whatever the user scrolled down to see. Registered once at
+// module load, same "global delegated listener" shape as app.js's
+// autoGrowTextarea input listener, rather than re-added on every mount.
+window.addEventListener('scroll', () => {
+  const box = document.getElementById('pf-allergenSuggestions');
+  if(box && !box.hidden) box.hidden = true;
+}, { passive: true, capture: true });
+// Belt-and-suspenders alongside the scroll listener above: closes it on a
+// click anywhere outside the picker too, independent of scroll mechanics.
+// Capture phase, and deliberately BEFORE any bubble-phase handler on the
+// clicked element runs -- a suggestion button's own mousedown handler
+// replaces box.innerHTML (to re-render with that item now picked), which
+// detaches the clicked button and breaks its .closest() chain; checking
+// in capture phase (top-down, ahead of the target's own bubble-phase
+// handler) reads the still-attached DOM instead of a torn-down one.
+document.addEventListener('mousedown', e => {
+  if(e.target.closest('.pf-allergen-picker')) return;
+  const box = document.getElementById('pf-allergenSuggestions');
+  if(box && !box.hidden) box.hidden = true;
+}, true);
 
 const PRODUCT_FORM_FIELD_IDS = [
   'pf-name', 'pf-sampleCode', 'pf-productType', 'pf-ideaMenuName', 'pf-description',
