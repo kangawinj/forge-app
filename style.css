@@ -3687,6 +3687,16 @@
   .trial-result-needs-revision b{color:var(--accent);}
   .trial-result-not-accepted{background:color-mix(in srgb, var(--danger) 10%, transparent);}
   .trial-result-not-accepted b{color:var(--danger);}
+  /* Test Result -- one pick only, so radios rather than the Certificate/
+     Docs checklists' checkboxes (see .proj-cert-checklist). Stacked, not
+     wrapped, since the Test Result cell is only as wide as any other
+     score cell in this table. */
+  .trial-testresult-radios{display:flex;flex-direction:column;gap:4px;}
+  .trial-testresult-radio-label{display:flex;align-items:center;gap:6px;font-weight:400;}
+  /* Improvement Guidelines only makes sense once a product's Test Result
+     is Needs Revision -- Accepted/Not accepted are already a final call.
+     Muted to read as "not needed" rather than "still blank". */
+  .trial-improve-na textarea{background:var(--bg);color:var(--text-dim);}
 
   .empty-state{
     text-align:center;

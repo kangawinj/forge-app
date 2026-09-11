@@ -132,7 +132,7 @@ function improvementFieldValue(pd, criteriaId){
   const legacyKey = LEGACY_IMPROVEMENT_KEYS[criteriaId];
   return (legacyKey ? pd[legacyKey] : '') || '';
 }
-const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Needs Revision', 'Not accepted'];
+const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 const TRIAL_TEST_RESULT_CLASSES = {
   'Accepted': 'trial-result-accepted',
   'Needs Revision': 'trial-result-needs-revision',
@@ -416,17 +416,27 @@ export function renderTrialsList(){
           const val = pd.testResult || '';
           const resultClass = TRIAL_TEST_RESULT_CLASSES[val] || '';
           return `<td class="${i > 0 ? 'recipe-boundary' : ''} ${resultClass}">${isEditing
-            ? `<select class="proj-select teval-testresult" data-product-id="${escapeHtml(p.id)}"><option value="">-</option>${TRIAL_TEST_RESULT_OPTIONS.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+            ? `<div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
+                <label class="trial-testresult-radio-label">
+                  <input type="radio" name="teval-testresult-${escapeHtml(p.id)}" class="teval-testresult" data-product-id="${escapeHtml(p.id)}" value="${o}" ${val === o ? 'checked' : ''}>
+                  ${o}
+                </label>
+              `).join('')}</div>`
             : `<b>${escapeHtml(val || '-')}</b>`}</td>`;
         }).join('')}
       </tr>
     `;
+    // Improvement notes only make sense for a product still Needs Revision
+    // -- Accepted/Not accepted are already a final call, nothing left to
+    // improve toward. Locked (readonly, muted) for every other Test Result,
+    // including not-yet-picked.
     const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
+          const needsRevision = pd.testResult === 'Needs Revision';
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? '' : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
         }).join('')}
       </tr>
     `).join('');
