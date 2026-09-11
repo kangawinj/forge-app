@@ -351,7 +351,11 @@ export function renderTrialsList(){
     // always asks the same handful of questions.
     const evalTargets = [
       ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
-      ...manualProducts.map(mp => ({ id: mp.id, label: mp.name || 'Untitled' }))
+      // Two manual products can share the same name (e.g. duplicated as a
+      // starting point for a variant, or just two samples of "Alfrado" at
+      // different Codes) -- appending the Code keeps their evaluation
+      // table columns distinguishable instead of both reading "ALFRADO".
+      ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
     ];
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const fixedCriteriaRowsHtml = TRIAL_FIXED_CRITERIA.map(c => `
