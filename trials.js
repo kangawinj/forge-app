@@ -107,7 +107,12 @@ const TRIAL_IMPROVEMENT_CRITERIA = [
   { key: 'improveOdor', label: 'Odor' },
   { key: 'improveTexture', label: 'Texture' }
 ];
-const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted'];
+const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Needs Revision', 'Not accepted'];
+const TRIAL_TEST_RESULT_CLASSES = {
+  'Accepted': 'trial-result-accepted',
+  'Needs Revision': 'trial-result-needs-revision',
+  'Not accepted': 'trial-result-not-accepted'
+};
 
 // A product being compared that isn't one of this app's own Recipes — a
 // competitor sample, a customer's existing product, anything typed in by
@@ -375,7 +380,7 @@ export function renderTrialsList(){
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const val = pd.testResult || '';
-          const resultClass = val === 'Accepted' ? 'trial-result-accepted' : (val === 'Not accepted' ? 'trial-result-not-accepted' : '');
+          const resultClass = TRIAL_TEST_RESULT_CLASSES[val] || '';
           return `<td class="${i > 0 ? 'recipe-boundary' : ''} ${resultClass}">${isEditing
             ? `<select class="proj-select teval-testresult" data-product-id="${escapeHtml(p.id)}"><option value="">-</option>${TRIAL_TEST_RESULT_OPTIONS.map(o => `<option value="${o}" ${val === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
             : `<b>${escapeHtml(val || '-')}</b>`}</td>`;

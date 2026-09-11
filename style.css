@@ -3683,6 +3683,8 @@
   .trial-photo-slot input[type="file"]{width:100px;font-size:11px;}
   .trial-result-accepted{background:color-mix(in srgb, var(--ok) 12%, transparent);}
   .trial-result-accepted b{color:var(--ok);}
+  .trial-result-needs-revision{background:color-mix(in srgb, var(--accent) 12%, transparent);}
+  .trial-result-needs-revision b{color:var(--accent);}
   .trial-result-not-accepted{background:color-mix(in srgb, var(--danger) 10%, transparent);}
   .trial-result-not-accepted b{color:var(--danger);}
 
