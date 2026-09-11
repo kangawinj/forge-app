@@ -740,7 +740,8 @@ const CHANGELOG = [
   { version: "3.0.402", date: "2026-09-11", note: "Moved Allergens on the Products form to right after Composition (Approx.), instead of next to EXW/Sales Price — fields renumbered accordingly" },
   { version: "3.0.403", date: "2026-09-11", note: "Fixed Products' Cooking Instruction, Description, and Remarks boxes not growing to fit their content when filled in by the Cooking Method quick-fill or when opening an existing product to edit — they now expand the same way they already do while typing" },
   { version: "3.0.404", date: "2026-09-11", note: "Products' Allergens is now a search-and-tick picker sourced from the Food Allergens reference chart's 25 categories, instead of free text — type to search, click to add as many as apply, or press Enter to add something not on the list. Shows as removable tags; saved the same way as before, so nothing else needs to change" },
-  { version: "3.0.405", date: "2026-09-11", note: "Fixed the Allergens search dropdown staying open and overlapping the page below it after scrolling away — it now closes on scroll or on clicking anywhere outside it" }
+  { version: "3.0.405", date: "2026-09-11", note: "Fixed the Allergens search dropdown staying open and overlapping the page below it after scrolling away — it now closes on scroll or on clicking anywhere outside it" },
+  { version: "3.0.406", date: "2026-09-11", note: "Added a Duplicate button to each manually-typed product in Test Results' \"Products Being Compared\" — copies its Name, Code, and photos as a starting point for a near-identical variant, up to the usual 4-product limit" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

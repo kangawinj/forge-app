@@ -298,6 +298,11 @@ export function renderTrialsList(){
     ];
     const manualCardsHtml = manualProducts.map(mp => {
       const removeBtn = isEditing ? `<button class="icon-btn" data-role="remove-trial-manual" data-manual-id="${escapeHtml(mp.id)}" title="Remove this product" style="margin-top:8px;">${icon('x')} Remove</button>` : '';
+      // Duplicate copies this card (name, Code, photos) as a starting point
+      // for a near-identical variant -- e.g. same product at a different
+      // Code -- without retyping everything. Hidden once at the cap, same
+      // as +Add above.
+      const duplicateBtn = isEditing && !atMax ? `<button class="icon-btn" data-role="duplicate-trial-manual" data-manual-id="${escapeHtml(mp.id)}" title="Duplicate this product" style="margin-top:8px;">${icon('copy')} Duplicate</button>` : '';
       if(isEditing){
         return `
           <div class="compare-info-col" data-manual-id="${escapeHtml(mp.id)}">
@@ -313,6 +318,7 @@ export function renderTrialsList(){
               }</div>
             `).join('')}
             ${trialPhotosHtml(mp.id)}
+            ${duplicateBtn}
             ${removeBtn}
           </div>
         `;
@@ -590,6 +596,26 @@ export function renderTrialsList(){
       renderTrialsList();
     });
 
+    block.querySelectorAll('[data-role="duplicate-trial-manual"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(combinedCountNow() >= TRIAL_MAX_PRODUCTS) return;
+        const manualId = btn.dataset.manualId;
+        const source = (t.manualProducts || []).find(x => x.id === manualId);
+        if(!source) return;
+        const copy = { ...source, id: uid() };
+        if(!Array.isArray(t.manualProducts)) t.manualProducts = [];
+        t.manualProducts.push(copy);
+        // Photos live in t.productData keyed by product id -- deep-copy them
+        // under the new id (with fresh photo ids too) so editing/removing a
+        // photo on one copy never touches the other's.
+        const sourcePhotos = normalizeTrialPhotos(getTrialProductData(t, manualId));
+        if(sourcePhotos.length){
+          getTrialProductData(t, copy.id).photos = sourcePhotos.map(p => ({ ...p, id: uid() }));
+        }
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
     block.querySelectorAll('[data-role="remove-trial-manual"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const manualId = btn.dataset.manualId;
