@@ -833,4 +833,4 @@ export function resetRefListsState(){
   metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [] };
 }
 
-export { metaLists, unsubscribeMetaLists };
+export { metaLists, unsubscribeMetaLists, FOOD_ALLERGEN_COLUMNS };

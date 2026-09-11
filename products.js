@@ -3,7 +3,8 @@ import {
   DELETE_APPROVER_EMAIL, approverProductsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName, autoGrowTextarea
+  productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName, autoGrowTextarea,
+  FOOD_ALLERGEN_COLUMNS
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, writeBatch
@@ -78,9 +79,68 @@ function renderCompositionRows(){
   });
 }
 
+// Allergens -- a search + multi-tick picker sourced from the Food
+// Allergens reference chart's 25 categories (see FOOD_ALLERGEN_COLUMNS
+// in reflists.js), plus free text for anything not on that list. Kept
+// as a comma-joined string on save -- the same shape this field always
+// saved as, so nothing downstream that reads p.allergens as plain text
+// (Sample Submissions' spec table, the product detail view) needs to
+// change. Staged the same "editing draft" way as compositionRowsEditing.
+let allergensEditing = [];
+function getAllergens(allergens){
+  if(Array.isArray(allergens)) return allergens.filter(Boolean);
+  if(typeof allergens === 'string' && allergens.trim()) return allergens.split(',').map(a => a.trim()).filter(Boolean);
+  return [];
+}
+function renderAllergenChips(){
+  const wrap = document.getElementById('pf-allergenChips');
+  if(!wrap) return;
+  wrap.innerHTML = allergensEditing.map((a, idx) => `
+    <span class="pf-allergen-chip">${escapeHtml(a)}<button type="button" class="pf-allergen-chip-remove" data-idx="${idx}" title="Remove">${icon('x', 12)}</button></span>
+  `).join('');
+  wrap.querySelectorAll('.pf-allergen-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      allergensEditing.splice(parseInt(btn.dataset.idx, 10), 1);
+      renderAllergenChips();
+    });
+  });
+}
+function addAllergen(name){
+  const v = (name || '').trim();
+  if(!v || allergensEditing.some(a => a.toLowerCase() === v.toLowerCase())) return;
+  allergensEditing.push(v);
+  renderAllergenChips();
+}
+// Suggestions are the 25 reference categories that match what's typed
+// (or all of them, focused with nothing typed yet) and aren't already
+// picked -- clicking one adds it without closing the field, so several
+// can be ticked in a row.
+function renderAllergenSuggestions(query){
+  const box = document.getElementById('pf-allergenSuggestions');
+  if(!box) return;
+  const q = (query || '').trim().toLowerCase();
+  const matches = FOOD_ALLERGEN_COLUMNS.filter(c =>
+    !allergensEditing.some(a => a.toLowerCase() === c.toLowerCase()) &&
+    (!q || c.toLowerCase().includes(q))
+  ).slice(0, 8);
+  if(!matches.length){ box.hidden = true; box.innerHTML = ''; return; }
+  box.innerHTML = matches.map(c => `<button type="button" class="pf-allergen-suggestion" data-name="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  box.hidden = false;
+  box.querySelectorAll('.pf-allergen-suggestion').forEach(btn => {
+    btn.addEventListener('mousedown', e => {
+      // preventDefault keeps focus in the search input instead of letting
+      // it blur first, which would hide this dropdown before the click lands.
+      e.preventDefault();
+      addAllergen(btn.dataset.name);
+      document.getElementById('pf-allergenSearch').value = '';
+      renderAllergenSuggestions('');
+    });
+  });
+}
+
 const PRODUCT_FORM_FIELD_IDS = [
   'pf-name', 'pf-sampleCode', 'pf-productType', 'pf-ideaMenuName', 'pf-description',
-  'pf-cookingInstruction', 'pf-allergens', 'pf-processedArea',
+  'pf-cookingInstruction', 'pf-processedArea',
   'pf-factory', 'pf-size', 'pf-packingStyle', 'pf-moq', 'pf-exwPrice', 'pf-salesPrice', 'pf-remarks'
 ];
 // composition is deliberately not in PRODUCT_DIFF_FIELDS -- it's a
@@ -311,7 +371,11 @@ export function mountProductsView(){
         </div>
         <div class="field">
           <label>17. Allergens</label>
-          <input type="text" id="pf-allergens" placeholder="e.g. Shrimp, Wheat, Soy bean">
+          <div class="pf-allergen-picker">
+            <div class="pf-allergen-chips" id="pf-allergenChips"></div>
+            <input type="text" id="pf-allergenSearch" placeholder="Search allergens (e.g. Shrimp, Wheat, Soy) or type your own and press Enter" autocomplete="off">
+            <div class="pf-allergen-suggestions" id="pf-allergenSuggestions" hidden></div>
+          </div>
         </div>
         <div class="field">
           <label>18. Remarks</label>
@@ -381,6 +445,23 @@ export function mountProductsView(){
       autoGrowTextarea(instrEl);
     }
   });
+  const allergenSearch = document.getElementById('pf-allergenSearch');
+  allergenSearch.addEventListener('input', () => renderAllergenSuggestions(allergenSearch.value));
+  allergenSearch.addEventListener('focus', () => renderAllergenSuggestions(allergenSearch.value));
+  allergenSearch.addEventListener('blur', () => {
+    // Delayed so a suggestion's own mousedown (which already preventDefault
+    // stops the blur that would otherwise race it) still has a moment to
+    // register as a click before this hides the dropdown.
+    setTimeout(() => { document.getElementById('pf-allergenSuggestions').hidden = true; }, 150);
+  });
+  allergenSearch.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      addAllergen(allergenSearch.value);
+      allergenSearch.value = '';
+      renderAllergenSuggestions('');
+    }
+  });
   document.getElementById('pf-rmImage').addEventListener('change', async e => {
     const file = e.target.files[0];
     if(!file) return;
@@ -432,7 +513,7 @@ export function mountProductsView(){
       composition: compositionRowsEditing
         .filter(r => r.main || r.sub1 || r.sub2 || r.pct !== '')
         .map(r => ({ main: r.main, sub1: r.sub1, sub2: r.sub2, pct: r.pct })),
-      allergens: document.getElementById('pf-allergens').value.trim(),
+      allergens: allergensEditing.join(', '),
       processedArea: document.getElementById('pf-processedArea').value.trim(),
       factory: document.getElementById('pf-factory').value.trim(),
       size: document.getElementById('pf-size').value.trim(),
@@ -587,7 +668,10 @@ function fillProductForm(p){
   document.getElementById('pf-cookingInstruction').value = p.cookingInstruction || '';
   compositionRowsEditing = getComposition(p.composition);
   renderCompositionRows();
-  document.getElementById('pf-allergens').value = p.allergens || '';
+  allergensEditing = getAllergens(p.allergens);
+  renderAllergenChips();
+  document.getElementById('pf-allergenSearch').value = '';
+  renderAllergenSuggestions('');
   document.getElementById('pf-processedArea').value = p.processedArea || '';
   document.getElementById('pf-factory').value = p.factory || '';
   document.getElementById('pf-size').value = p.size || '';
@@ -638,6 +722,10 @@ function cancelEditProduct(){
   document.getElementById('pf-cookingMethodPick').value = '';
   compositionRowsEditing = [blankCompositionRow()];
   renderCompositionRows();
+  allergensEditing = [];
+  renderAllergenChips();
+  document.getElementById('pf-allergenSearch').value = '';
+  renderAllergenSuggestions('');
   document.getElementById('pf-rmImage').value = '';
   document.getElementById('pf-ideaMenuImage').value = '';
   setProductImagePreview('rm', null);

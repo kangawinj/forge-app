@@ -3490,6 +3490,35 @@
   .mu-attachment-remove:hover{color:var(--danger);}
   .mu-attachments-editor{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
   .mu-attach-btn{display:inline-flex;align-items:center;gap:5px;}
+  /* Products' Allergens -- search + multi-tick picker (see
+     renderAllergenChips/renderAllergenSuggestions in products.js) sourced
+     from the Food Allergens reference chart's 25 categories, plus free
+     text. Chip styling mirrors .mu-attachment-chip; the suggestions
+     dropdown mirrors .ing-suggestions. */
+  .pf-allergen-picker{position:relative;}
+  .pf-allergen-chips{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px;}
+  .pf-allergen-chips:empty{display:none;}
+  .pf-allergen-chip{display:inline-flex;align-items:center;gap:5px;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:3px 8px 3px 10px;font-size:12px;}
+  .pf-allergen-chip-remove{display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;}
+  .pf-allergen-chip-remove:hover{color:var(--danger);}
+  .pf-allergen-suggestions{
+    position:absolute;
+    top:100%;
+    left:0;
+    right:0;
+    z-index:20;
+    margin-top:4px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    box-shadow:0 6px 16px rgba(0,0,0,.12);
+    max-height:220px;
+    overflow-y:auto;
+    display:flex;
+    flex-direction:column;
+  }
+  .pf-allergen-suggestion{display:block;width:100%;text-align:left;padding:8px 12px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);}
+  .pf-allergen-suggestion:hover, .pf-allergen-suggestion:active{background:var(--primary-light);}
   /* Attachment Preview popup — image/PDF render inline, other file types
      fall back to a centered message + the always-present Download button. */
   .mu-attachment-preview-body{display:flex;align-items:center;justify-content:center;min-height:200px;max-height:65vh;background:var(--bg);border-radius:var(--radius);overflow:auto;}
