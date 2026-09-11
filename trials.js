@@ -75,6 +75,15 @@ function getTrialProductData(t, productId){
   if(!t.productData[productId]) t.productData[productId] = {};
   return t.productData[productId];
 }
+// A per-criteria-row Note, spanning all products rather than one per
+// product -- e.g. a general remark about "Odor" that applies across every
+// sample being compared. Sensory Evaluation and Improvement Guidelines
+// keep separate notes for the same criteria row (same id, different
+// bucket) since the two tables' remarks don't necessarily overlap.
+function getCriteriaNotes(t, bucket){
+  if(!t[bucket] || typeof t[bucket] !== 'object') t[bucket] = {};
+  return t[bucket];
+}
 // A product's photos: one free-form gallery (up to TRIAL_PHOTO_MAX), each
 // with an editable caption (defaults to the uploaded file's own name) --
 // no fixed "Before/After frying" categories, the caption itself says
@@ -392,6 +401,7 @@ export function renderTrialsList(){
     ];
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
+    const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
     const fixedCriteriaRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td>${isEditing
@@ -404,6 +414,7 @@ export function renderTrialsList(){
           const pd = getTrialProductData(mt, p.id);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.id] || '')}</textarea></td>`;
         }).join('')}
+        <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
     `).join('');
     const addCriteriaBtnHtml = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-trial-criteria" style="margin-top:8px;">+ Add Criteria</button>` : '';
@@ -437,12 +448,14 @@ export function renderTrialsList(){
                 </label>
               `).join('')}</div>`}</td>`;
         }).join('')}
+        <td class="recipe-boundary"></td>
       </tr>
     `;
     // Improvement notes only make sense for a product still Needs Revision
     // -- Accepted/Not accepted are already a final call, nothing left to
     // improve toward. Locked (readonly, muted) for every other Test Result,
     // including not-yet-picked.
+    const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
     const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
@@ -451,13 +464,15 @@ export function renderTrialsList(){
           const needsRevision = pd.testResult === 'Needs Revision';
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? '' : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
         }).join('')}
+        <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
     `).join('');
 
     // 220px leading column mirrors the product-card spacer above so the two
     // grids share the same column ruler — rows are fixed now, so no
     // trailing comment/delete columns are needed any more.
-    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(evalTargets.length)}</colgroup>`;
+    // +1 trailing col for the Note column both tables now share.
+    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
@@ -566,7 +581,7 @@ export function renderTrialsList(){
               <div style="overflow-x:auto;">
                 <table class="compare-table">
                   ${trialColgroup}
-                  <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                  <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>
@@ -580,7 +595,7 @@ export function renderTrialsList(){
               <div style="overflow-x:auto;">
                 <table class="compare-table">
                   ${trialColgroup}
-                  <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                  <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${improvementRowsHtml}</tbody>
                 </table>
               </div>
@@ -824,6 +839,13 @@ export function renderTrialsList(){
       el.addEventListener('change', () => {
         const pd = getTrialProductData(t, el.dataset.productId);
         pd[el.dataset.field] = el.value.trim();
+        scheduleTrialSave(t);
+      });
+    });
+    block.querySelectorAll('.teval-criteria-note').forEach(el => {
+      el.addEventListener('change', () => {
+        const notes = getCriteriaNotes(t, el.dataset.bucket);
+        notes[el.dataset.criteriaId] = el.value.trim();
         scheduleTrialSave(t);
       });
     });
