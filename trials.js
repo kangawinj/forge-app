@@ -324,6 +324,9 @@ function renderEvalWizardStep(t, products, criteria, step){
       </div>
       <div class="eval-wizard-progress">Sample ${step + 1} of ${products.length}</div>
       <div class="eval-wizard-product-name">${escapeHtml(p.label)}</div>
+      <div class="eval-wizard-jar-legend">
+        ${JAR_SCALE.map(s => `<div class="eval-wizard-jar-legend-item"><b>${s.value}</b><span>${escapeHtml(s.label)}</span></div>`).join('')}
+      </div>
       ${criteria.map(c => `
         <div class="eval-wizard-question">
           <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>

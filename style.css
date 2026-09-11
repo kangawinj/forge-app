@@ -4898,7 +4898,23 @@
   }
   .eval-wizard-close:hover{background:var(--primary-light);border-color:var(--primary);}
   .eval-wizard-progress{font-size:12px;color:var(--text-dim);margin-top:10px;letter-spacing:.02em;}
-  .eval-wizard-product-name{font-size:20px;font-weight:700;color:var(--primary-dark);margin:4px 0 22px;}
+  .eval-wizard-product-name{font-size:20px;font-weight:700;color:var(--primary-dark);margin:4px 0 16px;}
+  /* One legend for the whole page rather than repeating it per criteria --
+     the 1-5 wording is the same generic scale for every row (see
+     JAR_SCALE), so a single reference up top is enough context to answer
+     every question below it. */
+  .eval-wizard-jar-legend{
+    display:flex;
+    flex-wrap:wrap;
+    gap:4px 16px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-radius:10px;
+    padding:10px 14px;
+    margin-bottom:22px;
+  }
+  .eval-wizard-jar-legend-item{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--text-dim);}
+  .eval-wizard-jar-legend-item b{color:var(--primary-dark);}
   .eval-wizard-question{margin-bottom:22px;}
   .eval-wizard-question-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;}
   .eval-wizard-jar-row{display:flex;gap:8px;}
