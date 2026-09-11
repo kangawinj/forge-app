@@ -3,7 +3,7 @@ import {
   DELETE_APPROVER_EMAIL, approverProductsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName
+  productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName, autoGrowTextarea
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, writeBatch
@@ -372,7 +372,13 @@ export function mountProductsView(){
     const picked = e.target.value.trim();
     const match = metaLists.cookingMethods.find(m => metaItemName(m) === picked);
     if(match && (match.steps || []).length){
-      document.getElementById('pf-cookingInstruction').value = match.steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+      const instrEl = document.getElementById('pf-cookingInstruction');
+      instrEl.value = match.steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+      // Setting .value directly doesn't fire 'input', so it wouldn't
+      // trigger the app-wide autoGrowTextarea listener on its own -- grow
+      // it explicitly instead of leaving the filled-in Steps clipped to
+      // the textarea's default 2 rows.
+      autoGrowTextarea(instrEl);
     }
   });
   document.getElementById('pf-rmImage').addEventListener('change', async e => {
@@ -594,6 +600,11 @@ function fillProductForm(p){
   document.getElementById('pf-ideaMenuImage').value = '';
   setProductImagePreview('rm', p.rmImage || null);
   setProductImagePreview('ideaMenu', p.ideaMenuImage || null);
+  // Setting .value directly above doesn't fire 'input', so it wouldn't
+  // trigger the app-wide autoGrowTextarea listener on its own -- grow
+  // each textarea explicitly so a long saved value isn't clipped to its
+  // default 2 rows when editing an existing product.
+  ['pf-description', 'pf-cookingInstruction', 'pf-remarks'].forEach(id => autoGrowTextarea(document.getElementById(id)));
 }
 
 function startEditProduct(p){

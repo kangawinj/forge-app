@@ -75,7 +75,8 @@ export {
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
-  openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText
+  openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText,
+  autoGrowTextarea
 };
 
 const firebaseConfig = {
@@ -736,7 +737,8 @@ const CHANGELOG = [
   { version: "3.0.399", date: "2026-09-10", note: "Reference Lists' Cooking Method tab: entries now sort A-Z regardless of upper/lower case, and each entry's Steps show as a plain numbered list instead of a row of boxed input fields — the input boxes still appear when you click Edit" },
   { version: "3.0.400", date: "2026-09-10", note: "Added an optional Note field to Reference Lists' Cooking Method entries — click \"+ Note\" while editing to add a remark (e.g. \"Do not reheat more than once\") separate from the numbered Steps" },
   { version: "3.0.401", date: "2026-09-11", note: "Products' Cooking Instruction now has a \"Pick a Cooking Method\" dropdown above it, sourced from Reference Lists — picking a method that has Steps on file fills them into Cooking Instruction as a numbered starting point, same idea as Projects' Cooking Guidelines autofill" },
-  { version: "3.0.402", date: "2026-09-11", note: "Moved Allergens on the Products form to right after Composition (Approx.), instead of next to EXW/Sales Price — fields renumbered accordingly" }
+  { version: "3.0.402", date: "2026-09-11", note: "Moved Allergens on the Products form to right after Composition (Approx.), instead of next to EXW/Sales Price — fields renumbered accordingly" },
+  { version: "3.0.403", date: "2026-09-11", note: "Fixed Products' Cooking Instruction, Description, and Remarks boxes not growing to fit their content when filled in by the Cooking Method quick-fill or when opening an existing product to edit — they now expand the same way they already do while typing" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
