@@ -3,7 +3,7 @@ import {
   DELETE_APPROVER_EMAIL, approverProductsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  productsCol, showCloudError, isCurrentUserAdmin, db
+  productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, writeBatch
@@ -300,6 +300,7 @@ export function mountProductsView(){
         </div>
         <div class="field">
           <label>16. Cooking Instruction</label>
+          <input type="text" id="pf-cookingMethodPick" list="cookingMethodDatalist" placeholder="Pick a Cooking Method (Reference Lists) to fill in its Steps below" style="margin-bottom:6px;">
           <textarea id="pf-cookingInstruction" rows="2" placeholder="e.g. ต้มในน้ำเดือด 10-15 นาที โดยไม่ต้องละลายสินค้า"></textarea>
         </div>
         <div class="field">
@@ -360,6 +361,19 @@ export function mountProductsView(){
   document.getElementById('btnAddCompositionRow').addEventListener('click', () => {
     compositionRowsEditing.push(blankCompositionRow());
     renderCompositionRows();
+  });
+  // Cooking Method quick-fill -- picking a method that has Steps on file
+  // (Reference Lists) fills them into Cooking Instruction as a starting
+  // point, same idea as Projects' Cooking Guidelines autofill. It's just a
+  // one-shot helper, not a saved field, so it's not in
+  // PRODUCT_FORM_FIELD_IDS/PRODUCT_DIFF_FIELDS -- cancelEditProduct clears
+  // it manually instead.
+  document.getElementById('pf-cookingMethodPick').addEventListener('change', e => {
+    const picked = e.target.value.trim();
+    const match = metaLists.cookingMethods.find(m => metaItemName(m) === picked);
+    if(match && (match.steps || []).length){
+      document.getElementById('pf-cookingInstruction').value = match.steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+    }
   });
   document.getElementById('pf-rmImage').addEventListener('change', async e => {
     const file = e.target.files[0];
@@ -558,6 +572,7 @@ function setProductImagePreview(which, dataUrl){
 }
 
 function fillProductForm(p){
+  document.getElementById('pf-cookingMethodPick').value = '';
   document.getElementById('pf-name').value = p.name || '';
   document.getElementById('pf-sampleCode').value = p.sampleCode || '';
   document.getElementById('pf-productType').value = p.productType || '';
@@ -609,6 +624,7 @@ function cancelEditProduct(){
   editingProductId = null;
   productEditSnapshotBefore = null;
   PRODUCT_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('pf-cookingMethodPick').value = '';
   compositionRowsEditing = [blankCompositionRow()];
   renderCompositionRows();
   document.getElementById('pf-rmImage').value = '';
