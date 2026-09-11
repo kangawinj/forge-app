@@ -758,7 +758,8 @@ const CHANGELOG = [
   { version: "3.0.420", date: "2026-09-11", note: "Added \"Perform Evaluation\" to Test Results — anyone logged in can submit their own Sensory Evaluation and Test Result for a product, kept separate from everyone else's, with an Overall view showing every evaluator's answer side by side. Auto-adds you to Test Participants the first time you submit. Improvement Guidelines now unlocks if any evaluator flags Needs Revision, not just one shared pick; it stays a single shared field for whoever manages the test, same as before" },
   { version: "3.0.421", date: "2026-09-11", note: "\"Perform Evaluation\" is now a full-screen, one-sample-at-a-time wizard — score each Sensory Evaluation criteria on a 1-5 scale, add Comments, pick a Test Result, then Review every sample's answers together before Done. Replaces the previous inline table editing; the Overall view on the main page still shows every evaluator's answer side by side" },
   { version: "3.0.422", date: "2026-09-11", note: "Perform Evaluation wizard: answer text (JAR score buttons, Test Result buttons, Comments, Review values) is now pure white for better readability against the dark background" },
-  { version: "3.0.423", date: "2026-09-11", note: "Perform Evaluation wizard now uses a white background matching the rest of Forge, instead of the dark theme it launched with" }
+  { version: "3.0.423", date: "2026-09-11", note: "Perform Evaluation wizard now uses a white background matching the rest of Forge, instead of the dark theme it launched with" },
+  { version: "3.0.424", date: "2026-09-11", note: "Fixed the Sensory Evaluation criteria label on tests created before \"(Interior)\" was dropped from the default — they now show \"Appearance\" instead of \"Appearance (Interior)\", same as new tests" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

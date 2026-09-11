@@ -181,6 +181,13 @@ function blankEvaluationCriteria(){
 }
 function getEvaluationCriteria(t){
   if(!Array.isArray(t.evaluationCriteria) || !t.evaluationCriteria.length) t.evaluationCriteria = blankEvaluationCriteria();
+  // A test saved before "(Interior)" was dropped from this default (see
+  // CHANGELOG 3.0.415) still carries the old label verbatim -- criteria
+  // are stored per-test now that they're editable, so the code default
+  // alone never reaches it. Only the exact untouched old default text is
+  // corrected here, never a custom label someone deliberately typed.
+  const legacy = t.evaluationCriteria.find(c => c.id === 'appearanceInterior' && c.label === 'Appearance (Interior)');
+  if(legacy) legacy.label = 'Appearance';
   return t.evaluationCriteria;
 }
 // Improvement Guidelines used to store its 3 criteria under their own
