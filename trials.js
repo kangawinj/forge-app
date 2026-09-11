@@ -474,50 +474,52 @@ export function renderTrialsList(){
             </div>
           </div>
 
-          <div class="trial-part-title trial-part2-title requirements-box-divider" style="margin-top:20px;">Part 2</div>
-          <div class="field">
-            <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
-            ${productCardsGrid}
-            ${isEditing ? `
-              <div class="project-add-row" style="margin-top:12px;">
-                <select class="trial-add-recipe-select" ${atMax ? 'disabled' : ''}>
-                  <option value="">${atMax ? `Maximum ${TRIAL_MAX_PRODUCTS} products reached` : (availableRecipes.length ? 'Select a product to add...' : 'No more recipes available')}</option>
-                  ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('')}
-                </select>
-                <button class="btn btn-sm" data-role="add-trial-recipe" ${atMax ? 'disabled' : ''}>+ Add</button>
-              </div>
-              <div class="project-add-row" style="margin-top:8px;">
-                <input type="text" class="trial-add-manual-input" placeholder="Or type a product name manually (e.g. a competitor sample)..." maxlength="120" ${atMax ? 'disabled' : ''}>
-                <button class="btn btn-sm" data-role="add-trial-manual" ${atMax ? 'disabled' : ''}>+ Add</button>
-              </div>
-            ` : ''}
-          </div>
-          ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
-
-          <div class="field">
-            <label>Sensory Evaluation</label>
-            ${evalTargets.length ? `
-            <div style="overflow-x:auto;">
-              <table class="compare-table">
-                ${trialColgroup}
-                <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
-                <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
-              </table>
+          <div class="trial-part2-box">
+            <div class="trial-part-title">Part 2</div>
+            <div class="field">
+              <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
+              ${productCardsGrid}
+              ${isEditing ? `
+                <div class="project-add-row" style="margin-top:12px;">
+                  <select class="trial-add-recipe-select" ${atMax ? 'disabled' : ''}>
+                    <option value="">${atMax ? `Maximum ${TRIAL_MAX_PRODUCTS} products reached` : (availableRecipes.length ? 'Select a product to add...' : 'No more recipes available')}</option>
+                    ${availableRecipes.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('')}
+                  </select>
+                  <button class="btn btn-sm" data-role="add-trial-recipe" ${atMax ? 'disabled' : ''}>+ Add</button>
+                </div>
+                <div class="project-add-row" style="margin-top:8px;">
+                  <input type="text" class="trial-add-manual-input" placeholder="Or type a product name manually (e.g. a competitor sample)..." maxlength="120" ${atMax ? 'disabled' : ''}>
+                  <button class="btn btn-sm" data-role="add-trial-manual" ${atMax ? 'disabled' : ''}>+ Add</button>
+                </div>
+              ` : ''}
             </div>
-            ` : '<div class="overview-empty">Add a product above first</div>'}
-          </div>
+            ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
-          <div class="field">
-            <label>Improvement Guidelines</label>
-            ${evalTargets.length ? `
-            <div style="overflow-x:auto;">
-              <table class="compare-table">
-                ${trialColgroup}
-                <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
-                <tbody>${improvementRowsHtml}</tbody>
-              </table>
+            <div class="field">
+              <label>Sensory Evaluation</label>
+              ${evalTargets.length ? `
+              <div style="overflow-x:auto;">
+                <table class="compare-table">
+                  ${trialColgroup}
+                  <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
+                </table>
+              </div>
+              ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>
-            ` : '<div class="overview-empty">Add a product above first</div>'}
+
+            <div class="field">
+              <label>Improvement Guidelines</label>
+              ${evalTargets.length ? `
+              <div style="overflow-x:auto;">
+                <table class="compare-table">
+                  ${trialColgroup}
+                  <thead><tr><th>Criteria</th>${evalHeaderCells}</tr></thead>
+                  <tbody>${improvementRowsHtml}</tbody>
+                </table>
+              </div>
+              ` : '<div class="overview-empty">Add a product above first</div>'}
+            </div>
           </div>
         </div>
       </div>

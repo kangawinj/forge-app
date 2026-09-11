@@ -743,7 +743,8 @@ const CHANGELOG = [
   { version: "3.0.405", date: "2026-09-11", note: "Fixed the Allergens search dropdown staying open and overlapping the page below it after scrolling away — it now closes on scroll or on clicking anywhere outside it" },
   { version: "3.0.406", date: "2026-09-11", note: "Added a Duplicate button to each manually-typed product in Test Results' \"Products Being Compared\" — copies its Name, Code, and photos as a starting point for a near-identical variant, up to the usual 4-product limit" },
   { version: "3.0.407", date: "2026-09-11", note: "Split Test Results into Part 1 (test setup — Project, Sample Prepared By, Test Date/Location/Participants, Cooking Method) and Part 2 (Products Being Compared onward), with a divider between them, so the form reads as two clear sections" },
-  { version: "3.0.408", date: "2026-09-11", note: "The Part 1 / Part 2 split now carries over to Test Results' Print — Part 2 starts on its own page instead of risking a mid-table split across Part 1 and the product/evaluation tables" }
+  { version: "3.0.408", date: "2026-09-11", note: "The Part 1 / Part 2 split now carries over to Test Results' Print — Part 2 starts on its own page instead of risking a mid-table split across Part 1 and the product/evaluation tables" },
+  { version: "3.0.409", date: "2026-09-11", note: "Test Results' Part 2 (Products Being Compared onward) now sits in its own bordered box, same treatment as Projects' Requirements box, so it reads as a clearly separate section from Part 1 instead of just a divider line" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -1992,12 +1992,13 @@
     letter-spacing:.03em;
     margin-bottom:12px;
   }
-  /* Test Results' own two-part split (Part 1: test info/setup, Part 2:
-     Products Being Compared onward) -- same bold-uppercase look as
+  /* Test Results' own two-part split (Part 1: test info/setup, plain
+     fields same as everywhere else on this page; Part 2: Products Being
+     Compared onward, boxed off like Projects' own .requirements-box so
+     the two read as clearly separate sections instead of one continuous
+     list with a small label change). Title styling mirrors
      .requirements-box-title, kept as its own class since it's not a
-     Requirements-box context. Part 2's divider line reuses
-     .requirements-box-divider (a generic border-top utility despite the
-     name -- see products.js's own reuse of it on .material-detail-list). */
+     Requirements-box context. */
   .trial-part-title{
     font-size:13px;
     font-weight:700;
@@ -2005,6 +2006,13 @@
     text-transform:uppercase;
     letter-spacing:.03em;
     margin-bottom:12px;
+  }
+  .trial-part2-box{
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    padding:16px 18px 18px;
+    margin-top:20px;
+    background:var(--bg);
   }
   /* A dt/dd row on its own (Certificate, at the very bottom) doesn't get
      the .material-detail-notes-label's border-bottom every other section
@@ -4500,8 +4508,11 @@
        own printed page instead of just a divider line -- Part 1 plus
        several product cards and a criteria table rarely fit together on
        one page cleanly, and a hard page break here keeps Part 2 from
-       splitting mid-table the way a soft break would risk. */
-    .trial-part2-title{break-before:page;}
+       splitting mid-table the way a soft break would risk. Targets the
+       box itself (not just its title) now that Part 2 is boxed -- a
+       break-before on a nested first child isn't as reliable as one on
+       the box that actually needs to start the new page. */
+    .trial-part2-box{break-before:page;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
 
