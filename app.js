@@ -747,7 +747,8 @@ const CHANGELOG = [
   { version: "3.0.409", date: "2026-09-11", note: "Test Results' Part 2 (Products Being Compared onward) now sits in its own bordered box, same treatment as Projects' Requirements box, so it reads as a clearly separate section from Part 1 instead of just a divider line" },
   { version: "3.0.410", date: "2026-09-11", note: "Sensory Evaluation and Improvement Guidelines column headers now show a manually-typed product's Code after its name (e.g. \"Alfrado 01\") — two products sharing the same name are no longer indistinguishable columns" },
   { version: "3.0.411", date: "2026-09-11", note: "Fixed Test Results' Print not actually starting Part 2 on its own page — an existing, deliberate reset (added earlier to fix a worse blank-page bug elsewhere in print) was silently cancelling that page break; it now survives, scoped narrowly enough to not reopen the old bug" },
-  { version: "3.0.412", date: "2026-09-11", note: "Added \"Needs Revision\" to Test Result's dropdown (Accepted / Needs Revision / Not accepted), with its own amber highlight alongside the existing green/red" }
+  { version: "3.0.412", date: "2026-09-11", note: "Added \"Needs Revision\" to Test Result's dropdown (Accepted / Needs Revision / Not accepted), with its own amber highlight alongside the existing green/red" },
+  { version: "3.0.413", date: "2026-09-11", note: "Moved Cooking Method from Part 1 into Part 2 (as the first field, above Products Being Compared) on Test Results, since it applies to the products in Part 2, not the test setup fields in Part 1" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

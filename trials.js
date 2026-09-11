@@ -475,16 +475,15 @@ export function renderTrialsList(){
             <label>Test Participants</label>
             ${trialStringListHtml(mt.testParticipants, isEditing, 'trial-participant-input', 'test-participant', 'e.g. Yano-san', 'salesRepDatalist')}
           </div>
-          <div class="field" style="margin-top:12px;">
-            <label>Cooking Method</label>
-            <input type="text" class="trial-cooking-method" list="cookingMethodDatalist" value="${escapeHtml(mt.cookingMethod)}" placeholder="e.g. Microwave" ${isEditing ? '' : 'readonly'}>
-            <div style="margin-top:8px;">
-              ${trialStringListHtml(mt.cookingMethodSteps, isEditing, 'trial-cooking-step-input', 'cooking-step', 'e.g. Deep Fry 170°C, 5 Mins.')}
-            </div>
-          </div>
-
           <div class="trial-part2-box">
             <div class="trial-part-title">Part 2</div>
+            <div class="field">
+              <label>Cooking Method</label>
+              <input type="text" class="trial-cooking-method" list="cookingMethodDatalist" value="${escapeHtml(mt.cookingMethod)}" placeholder="e.g. Microwave" ${isEditing ? '' : 'readonly'}>
+              <div style="margin-top:8px;">
+                ${trialStringListHtml(mt.cookingMethodSteps, isEditing, 'trial-cooking-step-input', 'cooking-step', 'e.g. Deep Fry 170°C, 5 Mins.')}
+              </div>
+            </div>
             <div class="field">
               <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
               ${productCardsGrid}
