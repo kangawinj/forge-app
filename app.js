@@ -43,7 +43,7 @@ import {
   projectProgressPct, statusPillHtml, projectNextAction, initProjectsModal,
   initMuAttachmentPreviewModal, openProjectFilterMenuKey, activeProjScrollbarProxySync,
   blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements, quickAddCalendarPlan,
-  projectWhoMenuOpen, closeProjectWhoMenu
+  projectWhoMenuOpen, closeProjectWhoMenu, certificateSummaryText
 } from './projects.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
@@ -76,7 +76,7 @@ export {
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
   openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText,
-  autoGrowTextarea, FOOD_ALLERGEN_COLUMNS
+  autoGrowTextarea, FOOD_ALLERGEN_COLUMNS, certificateSummaryText
 };
 
 const firebaseConfig = {
@@ -761,7 +761,8 @@ const CHANGELOG = [
   { version: "3.0.423", date: "2026-09-11", note: "Perform Evaluation wizard now uses a white background matching the rest of Forge, instead of the dark theme it launched with" },
   { version: "3.0.424", date: "2026-09-11", note: "Fixed the Sensory Evaluation criteria label on tests created before \"(Interior)\" was dropped from the default — they now show \"Appearance\" instead of \"Appearance (Interior)\", same as new tests" },
   { version: "3.0.425", date: "2026-09-11", note: "Perform Evaluation wizard now shows a legend explaining what each JAR score (1-5) means, right above the questions on every sample's page" },
-  { version: "3.0.426", date: "2026-09-11", note: "Test Results' Sensory Evaluation criteria can now be reordered with up/down arrows while editing — Improvement Guidelines' rows follow the same order automatically" }
+  { version: "3.0.426", date: "2026-09-11", note: "Test Results' Sensory Evaluation criteria can now be reordered with up/down arrows while editing — Improvement Guidelines' rows follow the same order automatically" },
+  { version: "3.0.427", date: "2026-09-11", note: "Fixed the linked project's Certificate requirement showing as \"[object Object]\" on Test Results — now shows the actual checked certificates (e.g. \"Halal, HACCP\"), same as the Projects page" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

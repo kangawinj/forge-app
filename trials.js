@@ -4,7 +4,7 @@ import {
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
   trialStringListHtml, trialsCol, showCloudError,
-  metaLists, metaItemName, getRequirements
+  metaLists, metaItemName, getRequirements, certificateSummaryText
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -809,7 +809,7 @@ export function renderTrialsList(){
               <div class="ci-row"><b>Responsible Person (PD):</b> ${escapeHtml(linkedProject.responsiblePerson || '-')}</div>
               <div class="ci-row"><b>Factory:</b> ${escapeHtml(linkedProject.factoryName || '-')}</div>
             </div>
-            ${(req.composition || req.recipe || req.cookingCondition.some(g => g.method || g.steps.length) || req.packagingCondition || req.certificate) ? `
+            ${(() => { const certText = certificateSummaryText(req.certificate); return (req.composition || req.recipe || req.cookingCondition.some(g => g.method || g.steps.length) || req.packagingCondition || certText) ? `
             <div class="trial-project-summary-reqs">
               <div class="trial-project-summary-reqs-title">Requirements</div>
               ${req.composition ? `<div><div class="material-detail-notes-label">Composition</div><div class="material-detail-notes">${escapeHtml(req.composition)}</div></div>` : ''}
@@ -821,9 +821,9 @@ export function renderTrialsList(){
               </div>
               `).join('')}
               ${req.packagingCondition ? `<div><div class="material-detail-notes-label">Packaging condition</div><div class="material-detail-notes">${escapeHtml(req.packagingCondition)}</div></div>` : ''}
-              ${req.certificate ? `<div><div class="material-detail-notes-label">Certificate</div><div class="material-detail-notes">${escapeHtml(req.certificate)}</div></div>` : ''}
+              ${certText ? `<div><div class="material-detail-notes-label">Certificate</div><div class="material-detail-notes">${escapeHtml(certText)}</div></div>` : ''}
             </div>
-            ` : ''}
+            ` : ''; })()}
           </div>
           `;
           })() : ''}

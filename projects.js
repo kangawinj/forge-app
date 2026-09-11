@@ -487,7 +487,7 @@ function getCertificate(cert){
 }
 // Plain-text summary for read-only/print-style contexts that expect a
 // single string (the detail-view row, CSV-style exports, etc.).
-function certificateSummaryText(cert){
+export function certificateSummaryText(cert){
   const picked = CERTIFICATE_TYPES.filter(t => cert[t.key]).map(t => t.label);
   if(cert.other) picked.push(cert.otherDetails || 'Other');
   return picked.join(', ');
