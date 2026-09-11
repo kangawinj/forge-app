@@ -13,14 +13,17 @@ import {
 let trials = [];
 let trialExpandedIds = new Set();
 let trialEditingId = null;
-// "Perform Evaluation" is its own mode, separate from (and mutually
-// exclusive with) the regular Edit above -- Sensory Evaluation and Test
-// Result are personal, per-evaluator opinions now (see pd.evaluations),
-// so filling them in is scoped to whoever is logged in (currentUser),
-// not a shared Edit anyone can overwrite. Everything else on the trial
-// (Part 1, Products, Criteria list, Improvement Guidelines, Note) still
-// goes through the regular Edit.
-let trialEvaluatingId = null;
+// "Perform Evaluation" opens a dedicated full-screen wizard (see
+// renderEvaluationWizard) -- Sensory Evaluation and Test Result are
+// personal, per-evaluator opinions now (see pd.evaluations), scoped to
+// whoever is logged in (currentUser), not a shared Edit anyone can
+// overwrite. It's a separate body-appended overlay, independent of the
+// regular Edit (which still covers Part 1, Products, Criteria list,
+// Improvement Guidelines, Note) -- not mutually exclusive with it.
+// { trialId, step, productIds } while open; step indexes into
+// productIds (one wizard "page" per product), or equals productIds.length
+// for the trailing Review page. null when the wizard is closed.
+let evalWizard = null;
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
@@ -201,6 +204,228 @@ const TRIAL_TEST_RESULT_CLASSES = {
   'Needs Revision': 'trial-result-needs-revision',
   'Not accepted': 'trial-result-not-accepted'
 };
+// Wizard buttons need their own selected-state coloring (not the light-
+// theme .trial-result-* chip classes above, whose padding/margin are tuned
+// for the small Overall-view chips, not a full-width dark button).
+const EVAL_WIZARD_RESULT_CLASSES = {
+  'Accepted': 'eval-wizard-tr-accepted',
+  'Needs Revision': 'eval-wizard-tr-needs-revision',
+  'Not accepted': 'eval-wizard-tr-not-accepted'
+};
+// The "Perform Evaluation" wizard scores each criteria on a 1-5
+// Just-About-Right (JAR) scale -- same generic wording for every
+// criteria (per request) rather than custom per-criteria phrasing, so
+// it works automatically for any criteria, including ones added later
+// via "+ Add Criteria", with no extra setup needed per row.
+const JAR_SCALE = [
+  { value: '1', label: 'Much less than ideal' },
+  { value: '2', label: 'Slightly less than ideal' },
+  { value: '3', label: 'Just right' },
+  { value: '4', label: 'Slightly more than ideal' },
+  { value: '5', label: 'Much more than ideal' }
+];
+function jarScoreLabel(value){
+  const found = JAR_SCALE.find(s => s.value === value);
+  return found ? found.label : (value || '');
+}
+// A legacy free-text answer (from before this JAR redesign) shows as-is
+// rather than crashing on the "N/5" format.
+function jarScoreDisplay(value){
+  return /^[1-5]$/.test(value || '') ? `${value}/5` : (value || '');
+}
+// Shared by the main render pass and the evaluation wizard so both list
+// products being compared the same way (linked recipes first, then manual
+// products, each labeled the same way the product cards/table headers are).
+function trialEvalTargets(t){
+  const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+  const manualProducts = t.manualProducts || [];
+  return [
+    ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
+    ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
+  ];
+}
+// Anyone who actually weighs in on a product should show up in Test
+// Participants, even if they weren't added ahead of time -- keeps that
+// list matching who really evaluated without requiring a coordinator to
+// pre-register every taster first. Fires the first time someone answers
+// something in the wizard, not merely on opening it.
+function registerEvaluationParticipant(t){
+  if(!currentUser?.email) return;
+  if(!Array.isArray(t.testParticipants)) t.testParticipants = [];
+  const already = t.testParticipants.some(name => name === currentUser.email || name === shortEvaluatorName(currentUser.email));
+  if(!already) t.testParticipants.push(shortEvaluatorName(currentUser.email));
+}
+
+// The "Perform Evaluation" wizard -- a dedicated full-screen overlay
+// (body-appended, independent of the part-block markup) walking one
+// product at a time: a JAR score per Sensory Evaluation criteria, a
+// Comments field, then Test Result as the last field on that product's
+// page, finishing with a Review page listing every product's answers
+// together before Done closes the overlay. Re-rendered on every answer
+// so the overlay always reflects the latest evalWizard/trials state,
+// same pattern as renderTrialsList itself.
+function renderEvaluationWizard(){
+  const existing = document.getElementById('evalWizardOverlay');
+  if(!evalWizard || !currentUser?.email){
+    existing?.remove();
+    return;
+  }
+  const t = trials.find(x => x.id === evalWizard.trialId);
+  const products = t ? evalWizard.productIds.map(id => trialEvalTargets(t).find(p => p.id === id)).filter(Boolean) : [];
+  if(!t || !products.length){
+    evalWizard = null;
+    existing?.remove();
+    return;
+  }
+  evalWizard.step = Math.max(0, Math.min(evalWizard.step, products.length));
+  const criteria = getEvaluationCriteria(t);
+  const isReview = evalWizard.step >= products.length;
+
+  const overlay = existing || document.createElement('div');
+  overlay.id = 'evalWizardOverlay';
+  overlay.className = 'eval-wizard-overlay';
+  if(!existing){
+    document.body.appendChild(overlay);
+    // Backdrop click closes the wizard -- guarded to attach once (this
+    // element persists across re-renders, only its innerHTML is replaced
+    // below), and requires the mousedown to also have started on the
+    // backdrop so selecting/dragging text inside a field that overshoots
+    // past the card's edge doesn't close it (same fix as wireModalOverlayClose
+    // in app.js).
+    let mousedownOnOverlay = false;
+    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if(mousedownOnOverlay && e.target === overlay){ evalWizard = null; renderEvaluationWizard(); }
+      mousedownOnOverlay = false;
+    });
+  }
+  overlay.innerHTML = isReview
+    ? renderEvalWizardReview(t, products, criteria)
+    : renderEvalWizardStep(t, products, criteria, evalWizard.step);
+
+  wireEvaluationWizard(overlay, t, products);
+}
+function renderEvalWizardStep(t, products, criteria, step){
+  const p = products[step];
+  const pd = getTrialProductData(t, p.id);
+  const mine = getMyEvaluation(pd);
+  return `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Sensory Evaluation</div>
+        <button type="button" class="eval-wizard-close" data-role="eval-wizard-close" title="Close">${icon('x')}</button>
+      </div>
+      <div class="eval-wizard-progress">Sample ${step + 1} of ${products.length}</div>
+      <div class="eval-wizard-product-name">${escapeHtml(p.label)}</div>
+      ${criteria.map(c => `
+        <div class="eval-wizard-question">
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>
+          <div class="eval-wizard-jar-row">
+            ${JAR_SCALE.map(s => `
+              <button type="button" class="eval-wizard-jar-btn${mine[c.id] === s.value ? ' selected' : ''}" data-role="eval-jar" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" title="${escapeHtml(s.label)}">${s.value}</button>
+            `).join('')}
+          </div>
+          <div class="eval-wizard-jar-caption">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</div>
+        </div>
+      `).join('')}
+      <div class="eval-wizard-question">
+        <div class="eval-wizard-question-label">Comments</div>
+        <textarea class="eval-wizard-comment" data-role="eval-comment" placeholder="Anything else worth noting about this sample">${escapeHtml(mine.comment || '')}</textarea>
+      </div>
+      <div class="eval-wizard-question">
+        <div class="eval-wizard-question-label">Test Result</div>
+        <div class="eval-wizard-testresult-row">
+          ${TRIAL_TEST_RESULT_OPTIONS.map(o => `
+            <button type="button" class="eval-wizard-testresult-btn${mine.testResult === o ? ' selected ' + (EVAL_WIZARD_RESULT_CLASSES[o] || '') : ''}" data-role="eval-testresult" data-value="${escapeHtml(o)}">${escapeHtml(o)}</button>
+          `).join('')}
+        </div>
+      </div>
+      <div class="eval-wizard-nav">
+        <button type="button" class="btn btn-sm" data-role="eval-back" ${step === 0 ? 'disabled' : ''}>Back</button>
+        <button type="button" class="btn btn-sm btn-primary" data-role="eval-next">${step === products.length - 1 ? 'Review' : 'Next Sample'} ${icon('chevron-right')}</button>
+      </div>
+    </div>
+  `;
+}
+function renderEvalWizardReview(t, products, criteria){
+  return `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Review Your Evaluation</div>
+        <button type="button" class="eval-wizard-close" data-role="eval-wizard-close" title="Close">${icon('x')}</button>
+      </div>
+      ${products.map((p, i) => {
+        const pd = getTrialProductData(t, p.id);
+        const mine = getMyEvaluation(pd);
+        return `
+        <div class="eval-wizard-review-product">
+          <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
+          ${criteria.map(c => `<div class="eval-wizard-review-row"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}</b></div>`).join('')}
+          ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
+          <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
+        </div>
+        `;
+      }).join('')}
+      <div class="eval-wizard-nav">
+        <button type="button" class="btn btn-sm" data-role="eval-back">Back</button>
+        <button type="button" class="btn btn-sm btn-primary" data-role="eval-done">${icon('check')} Done</button>
+      </div>
+    </div>
+  `;
+}
+function wireEvaluationWizard(overlay, t, products){
+  overlay.querySelector('[data-role="eval-wizard-close"]')?.addEventListener('click', () => {
+    evalWizard = null;
+    renderEvaluationWizard();
+  });
+  overlay.querySelectorAll('[data-role="eval-jar"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = products[evalWizard.step];
+      const pd = getTrialProductData(t, p.id);
+      const mine = getMyEvaluation(pd);
+      const criteriaId = btn.dataset.criteriaId;
+      const value = btn.dataset.value;
+      mine[criteriaId] = mine[criteriaId] === value ? '' : value;
+      registerEvaluationParticipant(t);
+      scheduleTrialSave(t);
+      renderTrialsList();
+      renderEvaluationWizard();
+    });
+  });
+  overlay.querySelector('.eval-wizard-comment')?.addEventListener('change', e => {
+    const p = products[evalWizard.step];
+    const pd = getTrialProductData(t, p.id);
+    const mine = getMyEvaluation(pd);
+    mine.comment = e.target.value.trim();
+    scheduleTrialSave(t);
+  });
+  overlay.querySelectorAll('[data-role="eval-testresult"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = products[evalWizard.step];
+      const pd = getTrialProductData(t, p.id);
+      const mine = getMyEvaluation(pd);
+      const value = btn.dataset.value;
+      mine.testResult = mine.testResult === value ? '' : value;
+      registerEvaluationParticipant(t);
+      scheduleTrialSave(t);
+      renderTrialsList();
+      renderEvaluationWizard();
+    });
+  });
+  overlay.querySelector('[data-role="eval-back"]')?.addEventListener('click', () => {
+    evalWizard.step = Math.max(0, evalWizard.step - 1);
+    renderEvaluationWizard();
+  });
+  overlay.querySelector('[data-role="eval-next"]')?.addEventListener('click', () => {
+    evalWizard.step = Math.min(products.length, evalWizard.step + 1);
+    renderEvaluationWizard();
+  });
+  overlay.querySelector('[data-role="eval-done"]')?.addEventListener('click', () => {
+    evalWizard = null;
+    renderTrialsList();
+    renderEvaluationWizard();
+  });
+}
 
 // A product being compared that isn't one of this app's own Recipes — a
 // competitor sample, a customer's existing product, anything typed in by
@@ -294,8 +519,7 @@ export function renderTrialsList(){
   const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
   container.innerHTML = sorted.map(t => {
     const isEditing = t.id === trialEditingId;
-    const isEvaluating = t.id === trialEvaluatingId;
-    const isExpanded = isEditing || isEvaluating || trialExpandedIds.has(t.id);
+    const isExpanded = isEditing || trialExpandedIds.has(t.id);
     // Migrated view used only for building this HTML string below — the
     // wiring block further down re-fetches the raw trial from `trials` and
     // guards each field defensively instead, same split used for Projects'
@@ -466,19 +690,15 @@ export function renderTrialsList(){
           : `<b>${escapeHtml(c.label)}</b>`}</td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          if(isEvaluating){
-            const mine = getMyEvaluation(pd);
-            return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-my-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${escapeHtml(c.id)}" placeholder="-">${escapeHtml(mine[c.id] || '')}</textarea></td>`;
-          }
-          // Sensory Evaluation is no longer editable through the regular
-          // Edit flow -- filling it in is "Perform Evaluation" above,
-          // scoped to whoever is logged in. This is the combined view:
-          // every evaluator's own answer, listed together (see
+          // Sensory Evaluation is filled in through the "Perform
+          // Evaluation" wizard now (see renderEvaluationWizard), not
+          // inline here -- this table always shows the combined view:
+          // every evaluator's own JAR answer, listed together (see
           // combinedEvaluationEntries), not a single shared value anyone
           // could silently overwrite.
           const entries = combinedEvaluationEntries(pd, c.id, t.updatedBy);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(e.value)}</div>`).join('')
+            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(jarScoreDisplay(e.value))}</div>`).join('')
             : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea></td>
@@ -486,27 +706,16 @@ export function renderTrialsList(){
     `).join('');
     const addCriteriaBtnHtml = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-trial-criteria" style="margin-top:8px;">+ Add Criteria</button>` : '';
     // Test Result is a per-evaluator pick now, same as the Sensory
-    // Evaluation criteria above. Perform Evaluation shows a radio picker
-    // scoped to your own pick; every other view shows everyone's picks
-    // together (see combinedEvaluationEntries), each line colored via the
-    // existing accepted/needs-revision/not-accepted classes.
+    // Evaluation criteria above -- filled in as the last step of each
+    // product in the "Perform Evaluation" wizard. This table always
+    // shows everyone's picks together (see combinedEvaluationEntries),
+    // each line colored via the existing accepted/needs-revision/
+    // not-accepted classes.
     const testResultRowHtml = `
       <tr>
         <td><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          if(isEvaluating){
-            const mine = getMyEvaluation(pd);
-            const val = mine.testResult || '';
-            return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
-              <div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
-                <label class="trial-testresult-radio-label">
-                  <input type="radio" name="teval-testresult-${escapeHtml(p.id)}" class="teval-testresult" data-product-id="${escapeHtml(p.id)}" value="${o}" ${val === o ? 'checked' : ''}>
-                  ${o}
-                </label>
-              `).join('')}</div>
-            </td>`;
-          }
           const entries = combinedEvaluationEntries(pd, null, t.updatedBy);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
             ? entries.map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(shortEvaluatorName(e.who))}: ${escapeHtml(e.value)}</b></div>`).join('')
@@ -554,10 +763,8 @@ export function renderTrialsList(){
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
           <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
-          ${!isEvaluating ? (isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`) : ''}
-          ${!isEditing && combinedCount > 0 ? (isEvaluating
-            ? `<button class="btn btn-sm" data-role="finish-evaluation">${icon('check')} Done Evaluating</button>`
-            : `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>`) : ''}
+          ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
+          ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
           <button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>
           <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
@@ -694,7 +901,6 @@ export function renderTrialsList(){
     const t = trials.find(x => x.id === id);
     if(!t) return;
     const isEditing = id === trialEditingId;
-    const isEvaluating = id === trialEvaluatingId;
 
     block.querySelector('.part-toggle-btn').addEventListener('click', () => {
       if(trialExpandedIds.has(id)) trialExpandedIds.delete(id);
@@ -702,9 +908,6 @@ export function renderTrialsList(){
       renderTrialsList();
     });
 
-    // Edit/Save aren't rendered at all while isEvaluating (mutually
-    // exclusive with Perform Evaluation -- see the header markup above),
-    // so both queries below need the null-safe form.
     if(isEditing){
       block.querySelector('[data-role="save-trial"]')?.addEventListener('click', () => {
         trialEditingId = null;
@@ -721,29 +924,14 @@ export function renderTrialsList(){
       });
     }
 
-    if(isEvaluating){
-      block.querySelector('[data-role="finish-evaluation"]')?.addEventListener('click', () => {
-        trialEvaluatingId = null;
-        renderTrialsList();
-      });
-    }else{
-      block.querySelector('[data-role="start-evaluation"]')?.addEventListener('click', () => {
-        if(!currentUser?.email) return;
-        trialEvaluatingId = id;
-        trialExpandedIds.add(id);
-        // Anyone who actually submits an evaluation should show up in
-        // Test Participants, even if they weren't added ahead of time --
-        // keeps that list matching who really weighed in without
-        // requiring a coordinator to pre-register every taster first.
-        if(!Array.isArray(t.testParticipants)) t.testParticipants = [];
-        const already = t.testParticipants.some(name => name === currentUser.email || name === shortEvaluatorName(currentUser.email));
-        if(!already){
-          t.testParticipants.push(shortEvaluatorName(currentUser.email));
-          scheduleTrialSave(t);
-        }
-        renderTrialsList();
-      });
-    }
+    block.querySelector('[data-role="start-evaluation"]')?.addEventListener('click', () => {
+      if(!currentUser?.email) return;
+      const productIds = trialEvalTargets(t).map(p => p.id);
+      if(!productIds.length) return;
+      trialExpandedIds.add(id);
+      evalWizard = { trialId: id, step: 0, productIds };
+      renderTrialsList();
+    });
 
     block.querySelector('[data-role="print-trial"]').addEventListener('click', () => {
       block.classList.add('printing-only');
@@ -976,34 +1164,12 @@ export function renderTrialsList(){
       scheduleTrialSave(t);
       renderTrialsList();
     });
-    // Click rather than change -- clicking a radio that's already checked
-    // doesn't fire 'change' natively (its checked state never actually
-    // changes), but it does still fire 'click' every time, which is
-    // exactly the case this needs to catch: clicking the already-selected
-    // option clears it, so a mis-click can be undone without being forced
-    // to pick a different option just to back out.
-    block.querySelectorAll('.teval-testresult').forEach(el => {
-      el.addEventListener('click', () => {
-        const pd = getTrialProductData(t, el.dataset.productId);
-        const mine = getMyEvaluation(pd);
-        if(mine.testResult === el.value){
-          mine.testResult = '';
-          el.checked = false;
-        }else{
-          mine.testResult = el.value;
-        }
-        scheduleTrialSave(t);
-        renderTrialsList(); // re-render so the accepted/not-accepted color applies right away
-      });
-    });
-    block.querySelectorAll('.teval-my-fixed').forEach(el => {
-      el.addEventListener('change', () => {
-        const pd = getTrialProductData(t, el.dataset.productId);
-        getMyEvaluation(pd)[el.dataset.field] = el.value.trim();
-        scheduleTrialSave(t);
-      });
-    });
+    // Sensory Evaluation/Test Result are filled in through the "Perform
+    // Evaluation" wizard now (see renderEvaluationWizard/wireEvaluationWizard),
+    // a separate body-appended overlay rather than inline cells here.
   });
+
+  renderEvaluationWizard();
 }
 
 function attachTrialsListener(){
