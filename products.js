@@ -271,14 +271,10 @@ export function mountProductsView(){
             <label>11. Sales Price</label>
             <input type="text" id="pf-salesPrice" placeholder="e.g. 120">
           </div>
-          <div class="field">
-            <label>12. Allergens</label>
-            <input type="text" id="pf-allergens" placeholder="e.g. Shrimp, Wheat, Soy bean">
-          </div>
         </div>
         <div class="grid-2-photos">
           <div class="field">
-            <label>13. Photo — Raw Material (optional)</label>
+            <label>12. Photo — Raw Material (optional)</label>
             <input type="file" id="pf-rmImage" accept="image/*">
             <div class="material-photo-preview-row">
               <img id="pf-rmImagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
@@ -286,7 +282,7 @@ export function mountProductsView(){
             </div>
           </div>
           <div class="field">
-            <label>14. Photo — Idea Menu (optional)</label>
+            <label>13. Photo — Idea Menu (optional)</label>
             <input type="file" id="pf-ideaMenuImage" accept="image/*">
             <div class="material-photo-preview-row">
               <img id="pf-ideaMenuImagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
@@ -295,16 +291,16 @@ export function mountProductsView(){
           </div>
         </div>
         <div class="field">
-          <label>15. Description</label>
+          <label>14. Description</label>
           <textarea id="pf-description" rows="2" placeholder="e.g. A classic Thai hot and sour soup with succulent shrimp..."></textarea>
         </div>
         <div class="field">
-          <label>16. Cooking Instruction</label>
+          <label>15. Cooking Instruction</label>
           <input type="text" id="pf-cookingMethodPick" list="cookingMethodDatalist" placeholder="Pick a Cooking Method (Reference Lists) to fill in its Steps below" style="margin-bottom:6px;">
           <textarea id="pf-cookingInstruction" rows="2" placeholder="e.g. ต้มในน้ำเดือด 10-15 นาที โดยไม่ต้องละลายสินค้า"></textarea>
         </div>
         <div class="field">
-          <label>17. Composition (Approx.)</label>
+          <label>16. Composition (Approx.)</label>
           <div style="overflow-x:auto;">
             <table class="compare-table pf-composition-table">
               <thead><tr><th>Main Ingredient</th><th>Sub 1</th><th>Sub 2</th><th>%</th><th></th></tr></thead>
@@ -312,6 +308,10 @@ export function mountProductsView(){
             </table>
           </div>
           <button type="button" class="btn btn-sm add-row-btn" id="btnAddCompositionRow" style="margin-top:6px;">+ Add Row</button>
+        </div>
+        <div class="field">
+          <label>17. Allergens</label>
+          <input type="text" id="pf-allergens" placeholder="e.g. Shrimp, Wheat, Soy bean">
         </div>
         <div class="field">
           <label>18. Remarks</label>

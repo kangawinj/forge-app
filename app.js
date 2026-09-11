@@ -735,7 +735,8 @@ const CHANGELOG = [
   { version: "3.0.398", date: "2026-09-10", note: "Added a \"Storage Condition\" tab to Reference Lists and connected it to every Storage Condition field in Projects (the main project edit view, the New Project panel, and the Pending Submission review form) so it suggests from the same curated list instead of being typed free-hand each time" },
   { version: "3.0.399", date: "2026-09-10", note: "Reference Lists' Cooking Method tab: entries now sort A-Z regardless of upper/lower case, and each entry's Steps show as a plain numbered list instead of a row of boxed input fields — the input boxes still appear when you click Edit" },
   { version: "3.0.400", date: "2026-09-10", note: "Added an optional Note field to Reference Lists' Cooking Method entries — click \"+ Note\" while editing to add a remark (e.g. \"Do not reheat more than once\") separate from the numbered Steps" },
-  { version: "3.0.401", date: "2026-09-11", note: "Products' Cooking Instruction now has a \"Pick a Cooking Method\" dropdown above it, sourced from Reference Lists — picking a method that has Steps on file fills them into Cooking Instruction as a numbered starting point, same idea as Projects' Cooking Guidelines autofill" }
+  { version: "3.0.401", date: "2026-09-11", note: "Products' Cooking Instruction now has a \"Pick a Cooking Method\" dropdown above it, sourced from Reference Lists — picking a method that has Steps on file fills them into Cooking Instruction as a numbered starting point, same idea as Projects' Cooking Guidelines autofill" },
+  { version: "3.0.402", date: "2026-09-11", note: "Moved Allergens on the Products form to right after Composition (Approx.), instead of next to EXW/Sales Price — fields renumbered accordingly" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
