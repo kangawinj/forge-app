@@ -1992,6 +1992,20 @@
     letter-spacing:.03em;
     margin-bottom:12px;
   }
+  /* Test Results' own two-part split (Part 1: test info/setup, Part 2:
+     Products Being Compared onward) -- same bold-uppercase look as
+     .requirements-box-title, kept as its own class since it's not a
+     Requirements-box context. Part 2's divider line reuses
+     .requirements-box-divider (a generic border-top utility despite the
+     name -- see products.js's own reuse of it on .material-detail-list). */
+  .trial-part-title{
+    font-size:13px;
+    font-weight:700;
+    color:var(--primary-dark);
+    text-transform:uppercase;
+    letter-spacing:.03em;
+    margin-bottom:12px;
+  }
   /* A dt/dd row on its own (Certificate, at the very bottom) doesn't get
      the .material-detail-notes-label's border-bottom every other section
      header in the box has -- this gives it the same "new section starts

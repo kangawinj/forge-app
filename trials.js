@@ -404,6 +404,7 @@ export function renderTrialsList(){
           <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
         <div class="part-body">
+          <div class="trial-part-title">Part 1</div>
           <div class="trial-header-row">
             <div class="field" style="margin-bottom:0;">
               <label>Project Name</label>
@@ -473,6 +474,7 @@ export function renderTrialsList(){
             </div>
           </div>
 
+          <div class="trial-part-title requirements-box-divider" style="margin-top:20px;">Part 2</div>
           <div class="field">
             <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
             ${productCardsGrid}
