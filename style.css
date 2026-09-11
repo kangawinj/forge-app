@@ -4875,7 +4875,7 @@
   .eval-wizard-card{
     width:100%;
     max-width:560px;
-    color:#e8ecf5;
+    color:#fff;
   }
   .eval-wizard-header{
     display:flex;
@@ -4887,7 +4887,7 @@
   .eval-wizard-close{
     background:transparent;
     border:1px solid rgba(255,255,255,.25);
-    color:#e8ecf5;
+    color:#fff;
     border-radius:8px;
     width:32px;
     height:32px;
@@ -4908,7 +4908,7 @@
     border-radius:10px;
     border:1px solid rgba(255,255,255,.18);
     background:rgba(255,255,255,.05);
-    color:#e8ecf5;
+    color:#fff;
     font-size:15px;
     font-weight:600;
     cursor:pointer;
@@ -4927,7 +4927,7 @@
     background:rgba(255,255,255,.05);
     border:1px solid rgba(255,255,255,.18);
     border-radius:10px;
-    color:#e8ecf5;
+    color:#fff;
     padding:10px 12px;
     font-size:13px;
     font-family:inherit;
@@ -4942,7 +4942,7 @@
     border-radius:10px;
     border:1px solid rgba(255,255,255,.18);
     background:rgba(255,255,255,.05);
-    color:#e8ecf5;
+    color:#fff;
     font-size:13px;
     font-weight:600;
     cursor:pointer;
@@ -4959,7 +4959,7 @@
   .eval-wizard-nav{display:flex;justify-content:space-between;gap:10px;margin-top:28px;}
   .eval-wizard-nav .btn-primary{background:#8ecdf7;border-color:#8ecdf7;color:#0c1830;}
   .eval-wizard-nav .btn-primary:hover{background:#79bff0;border-color:#79bff0;}
-  .eval-wizard-nav .btn:not(.btn-primary){background:transparent;border-color:rgba(255,255,255,.25);color:#e8ecf5;}
+  .eval-wizard-nav .btn:not(.btn-primary){background:transparent;border-color:rgba(255,255,255,.25);color:#fff;}
   .eval-wizard-nav .btn:not(.btn-primary):hover{background:rgba(255,255,255,.1);}
   .eval-wizard-nav .btn:disabled{opacity:.35;cursor:default;}
   .eval-wizard-review-product{
@@ -4980,7 +4980,7 @@
   }
   .eval-wizard-review-row:last-child{border-bottom:none;}
   .eval-wizard-review-row span{color:#9aa5c0;}
-  .eval-wizard-review-row b{color:#e8ecf5;text-align:right;}
+  .eval-wizard-review-row b{color:#fff;text-align:right;}
   @media (max-width:600px){
     .eval-wizard-jar-row{flex-wrap:wrap;}
     .eval-wizard-jar-btn{min-width:38px;}
