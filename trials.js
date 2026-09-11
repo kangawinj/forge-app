@@ -47,9 +47,9 @@ function blankTrial(){
   };
 }
 // Old trials only had photos (up to 3, shared across the whole trial) and
-// evaluation (freeform criteria rows) — replaced by a fixed test-report
-// format (see TRIAL_FIXED_CRITERIA/TRIAL_IMPROVEMENT_CRITERIA) with photos
-// and scores per product instead. The old fields are left on the document
+// evaluation (freeform criteria rows) — replaced by a structured test-
+// report format (see getEvaluationCriteria) with photos and scores per
+// product instead. The old fields are left on the document
 // untouched (unused, harmless) rather than migrated/stripped, same
 // never-destroy-data approach as migrateTrialsFromRecipes above.
 function migrateTrial(t){
@@ -95,18 +95,43 @@ function normalizeTrialPhotos(pd){
   }
   return pd.photos;
 }
-const TRIAL_FIXED_CRITERIA = [
-  { key: 'appearanceExterior', label: 'Appearance (Exterior)' },
-  { key: 'appearanceInterior', label: 'Appearance (Interior)' },
-  { key: 'odor', label: 'Odor' },
-  { key: 'taste', label: 'Taste' },
-  { key: 'texture', label: 'Texture' }
-];
-const TRIAL_IMPROVEMENT_CRITERIA = [
-  { key: 'improveAppearanceInterior', label: 'Appearance (Interior)' },
-  { key: 'improveOdor', label: 'Odor' },
-  { key: 'improveTexture', label: 'Texture' }
-];
+// Criteria rows used to be two separate fixed lists (5 for Sensory
+// Evaluation, 3 differently-worded for Improvement Guidelines). Now
+// they're one user-editable list per trial (rename/add/remove) shared by
+// both tables, so a change in one place applies to both instead of the
+// two silently drifting out of sync. Default ids match the old fixed
+// Sensory Evaluation keys 1:1 so an existing trial's scores (stored flat
+// as pd[key]) keep showing up with no migration step; "Appearance
+// (Exterior)" is dropped from the default per request -- a trial that
+// already had a score under that old key just keeps it, unused, same
+// never-destroy-data approach as elsewhere in this file.
+function blankEvaluationCriteria(){
+  return [
+    { id: 'appearanceInterior', label: 'Appearance (Interior)' },
+    { id: 'odor', label: 'Odor' },
+    { id: 'taste', label: 'Taste' },
+    { id: 'texture', label: 'Texture' }
+  ];
+}
+function getEvaluationCriteria(t){
+  if(!Array.isArray(t.evaluationCriteria) || !t.evaluationCriteria.length) t.evaluationCriteria = blankEvaluationCriteria();
+  return t.evaluationCriteria;
+}
+// Improvement Guidelines used to store its 3 criteria under their own
+// differently-named fixed keys (improveAppearanceInterior/improveOdor/
+// improveTexture). It now shares Sensory Evaluation's criteria ids,
+// prefixed "improve_" to keep the two tables' values separate per
+// criterion -- this bridges the 3 that overlap so existing notes keep
+// showing up. A write always goes to the new prefixed key (see the
+// shared .teval-fixed/.teval-improve wiring), so this fallback is
+// read-only; the old fields are left untouched, just unused going forward.
+const LEGACY_IMPROVEMENT_KEYS = { appearanceInterior: 'improveAppearanceInterior', odor: 'improveOdor', texture: 'improveTexture' };
+function improvementFieldValue(pd, criteriaId){
+  const key = 'improve_' + criteriaId;
+  if(pd[key] !== undefined) return pd[key] || '';
+  const legacyKey = LEGACY_IMPROVEMENT_KEYS[criteriaId];
+  return (legacyKey ? pd[legacyKey] : '') || '';
+}
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Needs Revision', 'Not accepted'];
 const TRIAL_TEST_RESULT_CLASSES = {
   'Accepted': 'trial-result-accepted',
@@ -351,9 +376,11 @@ export function renderTrialsList(){
     // glance, the same way Compare Recipes lines up ingredients per recipe.
     // Manual products score exactly like linked recipes — same map keyed by
     // the manual product's own id instead of a recipeId (see
-    // getTrialProductData). Fixed rows (see TRIAL_FIXED_CRITERIA) replace
-    // the old freeform criteria list — the report format this now follows
-    // always asks the same handful of questions.
+    // getTrialProductData). Criteria rows (see getEvaluationCriteria) are
+    // per-trial and user-editable now, replacing the old fixed/freeform
+    // split -- add, rename, or remove a row from the Sensory Evaluation
+    // table and Improvement Guidelines' rows follow, since both read from
+    // the same list.
     const evalTargets = [
       ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
       // Two manual products can share the same name (e.g. duplicated as a
@@ -363,15 +390,22 @@ export function renderTrialsList(){
       ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
     ];
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
-    const fixedCriteriaRowsHtml = TRIAL_FIXED_CRITERIA.map(c => `
+    const evaluationCriteria = getEvaluationCriteria(mt);
+    const fixedCriteriaRowsHtml = evaluationCriteria.map(c => `
       <tr>
-        <td><b>${escapeHtml(c.label)}</b></td>
+        <td>${isEditing
+          ? `<div style="display:flex;align-items:center;gap:6px;">
+              <input type="text" class="trial-criteria-label-input" data-criteria-id="${escapeHtml(c.id)}" value="${escapeHtml(c.label)}" placeholder="Criteria name">
+              <button type="button" class="icon-btn" data-role="remove-trial-criteria" data-criteria-id="${escapeHtml(c.id)}" title="Remove this criteria">${icon('x')}</button>
+            </div>`
+          : `<b>${escapeHtml(c.label)}</b>`}</td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${c.key}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.key] || '')}</textarea></td>`;
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-fixed" data-product-id="${escapeHtml(p.id)}" data-field="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.id] || '')}</textarea></td>`;
         }).join('')}
       </tr>
     `).join('');
+    const addCriteriaBtnHtml = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-trial-criteria" style="margin-top:8px;">+ Add Criteria</button>` : '';
     // Test Result is a dropdown (not free text) so Accepted/Not accepted
     // can be colored — matches the sample report's red "Not accepted" text.
     const testResultRowHtml = `
@@ -387,12 +421,12 @@ export function renderTrialsList(){
         }).join('')}
       </tr>
     `;
-    const improvementRowsHtml = TRIAL_IMPROVEMENT_CRITERIA.map(c => `
+    const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="${c.key}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(pd[c.key] || '')}</textarea></td>`;
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
         }).join('')}
       </tr>
     `).join('');
@@ -513,6 +547,7 @@ export function renderTrialsList(){
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>
+              ${addCriteriaBtnHtml}
               ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>
 
@@ -759,6 +794,28 @@ export function renderTrialsList(){
         pd[el.dataset.field] = el.value.trim();
         scheduleTrialSave(t);
       });
+    });
+    block.querySelectorAll('.trial-criteria-label-input').forEach(input => {
+      input.addEventListener('change', () => {
+        const criteria = getEvaluationCriteria(t);
+        const c = criteria.find(x => x.id === input.dataset.criteriaId);
+        if(c) c.label = input.value.trim();
+        scheduleTrialSave(t);
+        renderTrialsList(); // Improvement Guidelines' read-only label mirrors this right away
+      });
+    });
+    block.querySelectorAll('[data-role="remove-trial-criteria"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const criteria = getEvaluationCriteria(t);
+        t.evaluationCriteria = criteria.filter(x => x.id !== btn.dataset.criteriaId);
+        scheduleTrialSave(t);
+        renderTrialsList();
+      });
+    });
+    block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', () => {
+      getEvaluationCriteria(t).push({ id: uid(), label: '' });
+      scheduleTrialSave(t);
+      renderTrialsList();
     });
     block.querySelectorAll('.teval-testresult').forEach(el => {
       el.addEventListener('change', () => {
