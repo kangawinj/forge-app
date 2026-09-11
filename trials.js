@@ -474,7 +474,7 @@ export function renderTrialsList(){
             </div>
           </div>
 
-          <div class="trial-part-title requirements-box-divider" style="margin-top:20px;">Part 2</div>
+          <div class="trial-part-title trial-part2-title requirements-box-divider" style="margin-top:20px;">Part 2</div>
           <div class="field">
             <label>Products Being Compared (up to ${TRIAL_MAX_PRODUCTS})</label>
             ${productCardsGrid}

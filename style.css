@@ -4496,6 +4496,12 @@
        that trial, not the whole list of trials sharing the modal. */
     #btnAddTrial{display:none !important;}
     #trialsList > .part-block:not(.printing-only){display:none !important;}
+    /* Part 2 (Products Being Compared + Sensory Evaluation) starts on its
+       own printed page instead of just a divider line -- Part 1 plus
+       several product cards and a criteria table rarely fit together on
+       one page cleanly, and a hard page break here keeps Part 2 from
+       splitting mid-table the way a soft break would risk. */
+    .trial-part2-title{break-before:page;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
 
