@@ -4508,6 +4508,12 @@
       padding:2px 0 !important;
       resize:none !important;
     }
+    /* Test Result's read-only tick list (see .trial-testresult-radios) is
+       disabled, not readonly -- browsers dim disabled form controls by
+       default, which would make the circles hard to see on a paper
+       printout meant for someone outside the system to mark by hand.
+       Force full opacity so they print clearly either way. */
+    .trial-testresult-radios input[type=radio]:disabled{opacity:1 !important;-webkit-appearance:radio !important;appearance:radio !important;}
     .icon-btn, .part-toggle-btn, .material-search{display:none !important;}
     .part-block.collapsed .part-body{display:block !important;}
     .part-block{background:#fff !important;}

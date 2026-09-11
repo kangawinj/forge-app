@@ -423,7 +423,19 @@ export function renderTrialsList(){
                   ${o}
                 </label>
               `).join('')}</div>`
-            : `<b>${escapeHtml(val || '-')}</b>`}</td>`;
+            // Read-only view (also what Print shows -- see printing-only)
+            // keeps the same tick list instead of collapsing to plain
+            // text, so a paper printout still has all 3 options to mark
+            // by hand for someone outside the system, with whichever one
+            // is already recorded pre-ticked. disabled (not readonly --
+            // readonly has no effect on radio inputs) since this isn't
+            // the editable copy.
+            : `<div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
+                <label class="trial-testresult-radio-label">
+                  <input type="radio" disabled ${val === o ? 'checked' : ''}>
+                  ${o}
+                </label>
+              `).join('')}</div>`}</td>`;
         }).join('')}
       </tr>
     `;
