@@ -4504,15 +4504,6 @@
        that trial, not the whole list of trials sharing the modal. */
     #btnAddTrial{display:none !important;}
     #trialsList > .part-block:not(.printing-only){display:none !important;}
-    /* Part 2 (Products Being Compared + Sensory Evaluation) starts on its
-       own printed page instead of just a divider line -- Part 1 plus
-       several product cards and a criteria table rarely fit together on
-       one page cleanly, and a hard page break here keeps Part 2 from
-       splitting mid-table the way a soft break would risk. Targets the
-       box itself (not just its title) now that Part 2 is boxed -- a
-       break-before on a nested first child isn't as reliable as one on
-       the box that actually needs to start the new page. */
-    .trial-part2-box{break-before:page;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
 
@@ -4621,6 +4612,19 @@
     .card:has(.printing-project), .card:has(.printing-only){
       break-inside:auto;
     }
+    /* Test Results specifically wants Part 2 (see .trial-part2-box in
+       trials.js) to start on its own printed page -- but the blanket
+       reset just above wipes out break-before on every element inside
+       .printing-only, this box included, since it's a descendant.
+       Un-reset only break-before here, and only on this one element (not
+       break-inside/break-after, and not the blanket's own *) -- a forced
+       break-before is always trivially satisfiable (the browser just
+       starts a new page there), unlike the break-inside/after:avoid
+       constraints the blanket rule exists to rule out, which could
+       become impossible to satisfy on oversized content and were what
+       actually caused the blank-page bug described above. Needs
+       !important and to come after the blanket reset to win the cascade. */
+    .trial-part2-box{break-before:page !important;}
   }
 
   @media (max-width:1024px){

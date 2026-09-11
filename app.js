@@ -745,7 +745,8 @@ const CHANGELOG = [
   { version: "3.0.407", date: "2026-09-11", note: "Split Test Results into Part 1 (test setup — Project, Sample Prepared By, Test Date/Location/Participants, Cooking Method) and Part 2 (Products Being Compared onward), with a divider between them, so the form reads as two clear sections" },
   { version: "3.0.408", date: "2026-09-11", note: "The Part 1 / Part 2 split now carries over to Test Results' Print — Part 2 starts on its own page instead of risking a mid-table split across Part 1 and the product/evaluation tables" },
   { version: "3.0.409", date: "2026-09-11", note: "Test Results' Part 2 (Products Being Compared onward) now sits in its own bordered box, same treatment as Projects' Requirements box, so it reads as a clearly separate section from Part 1 instead of just a divider line" },
-  { version: "3.0.410", date: "2026-09-11", note: "Sensory Evaluation and Improvement Guidelines column headers now show a manually-typed product's Code after its name (e.g. \"Alfrado 01\") — two products sharing the same name are no longer indistinguishable columns" }
+  { version: "3.0.410", date: "2026-09-11", note: "Sensory Evaluation and Improvement Guidelines column headers now show a manually-typed product's Code after its name (e.g. \"Alfrado 01\") — two products sharing the same name are no longer indistinguishable columns" },
+  { version: "3.0.411", date: "2026-09-11", note: "Fixed Test Results' Print not actually starting Part 2 on its own page — an existing, deliberate reset (added earlier to fix a worse blank-page bug elsewhere in print) was silently cancelling that page break; it now survives, scoped narrowly enough to not reopen the old bug" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
