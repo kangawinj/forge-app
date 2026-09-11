@@ -107,7 +107,7 @@ function normalizeTrialPhotos(pd){
 // never-destroy-data approach as elsewhere in this file.
 function blankEvaluationCriteria(){
   return [
-    { id: 'appearanceInterior', label: 'Appearance (Interior)' },
+    { id: 'appearanceInterior', label: 'Appearance' },
     { id: 'odor', label: 'Odor' },
     { id: 'taste', label: 'Taste' },
     { id: 'texture', label: 'Texture' }
