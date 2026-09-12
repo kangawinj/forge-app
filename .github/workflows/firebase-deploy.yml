@@ -1,9 +1,11 @@
+# Manual dispatch only. This repo's code is currently behind the live
+# production app (see PR discussion), so deploying it would roll back
+# production features. Re-enable the `push` trigger only once this repo
+# is confirmed in sync with what's actually running on forge-food-dev.
 name: Deploy to Firebase
 
 on:
-  push:
-    branches:
-      - main
+  workflow_dispatch:
 
 jobs:
   deploy:
