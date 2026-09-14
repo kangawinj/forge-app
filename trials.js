@@ -722,11 +722,32 @@ export function renderTrialsList(){
     // Criteria tab) keeps wording consistent across tests instead of
     // everyone retyping their own "Appearance" vs "Appearance (Interior)"
     // -- same idea as Cooking Method's own reference-list quick-fill on
-    // the Products page. Typing a brand-new name straight into the field
-    // still works exactly the same as before if it isn't on the list yet.
+    // the Products page. A topic with Sub-items (e.g. "Taste" -> Sweetness/
+    // Salty/Sour) lists each sub under its parent, formatted as "Taste
+    // (Sweetness)" -- matching the exact naming convention criteria rows
+    // already use -- rather than the bare parent name. Typing a brand-new
+    // name in the field below still works exactly as before if it isn't on
+    // the list yet.
+    const criteriaPickOptionsHtml = [...metaLists.evaluationCriteria]
+      .sort((a,b) => metaItemName(a).localeCompare(metaItemName(b), undefined, { sensitivity: 'base', numeric: true }))
+      .map(item => {
+        const name = metaItemName(item);
+        const subs = item.subs || [];
+        return subs.length
+          ? `<optgroup label="${escapeHtml(name)}">${subs.map(s => `<option value="${escapeHtml(`${name} (${s})`)}">${escapeHtml(s)}</option>`).join('')}</optgroup>`
+          : `<option value="${escapeHtml(name)}">${escapeHtml(name)}</option>`;
+      }).join('');
     const addCriteriaBtnHtml = isEditing ? `
+      ${criteriaPickOptionsHtml ? `
       <div class="project-add-row" style="margin-top:8px;">
-        <input type="text" class="trial-add-criteria-input" list="evaluationCriteriaDatalist" placeholder="Pick a Criteria (Reference Lists) or type a new name...">
+        <select class="trial-criteria-pick-select">
+          <option value="">Pick a Criteria (Reference Lists)...</option>
+          ${criteriaPickOptionsHtml}
+        </select>
+      </div>
+      ` : ''}
+      <div class="project-add-row" style="margin-top:8px;">
+        <input type="text" class="trial-add-criteria-input" list="evaluationCriteriaDatalist" placeholder="Or type a new name...">
         <button type="button" class="btn btn-sm" data-role="add-trial-criteria">+ Add Criteria</button>
       </div>
     ` : '';
@@ -1203,15 +1224,23 @@ export function renderTrialsList(){
       btn.addEventListener('click', () => moveTrialCriteria(btn.dataset.criteriaId, 1));
     });
     const addCriteriaInput = block.querySelector('.trial-add-criteria-input');
-    const addCriteriaEntry = () => {
-      const label = (addCriteriaInput?.value || '').trim();
+    const addCriteriaEntry = explicitLabel => {
+      const label = explicitLabel !== undefined ? explicitLabel : (addCriteriaInput?.value || '').trim();
       getEvaluationCriteria(t).push({ id: uid(), label });
       scheduleTrialSave(t);
       renderTrialsList();
     };
-    block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', addCriteriaEntry);
+    block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', () => addCriteriaEntry());
     addCriteriaInput?.addEventListener('keydown', e => {
       if(e.key === 'Enter'){ e.preventDefault(); addCriteriaEntry(); }
+    });
+    // Picking an option adds it immediately (no separate "+ Add" click) --
+    // same instant-apply feel as a native <select>, then resets back to the
+    // placeholder so it's ready to pick another one right after.
+    block.querySelector('.trial-criteria-pick-select')?.addEventListener('change', e => {
+      if(!e.target.value) return;
+      addCriteriaEntry(e.target.value);
+      e.target.value = '';
     });
     // Sensory Evaluation/Test Result are filled in through the "Perform
     // Evaluation" wizard now (see renderEvaluationWizard/wireEvaluationWizard),
