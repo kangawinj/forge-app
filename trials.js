@@ -291,21 +291,13 @@ function renderEvaluationWizard(){
   const overlay = existing || document.createElement('div');
   overlay.id = 'evalWizardOverlay';
   overlay.className = 'eval-wizard-overlay';
-  if(!existing){
-    document.body.appendChild(overlay);
-    // Backdrop click closes the wizard -- guarded to attach once (this
-    // element persists across re-renders, only its innerHTML is replaced
-    // below), and requires the mousedown to also have started on the
-    // backdrop so selecting/dragging text inside a field that overshoots
-    // past the card's edge doesn't close it (same fix as wireModalOverlayClose
-    // in app.js).
-    let mousedownOnOverlay = false;
-    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
-    overlay.addEventListener('click', e => {
-      if(mousedownOnOverlay && e.target === overlay){ evalWizard = null; renderEvaluationWizard(); }
-      mousedownOnOverlay = false;
-    });
-  }
+  // No click-to-close-on-backdrop here (unlike the app's other modals,
+  // see wireModalOverlayClose) -- the card has no background/border of its
+  // own to visually mark where "outside" begins, both are plain white, so
+  // a stray click in the gap between questions would close the wizard
+  // without the person meaning to. Only the X button (and Back/Review/Done
+  // navigation) closes it.
+  if(!existing) document.body.appendChild(overlay);
   overlay.innerHTML = isReview
     ? renderEvalWizardReview(t, products, criteria)
     : renderEvalWizardStep(t, products, criteria, evalWizard.step);
