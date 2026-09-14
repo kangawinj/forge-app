@@ -1,7 +1,7 @@
 import {
   escapeHtml, icon, resizeImageFile, requestAuthConfirm, playContentTransition,
   formatActivityDateTime, trialStringListHtml, currentUser, uid, mainFeatureView,
-  countryFlagBadgeHtml, metaListsDoc
+  countryFlagBadgeHtml, metaListsDoc, logActivityEvent
 } from './app.js';
 import {
   onSnapshot, setDoc
@@ -848,6 +848,7 @@ function addMetaListValue(key, value, extra = {}){
   // wipe every OTHER list back to empty. A targeted write can never do
   // that no matter how stale the rest of the in-memory copy is.
   setDoc(metaListsDoc, { [key]: updated }, { merge: true });
+  logActivityEvent('created', META_LIST_LABELS[key] || key, v);
 }
 /* Renaming in place (rather than delete + re-add) is what lets "edited by /
    when" mean something distinct from "added by / when". Returns false
@@ -857,18 +858,22 @@ function renameMetaListItem(key, id, newName, extra = {}){
   const v = (newName || '').trim();
   if(!v) return false;
   if(metaLists[key].some(item => item.id !== id && metaItemName(item) === v)) return false;
+  const before = metaLists[key].find(item => item.id === id);
   const updated = metaLists[key].map(item => item.id === id
     ? { ...item, name: v, ...extra, updatedBy: currentUser?.email || '', updatedAt: Date.now() }
     : item
   );
   metaLists = { ...metaLists, [key]: updated };
   setDoc(metaListsDoc, { [key]: updated }, { merge: true });
+  logActivityEvent('updated', META_LIST_LABELS[key] || key, v, (before && metaItemName(before) !== v) ? [{ field: 'Name', before: metaItemName(before), after: v }] : []);
   return true;
 }
 function removeMetaListItem(key, id){
+  const removed = metaLists[key].find(item => item.id === id);
   const updated = metaLists[key].filter(item => item.id !== id);
   metaLists = { ...metaLists, [key]: updated };
   setDoc(metaListsDoc, { [key]: updated }, { merge: true });
+  logActivityEvent('deleted', META_LIST_LABELS[key] || key, removed ? metaItemName(removed) : 'Untitled');
 }
 function renderMetaDatalists(){
   const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist', evaluationCriteria: 'evaluationCriteriaDatalist' };
