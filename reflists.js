@@ -815,7 +815,11 @@ export function attachMetaListsListener(){
       storageConditions: (Array.isArray(data.storageConditions) ? data.storageConditions : []).map(metaItem),
       evaluationCriteria: (Array.isArray(data.evaluationCriteria) ? data.evaluationCriteria : []).map(metaItem)
     };
-    if(needsUnitSeed) setDoc(metaListsDoc, metaLists);
+    // Targeted write (merge:true, only the units field) for the same
+    // reason as addMetaListValue/renameMetaListItem/removeMetaListItem
+    // below -- never write the whole shared doc back from an in-memory
+    // copy, only the one field actually being touched.
+    if(needsUnitSeed) setDoc(metaListsDoc, { units: metaLists.units }, { merge: true });
     renderMetaDatalists();
     if(mainFeatureView === 'refLists') renderRefListItems();
   }, err => {
@@ -837,7 +841,13 @@ function addMetaListValue(key, value, extra = {}){
   const updated = [...metaLists[key], { id: uid(), name: v, ...extra, createdBy: who, createdAt: now, updatedBy: who, updatedAt: now }]
     .sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
   metaLists = { ...metaLists, [key]: updated };
-  setDoc(metaListsDoc, metaLists);
+  // Writes only the one list that actually changed (merge:true, and only
+  // this one field in the payload) rather than the whole metaLists object
+  // -- every list shares this single Firestore doc, so a full-object write
+  // built from a stale or not-yet-loaded in-memory copy would silently
+  // wipe every OTHER list back to empty. A targeted write can never do
+  // that no matter how stale the rest of the in-memory copy is.
+  setDoc(metaListsDoc, { [key]: updated }, { merge: true });
 }
 /* Renaming in place (rather than delete + re-add) is what lets "edited by /
    when" mean something distinct from "added by / when". Returns false
@@ -852,12 +862,13 @@ function renameMetaListItem(key, id, newName, extra = {}){
     : item
   );
   metaLists = { ...metaLists, [key]: updated };
-  setDoc(metaListsDoc, metaLists);
+  setDoc(metaListsDoc, { [key]: updated }, { merge: true });
   return true;
 }
 function removeMetaListItem(key, id){
-  metaLists = { ...metaLists, [key]: metaLists[key].filter(item => item.id !== id) };
-  setDoc(metaListsDoc, metaLists);
+  const updated = metaLists[key].filter(item => item.id !== id);
+  metaLists = { ...metaLists, [key]: updated };
+  setDoc(metaListsDoc, { [key]: updated }, { merge: true });
 }
 function renderMetaDatalists(){
   const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist', evaluationCriteria: 'evaluationCriteriaDatalist' };
