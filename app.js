@@ -762,7 +762,8 @@ const CHANGELOG = [
   { version: "3.0.424", date: "2026-09-11", note: "Fixed the Sensory Evaluation criteria label on tests created before \"(Interior)\" was dropped from the default — they now show \"Appearance\" instead of \"Appearance (Interior)\", same as new tests" },
   { version: "3.0.425", date: "2026-09-11", note: "Perform Evaluation wizard now shows a legend explaining what each JAR score (1-5) means, right above the questions on every sample's page" },
   { version: "3.0.426", date: "2026-09-11", note: "Test Results' Sensory Evaluation criteria can now be reordered with up/down arrows while editing — Improvement Guidelines' rows follow the same order automatically" },
-  { version: "3.0.427", date: "2026-09-11", note: "Fixed the linked project's Certificate requirement showing as \"[object Object]\" on Test Results — now shows the actual checked certificates (e.g. \"Halal, HACCP\"), same as the Projects page" }
+  { version: "3.0.427", date: "2026-09-11", note: "Fixed the linked project's Certificate requirement showing as \"[object Object]\" on Test Results — now shows the actual checked certificates (e.g. \"Halal, HACCP\"), same as the Projects page" },
+  { version: "3.0.428", date: "2026-09-14", note: "Added an \"Evaluation Criteria\" tab to Reference Lists — a reusable, editable list of Sensory Evaluation criteria names. Test Results' \"+ Add Criteria\" now has a \"Pick a Criteria\" field sourced from it, so wording stays consistent across tests instead of everyone retyping their own version" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

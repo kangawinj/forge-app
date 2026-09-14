@@ -718,7 +718,18 @@ export function renderTrialsList(){
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
     `).join('');
-    const addCriteriaBtnHtml = isEditing ? `<button type="button" class="btn btn-sm add-row-btn" data-role="add-trial-criteria" style="margin-top:8px;">+ Add Criteria</button>` : '';
+    // Picking a name already on file (see Reference Lists' Evaluation
+    // Criteria tab) keeps wording consistent across tests instead of
+    // everyone retyping their own "Appearance" vs "Appearance (Interior)"
+    // -- same idea as Cooking Method's own reference-list quick-fill on
+    // the Products page. Typing a brand-new name straight into the field
+    // still works exactly the same as before if it isn't on the list yet.
+    const addCriteriaBtnHtml = isEditing ? `
+      <div class="project-add-row" style="margin-top:8px;">
+        <input type="text" class="trial-add-criteria-input" list="evaluationCriteriaDatalist" placeholder="Pick a Criteria (Reference Lists) or type a new name...">
+        <button type="button" class="btn btn-sm" data-role="add-trial-criteria">+ Add Criteria</button>
+      </div>
+    ` : '';
     // Test Result is a per-evaluator pick now, same as the Sensory
     // Evaluation criteria above -- filled in as the last step of each
     // product in the "Perform Evaluation" wizard. This table always
@@ -1191,10 +1202,16 @@ export function renderTrialsList(){
     block.querySelectorAll('[data-role="move-trial-criteria-down"]').forEach(btn => {
       btn.addEventListener('click', () => moveTrialCriteria(btn.dataset.criteriaId, 1));
     });
-    block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', () => {
-      getEvaluationCriteria(t).push({ id: uid(), label: '' });
+    const addCriteriaInput = block.querySelector('.trial-add-criteria-input');
+    const addCriteriaEntry = () => {
+      const label = (addCriteriaInput?.value || '').trim();
+      getEvaluationCriteria(t).push({ id: uid(), label });
       scheduleTrialSave(t);
       renderTrialsList();
+    };
+    block.querySelector('[data-role="add-trial-criteria"]')?.addEventListener('click', addCriteriaEntry);
+    addCriteriaInput?.addEventListener('keydown', e => {
+      if(e.key === 'Enter'){ e.preventDefault(); addCriteriaEntry(); }
     });
     // Sensory Evaluation/Test Result are filled in through the "Perform
     // Evaluation" wizard now (see renderEvaluationWizard/wireEvaluationWizard),
