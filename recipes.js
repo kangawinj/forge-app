@@ -1284,6 +1284,13 @@ function renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked){
 // header.
 let overviewSortKey = 'wt';
 let overviewSortDir = 'desc';
+// Costing card's margin/selling-price block (Overhead Multiplier through
+// Customer Selling Price) can be hidden with the eye button -- e.g. while
+// screen-sharing or printing an informal copy, without needing to actually
+// blank the fields out. Session-only (resets on reload), same as every
+// other view-only UI toggle in this app; doesn't touch the recipe's own
+// data at all.
+let costingMarginVisible = true;
 function overviewHeaderRowHtml(){
   const th = (label, cls, key) => {
     const active = overviewSortKey === key;
@@ -1437,7 +1444,10 @@ export function renderRecipeEditor(r){
     </div>
 
     <div class="card">
-      <div class="card-title">3. Costing</div>
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        3. Costing
+        <button type="button" class="icon-btn" id="btnToggleCostingMargin" title="${costingMarginVisible ? 'Hide' : 'Show'} Overhead Multiplier, Margins & Selling Price">${icon(costingMarginVisible ? 'eye' : 'eye-off')}</button>
+      </div>
       <div class="overview-block">
         <div class="batch-summary" style="margin-top:0;margin-bottom:0;">
           <div>
@@ -1477,6 +1487,7 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-label">Cost RM / kg</div>
             <div class="batch-stat-value" id="overviewCostPerKg">—</div>
           </div>
+          <div id="costingMarginSection" style="display:${costingMarginVisible ? 'contents' : 'none'};">
           <div>
             <div class="batch-stat-label">Overhead Multiplier</div>
             <div class="batch-scale-row">
@@ -1523,6 +1534,7 @@ export function renderRecipeEditor(r){
           <div>
             <div class="batch-stat-label">Customer Selling Price / Serving</div>
             <div class="batch-stat-value" id="overviewCustomerPrice">—</div>
+          </div>
           </div>
         </div>
         <div class="compare-legend" style="margin-top:12px;">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — leave it blank to skip (× 1); 1.625 is the reference Overhead value at 25%. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
@@ -1852,6 +1864,19 @@ export function renderRecipeEditor(r){
       updateGrandTotal(r);
       scheduleSave();
     });
+  });
+  // Pure visibility toggle -- straight DOM manipulation instead of a full
+  // renderRecipeEditor() re-render, so it can't disturb whatever's mid-edit
+  // elsewhere on the page (e.g. a focused input losing its cursor position).
+  document.getElementById('btnToggleCostingMargin')?.addEventListener('click', () => {
+    costingMarginVisible = !costingMarginVisible;
+    const section = document.getElementById('costingMarginSection');
+    if(section) section.style.display = costingMarginVisible ? 'contents' : 'none';
+    const btn = document.getElementById('btnToggleCostingMargin');
+    if(btn){
+      btn.innerHTML = icon(costingMarginVisible ? 'eye' : 'eye-off');
+      btn.title = `${costingMarginVisible ? 'Hide' : 'Show'} Overhead Multiplier, Margins & Selling Price`;
+    }
   });
 
   renderParts(r);
