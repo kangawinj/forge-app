@@ -2803,16 +2803,9 @@
     gap:16px;
     flex-wrap:wrap;
   }
-  .process-actual-yield-fields label{
-    display:flex;
-    flex-direction:column;
-    gap:4px;
-    font-size:12px;
-    color:var(--text-dim);
-  }
   /* Up to 2 reference photos, sitting first in the flex row so the
-     Weight/Yield/QC fields always fall to its right -- naturally "after
-     the photo" once one's attached, no separate layout switch needed. */
+     Weight/Yield/QC data always sits beside it -- naturally "after the
+     photo" once one's attached, no separate layout switch needed. */
   .process-yield-photos{
     display:flex;
     flex-direction:column;
@@ -2821,7 +2814,30 @@
   }
   .process-yield-photos .trial-photos-row{margin-bottom:0;}
   .process-yield-photos .trial-photo-thumb{width:210px;height:210px;}
-  .process-actual-yield-fields input{width:110px;}
+  /* Weight/Yield and Brix/Salt/pH stacked as one column so all of it sits
+     level with the photo block's height, instead of the QC rows wrapping
+     onto their own line below the photos once those got bigger. */
+  .process-actual-yield-data{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    min-width:260px;
+    flex:1;
+  }
+  .process-actual-yield-weight-row{
+    display:flex;
+    align-items:flex-start;
+    gap:16px;
+    flex-wrap:wrap;
+  }
+  .process-actual-yield-weight-row label{
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .process-actual-yield-weight-row input{width:110px;}
   .process-actual-yield-result{
     display:flex;
     flex-direction:column;
@@ -2834,23 +2850,23 @@
     font-weight:700;
     color:var(--primary-dark);
   }
-  /* Quality Control readings (°Brix / %Salt / pH) -- 3 replicate inputs
-     per metric plus an auto-averaged result, laid out in the same flex row
-     as the Weight Before/After/Yield fields above (wraps onto its own line
-     on narrower widths via that row's own flex-wrap). */
+  /* Quality Control readings (°Brix / %Salt / pH) -- each its own single
+     line (label, 3 replicate inputs, averaged result) stacked below the
+     Weight/Yield row, matching the read-only Print/Preview table's own
+     one-row-per-metric layout. */
   .process-qc-groups{
     display:flex;
-    gap:16px;
-    flex-wrap:wrap;
-    margin-left:auto;
+    flex-direction:column;
+    gap:6px;
   }
   .process-qc-group{
     display:flex;
-    flex-direction:column;
-    gap:4px;
+    align-items:center;
+    gap:10px;
     font-size:12px;
     color:var(--text-dim);
   }
+  .process-qc-label{width:40px;flex:none;}
   .process-qc-reps{
     display:flex;
     gap:4px;

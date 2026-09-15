@@ -3274,24 +3274,28 @@ function renderProcesses(r){
             <div class="trial-photos-row proc-photos-row"></div>
             <label class="btn btn-sm mu-attach-btn proc-photo-add-label">${icon('paperclip', 14)} Add Photo<input type="file" class="proc-photo-input" accept="image/*" style="display:none;"></label>
           </div>
-          <label>Weight Before (g)<input type="number" class="proc-wt-before num-input" step="0.01" min="0" placeholder="—"></label>
-          <label>Weight After (g)<input type="number" class="proc-wt-after num-input" step="0.01" min="0" placeholder="—"></label>
-          <div class="process-actual-yield-result">
-            <span>Yield</span>
-            <span class="proc-actual-yield-display">—</span>
-          </div>
-          <div class="process-qc-groups">
-          ${['brix','salt','ph'].map(field => `
-            <div class="process-qc-group">
-              <span>${field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH'}</span>
-              <div class="process-qc-reps">
-                <input type="number" class="proc-${field} num-input" data-idx="0" step="0.01" placeholder="Rep 1">
-                <input type="number" class="proc-${field} num-input" data-idx="1" step="0.01" placeholder="Rep 2">
-                <input type="number" class="proc-${field} num-input" data-idx="2" step="0.01" placeholder="Rep 3">
+          <div class="process-actual-yield-data">
+            <div class="process-actual-yield-weight-row">
+              <label>Weight Before (g)<input type="number" class="proc-wt-before num-input" step="0.01" min="0" placeholder="—"></label>
+              <label>Weight After (g)<input type="number" class="proc-wt-after num-input" step="0.01" min="0" placeholder="—"></label>
+              <div class="process-actual-yield-result">
+                <span>Yield</span>
+                <span class="proc-actual-yield-display">—</span>
               </div>
-              <div class="process-qc-avg"><span>Avg</span><span class="proc-${field}-avg-display">—</span></div>
             </div>
-          `).join('')}
+            <div class="process-qc-groups">
+            ${['brix','salt','ph'].map(field => `
+              <div class="process-qc-group">
+                <span class="process-qc-label">${field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH'}</span>
+                <div class="process-qc-reps">
+                  <input type="number" class="proc-${field} num-input" data-idx="0" step="0.01" placeholder="Rep 1">
+                  <input type="number" class="proc-${field} num-input" data-idx="1" step="0.01" placeholder="Rep 2">
+                  <input type="number" class="proc-${field} num-input" data-idx="2" step="0.01" placeholder="Rep 3">
+                </div>
+                <div class="process-qc-avg"><span>Avg</span><span class="proc-${field}-avg-display">—</span></div>
+              </div>
+            `).join('')}
+            </div>
           </div>
         </div>
       </div>
