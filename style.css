@@ -4990,11 +4990,6 @@
   }
   .eval-wizard-criteria-note::placeholder{color:var(--text-dim);}
   .eval-wizard-criteria-note:focus{border-color:var(--primary);}
-  /* Sits right after the score on the same row now (see
-     renderEvalWizardReview) instead of its own row below -- lighter
-     weight and italic so it still reads as a note, not part of the score
-     itself. */
-  .eval-wizard-review-note-inline{font-style:italic;font-weight:400;color:var(--text-dim);}
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
     flex:1;
@@ -5040,6 +5035,13 @@
   .eval-wizard-review-row:last-child{border-bottom:none;}
   .eval-wizard-review-row span{color:var(--text-dim);}
   .eval-wizard-review-row b{color:var(--text);text-align:right;}
+  /* Criteria rows only -- score and Note get their own columns (name |
+     score | note) instead of the note trailing right after the score in
+     one combined value column like every other row (Comments, Test
+     Result) still uses. */
+  .eval-wizard-review-row-3col{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;}
+  .eval-wizard-review-row-3col b{text-align:right;}
+  .eval-wizard-review-note-col{text-align:left;font-style:italic;color:var(--text-dim);white-space:normal;word-break:break-word;}
   @media (max-width:600px){
     .eval-wizard-jar-row{flex-wrap:wrap;}
     .eval-wizard-jar-btn{min-width:38px;}

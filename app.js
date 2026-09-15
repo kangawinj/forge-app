@@ -777,7 +777,8 @@ const CHANGELOG = [
   { version: "3.0.439", date: "2026-09-15", note: "Removed the \"Prep Yield\" column from Recipe Overview — a lossy ingredient/part still highlights its Prepare Wt. cell, with the exact yield % now shown on hover instead of its own column" },
   { version: "3.0.440", date: "2026-09-15", note: "Perform Evaluation wizard: the selected JAR answer's meaning now shows inline right after the criteria's title, instead of below the score buttons" },
   { version: "3.0.441", date: "2026-09-15", note: "Review page: a criteria's Note now shows right after its score on the same line, instead of its own separate row below" },
-  { version: "3.0.442", date: "2026-09-15", note: "Added an eye button to Recipes' Costing card to show/hide Overhead Multiplier, Margins, and Selling Price — handy for screen-sharing or a quick printout without those figures" }
+  { version: "3.0.442", date: "2026-09-15", note: "Added an eye button to Recipes' Costing card to show/hide Overhead Multiplier, Margins, and Selling Price — handy for screen-sharing or a quick printout without those figures" },
+  { version: "3.0.443", date: "2026-09-15", note: "Review page: score and Note are now separate columns for each criteria row, instead of the note trailing after the score in one combined column" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
