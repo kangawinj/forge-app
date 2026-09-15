@@ -1287,10 +1287,19 @@ let overviewSortDir = 'desc';
 // Costing card's margin/selling-price block (Overhead Multiplier through
 // Customer Selling Price) can be hidden with the eye button -- e.g. while
 // screen-sharing or printing an informal copy, without needing to actually
-// blank the fields out. Session-only (resets on reload), same as every
-// other view-only UI toggle in this app; doesn't touch the recipe's own
-// data at all.
-let costingMarginVisible = true;
+// blank the fields out. Persisted per-browser in localStorage (not on the
+// recipe itself -- this is a personal viewing preference, not recipe
+// data, so it doesn't sync to other users or other devices), so it stays
+// hidden across a page reload or leaving/reopening a recipe instead of
+// resetting open every time.
+const COSTING_MARGIN_VISIBLE_KEY = 'forge_costingMarginVisible';
+function loadCostingMarginVisible(){
+  try {
+    const saved = localStorage.getItem(COSTING_MARGIN_VISIBLE_KEY);
+    return saved === null ? true : saved === 'true';
+  } catch(e) { return true; }
+}
+let costingMarginVisible = loadCostingMarginVisible();
 function overviewHeaderRowHtml(){
   const th = (label, cls, key) => {
     const active = overviewSortKey === key;
@@ -1863,6 +1872,7 @@ export function renderRecipeEditor(r){
   // elsewhere on the page (e.g. a focused input losing its cursor position).
   document.getElementById('btnToggleCostingMargin')?.addEventListener('click', () => {
     costingMarginVisible = !costingMarginVisible;
+    try { localStorage.setItem(COSTING_MARGIN_VISIBLE_KEY, String(costingMarginVisible)); } catch(e) {}
     const section = document.getElementById('costingMarginSection');
     if(section) section.style.display = costingMarginVisible ? 'contents' : 'none';
     const btn = document.getElementById('btnToggleCostingMargin');
@@ -4252,7 +4262,7 @@ function printIngredientTableHtml(parts, totalWeight){
     + `<tr class="print-ing-total-row"><td>Formula total</td><td class="print-ing-num"></td><td></td><td class="print-ing-num">${fmtWt(totalWeight)} g</td><td class="print-ing-num">${fmtWt(totalPrepareWeight)} g</td><td class="print-ing-num">100.00%</td><td class="print-ing-num">100.00%</td></tr>`;
   return `
     <table class="print-ing-table">
-      <thead><tr><th>Ingredient</th><th class="print-ing-num">Yield</th><th>Prep / Note</th><th class="print-ing-num">Formula (g)</th><th class="print-ing-num">Prepare (g)</th><th class="print-ing-num">%</th><th class="print-ing-num">% of Recipe</th></tr></thead>
+      <thead><tr><th>Ingredient</th><th class="print-ing-num">Yield</th><th>Prep / Note</th><th class="print-ing-num">Formula (g)</th><th class="print-ing-num">Prepare (g)</th><th class="print-ing-num">% of Part</th><th class="print-ing-num">% of Recipe</th></tr></thead>
       <tbody>${bodyRows}</tbody>
     </table>
   `;
