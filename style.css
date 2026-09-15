@@ -2402,6 +2402,25 @@
     margin-bottom:12px;
   }
   .process-view-step-block:last-child{margin-bottom:0;}
+  /* Read-only Actual Yield block (Print/Preview, Version Preview) -- same
+     "photos to the left, Weight/Yield/QC table to the right" layout as the
+     live edit page, with its own title bar standing in for the table's old
+     <thead> now that the table itself is only half the row. */
+  .process-view-yield-title{
+    font-size:11px;
+    text-transform:uppercase;
+    color:var(--text-dim);
+    border-bottom:2px solid var(--border);
+    padding:6px 8px 8px;
+  }
+  .process-view-yield-row{
+    display:flex;
+    gap:16px;
+    align-items:flex-start;
+    margin-bottom:10px;
+  }
+  .process-view-yield-row .trial-photos-row{margin-bottom:0;flex:none;}
+  .process-view-yield-row .process-view-yield-table{flex:1;margin-bottom:0;}
   .compare-process-title{
     font-weight:700;
     font-size:12px;

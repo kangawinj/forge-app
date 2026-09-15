@@ -785,7 +785,8 @@ const CHANGELOG = [
   { version: "3.0.447", date: "2026-09-15", note: "Each Process's Actual Yield section now has an Add Photo button (up to 2 photos) — Weight Before/After, Yield, and °Brix/%Salt/pH now sit to the right of the photos" },
   { version: "3.0.448", date: "2026-09-15", note: "Print/Preview: the Ingredients table vs. Process Flow column split in \"4. Components and Process\" changed from 70/30 to 75/25" },
   { version: "3.0.449", date: "2026-09-15", note: "Process Actual Yield photo thumbnails are now 3x larger (70px to 210px)" },
-  { version: "3.0.450", date: "2026-09-15", note: "Print/Preview now shows each Process's Actual Yield photos, previously only visible on the live edit page" }
+  { version: "3.0.450", date: "2026-09-15", note: "Print/Preview now shows each Process's Actual Yield photos, previously only visible on the live edit page" },
+  { version: "3.0.451", date: "2026-09-15", note: "Print/Preview's Actual Yield photos now sit to the left of the Weight/Yield/Brix/Salt/pH table, instead of in their own row above it" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3251,21 +3252,26 @@ export function readOnlyProcessesHtml(processes, parts){
       return `<tr><td>${label}</td><td>${reps.map(v => v != null ? v : '—').join(', ')}</td><td>Avg ${avgOf(validReps.map(Number)) || '—'}</td></tr>`;
     }).join('');
 
+    // Photos sit to the left of the Weight/Yield/QC table (same idea as the
+    // live edit page's own photos-then-fields row) instead of their own row
+    // above it, so the data reads right where a glance at the photo lands.
     const photosHtml = (p.photos && p.photos.length) ? `
-      <tr><td colspan="3"><div class="trial-photos-row">${p.photos.map((photo, idx) => `
+      <div class="trial-photos-row">${p.photos.map((photo, idx) => `
         <div class="trial-photo-thumb"><img src="${escapeHtml(photo)}" alt="Process photo ${idx+1}"></div>
-      `).join('')}</div></td></tr>
+      `).join('')}</div>
     ` : '';
 
     const actualYieldHtml = `
-      <table class="compare-table process-view-yield-table" style="margin-bottom:10px;">
-        <thead><tr><th colspan="3">Actual Yield</th></tr></thead>
-        <tbody>
-          ${photosHtml}
-          <tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>
-          ${qcRows}
-        </tbody>
-      </table>
+      <div class="process-view-yield-title">Actual Yield</div>
+      <div class="process-view-yield-row">
+        ${photosHtml}
+        <table class="compare-table process-view-yield-table">
+          <tbody>
+            <tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>
+            ${qcRows}
+          </tbody>
+        </table>
+      </div>
     `;
 
     return `
