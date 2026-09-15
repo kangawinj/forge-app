@@ -1295,7 +1295,6 @@ function overviewHeaderRowHtml(){
     ${th('Ingredient / Prep', '', 'name')}
     ${th('% of Recipe', 'col-pct', 'wt')}
     ${th('Formula Wt. (g)', 'col-wt', 'wt')}
-    ${th('Prep Yield', 'col-yield', 'yield')}
     ${th('Prepare Wt. (g)', 'col-wt', 'prepareWt')}
     ${th('Cost (฿)', 'col-cost', 'cost')}
   `;
@@ -1428,7 +1427,6 @@ export function renderRecipeEditor(r){
               <td>Formula Total</td>
               <td class="col-pct" id="grandTotalPct"></td>
               <td class="col-wt" id="grandTotalWt"></td>
-              <td class="col-yield"></td>
               <td class="col-wt" id="grandTotalPrepareWt" title="Preparation Total"></td>
               <td class="col-cost" id="grandTotalCost"></td>
             </tr>
@@ -2918,7 +2916,7 @@ function renderOverview(allIngredients, prepareWeightByIng){
   const costEl = document.getElementById('grandTotalCost');
   const named = allIngredients.filter(i => (i.name||'').trim() !== '');
   if(named.length === 0){
-    body.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
+    body.innerHTML = '<tr><td colspan="6"><div class="overview-empty">No ingredient names entered yet</div></td></tr>';
     if(costEl){ costEl.innerHTML = ''; costEl.title = ''; }
     const per100El = document.getElementById('overviewCostPer100');
     const perKgEl = document.getElementById('overviewCostPerKg');
@@ -3062,8 +3060,7 @@ function renderOverview(allIngredients, prepareWeightByIng){
       </td>
       <td class="col-pct">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
       <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
-      <td class="col-yield">${(isFinite(y) && y > 0 ? y : 100).toFixed(2)}%</td>
-      <td class="col-wt${isLossy ? ' col-prepare-highlight' : ''}">${formatWeight(g.prepareWt)}</td>
+      <td class="col-wt${isLossy ? ' col-prepare-highlight' : ''}" title="${isLossy ? `Prep Yield: ${y.toFixed(2)}%` : ''}">${formatWeight(g.prepareWt)}</td>
       <td class="col-cost">${numCellHtml(money(g.cost) ?? '—', costBarPct)}</td>
     `;
     // Reuses the exact same Material Detail popup the Ingredient Library
