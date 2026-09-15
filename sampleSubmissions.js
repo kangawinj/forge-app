@@ -2,7 +2,8 @@ import {
   uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess, compositionSummaryText
+  productList, db, sampleSubmissionCountersCol, projects, hasModuleAccess, compositionSummaryText,
+  moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, runTransaction
@@ -692,6 +693,7 @@ export function renderSubmissionsList(){
         () => {
           const deletedLabel = submissionLabel(s);
           submissions = submissions.filter(x => x.id !== s.id);
+          moveToTrash('sampleSubmissions', s.id, s, deletedLabel);
           deleteDoc(doc(sampleSubmissionsCol, s.id));
           logActivityEvent('deleted', 'sample submission', deletedLabel);
           renderSubmissionsList();

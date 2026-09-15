@@ -3,7 +3,7 @@ import {
   DELETE_APPROVER_EMAIL, approverMaterialsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  materialsCol, showCloudError, trialStringListHtml
+  materialsCol, showCloudError, trialStringListHtml, moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -119,7 +119,8 @@ export function renderMaterialTable(){
         () => {},
         {
           requireEmail: DELETE_APPROVER_EMAIL,
-          approverAction: () => deleteDoc(doc(approverMaterialsCol, id))
+          approverAction: () => moveToTrash('ingredientMaster', id, m, materialLabel(m))
+            .then(() => deleteDoc(doc(approverMaterialsCol, id)))
             .then(() => logActivityEvent('deleted', 'material', materialLabel(m)))
         }
       );

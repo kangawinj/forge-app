@@ -11,7 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
-  query, orderBy, limit
+  query, orderBy, limit, getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { mountCompareView, setCompareSeriesPrefilter } from './compare.js';
 import { mountSeriesMigrationView } from './seriesMigration.js';
@@ -111,6 +111,64 @@ export const sampleSubmissionsCol = collection(db, "sampleSubmissions");
 // sampleSubmissions.js. Same collision-safe-counter reasoning as
 // recipeSeriesCol above.
 export const sampleSubmissionCountersCol = collection(db, "sampleSubmissionCounters");
+// A full snapshot of any deleted Recipe/Ingredient/Product/Project/Trial/
+// Sample Submission, kept for 30 days so a delete can be undone from the
+// Trash screen (see moveToTrash/restoreFromTrash/purgeExpiredTrash below)
+// instead of needing a full Firestore backup restore for an everyday
+// mistake. Every entity's own delete flow already re-confirms identity
+// (or the approver's, for Recipes/Ingredients/Products) before it ever
+// runs — Trash doesn't add another gate on top of that, it's purely a
+// safety net for after a delete already happened.
+export const trashCol = collection(db, "trash");
+// Keyed by the same string each entity's delete flow passes to
+// moveToTrash — maps back to that collection's own reference so
+// restoreFromTrash can write the snapshot back to exactly where it came
+// from, and to a human label for the Trash list.
+const TRASH_COLLECTION_MAP = {
+  recipes: { col: recipesCol, label: 'Recipe' },
+  ingredientMaster: { col: materialsCol, label: 'Ingredient' },
+  productList: { col: productsCol, label: 'Product' },
+  projects: { col: projectsCol, label: 'Project' },
+  trials: { col: trialsCol, label: 'Test Result' },
+  sampleSubmissions: { col: sampleSubmissionsCol, label: 'Sample Submission' }
+};
+export const TRASH_RETENTION_DAYS = 30;
+const TRASH_RETENTION_MS = TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000;
+// Called right before each entity's own deleteDoc, with the exact
+// in-memory object about to be deleted (already proven Firestore-safe --
+// it's the same shape that collection's own save function writes). Runs
+// under the CURRENT user's normal session even when called from inside an
+// admin-approver flow (Recipes/Ingredients/Products) -- trashCol only
+// ever needs isAllowedUser(), a completely separate Firebase App/auth
+// instance from the isolated approver one, so this never depends on
+// (or interferes with) whichever session is active at the call site.
+export function moveToTrash(sourceCollection, id, data, label){
+  return setDoc(doc(trashCol, uid()), {
+    sourceCollection,
+    originalId: id,
+    label: label || 'Untitled',
+    data,
+    deletedBy: currentUser?.email || '',
+    deletedAt: Date.now()
+  });
+}
+export async function restoreFromTrash(trashDoc){
+  const target = TRASH_COLLECTION_MAP[trashDoc.sourceCollection];
+  if(!target) throw new Error(`Unknown Trash source collection "${trashDoc.sourceCollection}"`);
+  await setDoc(doc(target.col, trashDoc.originalId), trashDoc.data);
+  await deleteDoc(doc(trashCol, trashDoc.id));
+  logActivityEvent('restored', target.label.toLowerCase(), trashDoc.label);
+}
+// Lazy cleanup -- this app has no scheduled Cloud Function to run this on
+// a timer, so it just runs whenever the Trash screen is opened (see
+// initTrashModal below), which is exactly when stale entries would
+// otherwise be seen anyway.
+export async function purgeExpiredTrash(items){
+  const cutoff = Date.now() - TRASH_RETENTION_MS;
+  const expired = items.filter(t => (t.deletedAt || 0) < cutoff);
+  await Promise.all(expired.map(t => deleteDoc(doc(trashCol, t.id))));
+  return expired.map(t => t.id);
+}
 // Draft project submissions from the public, no-login "share a link"
 // intake page (submit.html) — see the /pendingSubmissions rule in
 // firestore.rules for how a random per-link token (not auth) scopes
@@ -806,7 +864,8 @@ const CHANGELOG = [
   { version: "3.0.468", date: "2026-09-16", note: "Fixed a bug where clicking the Projects tab while a collapsed (not expanded) project row existed would silently crash mid-navigation -- the crash aborted the nav bar's own tab-highlight update, so Recipes could stay highlighted even after Projects had already loaded" },
   { version: "3.0.469", date: "2026-09-16", note: "Part/Sub-part headers: closed the remaining Yield-to-Prepare WT. gap, and moved Yield to line up roughly with the Note column on the ingredient rows beneath it -- Prepare WT./Formula WT./% of Recipe no longer line up with their own ingredient-row columns, in exchange for Yield through % of Recipe now packing together with no gaps" },
   { version: "3.0.470", date: "2026-09-16", note: "Fine-tuned Part/Sub-part header Name box width (45% to 40%) so Yield lines up more precisely with the Note column" },
-  { version: "3.0.471", date: "2026-09-16", note: "Part/Sub-part header's Yield/Prepare WT./Formula WT./% of Recipe cluster now pushes flush against the row's right edge, lining % of Recipe up with the % column on the ingredient rows beneath it" }
+  { version: "3.0.471", date: "2026-09-16", note: "Part/Sub-part header's Yield/Prepare WT./Formula WT./% of Recipe cluster now pushes flush against the row's right edge, lining % of Recipe up with the % column on the ingredient rows beneath it" },
+  { version: "3.0.472", date: "2026-09-16", note: "Added Trash — deleting a Recipe, Ingredient, Product, Project, Test Result, or Sample Submission now keeps a full snapshot for 30 days (Account menu → Trash) instead of erasing it immediately, with a one-click Restore" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1409,6 +1468,82 @@ function initDataManagementModal(){
   document.getElementById('btnOpenDataManagement').addEventListener('click', openDataManagementModal);
   document.getElementById('btnCloseDataManagement').addEventListener('click', closeDataManagementModal);
   wireModalOverlayClose('dataManagementModalOverlay', closeDataManagementModal);
+}
+
+/* ---------- Trash (recover a deleted Recipe/Ingredient/Product/Project/
+   Test Result/Sample Submission within 30 days) ----------
+   Fetched fresh with a plain getDocs every time the modal opens rather
+   than a persistent onSnapshot listener -- Trash is checked rarely, so
+   there's no reason for every session to carry an always-on listener for
+   it the way recipes/materials/etc. need. */
+let trashItemsCache = [];
+async function loadAndRenderTrash(){
+  const listEl = document.getElementById('trashList');
+  listEl.innerHTML = '<div class="overview-empty">Loading…</div>';
+  try{
+    const snap = await getDocs(trashCol);
+    let items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    const purgedIds = await purgeExpiredTrash(items);
+    if(purgedIds.length) items = items.filter(t => !purgedIds.includes(t.id));
+    items.sort((a, b) => (b.deletedAt || 0) - (a.deletedAt || 0));
+    trashItemsCache = items;
+    renderTrashList(items);
+  }catch(err){
+    console.error('Forge: loading Trash failed', err);
+    listEl.innerHTML = `<div class="overview-empty">Could not load Trash: ${escapeHtml(err.message)}</div>`;
+  }
+}
+function renderTrashList(items){
+  const listEl = document.getElementById('trashList');
+  if(!items.length){
+    listEl.innerHTML = '<div class="overview-empty">Trash is empty</div>';
+    return;
+  }
+  listEl.innerHTML = items.map(t => {
+    const typeLabel = (TRASH_COLLECTION_MAP[t.sourceCollection] || {}).label || t.sourceCollection;
+    const daysLeft = Math.max(0, Math.ceil((TRASH_RETENTION_DAYS * 24 * 60 * 60 * 1000 - (Date.now() - (t.deletedAt || 0))) / (24 * 60 * 60 * 1000)));
+    return `
+      <div class="trash-row" data-trash-id="${escapeHtml(t.id)}">
+        <div class="trash-row-main">
+          <div class="trash-row-label"><b>${escapeHtml(t.label)}</b> <span class="trash-row-type">${escapeHtml(typeLabel)}</span></div>
+          <div class="trash-row-meta">Deleted by ${escapeHtml(t.deletedBy || 'Unknown')} · ${escapeHtml(formatActivityDateTime(t.deletedAt) || '')} · ${daysLeft} day${daysLeft === 1 ? '' : 's'} left</div>
+        </div>
+        <button type="button" class="btn btn-sm" data-role="restore-trash">Restore</button>
+      </div>
+    `;
+  }).join('');
+  listEl.querySelectorAll('[data-role="restore-trash"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const id = btn.closest('[data-trash-id]')?.dataset.trashId;
+      const t = trashItemsCache.find(x => x.id === id);
+      if(!t) return;
+      btn.disabled = true;
+      btn.textContent = 'Restoring…';
+      try{
+        await restoreFromTrash(t);
+        trashItemsCache = trashItemsCache.filter(x => x.id !== id);
+        renderTrashList(trashItemsCache);
+      }catch(err){
+        console.error('Forge: restore from Trash failed', err);
+        alert('Could not restore this item: ' + err.message);
+        btn.disabled = false;
+        btn.textContent = 'Restore';
+      }
+    });
+  });
+}
+function initTrashModal(){
+  function openTrashModal(){
+    document.getElementById('navbarAccount').classList.remove('open');
+    document.getElementById('trashModalOverlay').classList.add('open');
+    loadAndRenderTrash();
+  }
+  function closeTrashModal(){
+    document.getElementById('trashModalOverlay').classList.remove('open');
+  }
+  document.getElementById('btnOpenTrash').addEventListener('click', openTrashModal);
+  document.getElementById('btnCloseTrash').addEventListener('click', closeTrashModal);
+  wireModalOverlayClose('trashModalOverlay', closeTrashModal);
 }
 
 
@@ -3841,6 +3976,7 @@ function applyStaticIcons(){
   prefixIcon('btnOpenMyProfile', 'user');
   prefixIcon('btnOpenSecurity', 'lock');
   prefixIcon('btnOpenDataManagement', 'database');
+  prefixIcon('btnOpenTrash', 'trash-2');
   prefixIcon('btnSaveVersion', 'save');
   prefixIcon('btnExportAll', 'download');
   prefixIcon('btnImport', 'upload');
@@ -3883,6 +4019,7 @@ initUserAdminPanel();
 initMyProfileModal();
 initSecurityModal();
 initDataManagementModal();
+initTrashModal();
 initActivityChangesModal();
 renderFooter();
 

@@ -59,6 +59,15 @@ service cloud.firestore {
     match /sampleSubmissions/{submissionId} {
       allow read, write: if isAllowedUser();
     }
+    // A full snapshot of a deleted Recipe/Ingredient/Product/Project/Trial/
+    // Sample Submission, kept for 30 days so a delete can be undone from
+    // the Trash screen (see moveToTrash/restoreFromTrash in app.js) --
+    // same access level as the entities it holds snapshots of. No update
+    // rule: a Trash entry is only ever created once and later deleted
+    // (restored or expired), never edited in place.
+    match /trash/{trashId} {
+      allow read, create, delete: if isAllowedUser();
+    }
     // Atomic per-year Form No. counter (id = "2026", field maxSeq) that
     // issueSubmissionFormNo()'s runTransaction() reads and increments —
     // same access level as /sampleSubmissions itself, since only that

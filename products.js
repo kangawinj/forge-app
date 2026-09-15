@@ -4,7 +4,7 @@ import {
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
   productsCol, showCloudError, isCurrentUserAdmin, db, metaLists, metaItemName, autoGrowTextarea,
-  FOOD_ALLERGEN_COLUMNS
+  FOOD_ALLERGEN_COLUMNS, moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, writeBatch
@@ -278,7 +278,8 @@ export function renderProductTable(){
         () => {},
         {
           requireEmail: DELETE_APPROVER_EMAIL,
-          approverAction: () => deleteDoc(doc(approverProductsCol, id))
+          approverAction: () => moveToTrash('productList', id, p, productLabel(p))
+            .then(() => deleteDoc(doc(approverProductsCol, id)))
             .then(() => logActivityEvent('deleted', 'product', productLabel(p)))
         }
       );

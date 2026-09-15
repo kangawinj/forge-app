@@ -113,6 +113,7 @@
         <button class="navbar-account-menu-item" id="btnOpenMyProfile">My Profile</button>
         <button class="navbar-account-menu-item" id="btnOpenSecurity">Security</button>
         <button class="navbar-account-menu-item" id="btnOpenDataManagement">Data Management</button>
+        <button class="navbar-account-menu-item" id="btnOpenTrash">Trash</button>
         <button class="navbar-account-menu-item" id="btnOpenUserAdmin" style="display:none;">Manage Users</button>
         <button class="navbar-account-menu-item" id="btnOpenSeriesMigration" style="display:none;">Recipe Series Migration</button>
         <button class="navbar-account-menu-item" id="btnLogoutFromApp">Log Out</button>
@@ -500,6 +501,19 @@
         <button class="btn" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
       </div>
+    </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="trashModalOverlay">
+  <div class="modal" style="max-width:640px;">
+    <div class="modal-header">
+      <div class="modal-title">Trash</div>
+      <button class="icon-btn" id="btnCloseTrash" title="Close">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:13px;color:var(--text-dim);margin-top:0;">A deleted Recipe, Ingredient, Product, Project, Test Result, or Sample Submission stays here for 30 days before it's permanently removed — restore it any time before then.</p>
+      <div id="trashList"></div>
     </div>
   </div>
 </div>

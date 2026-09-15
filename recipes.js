@@ -10,7 +10,7 @@ import {
   snapshotMainFields, blankProduct, scheduleProjectSave,
   findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
   openMaterialDetail, computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight,
-  setCompareSeriesPrefilter
+  setCompareSeriesPrefilter, moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc, runTransaction
@@ -1941,7 +1941,8 @@ export function renderRecipeEditor(r){
       () => deleteCurrent(),
       {
         requireEmail: DELETE_APPROVER_EMAIL,
-        approverAction: () => deleteDoc(doc(approverRecipesCol, deletingId))
+        approverAction: () => moveToTrash('recipes', deletingId, r, r.name || 'Untitled recipe')
+          .then(() => deleteDoc(doc(approverRecipesCol, deletingId)))
           .then(() => logActivityEvent('deleted', 'recipe', r.name || 'Untitled recipe'))
       }
     );

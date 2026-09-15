@@ -3113,6 +3113,29 @@
   .user-admin-row-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
   .user-admin-row-actions{display:flex;gap:6px;flex-shrink:0;}
   .user-admin-status{font-weight:700;}
+  /* ---------- Trash ---------- */
+  .trash-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:10px;
+    flex-wrap:wrap;
+    padding:10px 12px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    margin-bottom:8px;
+  }
+  .trash-row-main{min-width:0;}
+  .trash-row-label{font-size:13px;}
+  .trash-row-type{
+    font-size:11px;
+    color:var(--text-dim);
+    border:1px solid var(--border);
+    border-radius:20px;
+    padding:1px 8px;
+    margin-left:4px;
+  }
+  .trash-row-meta{font-size:11px;color:var(--text-dim);margin-top:2px;}
   .user-admin-status-pending{color:var(--accent);}
   .user-admin-status-approved{color:var(--ok);}
   .user-admin-status-rejected{color:var(--danger);}

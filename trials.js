@@ -4,7 +4,7 @@ import {
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
   trialStringListHtml, trialsCol, showCloudError,
-  metaLists, metaItemName, getRequirements, certificateSummaryText
+  metaLists, metaItemName, getRequirements, certificateSummaryText, moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -1059,6 +1059,7 @@ export function renderTrialsList(){
         () => {
           const deletedLabel = trialLabel(t);
           trials = trials.filter(x => x.id !== t.id);
+          moveToTrash('trials', t.id, t, deletedLabel);
           deleteTrialFromCloud(t.id);
           logActivityEvent('deleted', 'trial', deletedLabel);
           renderTrialsList();

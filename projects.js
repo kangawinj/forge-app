@@ -5,7 +5,8 @@ import {
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
   showCloudError, trialStringListHtml, wireModalOverlayClose, isCurrentUserAdmin,
-  pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch
+  pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
+  moveToTrash
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -3924,6 +3925,7 @@ export function renderProjectsList(){
         `Enter your password to delete "${p.name || 'Untitled project'}".`,
         () => {
           projects = projects.filter(x => x.id !== p.id);
+          moveToTrash('projects', p.id, p, p.name || 'Untitled project');
           deleteProjectFromCloud(p.id);
           logActivityEvent('deleted', 'project', p.name || 'Untitled project');
           renderProjectsList();
