@@ -748,11 +748,11 @@ export function renderTrialsList(){
           // could silently overwrite.
           const entries = combinedEvaluationEntries(pd, c.id, t.updatedBy);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(jarScoreDisplay(e.value))}</div>`).join('')
+            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}">${escapeHtml(jarScoreDisplay(e.value))}</div>`).join('')
             : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
         <td class="recipe-boundary">${noteEntries.length
-          ? noteEntries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}${e.product && evalTargets.length > 1 ? ` (${escapeHtml(e.product)})` : ''}:</b> ${escapeHtml(e.note)}</div>`).join('')
+          ? noteEntries.map(e => `<div class="teval-overall-entry">${e.product && evalTargets.length > 1 ? `<b>(${escapeHtml(e.product)}):</b> ` : ''}${escapeHtml(e.note)}</div>`).join('')
           : '<span class="overview-empty">-</span>'}</td>
       </tr>
     `;
@@ -803,7 +803,7 @@ export function renderTrialsList(){
           const pd = getTrialProductData(mt, p.id);
           const entries = combinedEvaluationEntries(pd, null, t.updatedBy);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(shortEvaluatorName(e.who))}: ${escapeHtml(e.value)}</b></div>`).join('')
+            ? entries.map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(e.value)}</b></div>`).join('')
             // Print (see printing-only) still gets an empty tick list on a
             // product nobody has evaluated yet, so a paper printout has
             // all 3 options for someone outside the system to mark by
@@ -836,7 +836,7 @@ export function renderTrialsList(){
             });
           }
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(e.value)}</div>`).join('')
+            ? entries.map(e => `<div class="teval-overall-entry">${escapeHtml(e.value)}</div>`).join('')
             : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
         <td class="recipe-boundary"></td>

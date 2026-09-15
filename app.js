@@ -780,7 +780,8 @@ const CHANGELOG = [
   { version: "3.0.442", date: "2026-09-15", note: "Added an eye button to Recipes' Costing card to show/hide Overhead Multiplier, Margins, and Selling Price — handy for screen-sharing or a quick printout without those figures" },
   { version: "3.0.443", date: "2026-09-15", note: "Review page: score and Note are now separate columns for each criteria row, instead of the note trailing after the score in one combined column" },
   { version: "3.0.444", date: "2026-09-15", note: "Test Results' Sensory Evaluation table Note column now shows every evaluator's own per-criteria note from the Perform Evaluation wizard, instead of one separately hand-typed note only reachable via Edit mode" },
-  { version: "3.0.445", date: "2026-09-15", note: "Added a Comments row to Test Results' Sensory Evaluation table, showing every evaluator's overall Comments from the Perform Evaluation wizard right on the summary table instead of only on the wizard's own Review page" }
+  { version: "3.0.445", date: "2026-09-15", note: "Added a Comments row to Test Results' Sensory Evaluation table, showing every evaluator's overall Comments from the Perform Evaluation wizard right on the summary table instead of only on the wizard's own Review page" },
+  { version: "3.0.446", date: "2026-09-15", note: "Test Results' Sensory Evaluation table no longer shows the evaluator's name before each score, note, Test Result, and Comment — just the value itself" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
