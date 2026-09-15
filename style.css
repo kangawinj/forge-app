@@ -928,23 +928,28 @@
   }
   .part-header input:hover{border-color:var(--border);}
   .part-header input:focus{background:#fff;}
-  /* Name is the ONLY thing in this row that grows -- it absorbs 100% of
-     the row's free space, so everything after it (count, Yield, Prepare
-     WT., Formula WT., % of Recipe) packs together with no gap between
-     any of them, ending flush against the row's right edge (matching the
-     ingredient columns beneath them, see .row-value-col above). Giving
-     Name a real border (like a Sub-part's always has, and a top-level
-     Part's now gets too) is what makes that extra width look like "a
-     wide input field", the same way any text input can be wider than its
-     own text without looking broken -- a growing but invisible/borderless
-     field, or growing the count text instead, both used to leave an
-     unexplained gap where nothing visually accounted for the space. */
+  /* Name grows to absorb the row's free space -- up to half the row's
+     width, so it doesn't dominate the whole header -- so that most of
+     the way, count/Yield/Prepare WT./Formula WT./% of Recipe pack
+     together with no gap between any of them. Giving Name a real border
+     (like a Sub-part's always has, and a top-level Part's now gets too)
+     is what makes that extra width look like "a wide input field", the
+     same way any text input can be wider than its own text without
+     looking broken -- a growing but invisible/borderless field, or
+     growing the count text instead, both used to leave an unexplained
+     gap where nothing visually accounted for the space. Whatever free
+     space Name's own 50% cap can't absorb falls to .row-value-prepare's
+     margin-left:auto below instead, which is what still lands Prepare
+     WT./Formula WT./% of Recipe flush against the row's right edge
+     (matching the ingredient columns beneath them) even once Name maxes
+     out short of absorbing all of it. */
   .part-header > .part-name{
     border:1px solid var(--border) !important;
     background:#fff !important;
     padding:9px 10px !important;
     flex:1 1 auto;
     min-width:90px;
+    max-width:50%;
   }
   .part-header > .part-name:focus{border-color:var(--primary) !important;}
   /* A Sub-part nested inside a Part should read as one more row in that
@@ -1643,6 +1648,14 @@
      top-level Part's header and a nested Sub-part's, so a Part's own
      totals line up directly above its ingredient rows' Formula (g) / %
      of Recipe columns instead of drifting off to one side. */
+  /* Name's own max-width:50% caps how much of the row's free space it
+     can absorb -- whatever's left over falls here instead, so Prepare
+     WT./Formula WT./% of Recipe still end up flush against the row's
+     right edge (matching the ingredient columns) even once Name maxes
+     out. A no-op once Name already absorbed everything on its own. */
+  .part-header > .row-value-prepare{
+    margin-left:auto;
+  }
   .part-header .row-value-prepare,
   .part-header .row-value-wt,
   .part-header .row-value-pct{
