@@ -778,7 +778,8 @@ const CHANGELOG = [
   { version: "3.0.440", date: "2026-09-15", note: "Perform Evaluation wizard: the selected JAR answer's meaning now shows inline right after the criteria's title, instead of below the score buttons" },
   { version: "3.0.441", date: "2026-09-15", note: "Review page: a criteria's Note now shows right after its score on the same line, instead of its own separate row below" },
   { version: "3.0.442", date: "2026-09-15", note: "Added an eye button to Recipes' Costing card to show/hide Overhead Multiplier, Margins, and Selling Price — handy for screen-sharing or a quick printout without those figures" },
-  { version: "3.0.443", date: "2026-09-15", note: "Review page: score and Note are now separate columns for each criteria row, instead of the note trailing after the score in one combined column" }
+  { version: "3.0.443", date: "2026-09-15", note: "Review page: score and Note are now separate columns for each criteria row, instead of the note trailing after the score in one combined column" },
+  { version: "3.0.444", date: "2026-09-15", note: "Test Results' Sensory Evaluation table Note column now shows every evaluator's own per-criteria note from the Perform Evaluation wizard, instead of one separately hand-typed note only reachable via Edit mode" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

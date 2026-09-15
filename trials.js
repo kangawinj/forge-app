@@ -404,6 +404,11 @@ function wireEvaluationWizard(overlay, t, products){
       const mine = getMyEvaluation(pd);
       mine[`${el.dataset.criteriaId}_note`] = el.value.trim();
       scheduleTrialSave(t);
+      // The Overall table's Note column reads straight from this (see
+      // fixedCriteriaRowsHtml) -- refresh it now instead of waiting for
+      // some other action to happen to trigger a render, same as every
+      // JAR/Test Result answer already does.
+      renderTrialsList();
     });
   });
   overlay.querySelector('.eval-wizard-comment')?.addEventListener('change', e => {
@@ -694,7 +699,30 @@ export function renderTrialsList(){
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
-    const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => `
+    const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => {
+      // Combined per-evaluator notes for this criteria, across every
+      // product -- links this column to what's actually typed per-sample
+      // in the Perform Evaluation wizard (mine[`${criteriaId}_note`])
+      // instead of one hand-typed note only reachable via Edit mode. A
+      // note typed the old way (before the wizard had its own per-
+      // criteria Note field) is folded in too, attributed to whoever
+      // last edited the test, so it's never silently dropped -- same
+      // "never destroy data" approach as combinedEvaluationEntries.
+      const noteEntries = [];
+      evalTargets.forEach(p => {
+        const pd = getTrialProductData(mt, p.id);
+        if(pd.evaluations && typeof pd.evaluations === 'object'){
+          Object.entries(pd.evaluations).forEach(([email, ans]) => {
+            const noteVal = ans?.[`${c.id}_note`];
+            if(noteVal) noteEntries.push({ who: email, product: p.label, note: noteVal });
+          });
+        }
+      });
+      const legacyNote = sensoryCriteriaNotes[c.id];
+      if(legacyNote && !noteEntries.some(e => e.note === legacyNote)){
+        noteEntries.push({ who: t.updatedBy || 'Unspecified', product: null, note: legacyNote });
+      }
+      return `
       <tr>
         <td>${isEditing
           ? `<div style="display:flex;align-items:center;gap:6px;">
@@ -719,9 +747,12 @@ export function renderTrialsList(){
             ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(jarScoreDisplay(e.value))}</div>`).join('')
             : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
-        <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea></td>
+        <td class="recipe-boundary">${noteEntries.length
+          ? noteEntries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}${e.product && evalTargets.length > 1 ? ` (${escapeHtml(e.product)})` : ''}:</b> ${escapeHtml(e.note)}</div>`).join('')
+          : '<span class="overview-empty">-</span>'}</td>
       </tr>
-    `).join('');
+    `;
+    }).join('');
     // Picking a name already on file (see Reference Lists' Evaluation
     // Criteria tab) keeps wording consistent across tests instead of
     // everyone retyping their own "Appearance" vs "Appearance (Interior)"
