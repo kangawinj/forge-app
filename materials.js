@@ -3,7 +3,7 @@ import {
   DELETE_APPROVER_EMAIL, approverMaterialsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  materialsCol, showCloudError
+  materialsCol, showCloudError, trialStringListHtml
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -22,6 +22,12 @@ let editingSubIngredients = [];
 function blankSubIngredient(){
   return { id: uid(), type: '', size: '', sizeUnit: '', cooking: '', yieldPct: '' };
 }
+// Factories/companies that use this ingredient -- a plain string list, same
+// add/remove/edit shape as Test Participants (see trialStringListHtml),
+// just re-rendered into its own container instead of triggering a full
+// page re-render, matching how editingSubIngredients above stays local
+// until "+ Add to Library"/"Save Changes" actually commits it.
+let editingFactories = [];
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes'];
 const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
 let materialEditSnapshotBefore = null;
@@ -181,7 +187,11 @@ export function mountMaterialsView(){
           <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
         </div>
         <div class="field">
-          <label>10. Sub Ingredients (optional)</label>
+          <label>10. Factories/Companies Using This Material (optional)</label>
+          <div id="materialFactoriesRows"></div>
+        </div>
+        <div class="field">
+          <label>11. Sub Ingredients (optional)</label>
           <div class="flavor-table-scroll">
             <table class="flavor-table" id="subIngredientsTable">
               <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th></th></tr></thead>
@@ -260,6 +270,7 @@ export function mountMaterialsView(){
       price: document.getElementById('mf-price').value.trim(),
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
+      factories: editingFactories.map(f => (f || '').trim()).filter(Boolean),
       subIngredients: editingSubIngredients.map(si => ({...si})),
       image: editingMaterialImage || '',
       createdBy: existing?.createdBy || currentUser?.email || '',
@@ -299,6 +310,10 @@ export function openMaterialDetail(m){
     ${m.usageNotes ? `
       <div class="material-detail-notes-label">Usage Notes</div>
       <div class="material-detail-notes">${escapeHtml(m.usageNotes)}</div>
+    ` : ''}
+    ${(m.factories || []).length ? `
+      <div class="material-detail-notes-label">Factories/Companies Using This Material</div>
+      <div class="material-detail-notes">${m.factories.map(f => escapeHtml(f)).join(', ')}</div>
     ` : ''}
     ${(m.subIngredients || []).length ? `
       <div class="material-detail-notes-label">Sub Ingredients</div>
@@ -357,6 +372,8 @@ function fillMaterialForm(m){
   setMaterialImagePreview(m.image || null);
   editingSubIngredients = (m.subIngredients || []).map(si => ({...si}));
   renderSubIngredientsTable();
+  editingFactories = Array.isArray(m.factories) ? [...m.factories] : [];
+  renderMaterialFactoriesList();
 }
 
 function subIngredientRowHtml(si){
@@ -400,6 +417,25 @@ function renderSubIngredientsTable(){
   });
 }
 
+function renderMaterialFactoriesList(){
+  const wrap = document.getElementById('materialFactoriesRows');
+  if(!wrap) return;
+  wrap.innerHTML = trialStringListHtml(editingFactories, true, 'mf-factory-input', 'material-factory', 'e.g. ABC Co., Ltd.', 'customerDatalist');
+  wrap.querySelector('[data-role="add-material-factory"]')?.addEventListener('click', () => {
+    editingFactories.push('');
+    renderMaterialFactoriesList();
+  });
+  wrap.querySelectorAll('[data-role="remove-material-factory"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      editingFactories.splice(parseInt(btn.dataset.idx, 10), 1);
+      renderMaterialFactoriesList();
+    });
+  });
+  wrap.querySelectorAll('.mf-factory-input').forEach((input, idx) => {
+    input.addEventListener('change', () => { editingFactories[idx] = input.value.trim(); });
+  });
+}
+
 function startEditMaterial(m){
   editingMaterialId = m.id;
   materialEditSnapshotBefore = snapshotMainFields(m, MATERIAL_DIFF_FIELDS);
@@ -431,6 +467,8 @@ function cancelEditMaterial(){
   setMaterialImagePreview(null);
   editingSubIngredients = [];
   renderSubIngredientsTable();
+  editingFactories = [];
+  renderMaterialFactoriesList();
   document.getElementById('materialFormTitle').textContent = '+ Add New Ingredient';
   document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
   document.getElementById('btnCancelEditMaterial').style.display = 'none';
