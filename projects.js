@@ -2911,9 +2911,9 @@ export function renderProjectsList(){
             }) ? icon('check', 14) : '<span class="proj-missing" title="Missing">—</span>'}</td>
             <td data-col="productCount">${productCount === 0 ? '<span class="proj-missing" title="No products yet">0</span>' : productCount}</td>
             <td class="proj-actions-cell" style="white-space:nowrap;">
-              ${isEditing
-                ? ''
-                : `<button class="btn btn-sm" data-role="print-project" title="Print this project">${icon('printer')}</button><button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button>${p.isUnassignedBucket ? '' : `<button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}`}
+              ${(isExpanded && !isEditing)
+                ? `<button class="btn btn-sm" data-role="print-project" title="Print this project">${icon('printer')}</button><button class="btn btn-sm" data-role="edit-project">${icon('pencil')} Edit</button>${p.isUnassignedBucket ? '' : `<button class="btn btn-sm btn-danger" data-role="delete-project">${icon('x')} Delete</button>`}`
+                : ''}
             </td>
           </tr>
         `;

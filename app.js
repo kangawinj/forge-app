@@ -769,7 +769,8 @@ const CHANGELOG = [
   { version: "3.0.431", date: "2026-09-14", note: "IMPORTANT DATA-SAFETY FIX: Reference Lists (Company Directory, Contact Directory, Cooking Method, etc.) all share one Firestore document. Saving an entry used to write that whole document back from memory, so a stale copy in one tab/session could wipe every OTHER list back to empty. Every save now writes only the one list actually being edited — the rest can never be touched by it, no matter what's happening in that tab" },
   { version: "3.0.432", date: "2026-09-14", note: "Reference Lists (Company Directory, Cooking Method, Evaluation Criteria, etc.) now log to the Activity feed — adding, renaming, or deleting an entry shows up in the notification bell like it already does for Projects/Recipes/Test Results" },
   { version: "3.0.433", date: "2026-09-15", note: "Removed the unused \"Responsible Persons (PD)\" tab from Reference Lists — it was never actually linked to any Person/PD field in the app (those already pull from Contact Directory), so it was dead weight with no way to reach it from anywhere" },
-  { version: "3.0.434", date: "2026-09-15", note: "Clicking a project's photo in the Projects list now expands that row and shows its full details, same as clicking an ingredient's photo opens its detail view" }
+  { version: "3.0.434", date: "2026-09-15", note: "Clicking a project's photo in the Projects list now expands that row and shows its full details, same as clicking an ingredient's photo opens its detail view" },
+  { version: "3.0.435", date: "2026-09-15", note: "Print/Edit/Delete buttons on the Projects list now only show once a project's row is expanded, instead of cluttering every collapsed row" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
