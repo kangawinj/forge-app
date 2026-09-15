@@ -1001,7 +1001,7 @@
     margin-left:auto;
     display:flex;
     align-items:center;
-    gap:6px;
+    gap:14px;
     font-size:12px;
     color:var(--text-dim);
     white-space:nowrap;
@@ -1009,7 +1009,28 @@
   .part-header-fields .part-pct-display{width:64px;flex:0 0 auto;}
   .part-header-fields .part-wt-display{width:80px;flex:0 0 auto;}
   .part-header-fields .part-yield-input{width:56px;flex:0 0 auto;}
-  .part-header-fields .part-prepare-display{display:inline-block;min-width:60px;text-align:right;font-weight:600;}
+  .part-header-fields .part-prepare-display{display:inline-block;min-width:60px;text-align:left;font-weight:600;}
+  /* Prepare/Formula/% of Recipe each get their label on its own line
+     above the value, instead of inline with it -- inline overlapped
+     awkwardly with the numbers once these labels were added (this row
+     is a fixed nowrap flex row with several fields already competing
+     for the same horizontal space; see .part-header-fields above). */
+  .part-metric{
+    display:flex;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:2px;
+  }
+  .part-metric-label{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .row-value-inline{
+    display:flex;
+    align-items:center;
+    gap:2px;
+  }
   .part-block.collapsed .part-body{display:none;}
   /* Data cells used to force nowrap, which made long Customer/Destination/
      Factory names push the whole table past the viewport width, requiring
@@ -1655,29 +1676,28 @@
      as .sub-part-row > .part-header .part-name above), instead of the
      shared fixed 80px .row-value-col.row-value-prepare width every
      ingredient row also uses. */
-  .sub-part-row > .part-header .row-value-prepare{
+  /* Prepare/Formula/% of Recipe each get their label on the line above
+     the value instead of inline with it (same reasoning as .part-metric
+     for a top-level Part's header) -- flex-direction:column stacks
+     label-then-value, overriding the shared .row-value-col's row layout
+     that every plain ingredient row (with no label to show) still uses. */
+  .sub-part-row > .part-header .row-value-prepare,
+  .sub-part-row > .part-header .row-value-wt,
+  .sub-part-row > .part-header .row-value-pct{
     flex:0 0 auto;
-    gap:4px;
+    flex-direction:column;
+    align-items:flex-start;
+    gap:2px;
   }
   .row-value-prepare-label{
     font-size:11px;
     color:var(--text-dim);
     white-space:nowrap;
   }
-  /* Same idea as .row-value-prepare-label above, for the Formula weight
-     and % of Recipe cells -- an ingredient row's identical-looking cells
-     have no such label (their meaning is obvious from context: the
-     ingredient's own weight/%), but a Sub-part's own weight/% easily reads
-     as "just another number" without one. */
   .row-value-wt-label, .row-value-pct-label{
     font-size:11px;
     color:var(--text-dim);
     white-space:nowrap;
-  }
-  .sub-part-row > .part-header .row-value-wt,
-  .sub-part-row > .part-header .row-value-pct{
-    flex:0 0 auto;
-    gap:4px;
   }
   /* Part-level Prepare highlight -- toggled on the display span itself
      rather than a .row-value-prepare wrapper, since the top-level Part
