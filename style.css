@@ -1905,6 +1905,16 @@
     background:var(--accent-light);
   }
   .material-table tbody tr{cursor:pointer;}
+  .proj-row-photo-btn{
+    background:none;
+    border:none;
+    padding:0;
+    cursor:pointer;
+    border-radius:5px;
+    display:block;
+    line-height:0;
+  }
+  .proj-row-photo-btn:hover .material-thumb{border-color:var(--primary);}
   .material-table tbody tr:hover{background:var(--accent-light);}
   /* Product List's two named image slots (RM / Idea Menu) sit side by
      side in the add/edit form, same idea as .grid-3 above but always

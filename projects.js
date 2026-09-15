@@ -2893,7 +2893,7 @@ export function renderProjectsList(){
         const summaryRow = `
           <tr class="proj-row">
             <td><button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this project">${icon('chevron-right')}</button></td>
-            <td data-col="photo">${p.image ? `<img src="${escapeHtml(p.image)}" class="material-thumb" alt="${escapeHtml(p.name || 'Project photo')}">` : '<div class="material-thumb material-thumb-empty"></div>'}</td>
+            <td data-col="photo"><button type="button" class="proj-row-photo-btn" title="Expand this project">${p.image ? `<img src="${escapeHtml(p.image)}" class="material-thumb" alt="${escapeHtml(p.name || 'Project photo')}">` : '<div class="material-thumb material-thumb-empty"></div>'}</button></td>
             <td><b>${escapeHtml(p.name || 'Untitled project')}</b>${projectStatusBarHtml(p.status)}</td>
             <td data-col="status">${escapeHtml(p.status || PROJECT_STATUSES[0])}</td>
             <td data-col="requestDate">${missingCell(p.requestDate)}</td>
@@ -3445,11 +3445,18 @@ export function renderProjectsList(){
     const isEditing = id === projectEditingId;
     const isExpanded = isEditing || projectExpandedIds.has(id);
 
-    block.querySelector('.part-toggle-btn').addEventListener('click', () => {
+    const toggleProjectExpanded = () => {
       if(projectExpandedIds.has(id)) projectExpandedIds.delete(id);
       else projectExpandedIds.add(id);
       renderProjectsList();
-    });
+    };
+    block.querySelector('.part-toggle-btn').addEventListener('click', toggleProjectExpanded);
+    // Clicking the photo expands the row too, same as clicking a material's
+    // thumbnail opens its detail (see openMaterialDetail in materials.js) --
+    // projects don't have a separate detail modal, so the existing expand/
+    // collapse (which already reveals every field, Requirements, Products,
+    // Activities Updates) is the equivalent "show me more" here.
+    block.querySelector('.proj-row-photo-btn')?.addEventListener('click', toggleProjectExpanded);
 
     wireProjectDocSlots(block, p);
 
