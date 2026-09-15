@@ -784,7 +784,8 @@ const CHANGELOG = [
   { version: "3.0.446", date: "2026-09-15", note: "Test Results' Sensory Evaluation table no longer shows the evaluator's name before each score, note, Test Result, and Comment — just the value itself" },
   { version: "3.0.447", date: "2026-09-15", note: "Each Process's Actual Yield section now has an Add Photo button (up to 2 photos) — Weight Before/After, Yield, and °Brix/%Salt/pH now sit to the right of the photos" },
   { version: "3.0.448", date: "2026-09-15", note: "Print/Preview: the Ingredients table vs. Process Flow column split in \"4. Components and Process\" changed from 70/30 to 75/25" },
-  { version: "3.0.449", date: "2026-09-15", note: "Process Actual Yield photo thumbnails are now 3x larger (70px to 210px)" }
+  { version: "3.0.449", date: "2026-09-15", note: "Process Actual Yield photo thumbnails are now 3x larger (70px to 210px)" },
+  { version: "3.0.450", date: "2026-09-15", note: "Print/Preview now shows each Process's Actual Yield photos, previously only visible on the live edit page" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -3250,10 +3251,17 @@ export function readOnlyProcessesHtml(processes, parts){
       return `<tr><td>${label}</td><td>${reps.map(v => v != null ? v : '—').join(', ')}</td><td>Avg ${avgOf(validReps.map(Number)) || '—'}</td></tr>`;
     }).join('');
 
+    const photosHtml = (p.photos && p.photos.length) ? `
+      <tr><td colspan="3"><div class="trial-photos-row">${p.photos.map((photo, idx) => `
+        <div class="trial-photo-thumb"><img src="${escapeHtml(photo)}" alt="Process photo ${idx+1}"></div>
+      `).join('')}</div></td></tr>
+    ` : '';
+
     const actualYieldHtml = `
       <table class="compare-table process-view-yield-table" style="margin-bottom:10px;">
         <thead><tr><th colspan="3">Actual Yield</th></tr></thead>
         <tbody>
+          ${photosHtml}
           <tr><td>Weight Before / After</td><td>${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}</td><td>Yield ${actualYieldPct}</td></tr>
           ${qcRows}
         </tbody>
