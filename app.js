@@ -865,7 +865,8 @@ const CHANGELOG = [
   { version: "3.0.469", date: "2026-09-16", note: "Part/Sub-part headers: closed the remaining Yield-to-Prepare WT. gap, and moved Yield to line up roughly with the Note column on the ingredient rows beneath it -- Prepare WT./Formula WT./% of Recipe no longer line up with their own ingredient-row columns, in exchange for Yield through % of Recipe now packing together with no gaps" },
   { version: "3.0.470", date: "2026-09-16", note: "Fine-tuned Part/Sub-part header Name box width (45% to 40%) so Yield lines up more precisely with the Note column" },
   { version: "3.0.471", date: "2026-09-16", note: "Part/Sub-part header's Yield/Prepare WT./Formula WT./% of Recipe cluster now pushes flush against the row's right edge, lining % of Recipe up with the % column on the ingredient rows beneath it" },
-  { version: "3.0.472", date: "2026-09-16", note: "Added Trash — deleting a Recipe, Ingredient, Product, Project, Test Result, or Sample Submission now keeps a full snapshot for 30 days (Account menu → Trash) instead of erasing it immediately, with a one-click Restore" }
+  { version: "3.0.472", date: "2026-09-16", note: "Added Trash — deleting a Recipe, Ingredient, Product, Project, Test Result, or Sample Submission now keeps a full snapshot for 30 days (Account menu → Trash) instead of erasing it immediately, with a one-click Restore" },
+  { version: "3.0.473", date: "2026-09-16", note: "Test Results' Sensory Evaluation table now shows each JAR score's meaning (e.g. \"Just right (พอดี)\") right next to the number, not just on hover" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

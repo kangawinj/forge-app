@@ -748,7 +748,7 @@ export function renderTrialsList(){
           // could silently overwrite.
           const entries = combinedEvaluationEntries(pd, c.id, t.updatedBy);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}">${escapeHtml(jarScoreDisplay(e.value))}</div>`).join('')
+            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}">${escapeHtml(jarScoreDisplay(e.value))} <span class="teval-jar-meaning">${escapeHtml(jarScoreLabel(e.value))}</span></div>`).join('')
             : '<span class="overview-empty">-</span>'}</td>`;
         }).join('')}
         <td class="recipe-boundary">${noteEntries.length
