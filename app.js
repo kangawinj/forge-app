@@ -802,7 +802,8 @@ const CHANGELOG = [
   { version: "3.0.464", date: "2026-09-15", note: "Part/Sub-part headers: closed the gap between Yield and Prepare WT. -- Name now grows to a bordered box (like a Sub-part's name always was) to absorb the row's free space instead of a gap opening up between Yield and Prepare WT., while Prepare WT./Formula WT./% of Recipe still line up with the ingredient columns beneath them" },
   { version: "3.0.465", date: "2026-09-16", note: "Added an Edit button to the Ingredient Details popup (shown when clicking an ingredient, e.g. from Recipe Overview) -- jumps straight to editing that ingredient in the Ingredient Library instead of needing to find it there manually" },
   { version: "3.0.466", date: "2026-09-16", note: "Part/Sub-part header's Name box no longer grows past half the row's width" },
-  { version: "3.0.467", date: "2026-09-16", note: "Part/Sub-part header's Name box max width reduced again, from half the row's width to a quarter" }
+  { version: "3.0.467", date: "2026-09-16", note: "Part/Sub-part header's Name box max width reduced again, from half the row's width to a quarter" },
+  { version: "3.0.468", date: "2026-09-16", note: "Fixed a bug where clicking the Projects tab while a collapsed (not expanded) project row existed would silently crash mid-navigation -- the crash aborted the nav bar's own tab-highlight update, so Recipes could stay highlighted even after Projects had already loaded" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

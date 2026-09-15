@@ -3796,7 +3796,7 @@ export function renderProjectsList(){
         renderProjectsList();
       });
     }else{
-      block.querySelector('[data-role="edit-project"]').addEventListener('click', () => {
+      block.querySelector('[data-role="edit-project"]')?.addEventListener('click', () => {
         projectEditingId = p.id;
         monthlyUpdateEditingId = null;
         monthlyUpdateAddOpen = false;
