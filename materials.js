@@ -13,6 +13,11 @@ let ingredientMaster = [];
 let unsubscribeMaterials = null;
 let materialsLoaded = false;
 let editingMaterialId = null;
+// Which ingredient the read-only "Ingredient Details" popup (openMaterialDetail)
+// is currently showing -- lets its Edit button jump straight into editing
+// that same ingredient without the caller (any page that can open this
+// popup: Recipe Overview, Materials list, etc.) needing to pass it back.
+let materialDetailCurrentId = null;
 let editingMaterialImage = null; // staged photo as a data URL, or null for no photo
 // This ingredient's own composition, e.g. "Curry Powder" made of Turmeric,
 // Coriander, ... -- a plain array on the material doc (same deferred-shape
@@ -289,6 +294,7 @@ export function mountMaterialsView(){
 }
 
 export function openMaterialDetail(m){
+  materialDetailCurrentId = m.id;
   const body = document.getElementById('materialDetailBody');
   const rows = [
     ['Vendor Code', m.vendorCode],
@@ -342,6 +348,15 @@ export function openMaterialDetail(m){
 
 export function closeMaterialDetail(){
   document.getElementById('materialDetailModalOverlay').classList.remove('open');
+}
+
+// Called after the caller has already navigated to the Ingredient Library
+// view (mounting its form) and closed this popup -- loads whichever
+// ingredient the popup was showing into that form for editing, same as
+// clicking its row's own pencil icon would.
+export function editMaterialFromDetail(){
+  const m = ingredientMaster.find(x => x.id === materialDetailCurrentId);
+  if(m) startEditMaterial(m);
 }
 
 function setMaterialImagePreview(dataUrl){

@@ -1873,6 +1873,12 @@
     font-size:15px;
     color:var(--primary-dark);
   }
+  .modal-header-actions{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex:0 0 auto;
+  }
   .modal-body{
     padding:20px;
     overflow-y:auto;
