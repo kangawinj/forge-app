@@ -928,7 +928,7 @@
   }
   .part-header input:hover{border-color:var(--border);}
   .part-header input:focus{background:#fff;}
-  /* Name grows to absorb the row's free space, capped at 45% of the
+  /* Name grows to absorb the row's free space, capped at 40% of the
      row's width -- tuned so Yield (right after count, see below) lands
      at roughly the same x-position as Note on the ingredient rows
      beneath it, not just "not touching the edge". count/Yield/Prepare
@@ -950,7 +950,7 @@
     padding:9px 10px !important;
     flex:1 1 auto;
     min-width:90px;
-    max-width:45%;
+    max-width:40%;
   }
   .part-header > .part-name:focus{border-color:var(--primary) !important;}
   /* A Sub-part nested inside a Part should read as one more row in that
