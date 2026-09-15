@@ -51,7 +51,6 @@ export function mountRefListsView(){
         <button class="reflist-tab-btn active" data-key="customers">Company Directory</button>
         <button class="reflist-tab-btn" data-key="salesReps">Contact Directory</button>
         <button class="reflist-tab-btn" data-key="destinationCountries">Destination Countries</button>
-        <button class="reflist-tab-btn" data-key="responsiblePersons">Responsible Persons (PD)</button>
         <button class="reflist-tab-btn" data-key="productTypes">Product Types</button>
         <button class="reflist-tab-btn" data-key="units">Units</button>
         <button class="reflist-tab-btn" data-key="cookingMethods">Cooking Method</button>
@@ -764,8 +763,8 @@ export function renderRefListItems(){
 /* Each list holds { id, name } records rather than plain strings, so future
    fields (contact info, region, etc.) can be added per entry later without
    another data migration. */
-let metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [], evaluationCriteria: [] };
-const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', responsiblePersons: 'Responsible Persons (PD)', productTypes: 'Product Types', units: 'Units', cookingMethods: 'Cooking Method', storageConditions: 'Storage Condition', evaluationCriteria: 'Evaluation Criteria' };
+let metaLists = { customers: [], destinationCountries: [], salesReps: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [], evaluationCriteria: [] };
+const META_LIST_LABELS = { customers: 'Company Directory', salesReps: 'Contact Directory', destinationCountries: 'Destination Countries', productTypes: 'Product Types', units: 'Units', cookingMethods: 'Cooking Method', storageConditions: 'Storage Condition', evaluationCriteria: 'Evaluation Criteria' };
 // Seeded into metaLists.units the first time it's ever missing from the
 // saved doc (see attachMetaListsListener) — the exact same values every
 // Portion Weight/Packing/MOQ/Flavor-per unit dropdown used to be hardcoded
@@ -806,7 +805,6 @@ export function attachMetaListsListener(){
       customers: (Array.isArray(data.customers) ? data.customers : []).map(metaItem),
       destinationCountries: (Array.isArray(data.destinationCountries) ? data.destinationCountries : []).map(metaItem),
       salesReps: (Array.isArray(data.salesReps) ? data.salesReps : []).map(metaItem),
-      responsiblePersons: (Array.isArray(data.responsiblePersons) ? data.responsiblePersons : []).map(metaItem),
       productTypes: (Array.isArray(data.productTypes) ? data.productTypes : []).map(metaItem),
       units: needsUnitSeed
         ? DEFAULT_UNIT_SEED.map(name => ({ id: uid(), name, createdBy: '', createdAt: null, updatedBy: '', updatedAt: null }))
@@ -876,7 +874,7 @@ function removeMetaListItem(key, id){
   logActivityEvent('deleted', META_LIST_LABELS[key] || key, removed ? metaItemName(removed) : 'Untitled');
 }
 function renderMetaDatalists(){
-  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', responsiblePersons: 'responsiblePersonDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist', evaluationCriteria: 'evaluationCriteriaDatalist' };
+  const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist', evaluationCriteria: 'evaluationCriteriaDatalist' };
   Object.entries(map).forEach(([key, listId]) => {
     const el = document.getElementById(listId);
     if(!el) return;
@@ -897,7 +895,7 @@ let unsubscribeMetaLists = null;
 // but this resets the complete, current shape instead of a stale one.
 export function resetRefListsState(){
   if(unsubscribeMetaLists){ unsubscribeMetaLists(); unsubscribeMetaLists = null; }
-  metaLists = { customers: [], destinationCountries: [], salesReps: [], responsiblePersons: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [], evaluationCriteria: [] };
+  metaLists = { customers: [], destinationCountries: [], salesReps: [], productTypes: [], units: [], cookingMethods: [], storageConditions: [], evaluationCriteria: [] };
 }
 
 export { metaLists, unsubscribeMetaLists, FOOD_ALLERGEN_COLUMNS };
