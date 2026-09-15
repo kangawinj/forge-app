@@ -928,28 +928,29 @@
   }
   .part-header input:hover{border-color:var(--border);}
   .part-header input:focus{background:#fff;}
-  /* Name grows to absorb the row's free space -- up to a quarter of the
-     row's width, so it doesn't dominate the whole header -- so that most
-     of the way, count/Yield/Prepare WT./Formula WT./% of Recipe pack
-     together with no gap between any of them. Giving Name a real border
-     (like a Sub-part's always has, and a top-level Part's now gets too)
-     is what makes that extra width look like "a wide input field", the
-     same way any text input can be wider than its own text without
-     looking broken -- a growing but invisible/borderless field, or
-     growing the count text instead, both used to leave an unexplained
-     gap where nothing visually accounted for the space. Whatever free
-     space Name's own 25% cap can't absorb falls to .row-value-prepare's
-     margin-left:auto below instead, which is what still lands Prepare
-     WT./Formula WT./% of Recipe flush against the row's right edge
-     (matching the ingredient columns beneath them) even once Name maxes
-     out short of absorbing all of it. */
+  /* Name grows to absorb the row's free space, capped at 45% of the
+     row's width -- tuned so Yield (right after count, see below) lands
+     at roughly the same x-position as Note on the ingredient rows
+     beneath it, not just "not touching the edge". count/Yield/Prepare
+     WT./Formula WT./% of Recipe all pack together right after Name with
+     no gap between any of them (nothing after Name pushes toward the
+     row's right edge any more, so this whole cluster just trails Name
+     wherever that leaves it -- no longer aligned with the same columns
+     on the ingredient rows below, see .row-value-prepare's own comment).
+     Giving Name a real border (like a Sub-part's always has, and a
+     top-level Part's now gets too) is what makes its extra width look
+     like "a wide input field", the same way any text input can be wider
+     than its own text without looking broken -- a growing but invisible/
+     borderless field, or growing the count text instead, both used to
+     leave an unexplained gap where nothing visually accounted for the
+     space. */
   .part-header > .part-name{
     border:1px solid var(--border) !important;
     background:#fff !important;
     padding:9px 10px !important;
     flex:1 1 auto;
     min-width:90px;
-    max-width:25%;
+    max-width:45%;
   }
   .part-header > .part-name:focus{border-color:var(--primary) !important;}
   /* A Sub-part nested inside a Part should read as one more row in that
@@ -1642,20 +1643,14 @@
   .part-yield-chip .part-yield-input{width:60px;flex:none;}
   /* Prepare/Formula/% of Recipe show their label on the line above the
      value instead of inline with it -- inline overlapped the numbers once
-     these labels were added. Deliberately keeps the exact same fixed
-     column widths (.row-value-col.row-value-wt/.row-value-col's own 80px/
-     64px) a plain ingredient row uses for the same cells, on BOTH a
-     top-level Part's header and a nested Sub-part's, so a Part's own
-     totals line up directly above its ingredient rows' Formula (g) / %
-     of Recipe columns instead of drifting off to one side. */
-  /* Name's own max-width:50% caps how much of the row's free space it
-     can absorb -- whatever's left over falls here instead, so Prepare
-     WT./Formula WT./% of Recipe still end up flush against the row's
-     right edge (matching the ingredient columns) even once Name maxes
-     out. A no-op once Name already absorbed everything on its own. */
-  .part-header > .row-value-prepare{
-    margin-left:auto;
-  }
+     these labels were added. Each cell keeps the same fixed width
+     (.row-value-col.row-value-wt/.row-value-col's own 80px/64px) a plain
+     ingredient row uses for the same cell, on both a top-level Part's
+     header and a nested Sub-part's -- but the CLUSTER as a whole sits
+     right after Yield with no push toward the row's right edge (see
+     .part-name's own comment above), so it no longer lines up with the
+     same columns on the ingredient rows below: keeping this whole group
+     gap-free next to Yield took priority over that alignment. */
   .part-header .row-value-prepare,
   .part-header .row-value-wt,
   .part-header .row-value-pct{
