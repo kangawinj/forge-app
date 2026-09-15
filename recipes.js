@@ -2258,11 +2258,11 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         <span class="ing-unit">%</span>
       </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
-        <span class="row-value-prepare-label">Prepare</span>
+        <span class="row-value-prepare-label">Prepare WT.</span>
         <span class="part-prepare-display ing-prepare-display"></span>
       </div>
       <div class="row-value-col row-value-wt">
-        <span class="row-value-wt-label">Formula</span>
+        <span class="row-value-wt-label">Formula WT.</span>
         <div class="row-value-inline">
           <input type="number" class="part-wt-display num-input" step="0.01" min="0">
           <span class="ing-unit">g</span>
@@ -2287,11 +2287,11 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         <span class="ing-unit">%</span>
       </div>
       <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
-        <span class="row-value-prepare-label">Prepare</span>
+        <span class="row-value-prepare-label">Prepare WT.</span>
         <span class="part-prepare-display ing-prepare-display"></span>
       </div>
       <div class="row-value-col row-value-wt">
-        <span class="row-value-wt-label">Formula</span>
+        <span class="row-value-wt-label">Formula WT.</span>
         <div class="row-value-inline">
           <input type="number" class="part-wt-display num-input" step="0.01" min="0">
           <span class="ing-unit">g</span>
