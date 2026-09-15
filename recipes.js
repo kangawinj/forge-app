@@ -3270,6 +3270,10 @@ function renderProcesses(r){
       <div class="process-actual-yield">
         <div class="process-components-title">Actual Yield</div>
         <div class="process-actual-yield-fields">
+          <div class="process-yield-photos">
+            <div class="trial-photos-row proc-photos-row"></div>
+            <label class="btn btn-sm mu-attach-btn proc-photo-add-label">${icon('paperclip', 14)} Add Photo<input type="file" class="proc-photo-input" accept="image/*" style="display:none;"></label>
+          </div>
           <label>Weight Before (g)<input type="number" class="proc-wt-before num-input" step="0.01" min="0" placeholder="—"></label>
           <label>Weight After (g)<input type="number" class="proc-wt-after num-input" step="0.01" min="0" placeholder="—"></label>
           <div class="process-actual-yield-result">
@@ -3330,6 +3334,41 @@ function renderProcesses(r){
     wtAfterInput.addEventListener('input', e => {
       proc.weightAfter = e.target.value === '' ? null : (parseFloat(e.target.value) || null);
       updateActualYieldDisplay();
+      scheduleSave();
+    });
+
+    // Up to 2 reference photos for this process's Actual Yield measurement
+    // -- same resize-on-upload/thumbnail/remove pattern as the Description
+    // photos above, just a smaller cap and its own array so the two photo
+    // sets never mix.
+    if(!Array.isArray(proc.photos)) proc.photos = [];
+    const procPhotosRow = block.querySelector('.proc-photos-row');
+    const procPhotoInput = block.querySelector('.proc-photo-input');
+    const procPhotoAddLabel = block.querySelector('.proc-photo-add-label');
+    function renderProcPhotos(){
+      procPhotosRow.innerHTML = proc.photos.map((photo, idx) => `
+        <div class="trial-photo-thumb" data-idx="${idx}">
+          <img src="${escapeHtml(photo)}" alt="Process photo ${idx+1}">
+          <button type="button" title="Remove this photo">${icon('x')}</button>
+        </div>
+      `).join('');
+      procPhotosRow.querySelectorAll('.trial-photo-thumb button').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.closest('.trial-photo-thumb').dataset.idx, 10);
+          proc.photos.splice(idx, 1);
+          renderProcPhotos();
+          scheduleSave();
+        });
+      });
+      if(procPhotoAddLabel) procPhotoAddLabel.style.display = proc.photos.length >= 2 ? 'none' : '';
+    }
+    renderProcPhotos();
+    procPhotoInput.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if(!file || proc.photos.length >= 2) return;
+      proc.photos.push(await resizeImageFile(file, 500));
+      renderProcPhotos();
       scheduleSave();
     });
 

@@ -2790,6 +2790,17 @@
     font-size:12px;
     color:var(--text-dim);
   }
+  /* Up to 2 reference photos, sitting first in the flex row so the
+     Weight/Yield/QC fields always fall to its right -- naturally "after
+     the photo" once one's attached, no separate layout switch needed. */
+  .process-yield-photos{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+    align-items:flex-start;
+  }
+  .process-yield-photos .trial-photos-row{margin-bottom:0;}
+  .process-yield-photos .trial-photo-thumb{width:70px;height:70px;}
   .process-actual-yield-fields input{width:110px;}
   .process-actual-yield-result{
     display:flex;
