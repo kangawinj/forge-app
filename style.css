@@ -957,20 +957,17 @@
     border:1px solid var(--border);
     background:#fff;
     padding:9px 10px;
-    max-width:none;
-    /* Same flex sizing as .ing-name-wrap, so the name column ends up the
-       same width as a sibling ingredient row's, not just styled to look
-       alike. */
-    flex:2 1 110px;
+    /* Sized to fit a typical Part name, not stretched to match
+       .ing-name-wrap's width -- Yield/Prepare WT./Formula WT./% of
+       Recipe no longer depend on that for their own alignment (see
+       .part-header > .row-value-prepare below), so keeping this wide
+       only pushed Yield away from the name/count it sits right after. */
+    flex:0 1 200px;
     min-width:90px;
   }
   .sub-part-row > .part-header .part-name:focus{border-color:var(--primary);}
-  /* Same flex sizing as .ing-note, so this column's boundary — and
-     everything after it — lines up with a sibling ingredient row's,
-     even though this holds a count instead of a note. */
   .sub-part-row > .part-header > .part-ing-count{
-    flex:1 1 50px;
-    min-width:40px;
+    flex:0 0 auto;
     font-size:13px;
   }
   .part-toggle-btn{
@@ -1645,14 +1642,15 @@
   }
   .part-yield-chip-label{white-space:nowrap;}
   .part-yield-chip .part-yield-input{width:60px;flex:none;}
-  /* A top-level Part's own Yield/Prepare/Formula/% cluster has no note or
-     name column of its own to absorb the row's free space the way a
-     Sub-part's (or an ingredient's) flex-grow name/note fields do -- push
-     it to the row's right edge explicitly instead, so it still lands at
-     the same x-position as the ingredient columns beneath it. A Sub-part
-     header needs no such rule: its own name/count already flex-grow to
-     fill the gap (see .sub-part-row > .part-header .part-name above). */
-  .part-block:not(.sub-part-row) > .part-header > .part-yield-chip{
+  /* Yield sits right after the name/count with normal spacing -- it's
+     Prepare WT./Formula WT./% of Recipe that need to land at a fixed
+     x-position (matching the ingredient columns beneath them), so the
+     row's free space is absorbed right before THOSE instead of before
+     Yield. Applies the same way whether this is a top-level Part's
+     header or a nested Sub-part's -- neither one's name/count needs to
+     flex-grow to achieve this any more (compare the plain, non-growing
+     .sub-part-row > .part-header .part-name above). */
+  .part-header > .row-value-prepare{
     margin-left:auto;
   }
   /* Prepare/Formula/% of Recipe show their label on the line above the

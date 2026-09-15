@@ -794,7 +794,8 @@ const CHANGELOG = [
   { version: "3.0.456", date: "2026-09-15", note: "Fixed the Prepare/Formula/% of Recipe labels on Part and Sub-part header rows overlapping their numbers -- each label now sits on its own line above the value instead of squeezed onto the same line" },
   { version: "3.0.457", date: "2026-09-15", note: "A Part's own Formula (g) / % of Recipe header values now line up directly above the same columns on its own ingredient rows, instead of sitting off to one side -- both use the exact same column widths now" },
   { version: "3.0.458", date: "2026-09-15", note: "Renamed Part/Sub-part header labels \"Prepare\" and \"Formula\" to \"Prepare WT.\" and \"Formula WT.\"" },
-  { version: "3.0.459", date: "2026-09-15", note: "Widened the Yield % box on Part/Sub-part headers (48px to 60px) -- the number was getting clipped at the edge" }
+  { version: "3.0.459", date: "2026-09-15", note: "Widened the Yield % box on Part/Sub-part headers (48px to 60px) -- the number was getting clipped at the edge" },
+  { version: "3.0.460", date: "2026-09-15", note: "Part/Sub-part headers: Yield now sits right next to the name/count instead of a big gap away from it, while Prepare WT./Formula WT./% of Recipe still line up with the ingredient columns beneath them" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
