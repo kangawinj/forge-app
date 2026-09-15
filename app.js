@@ -798,7 +798,8 @@ const CHANGELOG = [
   { version: "3.0.460", date: "2026-09-15", note: "Part/Sub-part headers: Yield now sits right next to the name/count instead of a big gap away from it, while Prepare WT./Formula WT./% of Recipe still line up with the ingredient columns beneath them" },
   { version: "3.0.461", date: "2026-09-15", note: "Print/Preview's ingredient table: renamed the ambiguous \"%\" column header to \"% of Part\", to distinguish it from the \"% of Recipe\" column next to it" },
   { version: "3.0.462", date: "2026-09-15", note: "The Costing card's eye toggle (show/hide Overhead Multiplier, Margins & Selling Price) now remembers its state across a page reload or leaving/reopening a recipe, instead of always resetting back open" },
-  { version: "3.0.463", date: "2026-09-15", note: "Printed pages / PDFs now come out at 75% size automatically, matching what manually typing 75 into the browser's Print dialog Scale field used to produce -- the Scale field itself can stay at its default 100%" }
+  { version: "3.0.463", date: "2026-09-15", note: "Printed pages / PDFs now come out at 75% size automatically, matching what manually typing 75 into the browser's Print dialog Scale field used to produce -- the Scale field itself can stay at its default 100%" },
+  { version: "3.0.464", date: "2026-09-15", note: "Part/Sub-part headers: closed the gap between Yield and Prepare WT. -- Name now grows to a bordered box (like a Sub-part's name always was) to absorb the row's free space instead of a gap opening up between Yield and Prepare WT., while Prepare WT./Formula WT./% of Recipe still line up with the ingredient columns beneath them" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
