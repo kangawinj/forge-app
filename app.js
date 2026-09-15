@@ -783,7 +783,8 @@ const CHANGELOG = [
   { version: "3.0.445", date: "2026-09-15", note: "Added a Comments row to Test Results' Sensory Evaluation table, showing every evaluator's overall Comments from the Perform Evaluation wizard right on the summary table instead of only on the wizard's own Review page" },
   { version: "3.0.446", date: "2026-09-15", note: "Test Results' Sensory Evaluation table no longer shows the evaluator's name before each score, note, Test Result, and Comment — just the value itself" },
   { version: "3.0.447", date: "2026-09-15", note: "Each Process's Actual Yield section now has an Add Photo button (up to 2 photos) — Weight Before/After, Yield, and °Brix/%Salt/pH now sit to the right of the photos" },
-  { version: "3.0.448", date: "2026-09-15", note: "Print/Preview: the Ingredients table vs. Process Flow column split in \"4. Components and Process\" changed from 70/30 to 75/25" }
+  { version: "3.0.448", date: "2026-09-15", note: "Print/Preview: the Ingredients table vs. Process Flow column split in \"4. Components and Process\" changed from 70/30 to 75/25" },
+  { version: "3.0.449", date: "2026-09-15", note: "Process Actual Yield photo thumbnails are now 3x larger (70px to 210px)" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
