@@ -786,7 +786,8 @@ const CHANGELOG = [
   { version: "3.0.448", date: "2026-09-15", note: "Print/Preview: the Ingredients table vs. Process Flow column split in \"4. Components and Process\" changed from 70/30 to 75/25" },
   { version: "3.0.449", date: "2026-09-15", note: "Process Actual Yield photo thumbnails are now 3x larger (70px to 210px)" },
   { version: "3.0.450", date: "2026-09-15", note: "Print/Preview now shows each Process's Actual Yield photos, previously only visible on the live edit page" },
-  { version: "3.0.451", date: "2026-09-15", note: "Print/Preview's Actual Yield photos now sit to the left of the Weight/Yield/Brix/Salt/pH table, instead of in their own row above it" }
+  { version: "3.0.451", date: "2026-09-15", note: "Print/Preview's Actual Yield photos now sit to the left of the Weight/Yield/Brix/Salt/pH table, instead of in their own row above it" },
+  { version: "3.0.452", date: "2026-09-15", note: "Print/Preview's Actual Yield photos are a bit bigger (100px to 130px) and now center vertically against the taller Weight/Yield/Brix/Salt/pH table instead of hugging its top edge" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -2416,10 +2416,11 @@
   .process-view-yield-row{
     display:flex;
     gap:16px;
-    align-items:flex-start;
+    align-items:center;
     margin-bottom:10px;
   }
   .process-view-yield-row .trial-photos-row{margin-bottom:0;flex:none;}
+  .process-view-yield-row .trial-photo-thumb{width:130px;height:130px;}
   .process-view-yield-row .process-view-yield-table{flex:1;margin-bottom:0;}
   .compare-process-title{
     font-weight:700;
