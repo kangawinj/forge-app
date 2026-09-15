@@ -4512,7 +4512,17 @@
        tbody-not-tfoot fix that stopped the total row from also printing a
        page early). Scoped to this one section only -- not every section. */
     #recipeCards .card:nth-of-type(4){break-before:page;}
-    body{background:#fff;}
+    /* Browsers give no way for a page to set the print dialog's own
+       Scale field, so this reaches the same end result a different way
+       -- shrinking everything to 75% before it ever reaches that dialog,
+       so Scale can stay at its default 100% and the printed output still
+       comes out fitting more per page, matching what typing "75" into
+       Scale by hand used to produce. `zoom` (not `transform:scale`)
+       because it actually reflows the box model at the smaller size
+       instead of just visually shrinking a full-size layout, which is
+       what lets more content fit per page instead of leaving blank
+       space around a shrunk block. */
+    body{background:#fff;zoom:0.75;}
     /* The read-only flowchart's on-screen scroll box has a fixed
        max-height/overflow for the browser viewport — on paper it should
        just lay out at full size instead of being clipped. */
