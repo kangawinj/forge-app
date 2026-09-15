@@ -4990,8 +4990,11 @@
   }
   .eval-wizard-criteria-note::placeholder{color:var(--text-dim);}
   .eval-wizard-criteria-note:focus{border-color:var(--primary);}
-  .eval-wizard-review-note-row{padding-left:12px;}
-  .eval-wizard-review-note-row span{font-style:italic;}
+  /* Sits right after the score on the same row now (see
+     renderEvalWizardReview) instead of its own row below -- lighter
+     weight and italic so it still reads as a note, not part of the score
+     itself. */
+  .eval-wizard-review-note-inline{font-style:italic;font-weight:400;color:var(--text-dim);}
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
     flex:1;

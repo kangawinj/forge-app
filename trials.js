@@ -362,10 +362,10 @@ function renderEvalWizardReview(t, products, criteria){
         return `
         <div class="eval-wizard-review-product">
           <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
-          ${criteria.map(c => `
-            <div class="eval-wizard-review-row"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}</b></div>
-            ${mine[`${c.id}_note`] ? `<div class="eval-wizard-review-row eval-wizard-review-note-row"><span>${escapeHtml(c.label)} Note</span><b>${escapeHtml(mine[`${c.id}_note`])}</b></div>` : ''}
-          `).join('')}
+          ${criteria.map(c => {
+            const note = mine[`${c.id}_note`];
+            return `<div class="eval-wizard-review-row"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${note ? ` <span class="eval-wizard-review-note-inline">${escapeHtml(note)}</span>` : ''}</b></div>`;
+          }).join('')}
           ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
         </div>

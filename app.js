@@ -775,7 +775,8 @@ const CHANGELOG = [
   { version: "3.0.437", date: "2026-09-15", note: "Added Thai translations to the Perform Evaluation wizard's JAR scale legend (1-5 meaning)" },
   { version: "3.0.438", date: "2026-09-15", note: "Added an optional Note field to each criteria question in the Perform Evaluation wizard, separate from the overall Comments field — shows up on the Review page alongside that criteria's score" },
   { version: "3.0.439", date: "2026-09-15", note: "Removed the \"Prep Yield\" column from Recipe Overview — a lossy ingredient/part still highlights its Prepare Wt. cell, with the exact yield % now shown on hover instead of its own column" },
-  { version: "3.0.440", date: "2026-09-15", note: "Perform Evaluation wizard: the selected JAR answer's meaning now shows inline right after the criteria's title, instead of below the score buttons" }
+  { version: "3.0.440", date: "2026-09-15", note: "Perform Evaluation wizard: the selected JAR answer's meaning now shows inline right after the criteria's title, instead of below the score buttons" },
+  { version: "3.0.441", date: "2026-09-15", note: "Review page: a criteria's Note now shows right after its score on the same line, instead of its own separate row below" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
