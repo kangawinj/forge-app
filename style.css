@@ -1631,6 +1631,14 @@
      ahead of Weight/Prepare/%, as a compact labeled chip rather than a
      bare number in the shared ingredient-row column grid (ingredient rows
      have no Yield column of their own to line up with any more). */
+  /* Yield leads the tight Yield/Prepare WT./Formula WT./% of Recipe
+     cluster (no gaps within it, see .part-name's own comment) -- pushing
+     the whole cluster flush against the row's right edge via margin on
+     its own first element is what lines its LAST column (% of Recipe) up
+     with the ingredient rows' own rightmost (%) column beneath it. */
+  .part-header > .part-yield-chip{
+    margin-left:auto;
+  }
   .part-yield-chip{
     flex:0 0 auto;
     display:flex;

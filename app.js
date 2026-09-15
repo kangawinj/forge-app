@@ -805,7 +805,8 @@ const CHANGELOG = [
   { version: "3.0.467", date: "2026-09-16", note: "Part/Sub-part header's Name box max width reduced again, from half the row's width to a quarter" },
   { version: "3.0.468", date: "2026-09-16", note: "Fixed a bug where clicking the Projects tab while a collapsed (not expanded) project row existed would silently crash mid-navigation -- the crash aborted the nav bar's own tab-highlight update, so Recipes could stay highlighted even after Projects had already loaded" },
   { version: "3.0.469", date: "2026-09-16", note: "Part/Sub-part headers: closed the remaining Yield-to-Prepare WT. gap, and moved Yield to line up roughly with the Note column on the ingredient rows beneath it -- Prepare WT./Formula WT./% of Recipe no longer line up with their own ingredient-row columns, in exchange for Yield through % of Recipe now packing together with no gaps" },
-  { version: "3.0.470", date: "2026-09-16", note: "Fine-tuned Part/Sub-part header Name box width (45% to 40%) so Yield lines up more precisely with the Note column" }
+  { version: "3.0.470", date: "2026-09-16", note: "Fine-tuned Part/Sub-part header Name box width (45% to 40%) so Yield lines up more precisely with the Note column" },
+  { version: "3.0.471", date: "2026-09-16", note: "Part/Sub-part header's Yield/Prepare WT./Formula WT./% of Recipe cluster now pushes flush against the row's right edge, lining % of Recipe up with the % column on the ingredient rows beneath it" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
