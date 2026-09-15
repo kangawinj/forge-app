@@ -4954,7 +4954,11 @@
     border-color:var(--primary);
     color:#fff;
   }
-  .eval-wizard-jar-caption{font-size:12px;color:var(--text-dim);margin-top:8px;min-height:15px;}
+  /* Now sits inline right after the question title (see
+     renderEvalWizardStep) instead of below the JAR buttons -- the
+     answer's meaning is visible right where you're reading the question,
+     not below the row you already clicked. */
+  .eval-wizard-jar-caption{font-size:12px;font-weight:400;color:var(--text-dim);}
   .eval-wizard-comment{
     width:100%;
     min-height:70px;

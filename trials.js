@@ -321,13 +321,12 @@ function renderEvalWizardStep(t, products, criteria, step){
       </div>
       ${criteria.map(c => `
         <div class="eval-wizard-question">
-          <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)} <span class="eval-wizard-jar-caption">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</span></div>
           <div class="eval-wizard-jar-row">
             ${JAR_SCALE.map(s => `
               <button type="button" class="eval-wizard-jar-btn${mine[c.id] === s.value ? ' selected' : ''}" data-role="eval-jar" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" title="${escapeHtml(s.label)}">${s.value}</button>
             `).join('')}
           </div>
-          <div class="eval-wizard-jar-caption">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</div>
           <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
         </div>
       `).join('')}
