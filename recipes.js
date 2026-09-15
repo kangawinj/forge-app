@@ -1545,7 +1545,6 @@ export function renderRecipeEditor(r){
       <div class="card-title">4. Components and Process</div>
       <div class="components-process-grid">
       <div class="ingredients-edit-view">
-      <button class="btn btn-sm material-lib-btn" id="btnOpenMaterialLib">${icon('book-open')} Ingredient Library (select existing / add new)</button>
       <div class="ingredient-tree">
         <div class="tree-node tree-root-node">
           <span class="tree-node-label">Formula per Portion</span>
@@ -1740,12 +1739,6 @@ export function renderRecipeEditor(r){
     document.getElementById('codeYearDisplay').textContent = yearPrefix(r.date);
     updateRecipeTitleDisplay(r);
     scheduleSave();
-  });
-
-  document.getElementById('btnOpenMaterialLib').addEventListener('click', () => {
-    setMainFeatureView('materials');
-    renderMain();
-    renderSidebar();
   });
 
   document.getElementById('btnScale').addEventListener('click', () => {
@@ -2269,10 +2262,12 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         <span class="part-prepare-display ing-prepare-display"></span>
       </div>
       <div class="row-value-col row-value-wt">
+        <span class="row-value-wt-label">Formula</span>
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span class="ing-unit">g</span>
       </div>
-      <div class="row-value-col">
+      <div class="row-value-col row-value-pct">
+        <span class="row-value-pct-label">% of Recipe</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span class="ing-unit">%</span>
       </div>
@@ -2290,8 +2285,10 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         </div>
         <span>Prepare</span>
         <span class="part-prepare-display ing-prepare-display"></span>
+        <span>Formula</span>
         <input type="number" class="part-wt-display num-input" step="0.01" min="0">
         <span>g</span>
+        <span>% of Recipe</span>
         <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
         <span>%</span>
       </div>

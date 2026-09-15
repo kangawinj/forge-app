@@ -789,7 +789,8 @@ const CHANGELOG = [
   { version: "3.0.451", date: "2026-09-15", note: "Print/Preview's Actual Yield photos now sit to the left of the Weight/Yield/Brix/Salt/pH table, instead of in their own row above it" },
   { version: "3.0.452", date: "2026-09-15", note: "Print/Preview's Actual Yield photos are a bit bigger (100px to 130px) and now center vertically against the taller Weight/Yield/Brix/Salt/pH table instead of hugging its top edge" },
   { version: "3.0.453", date: "2026-09-15", note: "Live edit page: each Process's °Brix/%Salt/pH readings now stack as single-line rows next to the Weight/Yield fields and photos, instead of wrapping onto their own line below the photos once those got bigger" },
-  { version: "3.0.454", date: "2026-09-15", note: "Ingredient Library: added a \"Factories/Companies Using This Material\" list to the Add/Edit Ingredient form — add as many as needed, with autocomplete from Company Directory. Shows on the ingredient's detail view too" }
+  { version: "3.0.454", date: "2026-09-15", note: "Ingredient Library: added a \"Factories/Companies Using This Material\" list to the Add/Edit Ingredient form — add as many as needed, with autocomplete from Company Directory. Shows on the ingredient's detail view too" },
+  { version: "3.0.455", date: "2026-09-15", note: "Recipe editor: removed the redundant \"Ingredient Library\" shortcut button above the ingredient tree (still reachable from the top Ingredients tab). Also added Formula/% of Recipe labels to every Part and Sub-part's header row, so it's clear what each number is instead of a bare g/% figure" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

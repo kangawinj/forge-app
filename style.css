@@ -1664,6 +1664,21 @@
     color:var(--text-dim);
     white-space:nowrap;
   }
+  /* Same idea as .row-value-prepare-label above, for the Formula weight
+     and % of Recipe cells -- an ingredient row's identical-looking cells
+     have no such label (their meaning is obvious from context: the
+     ingredient's own weight/%), but a Sub-part's own weight/% easily reads
+     as "just another number" without one. */
+  .row-value-wt-label, .row-value-pct-label{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .sub-part-row > .part-header .row-value-wt,
+  .sub-part-row > .part-header .row-value-pct{
+    flex:0 0 auto;
+    gap:4px;
+  }
   /* Part-level Prepare highlight -- toggled on the display span itself
      rather than a .row-value-prepare wrapper, since the top-level Part
      header's Prepare span has no such wrapper (see updatePartSubtotal). */
