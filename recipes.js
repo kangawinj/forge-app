@@ -1691,6 +1691,19 @@ export function renderRecipeEditor(r){
     if(r.seriesId) return; // defensive -- the select is disabled above, this should never fire
     r.productType = e.target.value;
     refreshCodeProductTypeBadge(r);
+    // Picking a Product Type on a brand-new (Series-less) recipe starts its
+    // Trial Series right here — see startTrialSeriesForRecipe. From this
+    // point on the recipe IS Series-enabled, so the rest of this handler's
+    // own recipeSeq/codeRecipeSeqDisplay updates below would just be
+    // immediately overwritten by the frozen value anyway; re-rendering the
+    // whole editor is what actually reflects the now-locked picker, the new
+    // "+ New Trial" button, and the Trial History card.
+    if(r.productType){
+      startTrialSeriesForRecipe(r);
+      scheduleSave();
+      renderRecipeEditor(r);
+      return;
+    }
     // Re-assign the sequence number for the newly-picked type — whatever
     // number belonged to the old type wouldn't mean anything for this one.
     // Not manually editable, so this is the only place it's ever set.
@@ -4449,6 +4462,39 @@ function duplicateAsNewRecipe(){
   logActivityEvent('created', 'recipe', copy.name || 'Untitled recipe');
   renderSidebar();
   renderMain();
+}
+
+// A plain "+ New Recipe" starts Series-less (see blankRecipe) so Product
+// Type stays pickable — a Series recipe has that picker locked (see the
+// f-productTypeMain change handler above), which would permanently freeze
+// it at "not chosen yet" if a Series existed before the first pick. This
+// mints the Series in place (no new document, unlike duplicateAsNewRecipe)
+// the moment a Series-less recipe's Product Type is picked for the first
+// time, so a brand-new recipe reaches "+ New Trial" without ever needing a
+// separate Duplicate step. Same derivation as duplicateAsNewRecipe, just
+// freezing the current recipe's own live values instead of a clone's.
+function startTrialSeriesForRecipe(r){
+  if(r.seriesId) return;
+  const newSeq = suggestNextRecipeSeq(r.productType, r.id);
+  const countryCode = recipeDestinationIso2(r) || '';
+  const year = yearPrefix(r.date);
+  const prodTypeCode = recipeProductTypeCode(r);
+  const seriesKey = `${countryCode}${year}-${prodTypeCode}${newSeq}`;
+  const seriesRef = doc(recipeSeriesCol, uid());
+  const seriesDoc = {
+    id: seriesRef.id, seriesKey, countryCode, year, productTypeCode: prodTypeCode,
+    productType: r.productType || '', recipeSeq: newSeq, maxTrialNo: 1,
+    firstTrialId: r.id, createdAt: Date.now(), createdBy: currentUser?.email || ''
+  };
+  r.seriesId = seriesRef.id;
+  r.seriesKey = seriesKey;
+  r.countryCode = countryCode;
+  r.year = year;
+  r.productTypeCode = prodTypeCode;
+  r.recipeSeq = newSeq;
+  r.trialNo = 1;
+  r.sourceTrialId = null;
+  setDoc(seriesRef, seriesDoc);
 }
 
 /* Called after the approver's credentials have already been verified and the

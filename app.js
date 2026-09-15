@@ -770,7 +770,8 @@ const CHANGELOG = [
   { version: "3.0.432", date: "2026-09-14", note: "Reference Lists (Company Directory, Cooking Method, Evaluation Criteria, etc.) now log to the Activity feed — adding, renaming, or deleting an entry shows up in the notification bell like it already does for Projects/Recipes/Test Results" },
   { version: "3.0.433", date: "2026-09-15", note: "Removed the unused \"Responsible Persons (PD)\" tab from Reference Lists — it was never actually linked to any Person/PD field in the app (those already pull from Contact Directory), so it was dead weight with no way to reach it from anywhere" },
   { version: "3.0.434", date: "2026-09-15", note: "Clicking a project's photo in the Projects list now expands that row and shows its full details, same as clicking an ingredient's photo opens its detail view" },
-  { version: "3.0.435", date: "2026-09-15", note: "Print/Edit/Delete buttons on the Projects list now only show once a project's row is expanded, instead of cluttering every collapsed row" }
+  { version: "3.0.435", date: "2026-09-15", note: "Print/Edit/Delete buttons on the Projects list now only show once a project's row is expanded, instead of cluttering every collapsed row" },
+  { version: "3.0.436", date: "2026-09-15", note: "A brand-new Recipe now starts its Trial Series automatically the moment you pick its Product Type — \"+ New Trial\" and Trial History are available right away, without needing to \"Duplicate as New Recipe\" first" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
