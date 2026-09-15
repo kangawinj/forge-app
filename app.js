@@ -793,7 +793,8 @@ const CHANGELOG = [
   { version: "3.0.455", date: "2026-09-15", note: "Recipe editor: removed the redundant \"Ingredient Library\" shortcut button above the ingredient tree (still reachable from the top Ingredients tab). Also added Formula/% of Recipe labels to every Part and Sub-part's header row, so it's clear what each number is instead of a bare g/% figure" },
   { version: "3.0.456", date: "2026-09-15", note: "Fixed the Prepare/Formula/% of Recipe labels on Part and Sub-part header rows overlapping their numbers -- each label now sits on its own line above the value instead of squeezed onto the same line" },
   { version: "3.0.457", date: "2026-09-15", note: "A Part's own Formula (g) / % of Recipe header values now line up directly above the same columns on its own ingredient rows, instead of sitting off to one side -- both use the exact same column widths now" },
-  { version: "3.0.458", date: "2026-09-15", note: "Renamed Part/Sub-part header labels \"Prepare\" and \"Formula\" to \"Prepare WT.\" and \"Formula WT.\"" }
+  { version: "3.0.458", date: "2026-09-15", note: "Renamed Part/Sub-part header labels \"Prepare\" and \"Formula\" to \"Prepare WT.\" and \"Formula WT.\"" },
+  { version: "3.0.459", date: "2026-09-15", note: "Widened the Yield % box on Part/Sub-part headers (48px to 60px) -- the number was getting clipped at the edge" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

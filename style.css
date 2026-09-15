@@ -1644,7 +1644,7 @@
     color:var(--text-dim);
   }
   .part-yield-chip-label{white-space:nowrap;}
-  .part-yield-chip .part-yield-input{width:48px;flex:none;}
+  .part-yield-chip .part-yield-input{width:60px;flex:none;}
   /* A top-level Part's own Yield/Prepare/Formula/% cluster has no note or
      name column of its own to absorb the row's free space the way a
      Sub-part's (or an ingredient's) flex-grow name/note fields do -- push
