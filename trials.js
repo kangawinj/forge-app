@@ -417,6 +417,10 @@ function wireEvaluationWizard(overlay, t, products){
     const mine = getMyEvaluation(pd);
     mine.comment = e.target.value.trim();
     scheduleTrialSave(t);
+    // The Overall table's Comments row reads straight from this (see
+    // commentsRowHtml) -- refresh it now, same as the criteria Note field
+    // and every JAR/Test Result answer already do.
+    renderTrialsList();
   });
   overlay.querySelectorAll('[data-role="eval-testresult"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -815,6 +819,29 @@ export function renderTrialsList(){
         <td class="recipe-boundary"></td>
       </tr>
     `;
+    // Overall Comments is a per-evaluator, per-product free-text remark
+    // from the last step of each product's page in the "Perform
+    // Evaluation" wizard -- shown here the same combined way as Test
+    // Result above, so it's visible on the summary table too instead of
+    // only reachable by reopening the wizard's own Review page.
+    const commentsRowHtml = `
+      <tr>
+        <td><b>Comments</b></td>
+        ${evalTargets.map((p, i) => {
+          const pd = getTrialProductData(mt, p.id);
+          const entries = [];
+          if(pd.evaluations && typeof pd.evaluations === 'object'){
+            Object.entries(pd.evaluations).forEach(([email, ans]) => {
+              if(ans?.comment) entries.push({ who: email, value: ans.comment });
+            });
+          }
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
+            ? entries.map(e => `<div class="teval-overall-entry"><b>${escapeHtml(shortEvaluatorName(e.who))}:</b> ${escapeHtml(e.value)}</div>`).join('')
+            : '<span class="overview-empty">-</span>'}</td>`;
+        }).join('')}
+        <td class="recipe-boundary"></td>
+      </tr>
+    `;
     // Improvement notes only make sense for a product at least one
     // evaluator flagged Needs Revision -- Accepted/Not accepted from
     // everyone is already a final call, nothing left to improve toward.
@@ -947,7 +974,7 @@ export function renderTrialsList(){
                 <table class="compare-table">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
-                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${commentsRowHtml}</tbody>
                 </table>
               </div>
               ${addCriteriaBtnHtml}
