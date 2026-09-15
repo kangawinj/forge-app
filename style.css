@@ -4968,6 +4968,26 @@
   }
   .eval-wizard-comment::placeholder{color:var(--text-dim);}
   .eval-wizard-comment:focus{border-color:var(--primary);}
+  /* One optional Note per criteria question, separate from the single
+     overall Comments field below all the criteria -- smaller/single-line
+     height by default since most won't need more than a short remark. */
+  .eval-wizard-criteria-note{
+    width:100%;
+    min-height:36px;
+    background:#fff;
+    border:1px solid var(--border);
+    border-radius:8px;
+    color:var(--text);
+    padding:6px 10px;
+    font-size:12px;
+    font-family:inherit;
+    margin-top:8px;
+    resize:vertical;
+  }
+  .eval-wizard-criteria-note::placeholder{color:var(--text-dim);}
+  .eval-wizard-criteria-note:focus{border-color:var(--primary);}
+  .eval-wizard-review-note-row{padding-left:12px;}
+  .eval-wizard-review-note-row span{font-style:italic;}
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
     flex:1;

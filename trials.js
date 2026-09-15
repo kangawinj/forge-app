@@ -225,11 +225,11 @@ const EVAL_WIZARD_RESULT_CLASSES = {
 // it works automatically for any criteria, including ones added later
 // via "+ Add Criteria", with no extra setup needed per row.
 const JAR_SCALE = [
-  { value: '1', label: 'Much less than ideal' },
-  { value: '2', label: 'Slightly less than ideal' },
-  { value: '3', label: 'Just right' },
-  { value: '4', label: 'Slightly more than ideal' },
-  { value: '5', label: 'Much more than ideal' }
+  { value: '1', label: 'Much less than ideal (น้อยเกินไปมาก)' },
+  { value: '2', label: 'Slightly less than ideal (น้อยเกินไปเล็กน้อย)' },
+  { value: '3', label: 'Just right (พอดี)' },
+  { value: '4', label: 'Slightly more than ideal (มากเกินไปเล็กน้อย)' },
+  { value: '5', label: 'Much more than ideal (มากเกินไปมาก)' }
 ];
 function jarScoreLabel(value){
   const found = JAR_SCALE.find(s => s.value === value);
@@ -328,6 +328,7 @@ function renderEvalWizardStep(t, products, criteria, step){
             `).join('')}
           </div>
           <div class="eval-wizard-jar-caption">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</div>
+          <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
         </div>
       `).join('')}
       <div class="eval-wizard-question">
@@ -362,7 +363,10 @@ function renderEvalWizardReview(t, products, criteria){
         return `
         <div class="eval-wizard-review-product">
           <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
-          ${criteria.map(c => `<div class="eval-wizard-review-row"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}</b></div>`).join('')}
+          ${criteria.map(c => `
+            <div class="eval-wizard-review-row"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}</b></div>
+            ${mine[`${c.id}_note`] ? `<div class="eval-wizard-review-row eval-wizard-review-note-row"><span>${escapeHtml(c.label)} Note</span><b>${escapeHtml(mine[`${c.id}_note`])}</b></div>` : ''}
+          `).join('')}
           ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
         </div>
@@ -392,6 +396,15 @@ function wireEvaluationWizard(overlay, t, products){
       scheduleTrialSave(t);
       renderTrialsList();
       renderEvaluationWizard();
+    });
+  });
+  overlay.querySelectorAll('.eval-wizard-criteria-note').forEach(el => {
+    el.addEventListener('change', () => {
+      const p = products[evalWizard.step];
+      const pd = getTrialProductData(t, p.id);
+      const mine = getMyEvaluation(pd);
+      mine[`${el.dataset.criteriaId}_note`] = el.value.trim();
+      scheduleTrialSave(t);
     });
   });
   overlay.querySelector('.eval-wizard-comment')?.addEventListener('change', e => {
