@@ -2281,29 +2281,27 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
       <input type="text" class="part-name" placeholder="Part name">
       <span class="part-ing-count"></span>
-      <div class="part-header-fields">
-        <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
-          <span class="part-yield-chip-label">Yield</span>
-          <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+      <div class="part-yield-chip" title="This Part's own Yield % — an additional prep loss/gain for everything inside it, on top of any of its ingredients' own">
+        <span class="part-yield-chip-label">Yield</span>
+        <input type="number" class="part-yield-input ing-yield num-input" step="0.01" min="0.01" max="999.99" placeholder="100">
+        <span class="ing-unit">%</span>
+      </div>
+      <div class="row-value-col row-value-prepare" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
+        <span class="row-value-prepare-label">Prepare</span>
+        <span class="part-prepare-display ing-prepare-display"></span>
+      </div>
+      <div class="row-value-col row-value-wt">
+        <span class="row-value-wt-label">Formula</span>
+        <div class="row-value-inline">
+          <input type="number" class="part-wt-display num-input" step="0.01" min="0">
+          <span class="ing-unit">g</span>
+        </div>
+      </div>
+      <div class="row-value-col row-value-pct">
+        <span class="row-value-pct-label">% of Recipe</span>
+        <div class="row-value-inline">
+          <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
           <span class="ing-unit">%</span>
-        </div>
-        <div class="part-metric" title="This Part's own Prepare (gross) weight = the Prepare weight of everything inside it ÷ (this Part's own Yield ÷ 100) — calculated automatically, not editable directly">
-          <span class="part-metric-label">Prepare</span>
-          <span class="part-prepare-display ing-prepare-display"></span>
-        </div>
-        <div class="part-metric">
-          <span class="part-metric-label">Formula</span>
-          <div class="row-value-inline">
-            <input type="number" class="part-wt-display num-input" step="0.01" min="0">
-            <span>g</span>
-          </div>
-        </div>
-        <div class="part-metric">
-          <span class="part-metric-label">% of Recipe</span>
-          <div class="row-value-inline">
-            <input type="number" class="part-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — scales everything inside this Part proportionally">
-            <span>%</span>
-          </div>
         </div>
       </div>
       <button class="icon-btn" title="Delete this part">${icon('x')}</button>

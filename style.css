@@ -993,39 +993,15 @@
     color:var(--text-dim);
     white-space:nowrap;
   }
-  /* Part header's own editable %-of-recipe / weight fields — same
+  /* A top-level Part's own editable %-of-recipe / weight fields — same
      bidirectional behavior as an ingredient's own % OF PART field (see
      .ing-edit-row), just one level up: editing either one scales every
-     ingredient inside this Part proportionally. */
-  .part-header-fields{
-    margin-left:auto;
-    display:flex;
-    align-items:center;
-    gap:14px;
-    font-size:12px;
-    color:var(--text-dim);
-    white-space:nowrap;
-  }
-  .part-header-fields .part-pct-display{width:64px;flex:0 0 auto;}
-  .part-header-fields .part-wt-display{width:80px;flex:0 0 auto;}
-  .part-header-fields .part-yield-input{width:56px;flex:0 0 auto;}
-  .part-header-fields .part-prepare-display{display:inline-block;min-width:60px;text-align:left;font-weight:600;}
-  /* Prepare/Formula/% of Recipe each get their label on its own line
-     above the value, instead of inline with it -- inline overlapped
-     awkwardly with the numbers once these labels were added (this row
-     is a fixed nowrap flex row with several fields already competing
-     for the same horizontal space; see .part-header-fields above). */
-  .part-metric{
-    display:flex;
-    flex-direction:column;
-    align-items:flex-start;
-    gap:2px;
-  }
-  .part-metric-label{
-    font-size:11px;
-    color:var(--text-dim);
-    white-space:nowrap;
-  }
+     ingredient inside this Part proportionally. Now built from the exact
+     same .row-value-col markup an ingredient row and a Sub-part's own
+     header both use (see below), instead of a separately-styled cluster
+     with its own widths -- that used to drift out of alignment with the
+     Formula (g) / % of Recipe columns of this Part's own ingredient rows
+     underneath it, since nothing tied their widths together. */
   .row-value-inline{
     display:flex;
     align-items:center;
@@ -1669,24 +1645,34 @@
   }
   .part-yield-chip-label{white-space:nowrap;}
   .part-yield-chip .part-yield-input{width:48px;flex:none;}
-  /* A Sub-part's own Prepare cell gets the same "Prepare" text label a
-     top-level Part's does (see .part-header-fields' plain <span>Prepare</span>
-     above) -- an ingredient row's identical-looking cell has no such label,
-     so this widens the column for Sub-part rows only (same scoping pattern
-     as .sub-part-row > .part-header .part-name above), instead of the
-     shared fixed 80px .row-value-col.row-value-prepare width every
-     ingredient row also uses. */
-  /* Prepare/Formula/% of Recipe each get their label on the line above
-     the value instead of inline with it (same reasoning as .part-metric
-     for a top-level Part's header) -- flex-direction:column stacks
-     label-then-value, overriding the shared .row-value-col's row layout
-     that every plain ingredient row (with no label to show) still uses. */
-  .sub-part-row > .part-header .row-value-prepare,
-  .sub-part-row > .part-header .row-value-wt,
-  .sub-part-row > .part-header .row-value-pct{
-    flex:0 0 auto;
+  /* A top-level Part's own Yield/Prepare/Formula/% cluster has no note or
+     name column of its own to absorb the row's free space the way a
+     Sub-part's (or an ingredient's) flex-grow name/note fields do -- push
+     it to the row's right edge explicitly instead, so it still lands at
+     the same x-position as the ingredient columns beneath it. A Sub-part
+     header needs no such rule: its own name/count already flex-grow to
+     fill the gap (see .sub-part-row > .part-header .part-name above). */
+  .part-block:not(.sub-part-row) > .part-header > .part-yield-chip{
+    margin-left:auto;
+  }
+  /* Prepare/Formula/% of Recipe show their label on the line above the
+     value instead of inline with it -- inline overlapped the numbers once
+     these labels were added. Deliberately keeps the exact same fixed
+     column widths (.row-value-col.row-value-wt/.row-value-col's own 80px/
+     64px) a plain ingredient row uses for the same cells, on BOTH a
+     top-level Part's header and a nested Sub-part's, so a Part's own
+     totals line up directly above its ingredient rows' Formula (g) / %
+     of Recipe columns instead of drifting off to one side. */
+  .part-header .row-value-prepare,
+  .part-header .row-value-wt,
+  .part-header .row-value-pct{
     flex-direction:column;
-    align-items:flex-start;
+    /* Deliberately NOT align-items:flex-start -- the default `stretch`
+       keeps the label and the value row both filling this cell's exact
+       80px/64px width (see .row-value-col.row-value-wt above), which is
+       what lets the value row's own flex:1 input (.row-value-col input)
+       size correctly against a known width instead of an ambiguous
+       shrink-to-fit one. */
     gap:2px;
   }
   .row-value-prepare-label{
