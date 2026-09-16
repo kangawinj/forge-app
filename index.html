@@ -531,9 +531,11 @@
   </div>
 </div>
 
-<!-- SheetJS (xlsx) — pinned version, loaded as a plain global (not an ES
-     module) so projects.js can call the XLSX global directly. -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<!-- ExcelJS — pinned version, loaded as a plain global (not an ES module) so
+     recipes.js can call the ExcelJS global directly to build the "Export
+     Excel" workbook with real cell styling (fonts/fills/borders), which the
+     older SheetJS build this replaced couldn't do. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 <!-- pdf.js (Mozilla) — pinned version, loaded as a plain global so the
      Quotation/Specification document slot's small preview (see
      renderProjectDocPreview in projects.js) can render a PDF's first page

@@ -1347,6 +1347,7 @@ export function renderRecipeEditor(r){
             <button type="button" class="navbar-account-menu-item" id="btnVersions">${icon('clock')} Versions</button>
             <button type="button" class="navbar-account-menu-item" id="btnPreview">${icon('eye')} Preview</button>
             <button type="button" class="navbar-account-menu-item" id="btnPrint">${icon('printer')} Print / PDF</button>
+            <button type="button" class="navbar-account-menu-item" id="btnExportExcel">${icon('download')} Export Excel</button>
           </div>
         </div>
       </div>
@@ -1965,6 +1966,10 @@ export function renderRecipeEditor(r){
     };
     window.addEventListener('afterprint', restoreTitle);
     window.print();
+  });
+  document.getElementById('btnExportExcel').addEventListener('click', () => {
+    document.getElementById('recipeMoreMenu')?.classList.remove('open');
+    exportRecipeToExcel(r);
   });
 
   // Full-screen on-screen mirror of what Print / PDF would produce --
@@ -4367,6 +4372,316 @@ function renderPrintView(r){
       flowEl.innerHTML = '';
     }
   }
+}
+
+/* ---------- Export Excel ----------
+   Builds a real, editable .xlsx workbook (via the ExcelJS global loaded in
+   index.html -- see the <script> tag near the bottom of index.html) that
+   mirrors the Print/Preview page's own three sections -- Overview,
+   Ingredients, Process -- with real cell styling (fonts/fills/borders/
+   indentation) so it reads like the print-out, not a flat data dump.
+   Re-derives everything straight from the live recipe object the same way
+   renderPrintView/printIngredientTableHtml do, rather than scraping the
+   print DOM, so it's correct even if Print/Preview was never opened this
+   session. Colors match the app's own --primary/--primary-light/--border
+   CSS variables (style.css) so the workbook reads as the same product. */
+
+function xlArgb(hex){
+  return 'FF' + hex.replace('#','').toUpperCase();
+}
+const XL_COLORS = {
+  headerFill: xlArgb('#16294a'),
+  headerText: xlArgb('#ffffff'),
+  groupFill: xlArgb('#e8ecf5'),
+  groupText: xlArgb('#0c1830'),
+  border: xlArgb('#dfe3ea'),
+  dim: xlArgb('#6b7280'),
+  text: xlArgb('#1c2333')
+};
+function xlThinBorder(){
+  return { style: 'thin', color: { argb: XL_COLORS.border } };
+}
+
+function buildOverviewSheet(wb, r){
+  const ws = wb.addWorksheet('Overview');
+  ws.columns = [{ width: 22 }, { width: 70 }];
+  let row = 1;
+
+  const titleCell = ws.getCell(row, 1);
+  ws.mergeCells(row, 1, row, 2);
+  titleCell.value = r.name || 'Untitled recipe';
+  titleCell.font = { bold: true, size: 16, color: { argb: XL_COLORS.text } };
+  row += 2;
+
+  function kv(label, value){
+    ws.getCell(row, 1).value = label;
+    ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
+    ws.getCell(row, 2).value = (value || '').toString().trim() || '-';
+    ws.getCell(row, 2).alignment = { wrapText: true, vertical: 'top' };
+    row++;
+  }
+
+  const typeCode = recipeProductTypeCode(r);
+  kv('Code', fullCode(r));
+  kv('Date', r.date);
+  kv('Product Type', r.productType ? `${r.productType}${typeCode ? ` (${typeCode})` : ''}` : '');
+
+  const link = findProjectForRecipe(r.id);
+  if(link){
+    const { project, product } = link;
+    row++;
+    const sectionCell = ws.getCell(row, 1);
+    sectionCell.value = 'Linked Project';
+    sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
+    row++;
+    kv('Project', project.name || 'Untitled project');
+    kv('Customer', project.customerName);
+    kv('Destination', project.destinationCountry);
+    kv('Project Owner', project.ownerSalesRep);
+    kv('Factory Sales Rep', project.factorySalesRep);
+    kv('PD', project.responsiblePerson);
+    kv('Factory', project.factoryName);
+    kv('Stage', product.stage);
+  }
+
+  row++;
+  ws.getCell(row, 1).value = 'Description';
+  ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
+  row++;
+  const points = (r.description || []).filter(p => (p||'').trim() !== '');
+  if(points.length){
+    points.forEach(p => {
+      ws.getCell(row, 2).value = `• ${p}`;
+      ws.getCell(row, 2).alignment = { wrapText: true };
+      row++;
+    });
+  } else {
+    ws.getCell(row, 2).value = '-';
+    row++;
+  }
+
+  if((r.descPhotos || []).length){
+    kv('Photos', `${r.descPhotos.length} photo(s) attached — view in app`);
+  }
+
+  if((r.note||'').trim()){
+    row++;
+    ws.getCell(row, 1).value = 'Note';
+    ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
+    ws.getCell(row, 2).value = r.note;
+    ws.getCell(row, 2).alignment = { wrapText: true, vertical: 'top' };
+    row++;
+  }
+
+  row++;
+  const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  kv('Total weight', formatWeight(totalWt));
+}
+
+function buildIngredientsSheet(wb, r){
+  const ws = wb.addWorksheet('Ingredients');
+  ws.columns = [
+    { header: 'Ingredient', width: 40 },
+    { header: 'Yield', width: 10 },
+    { header: 'Prep / Note', width: 26 },
+    { header: 'Formula (g)', width: 14 },
+    { header: 'Prepare (g)', width: 14 },
+    { header: '% of Part', width: 12 },
+    { header: '% of Recipe', width: 14 }
+  ];
+  const headerRow = ws.getRow(1);
+  headerRow.eachCell(cell => {
+    cell.font = { bold: true, color: { argb: XL_COLORS.headerText } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.headerFill } };
+    cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+  });
+  headerRow.height = 28;
+
+  const totalWeight = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+  const namedParts = (r.parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
+
+  function addPartRows(part, depth, ancestorMultiplier){
+    const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
+    const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+    const label = (part.name||'').trim() || 'Unnamed part';
+    const partWeight = partTotalWeight(part);
+    const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
+    const ownMultiplier = computePrepareWeight(1, part.prepYieldPct);
+    const py = parseFloat(part.prepYieldPct);
+    const partYieldDisplay = (isFinite(py) && py > 0) ? py : 100;
+
+    const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct]);
+    groupRow.eachCell((cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: XL_COLORS.groupText } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
+      cell.border = { bottom: xlThinBorder() };
+      cell.alignment = colNumber === 1 ? { indent: depth, vertical: 'middle' } : { horizontal: 'right', vertical: 'middle' };
+    });
+    groupRow.getCell(2).numFmt = '0.00"%"';
+    groupRow.getCell(4).numFmt = '#,##0.00';
+    groupRow.getCell(5).numFmt = '#,##0.00';
+    groupRow.getCell(6).numFmt = '0.00"%"';
+    groupRow.getCell(7).numFmt = '0.00"%"';
+
+    const childMultiplier = ancestorMultiplier * ownMultiplier;
+    namedIngredients.forEach(ing => {
+      const formulaWt = parseFloat(ing.weight) || 0;
+      const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
+      const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
+      const ingRow = ws.addRow([
+        ing.name, null, (ing.note||'').trim(), formulaWt, prepareWt, parseFloat(ing.percent)||0, pctOfRecipe
+      ]);
+      ingRow.eachCell((cell, colNumber) => {
+        cell.border = { bottom: xlThinBorder() };
+        cell.font = { color: { argb: XL_COLORS.text } };
+        if(colNumber === 1) cell.alignment = { indent: depth+1, vertical: 'middle' };
+        else if(colNumber !== 3) cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      });
+      ingRow.getCell(4).numFmt = '#,##0.00';
+      ingRow.getCell(5).numFmt = '#,##0.00';
+      ingRow.getCell(6).numFmt = '0.00"%"';
+      ingRow.getCell(7).numFmt = '0.00"%"';
+    });
+
+    namedSubParts.forEach(sub => addPartRows(sub, depth+1, childMultiplier));
+  }
+
+  if(namedParts.length === 0){
+    ws.addRow(['No ingredients']);
+  } else {
+    namedParts.forEach(part => addPartRows(part, 0, 1));
+    const totalPrepareWeight = namedParts.reduce((s,p) => s + partPrepareWeight(p), 0);
+    const totalRow = ws.addRow(['Formula total', '', '', totalWeight, totalPrepareWeight, 100, 100]);
+    totalRow.eachCell((cell, colNumber) => {
+      cell.font = { bold: true, color: { argb: XL_COLORS.text } };
+      cell.border = { top: { style: 'medium', color: { argb: XL_COLORS.text } } };
+      if(colNumber > 1) cell.alignment = { horizontal: 'right' };
+    });
+    totalRow.getCell(4).numFmt = '#,##0.00';
+    totalRow.getCell(5).numFmt = '#,##0.00';
+    totalRow.getCell(6).numFmt = '0.00"%"';
+    totalRow.getCell(7).numFmt = '0.00"%"';
+  }
+
+  ws.views = [{ state: 'frozen', ySplit: 1 }];
+}
+
+function buildProcessSheet(wb, r){
+  const ws = wb.addWorksheet('Process');
+  ws.columns = [{ width: 6 }, { width: 34 }, { width: 16 }, { width: 12 }, { width: 18 }, { width: 12 }];
+
+  const list = (r.processes || []).filter(p =>
+    (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== '') || (p.components||[]).length > 0
+  );
+  if(list.length === 0){
+    ws.getCell(1, 1).value = 'No processes yet';
+    return;
+  }
+
+  const fmtReps = (arr) => (arr || []).map(v => { const n = parseFloat(v); return isFinite(n) ? n.toFixed(2) : null; });
+  const avgOf = (nums) => nums.length ? (nums.reduce((s,n)=>s+n,0) / nums.length).toFixed(2) : null;
+
+  let row = 1;
+  function setRow(values, style){
+    const r2 = ws.getRow(row);
+    r2.values = values;
+    if(style) style(r2);
+    row++;
+    return r2;
+  }
+
+  list.forEach(p => {
+    ws.mergeCells(row, 1, row, 6);
+    setRow([p.title || 'Untitled process'], r2 => {
+      r2.height = 22;
+      const cell = r2.getCell(1);
+      cell.font = { bold: true, size: 13, color: { argb: XL_COLORS.groupText } };
+      cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
+      cell.alignment = { vertical: 'middle', indent: 1 };
+    });
+
+    const components = p.components || [];
+    if(components.length){
+      setRow(['#','Component','Weight (g)','Tolerance','Range','%'], r2 => {
+        r2.eachCell(cell => {
+          cell.font = { bold: true, color: { argb: XL_COLORS.dim } };
+          cell.border = { bottom: xlThinBorder() };
+        });
+      });
+      components.forEach((c, cIdx) => {
+        const wt = parseFloat(c.weight) || 0;
+        const tol = parseFloat(c.tolerance) || 0;
+        setRow([cIdx+1, c.name||'', wt, tol ? `±${tol}` : '', `${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g`, parseFloat(c.percent)||0], r2 => {
+          r2.getCell(3).numFmt = '#,##0.00';
+          r2.getCell(6).numFmt = '0.00"%"';
+        });
+
+        const matchedPart = findPartByName(r.parts, (c.name || '').trim());
+        const innerIngredients = matchedPart ? allIngredientsInPart(matchedPart).filter(i => (i.name||'').trim() !== '') : [];
+        innerIngredients.forEach(ing => {
+          setRow(['', ing.name, parseFloat(ing.weight)||0, '', '', parseFloat(ing.percent)||0], r2 => {
+            const nameCell = r2.getCell(2);
+            nameCell.font = { italic: true, color: { argb: XL_COLORS.dim } };
+            nameCell.alignment = { indent: 1 };
+            r2.getCell(3).numFmt = '#,##0.00';
+            r2.getCell(6).numFmt = '0.00"%"';
+          });
+        });
+      });
+      setRow(['', 'Total', components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0), '', '', components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0)], r2 => {
+        r2.eachCell(cell => { cell.font = { bold: true }; cell.border = { top: xlThinBorder() }; });
+        r2.getCell(3).numFmt = '#,##0.00';
+        r2.getCell(6).numFmt = '0.00"%"';
+      });
+    }
+
+    const wtBefore = parseFloat(p.weightBefore);
+    const wtAfter = parseFloat(p.weightAfter);
+    const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
+    setRow(['Actual Yield'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+    setRow(['', 'Weight Before / After', `${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}`, `Yield ${actualYieldPct}`]);
+    ['brix','salt','ph'].forEach(field => {
+      const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);
+      const validReps = reps.filter(v => v != null);
+      const label = field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH';
+      setRow(['', label, reps.map(v => v != null ? v : '—').join(', '), `Avg ${avgOf(validReps.map(Number)) || '—'}`]);
+    });
+
+    setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+    const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+    if(steps.length){
+      steps.forEach((s, idx) => setRow(['', `${idx+1}.`, s]));
+    } else {
+      setRow(['', 'No steps yet']);
+    }
+
+    row++; // blank separator row between processes
+  });
+}
+
+async function exportRecipeToExcel(r){
+  if(!window.ExcelJS){
+    alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
+    return;
+  }
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+
+  buildOverviewSheet(wb, r);
+  buildIngredientsSheet(wb, r);
+  buildProcessSheet(wb, r);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  const code = fullCode(r);
+  const namePart = [r.name || 'Untitled recipe', code].filter(Boolean).join(' ');
+  a.download = `Recipe ${namePart}`.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.click();
+  URL.revokeObjectURL(url);
 }
 
 /* ---------- Recipe actions ---------- */
