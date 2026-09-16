@@ -916,7 +916,8 @@ const CHANGELOG = [
   { version: "3.0.512", date: "2026-09-16", note: "Test Results' List view now groups tests by their linked Project too (same grouping as Summary Table), with a heading above each project's own tests. Also left-aligned the Summary Table's PD and Summary Test columns, which were reading as ragged right-aligned paragraphs" },
   { version: "3.0.513", date: "2026-09-16", note: "Collapsed tests in the Test Results List view are compact rows now (thin divider, no padded box) instead of full stacked cards — much tighter when a project has several tests. Expanding one still gets the full card treatment for its own detailed form" },
   { version: "3.0.514", date: "2026-09-16", note: "Fixed Test Results' sort order to go by each test's own Tested date (most recent first) instead of when the record was last saved, which could drift out of sync with it. Also changed Summary Table's Improve/Just Right from one comma-joined line into a proper bulleted list per item" },
-  { version: "3.0.515", date: "2026-09-16", note: "Test Results List view: hid each row's Print/Delete buttons until the row is expanded, so the collapsed list stays uncluttered" }
+  { version: "3.0.515", date: "2026-09-16", note: "Test Results List view: hid each row's Print/Delete buttons until the row is expanded, so the collapsed list stays uncluttered" },
+  { version: "3.0.516", date: "2026-09-16", note: "Test Results List view: since the linked project's name is already shown once above a group of tests, each test row's own label now leads with its Tested date and which product(s) were tested, instead of repeating the project name" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

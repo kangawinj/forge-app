@@ -915,9 +915,13 @@ export function renderTrialsList(){
     const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
     const manualProducts = t.manualProducts || [];
     const combinedCount = (t.recipeIds || []).length + manualProducts.length;
-    const productLabel = linkedProject?.name || (combinedCount
+    // The linked project's own name is already shown once, above this row,
+    // via the .trial-project-group-header (see groupTrialsByProject) -- so
+    // each row's own label leads with what's actually different per row:
+    // the Tested date and which product(s) were tested that day.
+    const productLabel = combinedCount
       ? [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')].join(', ')
-      : 'Untitled test');
+      : 'No products added yet';
     const activity = [];
     if(t.createdBy) activity.push(`Created by ${escapeHtml(t.createdBy)}${t.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(t.createdAt)) : ''}`);
     if(t.updatedBy && t.updatedAt !== t.createdAt) activity.push(`Last edited by ${escapeHtml(t.updatedBy)}${t.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(t.updatedAt)) : ''}`);
@@ -1271,8 +1275,8 @@ export function renderTrialsList(){
         <div class="part-header" style="margin-bottom:12px;">
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
           ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
-          <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
-          <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
+          <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}</span>
+          <span class="part-header-summary">${escapeHtml(productLabel)}${combinedCount ? ` · ${combinedCount} product${combinedCount === 1 ? '' : 's'}` : ''}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
           ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
           ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
