@@ -1073,7 +1073,51 @@ async function importShareResponse(t, resp){
     showCloudError('The response was imported into this test, but could not be marked as imported in Firebase (it may look importable again next time): ' + err.message);
   }
   resp.imported = true;
+  loadSharePendingCounts();
   renderTrialsList();
+}
+// "Skip this one" -- keeps the response (and everything in it) exactly as
+// submitted, just stops it from counting toward the pending badge or
+// offering an Import button, for a response nobody's going to want folded
+// into this test's real scores (spam, a duplicate, clearly the wrong
+// test). Never deletes anything, so it's always still visible via Preview
+// if someone needs to double-check that call later.
+async function dismissShareResponse(resp){
+  try{
+    await setDoc(doc(evaluationResponsesCol, resp.id), { dismissed: true }, { merge: true });
+  }catch(err){
+    console.error('Forge: failed to dismiss guest response', err);
+    showCloudError('Failed to dismiss this response: ' + err.message);
+    return;
+  }
+  resp.dismissed = true;
+  loadSharePendingCounts();
+}
+// One trialId -> count of guest responses still awaiting a decision
+// (neither imported nor dismissed), shown as a small badge on each row's
+// own "Share External Evaluation" button so a pending response is
+// noticeable without opening every trial's panel to check. Loaded once via
+// a single query (not one query per trial) whenever Test Results is
+// mounted, and refreshed after any Import/Dismiss action changes the
+// count -- not a live listener, so a response submitted while this page is
+// already open won't bump the badge until the page is revisited or an
+// action here triggers a refresh; acceptable for what's meant as a "check
+// when you're back in the app" nudge, not a push notification.
+let trialSharePendingCounts = {};
+async function loadSharePendingCounts(){
+  try{
+    const snap = await getDocs(query(evaluationResponsesCol, where('imported', '==', false)));
+    const counts = {};
+    snap.docs.forEach(d => {
+      const data = d.data();
+      if(data.dismissed) return;
+      counts[data.trialId] = (counts[data.trialId] || 0) + 1;
+    });
+    trialSharePendingCounts = counts;
+  }catch(err){
+    console.error('Forge: failed to load pending guest response counts', err);
+  }
+  if(mainFeatureView === 'trials') renderTrialsList();
 }
 function renderTrialShareModal(){
   const existing = document.getElementById('trialShareOverlay');
@@ -1134,9 +1178,17 @@ function renderTrialShareModal(){
               <b>${escapeHtml(resp.guestName || 'Guest')}</b>
               <span class="trial-share-response-meta">${resp.submittedAt ? escapeHtml(formatActivityDateTime(resp.submittedAt)) : ''}</span>
             </div>
-            ${resp.imported
-              ? '<span class="trial-share-response-imported">' + icon('check', 14) + ' Imported</span>'
-              : `<button type="button" class="btn btn-sm" data-role="import-share-response" data-response-id="${escapeHtml(resp.id)}">Import</button>`}
+            <div class="trial-share-response-actions">
+              <button type="button" class="btn btn-sm" data-role="preview-share-response" data-response-id="${escapeHtml(resp.id)}">${icon('eye', 14)} Preview</button>
+              ${resp.imported
+                ? '<span class="trial-share-response-imported">' + icon('check', 14) + ' Imported</span>'
+                : resp.dismissed
+                  ? '<span class="trial-share-response-dismissed">' + icon('eye-off', 14) + ' Dismissed</span>'
+                  : `
+                    <button type="button" class="btn btn-sm" data-role="dismiss-share-response" data-response-id="${escapeHtml(resp.id)}" title="Keep the response, but stop offering to import it">${icon('eye-off', 14)} Dismiss</button>
+                    <button type="button" class="btn btn-sm" data-role="import-share-response" data-response-id="${escapeHtml(resp.id)}">Import</button>
+                  `}
+            </div>
           </div>
         `).join('')}
       </div>
@@ -1151,6 +1203,7 @@ function renderTrialShareModal(){
   overlay.querySelector('[data-role="share-close"]')?.addEventListener('click', () => {
     trialShareId = null;
     renderTrialShareModal();
+    renderShareResponsePreviewModal();
   });
   overlay.querySelector('[data-role="copy-share-link"]')?.addEventListener('click', async () => {
     try{ await navigator.clipboard.writeText(shareUrl); }catch{}
@@ -1171,6 +1224,144 @@ function renderTrialShareModal(){
       if(resp) await importShareResponse(t, resp);
       renderTrialShareModal();
     });
+  });
+  overlay.querySelectorAll('[data-role="dismiss-share-response"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const resp = trialShareResponses.find(r => r.id === btn.dataset.responseId);
+      if(resp) await dismissShareResponse(resp);
+      renderTrialShareModal();
+    });
+  });
+  overlay.querySelectorAll('[data-role="preview-share-response"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      trialSharePreviewId = btn.dataset.responseId;
+      trialSharePreviewEditing = false;
+      renderShareResponsePreviewModal();
+    });
+  });
+}
+
+// Read-only by default, an Edit button switches every JAR/note/Comments/
+// Test Result field to the exact same interactive markup the real Perform
+// Evaluation wizard uses (see renderEvalWizardStep) -- Save writes the
+// edited answers back onto this one evaluationResponses doc, so a typo or
+// a stray tap a guest made on their phone can be fixed before Import folds
+// it into the test's real Sensory Evaluation. Edits the response in place;
+// doesn't touch pd.evaluations at all until Import is actually clicked.
+let trialSharePreviewId = null;
+let trialSharePreviewEditing = false;
+function renderShareResponsePreviewModal(){
+  const existing = document.getElementById('shareResponsePreviewOverlay');
+  if(!trialSharePreviewId){ existing?.remove(); return; }
+  const t = trials.find(x => x.id === trialShareId);
+  const resp = trialShareResponses.find(r => r.id === trialSharePreviewId);
+  if(!t || !resp){ trialSharePreviewId = null; trialSharePreviewEditing = false; existing?.remove(); return; }
+  const criteria = getEvaluationCriteria(t);
+  const isEditing = trialSharePreviewEditing;
+
+  const overlay = existing || document.createElement('div');
+  overlay.id = 'shareResponsePreviewOverlay';
+  overlay.className = 'eval-wizard-overlay';
+  if(!existing){
+    document.body.appendChild(overlay);
+    let mousedownOnOverlay = false;
+    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if(mousedownOnOverlay && e.target === overlay){ trialSharePreviewId = null; trialSharePreviewEditing = false; renderShareResponsePreviewModal(); }
+      mousedownOnOverlay = false;
+    });
+  }
+
+  const productRowsHtml = Object.entries(resp.answers || {}).map(([productId, ans]) => {
+    const product = trialEvalTargets(t).find(p => p.id === productId);
+    const label = product ? product.label : 'Unknown product (no longer on this test)';
+    return `
+      <div class="eval-wizard-product-name">${escapeHtml(label)}</div>
+      ${criteria.map(c => `
+        <div class="eval-wizard-question">
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)} <span class="eval-wizard-jar-caption">${ans[c.id] ? escapeHtml(jarScoreLabel(ans[c.id])) : 'Not answered'}</span></div>
+          <div class="eval-wizard-jar-row">
+            ${JAR_SCALE.map(s => `<button type="button" class="eval-wizard-jar-btn${ans[c.id] === s.value ? ' selected' : ''}" data-role="preview-jar" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" ${isEditing ? '' : 'disabled'}>${s.value}</button>`).join('')}
+          </div>
+          <textarea class="eval-wizard-criteria-note" data-role="preview-note" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(ans[`${c.id}_note`] || '')}</textarea>
+        </div>
+      `).join('')}
+      <div class="eval-wizard-question">
+        <div class="eval-wizard-question-label">Comments</div>
+        <textarea class="eval-wizard-comment" data-role="preview-comment" data-product-id="${escapeHtml(productId)}" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(ans.comment || '')}</textarea>
+      </div>
+      <div class="eval-wizard-question">
+        <div class="eval-wizard-question-label">Test Result</div>
+        <div class="eval-wizard-testresult-row">
+          ${TRIAL_TEST_RESULT_OPTIONS.map(o => `<button type="button" class="eval-wizard-testresult-btn${ans.testResult === o ? ' selected ' + (EVAL_WIZARD_RESULT_CLASSES[o] || '') : ''}" data-role="preview-testresult" data-product-id="${escapeHtml(productId)}" data-value="${escapeHtml(o)}" ${isEditing ? '' : 'disabled'}>${escapeHtml(o)}</button>`).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  overlay.innerHTML = `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Guest Response Preview</div>
+        <button type="button" class="eval-wizard-close" data-role="preview-close" title="Close">${icon('x')}</button>
+      </div>
+      <div class="trial-share-response-meta" style="margin-bottom:16px;font-size:13px;">
+        <b>${escapeHtml(resp.guestName || 'Guest')}</b> · ${resp.submittedAt ? escapeHtml(formatActivityDateTime(resp.submittedAt)) : ''}
+      </div>
+      ${productRowsHtml || '<div class="overview-empty">No answers submitted.</div>'}
+      <div class="eval-wizard-nav">
+        ${isEditing
+          ? `<button type="button" class="btn btn-sm btn-primary" data-role="preview-save">${icon('save', 14)} Save</button>`
+          : `<button type="button" class="btn btn-sm" data-role="preview-edit">${icon('pencil', 14)} Edit</button>`}
+      </div>
+    </div>
+  `;
+
+  overlay.querySelector('[data-role="preview-close"]')?.addEventListener('click', () => {
+    trialSharePreviewId = null;
+    trialSharePreviewEditing = false;
+    renderShareResponsePreviewModal();
+  });
+  overlay.querySelector('[data-role="preview-edit"]')?.addEventListener('click', () => {
+    trialSharePreviewEditing = true;
+    renderShareResponsePreviewModal();
+  });
+  overlay.querySelectorAll('[data-role="preview-jar"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ans = resp.answers[btn.dataset.productId];
+      ans[btn.dataset.criteriaId] = ans[btn.dataset.criteriaId] === btn.dataset.value ? '' : btn.dataset.value;
+      renderShareResponsePreviewModal();
+    });
+  });
+  overlay.querySelectorAll('[data-role="preview-note"]').forEach(el => {
+    el.addEventListener('change', () => {
+      resp.answers[el.dataset.productId][`${el.dataset.criteriaId}_note`] = el.value.trim();
+    });
+  });
+  overlay.querySelectorAll('[data-role="preview-comment"]').forEach(el => {
+    el.addEventListener('change', () => {
+      resp.answers[el.dataset.productId].comment = el.value.trim();
+    });
+  });
+  overlay.querySelectorAll('[data-role="preview-testresult"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const ans = resp.answers[btn.dataset.productId];
+      ans.testResult = ans.testResult === btn.dataset.value ? '' : btn.dataset.value;
+      renderShareResponsePreviewModal();
+    });
+  });
+  overlay.querySelector('[data-role="preview-save"]')?.addEventListener('click', async e => {
+    e.target.disabled = true;
+    try{
+      await setDoc(doc(evaluationResponsesCol, resp.id), { answers: resp.answers }, { merge: true });
+      trialSharePreviewEditing = false;
+      renderShareResponsePreviewModal();
+    }catch(err){
+      console.error('Forge: failed to save edited guest response', err);
+      showCloudError('Failed to save changes to this response: ' + err.message);
+      e.target.disabled = false;
+    }
   });
 }
 
@@ -1274,6 +1465,7 @@ export function mountTrialsView(){
   });
 
   renderTrialsList();
+  loadSharePendingCounts();
   playContentTransition(main);
 }
 
@@ -1298,6 +1490,7 @@ export function renderTrialsList(){
     renderEvaluationWizard();
     renderTrialSummaryModal();
     renderTrialShareModal();
+    renderShareResponsePreviewModal();
     return;
   }
   // Grouped by linked Project (see groupTrialsByProject, shared with the
@@ -1697,7 +1890,7 @@ export function renderTrialsList(){
           <div class="trial-row-actions">
             ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
-            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-share">${icon('share-2')} Share External Evaluation</button>` : ''}
+            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-share">${icon('share-2')} Share External Evaluation${trialSharePendingCounts[t.id] ? `<span class="trial-share-pending-badge" title="${trialSharePendingCounts[t.id]} guest response${trialSharePendingCounts[t.id] === 1 ? '' : 's'} waiting for a decision">${trialSharePendingCounts[t.id]}</span>` : ''}</button>` : ''}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>` : ''}
@@ -2167,6 +2360,7 @@ export function renderTrialsList(){
   renderEvaluationWizard();
   renderTrialSummaryModal();
   renderTrialShareModal();
+  renderShareResponsePreviewModal();
 }
 
 function attachTrialsListener(){

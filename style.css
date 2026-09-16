@@ -5434,7 +5434,19 @@
   .trial-share-response-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--border);}
   .trial-share-response-main{display:flex;flex-direction:column;gap:2px;}
   .trial-share-response-meta{font-size:11px;color:var(--text-dim);}
+  .trial-share-response-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
   .trial-share-response-imported{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ok);font-weight:600;flex-shrink:0;}
+  .trial-share-response-dismissed{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);font-weight:600;flex-shrink:0;}
+  /* Count of guest responses still awaiting Import/Dismiss (see
+     trialSharePendingCounts) -- a small filled circle on the row's own
+     "Share External Evaluation" button, same idea as an unread-count
+     badge, so a pending response is noticeable without opening the panel. */
+  .trial-share-pending-badge{
+    display:inline-flex;align-items:center;justify-content:center;
+    min-width:16px;height:16px;padding:0 4px;margin-left:6px;
+    background:var(--accent);color:#fff;border-radius:999px;
+    font-size:10px;font-weight:700;line-height:1;
+  }
   /* Summary Table (Test Results' alternate view -- see trialsViewMode /
      renderTrialsSummaryTable) -- Project / PD / a compact inline version
      of the same per-product summary the modal shows as full cards. */
