@@ -122,6 +122,26 @@ function getMyEvaluation(pd){
   if(!pd.evaluations[currentUser.email]) pd.evaluations[currentUser.email] = {};
   return pd.evaluations[currentUser.email];
 }
+// Per request, Comments is now one shared remark per evaluator covering
+// the whole test (every product), not a separate one per product -- lives
+// at the trial level (sibling to productData), same lazy-init shape as
+// getMyEvaluation just above, just keyed straight by email since there's
+// no per-product dimension to it any more.
+function getMyEvaluatorComment(t){
+  if(!currentUser?.email) return '';
+  if(!t.evaluatorComments || typeof t.evaluatorComments !== 'object') t.evaluatorComments = {};
+  return t.evaluatorComments[currentUser.email] || '';
+}
+// Optional reference photos to go with the comment above -- e.g. a
+// competitor sample or something else worth pointing at -- same one-set-
+// per-evaluator-per-trial shape, capped at EVAL_COMMENT_PHOTO_MAX.
+const EVAL_COMMENT_PHOTO_MAX = 2;
+function getMyEvaluatorPhotos(t){
+  if(!currentUser?.email) return [];
+  if(!t.evaluatorPhotos || typeof t.evaluatorPhotos !== 'object') t.evaluatorPhotos = {};
+  if(!Array.isArray(t.evaluatorPhotos[currentUser.email])) t.evaluatorPhotos[currentUser.email] = [];
+  return t.evaluatorPhotos[currentUser.email];
+}
 // One { who, value } per person who has weighed in on this product's
 // given criteria (or Test Result, when criteriaId is null) -- feeds the
 // combined "Overall" view. A trial saved before this feature has its
@@ -465,10 +485,6 @@ function renderEvalWizardStep(t, products, criteria, step){
         </div>
       `).join('')}
       <div class="eval-wizard-question">
-        <div class="eval-wizard-question-label">Comments</div>
-        <textarea class="eval-wizard-comment" data-role="eval-comment" placeholder="Anything else worth noting about this sample">${escapeHtml(mine.comment || '')}</textarea>
-      </div>
-      <div class="eval-wizard-question">
         <div class="eval-wizard-question-label">Test Result</div>
         <div class="eval-wizard-testresult-row">
           ${TRIAL_TEST_RESULT_OPTIONS.map(o => `
@@ -503,12 +519,25 @@ function renderEvalWizardReview(t, products, criteria){
             const meaning = mine[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(mine[c.id]))}</span>` : '';
             return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${meaning}${pctBadge}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
           }).join('')}
-          ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
         </div>
         `;
       }).join('')}
       <div class="eval-wizard-review-disclaimer">Note: This Idea Guideline reflects only your own scores — the final improvement direction may change based on the overall average and other evaluators' opinions (คำแนะนำนี้อ้างอิงจากคะแนนของคุณเท่านั้น ผลสุดท้ายอาจเปลี่ยนแปลงตามค่าเฉลี่ยโดยรวมและความเห็นจากผู้เข้าร่วมทดสอบคนอื่นๆ)</div>
+      <div class="eval-wizard-question" style="margin-top:14px;margin-bottom:0;">
+        <div class="eval-wizard-question-label">Comments</div>
+        <textarea class="eval-wizard-comment" data-role="eval-overall-comment" placeholder="Anything else worth noting — covers every sample above, not just one">${escapeHtml(getMyEvaluatorComment(t))}</textarea>
+        <div class="eval-wizard-question-label" style="margin-top:12px;margin-bottom:6px;">Reference Photo (optional)</div>
+        ${getMyEvaluatorPhotos(t).length ? `<div class="proj-ref-images-grid">${getMyEvaluatorPhotos(t).map(ph => `
+          <div class="proj-ref-image-item">
+            <div class="proj-ref-image-thumb-wrap">
+              <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb" alt="Reference photo">
+              <button type="button" class="proj-ref-image-remove" data-role="remove-eval-photo" data-photo-id="${escapeHtml(ph.id)}" title="Remove">${icon('x', 12)}</button>
+            </div>
+          </div>
+        `).join('')}</div>` : ''}
+        ${getMyEvaluatorPhotos(t).length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="eval-review-photo-input" accept="image/*" style="margin-top:8px;">` : ''}
+      </div>
       <div class="eval-wizard-nav">
         <button type="button" class="btn btn-sm" data-role="eval-back">Back</button>
         <button type="button" class="btn btn-sm btn-primary" data-role="eval-done">${icon('check')} Done</button>
@@ -594,16 +623,35 @@ function wireEvaluationWizard(overlay, t, products){
     });
   });
   overlay.querySelectorAll('.mu-field-with-translate').forEach(wireTrialTranslateButton);
-  overlay.querySelector('.eval-wizard-comment')?.addEventListener('change', e => {
-    const p = products[evalWizard.step];
-    const pd = getTrialProductData(t, p.id);
-    const mine = getMyEvaluation(pd);
-    mine.comment = e.target.value.trim();
+  overlay.querySelector('[data-role="eval-overall-comment"]')?.addEventListener('change', e => {
+    if(!t.evaluatorComments || typeof t.evaluatorComments !== 'object') t.evaluatorComments = {};
+    if(currentUser?.email) t.evaluatorComments[currentUser.email] = e.target.value.trim();
     scheduleTrialSave(t);
-    // The Overall table's Comments row reads straight from this (see
-    // commentsRowHtml) -- refresh it now, same as the criteria Note field
-    // and every JAR/Test Result answer already do.
+    // The Overall table's Comments section reads straight from this (see
+    // evaluatorCommentsHtml) -- refresh it now, same as the criteria Note
+    // field and every JAR/Test Result answer already do.
     renderTrialsList();
+  });
+  overlay.querySelector('.eval-review-photo-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    const photos = getMyEvaluatorPhotos(t);
+    if(photos.length >= EVAL_COMMENT_PHOTO_MAX) return;
+    photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500) });
+    scheduleTrialSave(t);
+    renderTrialsList();
+    renderEvaluationWizard();
+  });
+  overlay.querySelectorAll('[data-role="remove-eval-photo"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const photos = getMyEvaluatorPhotos(t);
+      const idx = photos.findIndex(ph => ph.id === btn.dataset.photoId);
+      if(idx !== -1) photos.splice(idx, 1);
+      scheduleTrialSave(t);
+      renderTrialsList();
+      renderEvaluationWizard();
+    });
   });
   overlay.querySelectorAll('[data-role="eval-testresult"]').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1058,13 +1106,28 @@ async function loadShareResponses(trialId){
 // up. Marks the response imported (both locally and in Firestore) so
 // re-opening this panel doesn't offer to import the same answers twice.
 async function importShareResponse(t, resp){
+  const guestKey = `guest:${resp.guestName || 'Guest'}:${resp.id}`;
   Object.entries(resp.answers || {}).forEach(([productId, answers]) => {
     const target = trialEvalTargets(t).find(p => p.id === productId);
     if(!target) return;
     const pd = getTrialProductData(t, productId);
     if(!pd.evaluations || typeof pd.evaluations !== 'object') pd.evaluations = {};
-    pd.evaluations[`guest:${resp.guestName || 'Guest'}:${resp.id}`] = answers;
+    pd.evaluations[guestKey] = answers;
   });
+  // Comments + reference photo are the guest's own overall remark about
+  // the whole test (see evaluate.js's Review page), same one-per-
+  // evaluator shape real evaluators' answers take (t.evaluatorComments/
+  // evaluatorPhotos) -- imported under the same guestKey as their scores
+  // above so both end up attributed to the same "who" in the Comments
+  // block.
+  if((resp.comment || '').trim()){
+    if(!t.evaluatorComments || typeof t.evaluatorComments !== 'object') t.evaluatorComments = {};
+    t.evaluatorComments[guestKey] = resp.comment.trim();
+  }
+  if((resp.photos || []).length){
+    if(!t.evaluatorPhotos || typeof t.evaluatorPhotos !== 'object') t.evaluatorPhotos = {};
+    t.evaluatorPhotos[guestKey] = resp.photos;
+  }
   scheduleTrialSave(t);
   try{
     await setDoc(doc(evaluationResponsesCol, resp.id), { imported: true }, { merge: true });
@@ -1319,10 +1382,6 @@ function renderShareResponsePreviewModal(){
         </div>
       `).join('')}
       <div class="eval-wizard-question">
-        <div class="eval-wizard-question-label">Comments</div>
-        <textarea class="eval-wizard-comment" data-role="preview-comment" data-product-id="${escapeHtml(productId)}" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(ans.comment || '')}</textarea>
-      </div>
-      <div class="eval-wizard-question">
         <div class="eval-wizard-question-label">Test Result</div>
         <div class="eval-wizard-testresult-row">
           ${TRIAL_TEST_RESULT_OPTIONS.map(o => `<button type="button" class="eval-wizard-testresult-btn${ans.testResult === o ? ' selected ' + (EVAL_WIZARD_RESULT_CLASSES[o] || '') : ''}" data-role="preview-testresult" data-product-id="${escapeHtml(productId)}" data-value="${escapeHtml(o)}" ${isEditing ? '' : 'disabled'}>${escapeHtml(o)}</button>`).join('')}
@@ -1330,6 +1389,29 @@ function renderShareResponsePreviewModal(){
       </div>
     `;
   }).join('');
+
+  // Comments + reference photo are one shared thing for the whole
+  // response now (see evaluate.js's own Review page), not one per
+  // product -- resp.comment/resp.photos are top-level fields on the
+  // response doc, same shape importShareResponse folds into
+  // t.evaluatorComments/evaluatorPhotos on Import.
+  const photos = Array.isArray(resp.photos) ? resp.photos : [];
+  const commentSectionHtml = `
+    <div class="eval-wizard-question" style="margin-top:14px;">
+      <div class="eval-wizard-question-label">Comments</div>
+      <textarea class="eval-wizard-comment" data-role="preview-overall-comment" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(resp.comment || '')}</textarea>
+      <div class="eval-wizard-question-label" style="margin-top:12px;margin-bottom:6px;">Reference Photo</div>
+      ${photos.length ? `<div class="proj-ref-images-grid">${photos.map(ph => `
+        <div class="proj-ref-image-item">
+          <div class="proj-ref-image-thumb-wrap">
+            <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb" alt="Reference photo">
+            ${isEditing ? `<button type="button" class="proj-ref-image-remove" data-role="preview-remove-photo" data-photo-id="${escapeHtml(ph.id)}" title="Remove">${icon('x', 12)}</button>` : ''}
+          </div>
+        </div>
+      `).join('')}</div>` : '<div class="overview-empty">No photo attached.</div>'}
+      ${isEditing && photos.length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="preview-photo-input" accept="image/*" style="margin-top:8px;">` : ''}
+    </div>
+  `;
 
   overlay.innerHTML = `
     <div class="eval-wizard-card">
@@ -1341,6 +1423,7 @@ function renderShareResponsePreviewModal(){
         <b>${escapeHtml(resp.guestName || 'Guest')}</b> · ${resp.submittedAt ? escapeHtml(formatActivityDateTime(resp.submittedAt)) : ''}
       </div>
       ${productRowsHtml || '<div class="overview-empty">No answers submitted.</div>'}
+      ${commentSectionHtml}
       <div class="eval-wizard-nav">
         ${isEditing
           ? `<button type="button" class="btn btn-sm btn-primary" data-role="preview-save">${icon('save', 14)} Save</button>`
@@ -1370,9 +1453,24 @@ function renderShareResponsePreviewModal(){
       resp.answers[el.dataset.productId][`${el.dataset.criteriaId}_note`] = el.value.trim();
     });
   });
-  overlay.querySelectorAll('[data-role="preview-comment"]').forEach(el => {
-    el.addEventListener('change', () => {
-      resp.answers[el.dataset.productId].comment = el.value.trim();
+  overlay.querySelector('[data-role="preview-overall-comment"]')?.addEventListener('change', e => {
+    resp.comment = e.target.value.trim();
+  });
+  overlay.querySelector('.preview-photo-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    if(!Array.isArray(resp.photos)) resp.photos = [];
+    if(resp.photos.length >= EVAL_COMMENT_PHOTO_MAX) return;
+    resp.photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500) });
+    renderShareResponsePreviewModal();
+  });
+  overlay.querySelectorAll('[data-role="preview-remove-photo"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      if(!Array.isArray(resp.photos)) return;
+      const idx = resp.photos.findIndex(ph => ph.id === btn.dataset.photoId);
+      if(idx !== -1) resp.photos.splice(idx, 1);
+      renderShareResponsePreviewModal();
     });
   });
   overlay.querySelectorAll('[data-role="preview-testresult"]').forEach(btn => {
@@ -1385,7 +1483,7 @@ function renderShareResponsePreviewModal(){
   overlay.querySelector('[data-role="preview-save"]')?.addEventListener('click', async e => {
     e.target.disabled = true;
     try{
-      await setDoc(doc(evaluationResponsesCol, resp.id), { answers: resp.answers }, { merge: true });
+      await setDoc(doc(evaluationResponsesCol, resp.id), { answers: resp.answers, comment: resp.comment || '', photos: resp.photos || [] }, { merge: true });
       trialSharePreviewEditing = false;
       renderShareResponsePreviewModal();
     }catch(err){
@@ -1829,27 +1927,40 @@ export function renderTrialsList(){
         <td class="recipe-boundary"></td>
       </tr>
     `;
-    // Overall Comments is a per-evaluator, per-product free-text remark
-    // from the last step of each product's page in the "Perform
-    // Evaluation" wizard -- shown here the same combined way as Test
-    // Result above, so it's visible on the summary table too instead of
-    // only reachable by reopening the wizard's own Review page.
-    const commentsRowHtml = `
-      <tr>
-        <td><b>Comments</b></td>
-        ${evalTargets.map((p, i) => {
-          const pd = getTrialProductData(mt, p.id);
-          const entries = [];
-          if(pd.evaluations && typeof pd.evaluations === 'object'){
-            Object.entries(pd.evaluations).forEach(([email, ans]) => {
-              if(ans?.comment) entries.push({ who: email, value: ans.comment });
-            });
-          }
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry">${escapeHtml(e.value)}</div>`).join('')
-            : '<span class="overview-empty">-</span>'}</td>`;
-        }).join('')}
-        <td class="recipe-boundary"></td>
+    // Comments + an optional reference photo are now one shared thing per
+    // evaluator covering the whole test (see getMyEvaluatorComment/
+    // evaluatorPhotos), not one of each per product -- doesn't fit as a
+    // table row keyed by product any more, so it's a standalone block
+    // below the table instead (one entry per evaluator who left either),
+    // same idea as Test Result above just no longer per-product.
+    const evaluatorCommentsHtml = (() => {
+      const comments = (t.evaluatorComments && typeof t.evaluatorComments === 'object') ? t.evaluatorComments : {};
+      const photosByEmail = (t.evaluatorPhotos && typeof t.evaluatorPhotos === 'object') ? t.evaluatorPhotos : {};
+      const emails = [...new Set([...Object.keys(comments), ...Object.keys(photosByEmail)])]
+        .filter(email => (comments[email] || '').trim() || (photosByEmail[email] || []).length);
+      if(!emails.length) return '';
+      return `
+        <div class="teval-overall-comments">
+          <div class="teval-overall-comments-title">Comments</div>
+          ${emails.map(email => `
+            <div class="teval-overall-entry">
+              <b>${escapeHtml(shortEvaluatorName(email))}:</b> ${escapeHtml((comments[email] || '').trim() || '-')}
+              ${(photosByEmail[email] || []).length ? `
+                <div class="proj-ref-images-grid" style="margin-top:6px;">
+                  ${(photosByEmail[email] || []).map(ph => `
+                    <div class="proj-ref-image-item">
+                      <div class="proj-ref-image-thumb-wrap">
+                        <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb" alt="Reference photo">
+                      </div>
+                    </div>
+                  `).join('')}
+                </div>
+              ` : ''}
+            </div>
+          `).join('')}
+        </div>
+      `;
+    })();
       </tr>
     `;
     // Improvement notes only make sense for a product at least one
@@ -2025,9 +2136,10 @@ export function renderTrialsList(){
                 <table class="compare-table">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
-                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${commentsRowHtml}</tbody>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>
+              ${evaluatorCommentsHtml}
               ${addCriteriaBtnHtml}
               ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>

@@ -104,8 +104,13 @@ let linkData = null;
 let step = 0;
 // Per-product answers, same shape as a real evaluator's own
 // pd.evaluations[someKey] in trials.js: { [criteriaId]: '1'-'9',
-// [criteriaId+'_note']: string, comment: string, testResult: string }.
+// [criteriaId+'_note']: string, testResult: string }.
 let answers = {};
+// One shared Comments + up to EVAL_COMMENT_PHOTO_MAX reference photos for
+// the whole submission (per request), asked once on the Review page --
+// not nested inside `answers`, since neither is tied to any one product.
+let generalComment = '';
+let generalPhotos = [];
 
 // Same 192-bit CSPRNG token generation as submit.js's own generateToken
 // and trials.js's generateShareToken -- this response's own doc id, freshly
@@ -259,6 +264,11 @@ function stepHtml(product, criteria, total){
 // guest can catch a wrong tap before Submit, with Back returning to the
 // last product's own page to fix it. Submit is the only action on this
 // whole page that ever touches Firestore.
+//
+// Comments + an optional reference photo are one shared thing covering
+// the whole test here (per request), not one of each per product -- asked
+// once at the very bottom, after every product's own answers, rather than
+// repeated on each product's own page.
 function reviewHtml(products, criteria){
   return `
     <div class="card">
@@ -280,23 +290,23 @@ function reviewHtml(products, criteria){
             `;
             }).join('')}
             <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[ans.testResult] || ''}">${escapeHtml(ans.testResult || '-')}</b></div>
-            <div class="eval-wizard-question" style="margin-top:14px;margin-bottom:0;" data-review-product-id="${escapeHtml(p.id)}">
-              <div class="eval-wizard-question-label">Comments</div>
-              <textarea class="eval-wizard-comment" data-role="review-comment" data-product-id="${escapeHtml(p.id)}" placeholder="Anything else worth noting about this sample">${escapeHtml(ans.comment || '')}</textarea>
-              <div class="eval-wizard-question-label" style="margin-top:12px;margin-bottom:6px;">Reference Photo (optional)</div>
-              ${(ans.commentPhotos || []).length ? `<div class="proj-ref-images-grid">${(ans.commentPhotos || []).map(ph => `
-                <div class="proj-ref-image-item">
-                  <div class="proj-ref-image-thumb-wrap">
-                    <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb">
-                    <button type="button" class="proj-ref-image-remove" data-role="remove-review-photo" data-product-id="${escapeHtml(p.id)}" data-photo-id="${escapeHtml(ph.id)}" title="Remove">×</button>
-                  </div>
-                </div>
-              `).join('')}</div>` : ''}
-              ${(ans.commentPhotos || []).length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="review-photo-input" data-product-id="${escapeHtml(p.id)}" accept="image/*" style="margin-top:8px;">` : ''}
-            </div>
           </div>
         `;
       }).join('')}
+      <div class="eval-wizard-question" style="margin-top:14px;">
+        <div class="eval-wizard-question-label">Comments</div>
+        <textarea class="eval-wizard-comment" data-role="review-comment" placeholder="Anything else worth noting — covers every sample above, not just one">${escapeHtml(generalComment)}</textarea>
+        <div class="eval-wizard-question-label" style="margin-top:12px;margin-bottom:6px;">Reference Photo (optional)</div>
+        ${generalPhotos.length ? `<div class="proj-ref-images-grid">${generalPhotos.map(ph => `
+          <div class="proj-ref-image-item">
+            <div class="proj-ref-image-thumb-wrap">
+              <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb">
+              <button type="button" class="proj-ref-image-remove" data-role="remove-review-photo" data-photo-id="${escapeHtml(ph.id)}" title="Remove">×</button>
+            </div>
+          </div>
+        `).join('')}</div>` : ''}
+        ${generalPhotos.length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="review-photo-input" accept="image/*" style="margin-top:8px;">` : ''}
+      </div>
       <div class="eval-wizard-nav">
         <button type="button" class="btn btn-sm" data-role="wiz-back">Back</button>
         <button type="button" class="btn btn-sm btn-primary" data-role="wiz-submit">Submit Evaluation</button>
@@ -310,6 +320,8 @@ function render(data){
   linkData = data;
   step = 0;
   answers = {};
+  generalComment = '';
+  generalPhotos = [];
   (data.products || []).forEach(p => { answers[p.id] = {}; });
 
   rootEl.innerHTML = `
@@ -456,32 +468,25 @@ function wireWizardStep(){
       });
     });
   });
-  // Comments + optional reference photo now live on the Review page (per
-  // request) instead of each product's own step -- one block per product,
-  // scoped by data-review-product-id since the Review page shows every
-  // product at once rather than one at a time.
-  document.querySelectorAll('[data-review-product-id]').forEach(block => {
-    const productId = block.dataset.reviewProductId;
-    const mine = answers[productId] || (answers[productId] = {});
-    block.querySelector('[data-role="review-comment"]')?.addEventListener('change', e => {
-      mine.comment = e.target.value.trim();
-    });
-    block.querySelector('.review-photo-input')?.addEventListener('change', async e => {
-      const file = e.target.files[0];
-      e.target.value = '';
-      if(!file) return;
-      if(!Array.isArray(mine.commentPhotos)) mine.commentPhotos = [];
-      if(mine.commentPhotos.length >= EVAL_COMMENT_PHOTO_MAX) return;
-      mine.commentPhotos.push({ id: crypto.randomUUID(), dataUrl: await resizeImageFile(file, 500) });
+  // Comments + optional reference photo live on the Review page, as one
+  // shared field covering the whole submission (per request) -- not
+  // scoped to any one product any more.
+  document.querySelector('[data-role="review-comment"]')?.addEventListener('change', e => {
+    generalComment = e.target.value.trim();
+  });
+  document.querySelector('.review-photo-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    if(generalPhotos.length >= EVAL_COMMENT_PHOTO_MAX) return;
+    generalPhotos.push({ id: crypto.randomUUID(), dataUrl: await resizeImageFile(file, 500) });
+    renderWizardStep();
+  });
+  document.querySelectorAll('[data-role="remove-review-photo"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const idx = generalPhotos.findIndex(ph => ph.id === btn.dataset.photoId);
+      if(idx !== -1) generalPhotos.splice(idx, 1);
       renderWizardStep();
-    });
-    block.querySelectorAll('[data-role="remove-review-photo"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        if(!Array.isArray(mine.commentPhotos)) return;
-        const idx = mine.commentPhotos.findIndex(ph => ph.id === btn.dataset.photoId);
-        if(idx !== -1) mine.commentPhotos.splice(idx, 1);
-        renderWizardStep();
-      });
     });
   });
   document.querySelector('[data-role="wiz-back"]')?.addEventListener('click', () => {
@@ -523,7 +528,9 @@ async function save(){
       guestName,
       submittedAt: Date.now(),
       imported: false,
-      answers
+      answers,
+      comment: generalComment,
+      photos: generalPhotos
     });
     // The header card above (trial info + "Your Name") is left as-is,
     // not wiped out like a full render() would -- only #wizardRoot is

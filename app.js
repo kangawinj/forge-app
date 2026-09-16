@@ -946,7 +946,8 @@ const CHANGELOG = [
   { version: "3.0.535", date: "2026-09-17", note: "evaluate.html: pressing and sliding a finger across the 1-9 buttons now scrubs through scores like a slider, instead of needing to lift and re-tap each one" },
   { version: "3.0.536", date: "2026-09-17", note: "Fixed a light-colored band getting stuck on the last button touched after a press-and-drag score selection on a phone -- that was the JAR button's own :hover style, which mobile browsers can leave stuck on after a touch ends; now only applies on real pointer devices (mouse/trackpad)" },
   { version: "3.0.537", date: "2026-09-17", note: "evaluate.html: moved each product's Comments field from its own step page onto the Review page (before Submit), and added an optional reference photo (up to 2 per product) alongside it there" },
-  { version: "3.0.538", date: "2026-09-17", note: "Fixed the JAR press-and-drag picking up an ordinary page-scroll that merely passed over the 1-9 buttons and silently changing whatever score was under the finger -- a gesture is no longer treated as a drag until it's clearly moving more horizontally than vertically" }
+  { version: "3.0.538", date: "2026-09-17", note: "Fixed the JAR press-and-drag picking up an ordinary page-scroll that merely passed over the 1-9 buttons and silently changing whatever score was under the finger -- a gesture is no longer treated as a drag until it's clearly moving more horizontally than vertically" },
+  { version: "3.0.539", date: "2026-09-17", note: "Perform Evaluation and External Evaluation: consolidated Comments from one-per-product into a single field covering the whole test, asked once on the Review page, and added an optional reference photo there (up to 2) to both" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

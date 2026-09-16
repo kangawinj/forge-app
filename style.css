@@ -3984,6 +3984,13 @@
      overwrite. Padding matches .teval-fixed's old textarea so the column
      doesn't visibly shift between the two views. */
   .teval-overall-entry{font-size:13px;padding:2px 0;}
+  /* Comments + reference photo moved out of the Sensory Evaluation table
+     (they're one shared thing per evaluator now, not per-product, so they
+     no longer fit as a table column) into this standalone block right
+     below it -- same idea/shape as the table's own Overall rows, just
+     outside the <table> now that there's no product column to key by. */
+  .teval-overall-comments{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
+  .teval-overall-comments-title{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
   /* The bare "3/5" doesn't say what 3 actually means -- show the JAR
      scale's own wording (already bilingual, see JAR_SCALE) right next to
      it instead of only on hover via the div's own title tooltip. */
