@@ -69,6 +69,18 @@ function jarScoreLabel(value){
 function jarScoreDisplay(value){
   return /^[1-9]$/.test(value || '') ? `${value}/9` : '-';
 }
+// Same "Idea Guideline" math as jarAdjustmentPercent in trials.js -- how
+// far off-ideal a JAR answer is, as a -100%/+100% figure toward the
+// midpoint ("Just right"). Kept in sync manually, same reasoning as every
+// other duplicated constant/helper in this file.
+function jarAdjustmentPercent(value){
+  const n = parseInt(value, 10);
+  if(!(n >= 1 && n <= JAR_SCALE.length)) return null;
+  const midpoint = Math.ceil(JAR_SCALE.length / 2);
+  const maxDeviation = midpoint - 1;
+  if(maxDeviation <= 0) return 0;
+  return Math.round(-((n - midpoint) / maxDeviation) * 100);
+}
 
 const token = new URLSearchParams(location.search).get('token') || '';
 const bannerEl = document.getElementById('evalStatusBanner');
@@ -158,6 +170,26 @@ function productSectionHtml(product, criteria){
             `).join('')}
           </div>
           <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
+          ${(() => {
+            const pct = jarAdjustmentPercent(mine[c.id]);
+            if(pct === null || pct === 0) return '';
+            const markerPos = 50 + pct / 2;
+            return `
+              <div class="eval-wizard-idea-guideline">
+                <div class="eval-wizard-idea-label">Idea Guideline — toward Just Right (พอดี)</div>
+                <div class="eval-wizard-idea-track">
+                  <div class="eval-wizard-idea-center"></div>
+                  <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
+                </div>
+                <div class="eval-wizard-idea-scale-labels">
+                  <span${pct <= -100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>-100%</span>
+                  <span>Just right</span>
+                  <span${pct >= 100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>+100%</span>
+                  <span class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</span>
+                </div>
+              </div>
+            `;
+          })()}
         </div>
       `).join('')}
       <div class="eval-wizard-question">
@@ -204,13 +236,17 @@ function reviewHtml(products, criteria){
         return `
           <div class="eval-wizard-review-product">
             <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
-            ${criteria.map(c => `
+            ${criteria.map(c => {
+              const pct = jarAdjustmentPercent(ans[c.id]);
+              const pctBadge = (pct !== null && pct !== 0) ? `<span class="eval-wizard-review-idea-badge">${pct > 0 ? '+' : ''}${pct}%</span>` : '';
+              return `
               <div class="eval-wizard-review-row eval-wizard-review-row-3col">
                 <span>${escapeHtml(c.label)}</span>
-                <b>${jarScoreDisplay(ans[c.id])}${ans[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(ans[c.id]))}</span>` : ''}</b>
+                <b>${jarScoreDisplay(ans[c.id])}${ans[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(ans[c.id]))}</span>` : ''}${pctBadge}</b>
                 <span class="eval-wizard-review-note-col">${escapeHtml(ans[`${c.id}_note`] || '')}</span>
               </div>
-            `).join('')}
+            `;
+            }).join('')}
             ${(ans.comment || '').trim() ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(ans.comment)}</b></div>` : ''}
             <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[ans.testResult] || ''}">${escapeHtml(ans.testResult || '-')}</b></div>
           </div>
@@ -267,11 +303,11 @@ function wireWizardStep(){
       btn.addEventListener('click', () => {
         const criteriaId = btn.dataset.criteriaId;
         mine[criteriaId] = mine[criteriaId] === btn.dataset.value ? '' : btn.dataset.value;
-        section.querySelectorAll(`[data-role="eval-jar"][data-criteria-id="${criteriaId}"]`).forEach(b => {
-          b.classList.toggle('selected', b.dataset.value === mine[criteriaId]);
-        });
-        const caption = section.querySelector(`[data-jar-caption="${criteriaId}"]`);
-        if(caption) caption.textContent = mine[criteriaId] ? jarScoreLabel(mine[criteriaId]) : 'Not answered yet';
+        // Full re-render (not a DOM patch) -- same as the real Perform
+        // Evaluation wizard's own JAR click handler -- since the Idea
+        // Guideline block below each question only exists/updates by being
+        // recomputed from the answer that just changed.
+        renderWizardStep();
       });
     });
     section.querySelectorAll('[data-role="eval-criteria-note"]').forEach(el => {
@@ -332,10 +368,25 @@ async function save(){
       imported: false,
       answers
     });
-    rootEl.innerHTML = `<div class="card" style="text-align:center;padding:32px 20px;">
+    // The header card above (trial info + "Your Name") is left as-is,
+    // not wiped out like a full render() would -- only #wizardRoot is
+    // replaced, so a mistaken submit can still be corrected: "Back to
+    // Edit" returns to the Review page with every answer just submitted
+    // still sitting in `answers`, ready to tweak and resend. This can
+    // never *edit* the response just written (a guest has no update
+    // access to /evaluationResponses, see firestore.rules), only create a
+    // fresh corrected one -- both responses stay visible to the team, who
+    // can Dismiss whichever one doesn't belong.
+    document.getElementById('wizardRoot').innerHTML = `<div class="card" style="text-align:center;padding:32px 20px;">
       <p style="font-size:15px;font-weight:600;color:var(--primary-dark);margin-bottom:6px;">Thank you, ${escapeHtml(guestName)}!</p>
-      <p style="color:var(--text-dim);">Your evaluation has been submitted.</p>
+      <p style="color:var(--text-dim);margin-bottom:16px;">Your evaluation has been submitted.</p>
+      <button type="button" class="btn btn-sm" data-role="wiz-edit-again">${'←'} Back to Edit</button>
     </div>`;
+    document.querySelector('[data-role="wiz-edit-again"]')?.addEventListener('click', () => {
+      step = (linkData.products || []).length;
+      renderWizardStep();
+      window.scrollTo(0, 0);
+    });
   }catch(err){
     feedback.style.color = 'var(--danger)';
     feedback.textContent = 'Could not submit: ' + (err.message || err);

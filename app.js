@@ -936,7 +936,8 @@ const CHANGELOG = [
   { version: "3.0.525", date: "2026-09-16", note: "Printing a Test Result: hid every other project's own group heading (was showing above/below the one trial being printed) and hid empty fields' placeholder hint text (e.g. \"e.g. Microwave\") and the Translate button, none of which belong on a printed page" },
   { version: "3.0.526", date: "2026-09-16", note: "Share External Evaluation: added Preview (view a guest response, with an Edit + Save to fix it before importing) and Dismiss (keep the response, just stop offering to import it) to each guest response, plus a pending-count badge on the Share External Evaluation button for responses nobody's decided on yet" },
   { version: "3.0.527", date: "2026-09-16", note: "Rebuilt the guest evaluate.html survey to walk through one product per page (Back/Next Sample), same as the Perform Evaluation wizard, ending on a Review page listing every answer with its own Back button so a guest can fix a wrong tap before the one and only Submit" },
-  { version: "3.0.528", date: "2026-09-16", note: "Made a Dismissed guest response clickable to undo -- asks for your password first, same as deleting a test result, since restoring it puts it back in front of Import" }
+  { version: "3.0.528", date: "2026-09-16", note: "Made a Dismissed guest response clickable to undo -- asks for your password first, same as deleting a test result, since restoring it puts it back in front of Import" },
+  { version: "3.0.529", date: "2026-09-16", note: "Guest evaluate.html: added the Idea Guideline widget under each JAR question, same as the real Perform Evaluation wizard, and a \"Back to Edit\" button on the Thank You page that returns to the Review page to fix and resend an answer" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
