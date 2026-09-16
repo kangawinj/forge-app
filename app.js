@@ -880,7 +880,8 @@ const CHANGELOG = [
   { version: "3.0.476", date: "2026-09-16", note: "Replaced the navbar's unused \"?\" Help button with an online-users indicator — a photo (or initials) with a green dot for each teammate currently active in Forge. Help moved into the Account menu" },
   { version: "3.0.477", date: "2026-09-16", note: "Ingredient Library: added a Brand field to the Add/Edit Ingredient form and detail view" },
   { version: "3.0.478", date: "2026-09-16", note: "Ingredient Library: moved Brand to field #3 (right after the two ingredient names), renumbering everything after it — Photo's preview thumbnail now sits directly under it in the same box instead of a separate grid cell, so the numbering could stay in clean groups of 3 per row" },
-  { version: "3.0.479", date: "2026-09-16", note: "Recipe editor now shows each ingredient's Brand — in the \"Recipe Overview (all parts combined)\" table's sub-label, and in the ingredient search dropdown when adding/editing an ingredient" }
+  { version: "3.0.479", date: "2026-09-16", note: "Recipe editor now shows each ingredient's Brand — in the \"Recipe Overview (all parts combined)\" table's sub-label, and in the ingredient search dropdown when adding/editing an ingredient" },
+  { version: "3.0.480", date: "2026-09-16", note: "Fixed: editing an ingredient's name in a recipe no longer wipes the weight you already entered for it — the field just stays disabled (greyed, value kept) until the new name matches a library ingredient again" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

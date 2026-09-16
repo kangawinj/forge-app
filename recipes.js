@@ -2686,7 +2686,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       }
       updatePrepareDisplay();
 
-      function syncMaterialLink(resetWeightIfUnlinked){
+      function syncMaterialLink(){
         const matched = findMaterialByLabel(nameInput.value);
         ing.materialId = matched ? matched.id : null;
         wtInput.disabled = !matched;
@@ -2707,18 +2707,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
             hintEl.textContent = 'Select an ingredient from the library first before entering a weight';
             hintEl.className = 'ing-hint';
           }
-          if(resetWeightIfUnlinked && (parseFloat(ing.weight) || 0) !== 0){
-            ing.weight = 0;
-            wtInput.value = (0).toFixed(2);
-            pctDisplay.value = (0).toFixed(2);
-          }
         }
         renderIngSubsToggle(subsEl, ing, matched, noteInput, () => {
           updatePrepareDisplay();
           refreshDisplays(r);
         });
       }
-      syncMaterialLink(false);
+      syncMaterialLink();
 
       // Custom fuzzy-search dropdown — replaces the old native <datalist>,
       // which only ever did a plain substring match and looked/behaved
@@ -2763,7 +2758,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
 
       nameInput.addEventListener('input', e => {
         ing.name = e.target.value;
-        syncMaterialLink(true);
+        syncMaterialLink();
         refreshDisplays(r);
         renderProcesses(r); // keep the "Add Component" picker's ingredient list current
         scheduleSave();
