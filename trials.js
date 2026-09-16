@@ -1014,16 +1014,22 @@ async function generateShareLink(t){
   }));
   const createdAt = Date.now();
   const expiresAt = createdAt + EVAL_LINK_LIFETIME_MS;
-  await setDoc(doc(evaluationLinksCol, shareToken), {
-    trialId: t.id,
-    createdAt,
-    expiresAt,
-    createdBy: currentUser?.email || '',
-    trialLabel: trialLabel(t),
-    testDate: t.testDate || '',
-    products,
-    criteria: criteria.map(c => ({ id: c.id, label: c.label }))
-  });
+  try{
+    await setDoc(doc(evaluationLinksCol, shareToken), {
+      trialId: t.id,
+      createdAt,
+      expiresAt,
+      createdBy: currentUser?.email || '',
+      trialLabel: trialLabel(t),
+      testDate: t.testDate || '',
+      products,
+      criteria: criteria.map(c => ({ id: c.id, label: c.label }))
+    });
+  }catch(err){
+    console.error('Forge: failed to create share link', err);
+    showCloudError('Failed to create the share link: ' + err.message);
+    return;
+  }
   t.shareToken = shareToken;
   t.shareExpiresAt = expiresAt;
   scheduleTrialSave(t);
@@ -1034,8 +1040,13 @@ async function generateShareLink(t){
 // and a plain getDocs keeps this panel from needing its own listener
 // teardown when the modal closes.
 async function loadShareResponses(trialId){
-  const snap = await getDocs(query(evaluationResponsesCol, where('trialId', '==', trialId)));
-  trialShareResponses = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  try{
+    const snap = await getDocs(query(evaluationResponsesCol, where('trialId', '==', trialId)));
+    trialShareResponses = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+  }catch(err){
+    console.error('Forge: failed to load guest evaluation responses', err);
+    showCloudError('Failed to load guest responses from Firebase: ' + err.message);
+  }
 }
 // Folds one guest response into the trial's own data the exact same shape
 // a real evaluator's answers take (pd.evaluations[someKey]) -- so every
@@ -1055,7 +1066,12 @@ async function importShareResponse(t, resp){
     pd.evaluations[`guest:${resp.guestName || 'Guest'}:${resp.id}`] = answers;
   });
   scheduleTrialSave(t);
-  await setDoc(doc(evaluationResponsesCol, resp.id), { imported: true }, { merge: true });
+  try{
+    await setDoc(doc(evaluationResponsesCol, resp.id), { imported: true }, { merge: true });
+  }catch(err){
+    console.error('Forge: failed to mark guest response as imported', err);
+    showCloudError('The response was imported into this test, but could not be marked as imported in Firebase (it may look importable again next time): ' + err.message);
+  }
   resp.imported = true;
   renderTrialsList();
 }
