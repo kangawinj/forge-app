@@ -198,6 +198,14 @@ const userApprovalsCol = collection(db, "userApprovals");
 // fields accept, same reason every other photo in this app (Projects,
 // Trials, etc.) lives in a Firestore doc rather than Auth/Storage.
 const userProfilesCol = collection(db, "userProfiles");
+// One doc per account (keyed by uid), holding just a heartbeat timestamp --
+// see attachPresenceListeners/sendPresenceHeartbeat below. No Realtime
+// Database in this app, so there's no true on-disconnect signal; "online"
+// is approximated client-side as "this doc's lastSeen is recent enough",
+// re-checked on a timer so someone reads as offline again a little after
+// they actually close the tab, not just whenever the next write happens to
+// land.
+const presenceCol = collection(db, "presence");
 /* Single shared document holding the "type to add" suggestion lists for
    Customer Name / Destination Country / Sales Rep — much lighter than a
    full master-data collection like ingredientMaster since these are just
@@ -868,7 +876,8 @@ const CHANGELOG = [
   { version: "3.0.472", date: "2026-09-16", note: "Added Trash — deleting a Recipe, Ingredient, Product, Project, Test Result, or Sample Submission now keeps a full snapshot for 30 days (Account menu → Trash) instead of erasing it immediately, with a one-click Restore" },
   { version: "3.0.473", date: "2026-09-16", note: "Test Results' Sensory Evaluation table now shows each JAR score's meaning (e.g. \"Just right (พอดี)\") right next to the number, not just on hover" },
   { version: "3.0.474", date: "2026-09-16", note: "The Costing card's eye toggle now also hides the explanatory paragraph below the numbers, not just the Overhead Multiplier/Margins/Selling Price fields" },
-  { version: "3.0.475", date: "2026-09-16", note: "Ingredient Library: added an E-Number / INS field to the Add/Edit Ingredient form — the \"INS-\" prefix is fixed, just type the number after it. Shows on the ingredient's detail view too" }
+  { version: "3.0.475", date: "2026-09-16", note: "Ingredient Library: added an E-Number / INS field to the Add/Edit Ingredient form — the \"INS-\" prefix is fixed, just type the number after it. Shows on the ingredient's detail view too" },
+  { version: "3.0.476", date: "2026-09-16", note: "Replaced the navbar's unused \"?\" Help button with an online-users indicator — a photo (or initials) with a green dot for each teammate currently active in Forge. Help moved into the Account menu" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -912,6 +921,24 @@ let userApprovalsAdminList = [];
 export let myProfile = { displayName: '', photoImage: '' };
 let unsubscribeMyProfile = null;
 let editingProfileImage = ''; // staged photo for the My Profile modal, same pattern as newProjectImage
+
+// ---------- Online presence (navbar avatar cluster) ----------
+// Raw presence docs (one per account that's ever signed in, keyed by uid)
+// and every account's My Profile (for the photo/display name to show next
+// to a presence doc) -- kept as two separate live collections rather than
+// duplicating photo/name onto each presence doc, so there's exactly one
+// place (My Profile) that can ever go stale.
+let presenceList = [];
+let allUserProfiles = {}; // uid -> { displayName, photoImage }
+let unsubscribePresence = null;
+let unsubscribeAllUserProfiles = null;
+let presenceHeartbeatInterval = null;
+let presenceRenderInterval = null;
+// A presence doc's lastSeen older than this reads as "offline" -- well
+// past PRESENCE_HEARTBEAT_MS so a normal gap between heartbeats never
+// flickers someone offline and back.
+const PRESENCE_HEARTBEAT_MS = 25000;
+const PRESENCE_STALE_MS = 70000;
 
 function authErrorMessage(err){
   const map = {
@@ -3879,6 +3906,14 @@ document.getElementById('navbarAccount').addEventListener('click', e => {
   e.stopPropagation();
   document.getElementById('navbarAccount').classList.toggle('open');
 });
+// Moved out of its own navbar-right icon button (see navbarOnlineUsers,
+// which took that spot) and into the account menu -- never had any real
+// destination of its own (a bare "?" tooltip), so this just closes the
+// menu like every other item here does, rather than adding a Help modal
+// that wasn't asked for.
+document.getElementById('btnNavbarHelp').addEventListener('click', () => {
+  document.getElementById('navbarAccount').classList.remove('open');
+});
 document.getElementById('navbarNotifications').addEventListener('click', e => {
   e.stopPropagation();
   const wrap = document.getElementById('navbarNotifications');
@@ -4092,6 +4127,62 @@ function saveCalendarPanes(){
     .catch(err => console.error('Forge: failed to save calendar panes', err));
 }
 
+// Writes/refreshes this account's own presence doc -- called immediately
+// on sign-in, on a recurring timer while signed in, and whenever the tab
+// becomes visible again (a backgrounded tab's timers can be throttled or
+// paused by the browser, so a tab switch back is worth an immediate
+// refresh rather than waiting for the next scheduled tick).
+function sendPresenceHeartbeat(){
+  if(!currentUser) return;
+  setDoc(doc(presenceCol, currentUser.uid), { email: currentUser.email, lastSeen: Date.now() }, { merge: true })
+    .catch(err => console.error('Forge: presence heartbeat failed', err));
+}
+function attachPresenceListeners(){
+  sendPresenceHeartbeat();
+  if(!presenceHeartbeatInterval) presenceHeartbeatInterval = setInterval(sendPresenceHeartbeat, PRESENCE_HEARTBEAT_MS);
+  if(!presenceRenderInterval) presenceRenderInterval = setInterval(renderOnlineUsers, 15000);
+  unsubscribePresence = onSnapshot(presenceCol, snap => {
+    presenceList = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    renderOnlineUsers();
+  }, err => console.error('Forge: presence listener error', err));
+  unsubscribeAllUserProfiles = onSnapshot(userProfilesCol, snap => {
+    const next = {};
+    snap.docs.forEach(d => { next[d.id] = d.data(); });
+    allUserProfiles = next;
+    renderOnlineUsers();
+  }, err => console.error('Forge: user profiles listener error', err));
+}
+// Up to this many avatars show individually; anyone past that collapses
+// into one "+N" pill instead of the cluster growing unbounded as the team
+// does.
+const PRESENCE_MAX_AVATARS = 5;
+function renderOnlineUsers(){
+  const wrap = document.getElementById('navbarOnlineUsers');
+  if(!wrap) return;
+  const cutoff = Date.now() - PRESENCE_STALE_MS;
+  const online = presenceList
+    .filter(p => (p.lastSeen || 0) > cutoff)
+    .sort((a, b) => (b.lastSeen || 0) - (a.lastSeen || 0));
+  const shown = online.slice(0, PRESENCE_MAX_AVATARS);
+  const extra = online.length - shown.length;
+  wrap.innerHTML = shown.map(p => {
+    const profile = allUserProfiles[p.uid] || {};
+    const { name, initials } = accountDisplayFromEmail(p.email);
+    const displayName = profile.displayName || name;
+    return `
+      <div class="navbar-online-avatar" title="${escapeHtml(displayName)} — Online">
+        ${profile.photoImage
+          ? `<img src="${escapeHtml(profile.photoImage)}" alt="">`
+          : `<span>${escapeHtml(initials)}</span>`}
+        <span class="navbar-online-dot"></span>
+      </div>
+    `;
+  }).join('') + (extra > 0 ? `<div class="navbar-online-avatar navbar-online-more" title="${extra} more online">+${extra}</div>` : '');
+}
+document.addEventListener('visibilitychange', () => {
+  if(document.visibilityState === 'visible') sendPresenceHeartbeat();
+});
+
 function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
@@ -4103,6 +4194,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeLoginEvents) attachLoginEventsListener();
   if(!unsubscribeActivityEvents) attachActivityEventsListener();
   if(!unsubscribeMyProfile) attachMyProfileListener();
+  if(!unsubscribePresence) attachPresenceListeners();
   if(appView === 'auth' || appView === 'pending') goToApp();
 }
 
@@ -4175,6 +4267,13 @@ onAuthStateChanged(auth, user => {
     if(unsubscribeActivityEvents){ unsubscribeActivityEvents(); unsubscribeActivityEvents = null; }
     if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); unsubscribeUserApprovalsAdmin = null; }
     if(unsubscribeMyProfile){ unsubscribeMyProfile(); unsubscribeMyProfile = null; }
+    if(unsubscribePresence){ unsubscribePresence(); unsubscribePresence = null; }
+    if(unsubscribeAllUserProfiles){ unsubscribeAllUserProfiles(); unsubscribeAllUserProfiles = null; }
+    if(presenceHeartbeatInterval){ clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; }
+    if(presenceRenderInterval){ clearInterval(presenceRenderInterval); presenceRenderInterval = null; }
+    presenceList = [];
+    allUserProfiles = {};
+    renderOnlineUsers();
     myProfile = { displayName: '', photoImage: '' };
     activityEvents = [];
     loginEvents = [];

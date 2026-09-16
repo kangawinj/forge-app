@@ -163,6 +163,37 @@
     overflow:hidden;
   }
   .navbar-avatar img{width:100%;height:100%;object-fit:cover;display:block;}
+  /* Who's currently online -- replaces the old bare "?" Help icon button
+     (moved into the account menu, see btnNavbarHelp). Overlapping circles
+     read as one connected cluster rather than a row of separate buttons;
+     the small negative margin plus a border matching the page background
+     is what gives each one a visible "cut" between it and its neighbor. */
+  .navbar-online-users{display:flex;align-items:center;flex-shrink:0;}
+  .navbar-online-avatar{
+    position:relative;
+    width:28px;height:28px;
+    border-radius:50%;
+    background:var(--primary);
+    color:#fff;
+    font-size:11px;
+    font-weight:700;
+    display:flex;align-items:center;justify-content:center;
+    flex-shrink:0;
+    overflow:visible;
+    border:2px solid var(--panel);
+    margin-left:-8px;
+  }
+  .navbar-online-avatar:first-child{margin-left:0;}
+  .navbar-online-avatar img{width:100%;height:100%;border-radius:50%;object-fit:cover;display:block;}
+  .navbar-online-dot{
+    position:absolute;
+    bottom:-1px;right:-1px;
+    width:9px;height:9px;
+    border-radius:50%;
+    background:#22c55e;
+    border:2px solid var(--panel);
+  }
+  .navbar-online-more{background:var(--text-dim);font-size:10px;}
   .navbar-account-name{font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;}
   .navbar-account-chevron{font-size:10px;color:var(--text-dim);transition:transform .15s;}
   .navbar-account.open .navbar-account-chevron{transform:rotate(180deg);}
@@ -4811,6 +4842,7 @@
     .top-navbar{padding:0 12px;gap:6px;}
     .navbar-brand-title{display:none;}
     .navbar-icon-btn{display:none;}
+    .navbar-online-users{display:none;}
     .navbar-account-name{display:none;}
     .navbar-tabs{margin-left:4px;}
     .nav-tab{margin:0 6px;padding-inline:6px;}
