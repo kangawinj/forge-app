@@ -2578,12 +2578,29 @@
      "+T{next}" pill triggering New Trial directly. Horizontal scroll
      rather than wrap on narrow screens, same reasoning as any other wide
      row of same-size items in this app (see e.g. .proj-table-scroll). */
+  /* Row pairing the (horizontally-scrolling) trial stepper with the
+     New Trial / Compare Trials actions, moved down here from the recipe
+     header's own toolbar so they sit right next to the Trial History
+     they actually act on -- track shrinks/scrolls first via min-width:0,
+     the action buttons stay fixed-width at the row's end. */
+  .trial-history-row{
+    display:flex;
+    align-items:center;
+    gap:16px;
+  }
   .trial-history-track{
     display:flex;
     align-items:center;
     gap:0;
     overflow-x:auto;
     padding-bottom:4px;
+    min-width:0;
+    flex:1;
+  }
+  .trial-history-actions{
+    display:flex;
+    gap:8px;
+    flex-shrink:0;
   }
   .trial-history-node{
     flex:0 0 auto;
@@ -4862,6 +4879,8 @@
     .nav-tab{margin:0 6px;padding-inline:6px;}
     .main{padding:24px 24px 60px;}
     .hd2-stats{grid-template-columns:repeat(2,minmax(0,1fr));}
+    .trial-history-row{flex-direction:column;align-items:stretch;gap:10px;}
+    .trial-history-actions{justify-content:flex-end;}
     .sidebar{
       position:fixed;
       top:0; left:0; bottom:0;

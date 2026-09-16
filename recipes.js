@@ -1336,10 +1336,6 @@ export function renderRecipeEditor(r){
     <div class="recipe-header-actions">
       <div class="lock-banner" id="lockBanner"></div>
       <div class="toolbar">
-        ${r.seriesId ? `
-          <button class="btn btn-primary" id="btnNewTrial">+ New Trial</button>
-          <button class="btn" id="btnCompareTrials">${icon('scale')} Compare Trials</button>
-        ` : ''}
         <div class="hd2-create-wrap">
           <button type="button" class="btn" id="btnRecipeMore">More ${icon('chevron-down', 14)}</button>
           <div class="hd2-create-menu" id="recipeMoreMenu">
@@ -1356,7 +1352,13 @@ export function renderRecipeEditor(r){
     ${r.seriesId ? `
     <div class="card" id="trialHistoryCard">
       <div class="card-title">Trial History — ${escapeHtml(r.seriesKey || '')}</div>
-      <div class="trial-history-track" id="trialHistoryTrack"></div>
+      <div class="trial-history-row">
+        <div class="trial-history-track" id="trialHistoryTrack"></div>
+        <div class="trial-history-actions">
+          <button class="btn btn-primary" id="btnNewTrial">+ New Trial</button>
+          <button class="btn" id="btnCompareTrials">${icon('scale')} Compare Trials</button>
+        </div>
+      </div>
     </div>
     ` : ''}
 
