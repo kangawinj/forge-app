@@ -5598,4 +5598,20 @@
        inconsistent-looking pair. One full-width button per row instead. */
     .eval-wizard-testresult-row{flex-direction:column;}
     .eval-wizard-testresult-btn{min-width:0;}
+    /* iOS Safari auto-zooms the whole page in the instant a text field
+       narrower than 16px is focused (its own built-in "make this
+       legible" behavior), then leaves the page zoomed in after the
+       keyboard closes instead of zooming back out on its own -- exactly
+       what was reported on evaluate.html's Note/Comments fields (both
+       12-13px) and "Your Name" (14px, the app-wide input default). 16px
+       is the one threshold that stops it from triggering at all. Scoped
+       to evaluate.html's own fields specifically (#fGuestName, plus
+       .eval-wizard-comment/.eval-wizard-criteria-note which the real
+       Perform Evaluation wizard shares and benefits from the same fix on
+       a phone) rather than every input/textarea app-wide, since the rest
+       of the app's narrow-table layouts at this width haven't been
+       audited for a jump from their own tuned font-sizes to 16px. The
+       field's visual box size (padding/min-height) is untouched, only
+       the text/placeholder size. */
+    #fGuestName, .eval-wizard-comment, .eval-wizard-criteria-note{font-size:16px;}
   }

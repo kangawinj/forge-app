@@ -941,7 +941,8 @@ const CHANGELOG = [
   { version: "3.0.530", date: "2026-09-16", note: "Fixed the password confirmation dialog appearing behind (not in front of) Perform Evaluation / Summary Test / Share External Evaluation / Response Preview when triggered from inside one of them, e.g. undismissing a guest response" },
   { version: "3.0.531", date: "2026-09-16", note: "Optimized the JAR (1-9) and Test Result buttons for narrow phone screens (e.g. 402x873) -- switched from an unevenly-wrapping row to a clean 3x3 grid / single column instead of stretched leftover buttons, and tightened extra empty space above Back/Next Sample" },
   { version: "3.0.532", date: "2026-09-17", note: "Gave the \"Dismissed\" guest response button a gray fill (not white like the other buttons) so its off/inactive state is visible at a glance" },
-  { version: "3.0.533", date: "2026-09-17", note: "Per follow-up feedback, changed the JAR (1-9) buttons on narrow phone screens from a 3x3 grid back to one single row (same as desktop), just narrower per button, since 3 rows read as more boxes to scan than a quick 1-9 row" }
+  { version: "3.0.533", date: "2026-09-17", note: "Per follow-up feedback, changed the JAR (1-9) buttons on narrow phone screens from a 3x3 grid back to one single row (same as desktop), just narrower per button, since 3 rows read as more boxes to scan than a quick 1-9 row" },
+  { version: "3.0.534", date: "2026-09-17", note: "Fixed evaluate.html zooming in and staying zoomed after typing into Your Name/Comments/Note on a phone -- iOS Safari auto-zooms any text field smaller than 16px on focus, so those fields are now 16px on narrow screens" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
