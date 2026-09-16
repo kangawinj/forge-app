@@ -967,9 +967,9 @@ export function renderTrialsList(){
     // via the .trial-project-group-header (see groupTrialsByProject) -- so
     // each row's own label leads with what's actually different per row:
     // the Tested date and which product(s) were tested that day.
-    const productLabel = combinedCount
-      ? [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')].join(', ')
-      : 'No products added yet';
+    const productNames = combinedCount
+      ? [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')]
+      : [];
     const activity = [];
     if(t.createdBy) activity.push(`Created by ${escapeHtml(t.createdBy)}${t.createdAt ? ' · ' + escapeHtml(formatActivityDateTime(t.createdAt)) : ''}`);
     if(t.updatedBy && t.updatedAt !== t.createdAt) activity.push(`Last edited by ${escapeHtml(t.updatedBy)}${t.updatedAt ? ' · ' + escapeHtml(formatActivityDateTime(t.updatedAt)) : ''}`);
@@ -1324,8 +1324,8 @@ export function renderTrialsList(){
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
           ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
           <div class="trial-row-title-block">
-            <span class="trial-row-date">${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}</span>
-            <span class="trial-row-products">${escapeHtml(productLabel)}${combinedCount ? ` · ${combinedCount} product${combinedCount === 1 ? '' : 's'}` : ''}</span>
+            <span class="trial-row-date">${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}${combinedCount ? ` · ${combinedCount} product${combinedCount === 1 ? '' : 's'}` : ''}</span>
+            <div class="trial-row-products">${productNames.length ? productNames.map(n => `<div>${escapeHtml(n)}</div>`).join('') : 'No products added yet'}</div>
           </div>
           <div class="trial-row-actions">
             ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}

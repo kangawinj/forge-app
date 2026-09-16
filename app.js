@@ -919,7 +919,8 @@ const CHANGELOG = [
   { version: "3.0.515", date: "2026-09-16", note: "Test Results List view: hid each row's Print/Delete buttons until the row is expanded, so the collapsed list stays uncluttered" },
   { version: "3.0.516", date: "2026-09-16", note: "Test Results List view: since the linked project's name is already shown once above a group of tests, each test row's own label now leads with its Tested date and which product(s) were tested, instead of repeating the project name" },
   { version: "3.0.517", date: "2026-09-16", note: "Test Results List view: moved each row's tested product name(s) onto their own line below the Tested date, so a long product list wraps in place instead of pushing the row's buttons off the edge" },
-  { version: "3.0.518", date: "2026-09-16", note: "Added the same Translate button (Thai <-> English, no account/API key needed) used elsewhere in Forge to each criteria's Note field in the Perform Evaluation wizard (Appearance/Odor/Taste/Texture etc.)" }
+  { version: "3.0.518", date: "2026-09-16", note: "Added the same Translate button (Thai <-> English, no account/API key needed) used elsewhere in Forge to each criteria's Note field in the Perform Evaluation wizard (Appearance/Odor/Taste/Texture etc.)" },
+  { version: "3.0.519", date: "2026-09-16", note: "Test Results List view: moved the product count next to the Tested date, and changed the tested product name(s) below it into a one-per-line list instead of one comma-separated line" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

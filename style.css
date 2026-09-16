@@ -1020,9 +1020,10 @@
     color:var(--text-dim);
     white-space:nowrap;
   }
-  /* Test Results row header -- Tested date + tested product name(s) stack
-     as their own two-line block so long product lists wrap inside it
-     instead of pushing the row's action buttons off the edge of the card. */
+  /* Test Results row header -- Tested date (+ product count) on its own
+     line, then each tested product name listed one per line below it, so a
+     multi-product test reads as a scannable list instead of one run-on
+     comma-separated line pushing the row's action buttons off the edge. */
   .trial-row-title-block{
     display:flex;
     flex-direction:column;
@@ -1038,6 +1039,9 @@
   .trial-row-products{
     font-size:12px;
     color:var(--text-dim);
+  }
+  .trial-row-products div{
+    line-height:1.5;
   }
   .trial-row-actions{
     display:flex;
