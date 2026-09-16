@@ -696,6 +696,147 @@ function groupTrialsByProject(sortedTrials){
   });
   return groups;
 }
+// Same ExcelJS pattern as Recipes' own Export Excel (see xlArgb/XL_COLORS/
+// xlThinBorder/addSectionTitleBar in recipes.js) -- kept as its own copy
+// here rather than imported, since trials.js doesn't otherwise depend on
+// recipes.js internals (same reasoning as the Translate button helpers
+// above). Colors are pulled straight from :root's CSS custom properties in
+// style.css so the workbook matches the on-screen Summary Table exactly,
+// not an approximation of it.
+function xlArgb(hex){
+  return 'FF' + hex.replace('#','').toUpperCase();
+}
+const XL_COLORS = {
+  headerFill: xlArgb('#16294a'),
+  headerText: xlArgb('#ffffff'),
+  groupFill: xlArgb('#e8ecf5'),
+  groupText: xlArgb('#0c1830'),
+  primaryDark: xlArgb('#0c1830'),
+  border: xlArgb('#dfe3ea'),
+  dim: xlArgb('#6b7280'),
+  text: xlArgb('#1c2333'),
+  ok: xlArgb('#2e8b3d'),
+  accent: xlArgb('#ef7f24'),
+  danger: xlArgb('#c0392b')
+};
+function xlThinBorder(){
+  return { style: 'thin', color: { argb: XL_COLORS.border } };
+}
+function addSectionTitleBar(ws, title, colSpan){
+  ws.mergeCells(1, 1, 1, colSpan);
+  const cell = ws.getCell(1, 1);
+  cell.value = title;
+  cell.font = { bold: true, size: 13, color: { argb: XL_COLORS.headerText } };
+  cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.headerFill } };
+  cell.alignment = { vertical: 'middle', indent: 1 };
+  ws.getRow(1).height = 26;
+}
+// One worksheet, one row per test (matching the on-screen table's own tr
+// exactly, including Project/PD merged down the same way rowspan groups
+// them on screen), built as ExcelJS richText so a single Summary Test cell
+// can carry the product name (bold), its verdict badge (colored, matching
+// TRIAL_SUMMARY_VERDICT_CLASSES), and its Improve/Just Right bullet lines
+// (Just Right colored the same green as on screen) all in one wrapped cell,
+// same as the live page's own layout.
+function buildTrialsSummarySheet(wb, groups){
+  const ws = wb.addWorksheet('Summary Table');
+  ws.columns = [{ width: 26 }, { width: 22 }, { width: 74 }];
+  addSectionTitleBar(ws, 'Test Results — Summary Table', 3);
+
+  const headerRow = ws.addRow(['Project', 'PD / Responsible Person', 'Summary Test']);
+  headerRow.eachCell(cell => {
+    cell.font = { bold: true, size: 11, color: { argb: XL_COLORS.groupText } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
+    cell.border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
+    cell.alignment = { vertical: 'middle' };
+  });
+
+  groups.forEach(g => {
+    const linkedProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
+    const startRow = ws.rowCount + 1;
+    g.trials.forEach((t, i) => {
+      const criteria = getEvaluationCriteria(t);
+      const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
+      const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
+
+      const runs = [];
+      runs.push({ text: (t.testDate ? 'TESTED ' + formatDateLong(t.testDate).toUpperCase() : 'NO TEST DATE') + '\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.dim } } });
+      if(!products.length){
+        runs.push({ text: 'No products marked "Continue Development"', font: { italic: true, size: 11, color: { argb: XL_COLORS.dim } } });
+      } else {
+        products.forEach((pr, pi) => {
+          if(pi > 0) runs.push({ text: '\n', font: { size: 4 } });
+          runs.push({ text: pr.label, font: { bold: true, size: 12, color: { argb: XL_COLORS.text } } });
+          if(pr.verdict){
+            const vColor = pr.verdict === 'Accepted' ? XL_COLORS.ok : pr.verdict === 'Not accepted' ? XL_COLORS.danger : XL_COLORS.accent;
+            runs.push({ text: '  [' + pr.verdict + ']\n', font: { bold: true, size: 10, color: { argb: vColor } } });
+          } else {
+            runs.push({ text: '  [Not yet evaluated]\n', font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
+          }
+          if(pr.improvements.length){
+            runs.push({ text: 'Improve:\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.primaryDark } } });
+            pr.improvements.forEach(x => {
+              runs.push({ text: `• ${x.suggestion}`, font: { size: 11, color: { argb: XL_COLORS.text } } });
+              if(x.note) runs.push({ text: `  — ${x.note}`, font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
+              runs.push({ text: '\n' });
+            });
+          }
+          if(pr.justRight.length){
+            runs.push({ text: 'Just Right:\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.primaryDark } } });
+            pr.justRight.forEach(c => {
+              runs.push({ text: `• ${c.label}`, font: { size: 11, color: { argb: XL_COLORS.ok } } });
+              if(c.note) runs.push({ text: `  — ${c.note}`, font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
+              runs.push({ text: '\n' });
+            });
+          }
+        });
+      }
+
+      const row = ws.addRow([
+        i === 0 ? (linkedProject?.name || '-') : '',
+        i === 0 ? (linkedProject?.responsiblePerson || '-') : '',
+        { richText: runs }
+      ]);
+      [1, 2, 3].forEach(col => {
+        row.getCell(col).alignment = { wrapText: true, vertical: 'top' };
+        row.getCell(col).font = row.getCell(col).font || { size: 11, color: { argb: XL_COLORS.text } };
+        row.getCell(col).border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
+      });
+      row.getCell(1).font = { size: 11, color: { argb: XL_COLORS.text } };
+      row.getCell(2).font = { size: 11, color: { argb: XL_COLORS.text } };
+      const fullText = runs.map(r => r.text).join('');
+      const lineCount = (fullText.match(/\n/g) || []).length + 1;
+      row.height = Math.max(30, lineCount * 15);
+    });
+    const endRow = ws.rowCount;
+    if(g.trials.length > 1){
+      ws.mergeCells(startRow, 1, endRow, 1);
+      ws.mergeCells(startRow, 2, endRow, 2);
+    }
+  });
+}
+async function exportTrialsSummaryToExcel(){
+  if(!window.ExcelJS){
+    alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
+    return;
+  }
+  const sorted = [...trials].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
+  const groups = groupTrialsByProject(sorted);
+
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+  buildTrialsSummarySheet(wb, groups);
+
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `Test Results Summary ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 function renderTrialsSummaryTable(container, sortedTrials){
   const groups = groupTrialsByProject(sortedTrials);
 
@@ -889,6 +1030,7 @@ export function mountTrialsView(){
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'table' ? ' active' : ''}" data-mode="table">${icon('file-text', 14)} Summary Table</button>
         </div>
+        <button type="button" class="btn btn-sm" id="btnExportTrialsSummary" style="margin-left:8px;${trialsViewMode === 'table' ? '' : 'display:none;'}">${icon('download', 14)} Export Excel</button>
       </div>
       <div id="trialsList"></div>
     </div>
@@ -899,7 +1041,13 @@ export function mountTrialsView(){
       trialsViewMode = btn.dataset.mode;
       renderTrialsList();
       document.querySelectorAll('#trialsViewToggle .view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === trialsViewMode));
+      const exportBtn = document.getElementById('btnExportTrialsSummary');
+      if(exportBtn) exportBtn.style.display = trialsViewMode === 'table' ? '' : 'none';
     });
+  });
+
+  document.getElementById('btnExportTrialsSummary').addEventListener('click', () => {
+    exportTrialsSummaryToExcel();
   });
 
   document.getElementById('btnAddTrial').addEventListener('click', () => {
