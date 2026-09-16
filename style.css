@@ -4807,13 +4807,21 @@
       padding:2px 0 !important;
       resize:none !important;
     }
+    /* An empty field's placeholder ("e.g. Microwave", "Anything else worth
+       noting", ...) is a screen-only typing hint -- on a printed page read
+       by someone who was never going to type into it, it just reads as
+       real content that was never actually filled in. Hidden everywhere in
+       print rather than per-field, since every printable page in the app
+       (Trial Results, Sample Submissions, Projects, ...) has the same
+       problem wherever a field happens to be blank. */
+    input::placeholder, textarea::placeholder{color:transparent !important;}
     /* Test Result's read-only tick list (see .trial-testresult-radios) is
        disabled, not readonly -- browsers dim disabled form controls by
        default, which would make the circles hard to see on a paper
        printout meant for someone outside the system to mark by hand.
        Force full opacity so they print clearly either way. */
     .trial-testresult-radios input[type=radio]:disabled{opacity:1 !important;-webkit-appearance:radio !important;appearance:radio !important;}
-    .icon-btn, .part-toggle-btn, .material-search{display:none !important;}
+    .icon-btn, .part-toggle-btn, .material-search, .mu-translate-btn{display:none !important;}
     .part-block.collapsed .part-body{display:block !important;}
     .part-block{background:#fff !important;}
 
@@ -4821,6 +4829,14 @@
        that trial, not the whole list of trials sharing the modal. */
     #btnAddTrial{display:none !important;}
     #trialsList > .part-block:not(.printing-only){display:none !important;}
+    /* The List view's project grouping headers (see groupTrialsByProject /
+       .trial-project-group-header) are plain siblings of .part-block, not
+       :not(.printing-only) itself, so the rule above alone leaves every
+       OTHER project's own header still showing above/below the one trial
+       being printed. The printed trial already states its own Project
+       Name inside Part 1, so none of these headers are needed on a single-
+       trial printout regardless of which group they belong to. */
+    #trialsList > .trial-project-group-header{display:none !important;}
     [data-role="edit-trial"], [data-role="save-trial"], [data-role="delete-trial"],
     [data-role="print-trial"], .project-add-row, .trial-product-photo-input{display:none !important;}
 

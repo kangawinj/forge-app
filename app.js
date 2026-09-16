@@ -932,7 +932,8 @@ const CHANGELOG = [
   { version: "3.0.521", date: "2026-09-16", note: "Added an Export Excel button to Test Results' Summary Table view, producing a workbook formatted to match the on-screen table exactly (Project/PD grouping, verdict colors, Improve/Just Right bullet lists)" },
   { version: "3.0.522", date: "2026-09-16", note: "Test Results' Summary Table: moved the Tested date out of the Summary Test column into its own Tested Date column, on-screen and in the Excel export" },
   { version: "3.0.523", date: "2026-09-16", note: "Perform Evaluation wizard: Back/Next Sample/Review now scroll back to the top of the page, instead of opening the next sample's questions still scrolled to wherever the previous page was left" },
-  { version: "3.0.524", date: "2026-09-16", note: "Added \"Share External Evaluation\" to Test Results: generate a link + QR code (expires after 24 hours, usable by any number of people at once, no account needed) that opens a standalone evaluate.html survey for that test; incoming guest responses can be reviewed and imported into that test's own Sensory Evaluation with one click" }
+  { version: "3.0.524", date: "2026-09-16", note: "Added \"Share External Evaluation\" to Test Results: generate a link + QR code (expires after 24 hours, usable by any number of people at once, no account needed) that opens a standalone evaluate.html survey for that test; incoming guest responses can be reviewed and imported into that test's own Sensory Evaluation with one click" },
+  { version: "3.0.525", date: "2026-09-16", note: "Printing a Test Result: hid every other project's own group heading (was showing above/below the one trial being printed) and hid empty fields' placeholder hint text (e.g. \"e.g. Microwave\") and the Translate button, none of which belong on a printed page" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
