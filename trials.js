@@ -607,13 +607,24 @@ function wireEvaluationWizard(overlay, t, products){
       renderEvaluationWizard();
     });
   });
+  // Back/Next Sample/Review all move to a whole new page of questions --
+  // scroll the overlay (the actual scrolling element, see .eval-wizard-
+  // overlay's own overflow-y:auto) back to its top so the new page opens
+  // where its first question is, instead of wherever the previous page
+  // happened to be scrolled to (typically the bottom, right where the
+  // button just clicked was). Every other renderEvaluationWizard() call in
+  // this file is a same-page update (a JAR answer, a note) and must NOT
+  // reset scroll, or answering a question mid-scroll would keep yanking
+  // the page back to the top.
   overlay.querySelector('[data-role="eval-back"]')?.addEventListener('click', () => {
     evalWizard.step = Math.max(0, evalWizard.step - 1);
     renderEvaluationWizard();
+    overlay.scrollTop = 0;
   });
   overlay.querySelector('[data-role="eval-next"]')?.addEventListener('click', () => {
     evalWizard.step = Math.min(products.length, evalWizard.step + 1);
     renderEvaluationWizard();
+    overlay.scrollTop = 0;
   });
   overlay.querySelector('[data-role="eval-done"]')?.addEventListener('click', () => {
     evalWizard = null;
