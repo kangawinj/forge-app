@@ -11,6 +11,17 @@
 // action wrote into /evaluationLinks (see generateShareLink in trials.js),
 // and only ever creates its own new /evaluationResponses doc, never
 // touching anyone else's.
+//
+// Walks through one product per page (same Back/Next Sample flow as the
+// real Perform Evaluation wizard in trials.js, see renderEvalWizardStep/
+// renderEvalWizardReview), ending on a Review page that lists every
+// answer with its own Back button before the one and only Submit -- so a
+// guest can fix a wrong tap before anything is actually written, rather
+// than the earlier single long scrolling form. Nothing is saved to
+// Firestore until Submit on the Review page; the Thank You page after that
+// is genuinely final (the create-only /evaluationResponses rule gives a
+// guest no way to edit a response after it's written, so there's nothing
+// to go "back" to from there).
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { getFirestore, doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -55,6 +66,9 @@ function jarScoreLabel(value){
   const found = JAR_SCALE.find(s => s.value === value);
   return found ? found.label : '';
 }
+function jarScoreDisplay(value){
+  return /^[1-9]$/.test(value || '') ? `${value}/9` : '-';
+}
 
 const token = new URLSearchParams(location.search).get('token') || '';
 const bannerEl = document.getElementById('evalStatusBanner');
@@ -68,6 +82,14 @@ function showBanner(html, kind){
   bannerEl.innerHTML = html;
 }
 
+// The evaluationLinks snapshot this page is walking through, and the
+// current step -- 0..products.length-1 is a product's own page, and
+// products.length is the trailing Review page. Both module-level since
+// renderWizardStep() re-renders only #wizardRoot (the "Your Name" field
+// above it, part of the same header render() builds once, must survive
+// every step change untouched).
+let linkData = null;
+let step = 0;
 // Per-product answers, same shape as a real evaluator's own
 // pd.evaluations[someKey] in trials.js: { [criteriaId]: '1'-'9',
 // [criteriaId+'_note']: string, comment: string, testResult: string }.
@@ -154,7 +176,58 @@ function productSectionHtml(product, criteria){
   `;
 }
 
+// One product's own page -- Back is disabled on the very first product
+// (nowhere earlier to go), and the last product's "Next Sample" reads
+// "Review" instead, same wording/behavior as renderEvalWizardStep.
+function stepHtml(product, criteria, total){
+  return `
+    <div class="eval-wizard-progress" style="margin-bottom:8px;">Sample ${step + 1} of ${total}</div>
+    ${productSectionHtml(product, criteria)}
+    <div class="card eval-wizard-nav" style="margin-bottom:0;">
+      <button type="button" class="btn btn-sm" data-role="wiz-back" ${step === 0 ? 'disabled' : ''}>Back</button>
+      <button type="button" class="btn btn-sm btn-primary" data-role="wiz-next">${step === total - 1 ? 'Review' : 'Next Sample'}</button>
+    </div>
+  `;
+}
+
+// The last page before anything is actually written -- lists every
+// product's own answers (same layout as renderEvalWizardReview) so a
+// guest can catch a wrong tap before Submit, with Back returning to the
+// last product's own page to fix it. Submit is the only action on this
+// whole page that ever touches Firestore.
+function reviewHtml(products, criteria){
+  return `
+    <div class="card">
+      <div class="eval-wizard-title" style="margin-bottom:14px;">Review Your Evaluation</div>
+      ${products.map(p => {
+        const ans = answers[p.id] || {};
+        return `
+          <div class="eval-wizard-review-product">
+            <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
+            ${criteria.map(c => `
+              <div class="eval-wizard-review-row eval-wizard-review-row-3col">
+                <span>${escapeHtml(c.label)}</span>
+                <b>${jarScoreDisplay(ans[c.id])}${ans[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(ans[c.id]))}</span>` : ''}</b>
+                <span class="eval-wizard-review-note-col">${escapeHtml(ans[`${c.id}_note`] || '')}</span>
+              </div>
+            `).join('')}
+            ${(ans.comment || '').trim() ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(ans.comment)}</b></div>` : ''}
+            <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[ans.testResult] || ''}">${escapeHtml(ans.testResult || '-')}</b></div>
+          </div>
+        `;
+      }).join('')}
+      <div class="eval-wizard-nav">
+        <button type="button" class="btn btn-sm" data-role="wiz-back">Back</button>
+        <button type="button" class="btn btn-sm btn-primary" data-role="wiz-submit">Submit Evaluation</button>
+      </div>
+      <div id="submitFeedback" style="font-size:13px;color:var(--text-dim);margin-top:8px;"></div>
+    </div>
+  `;
+}
+
 function render(data){
+  linkData = data;
+  step = 0;
   answers = {};
   (data.products || []).forEach(p => { answers[p.id] = {}; });
 
@@ -167,20 +240,27 @@ function render(data){
         <input type="text" id="fGuestName" placeholder="e.g. John (Customer)">
       </div>
     </div>
-    <div id="productsRoot">${(data.products || []).map(p => productSectionHtml(p, data.criteria || [])).join('')}</div>
-    ${(data.products || []).length === 0 ? '<div class="card"><div class="overview-empty">No products were added to this test yet.</div></div>' : ''}
-    <div class="card" style="display:flex;gap:8px;align-items:center;">
-      <button class="btn btn-primary btn-sm" id="btnSubmitEval">Submit Evaluation</button>
-      <span id="submitFeedback" style="font-size:13px;color:var(--text-dim);"></span>
-    </div>
+    <div id="wizardRoot"></div>
   `;
-
-  wireProducts();
-  document.getElementById('btnSubmitEval').addEventListener('click', () => save(data));
+  renderWizardStep();
 }
 
-function wireProducts(){
-  document.querySelectorAll('#productsRoot [data-product-id]').forEach(section => {
+function renderWizardStep(){
+  const wizardRoot = document.getElementById('wizardRoot');
+  const products = linkData.products || [];
+  const criteria = linkData.criteria || [];
+  if(products.length === 0){
+    wizardRoot.innerHTML = '<div class="card"><div class="overview-empty">No products were added to this test yet.</div></div>';
+    return;
+  }
+  step = Math.max(0, Math.min(step, products.length));
+  const isReview = step >= products.length;
+  wizardRoot.innerHTML = isReview ? reviewHtml(products, criteria) : stepHtml(products[step], criteria, products.length);
+  wireWizardStep();
+}
+
+function wireWizardStep(){
+  document.querySelectorAll('#wizardRoot [data-product-id]').forEach(section => {
     const productId = section.dataset.productId;
     const mine = answers[productId] || (answers[productId] = {});
     section.querySelectorAll('[data-role="eval-jar"]').forEach(btn => {
@@ -211,19 +291,31 @@ function wireProducts(){
       });
     });
   });
+  document.querySelector('[data-role="wiz-back"]')?.addEventListener('click', () => {
+    step = Math.max(0, step - 1);
+    renderWizardStep();
+    window.scrollTo(0, 0);
+  });
+  document.querySelector('[data-role="wiz-next"]')?.addEventListener('click', () => {
+    step = Math.min((linkData.products || []).length, step + 1);
+    renderWizardStep();
+    window.scrollTo(0, 0);
+  });
+  document.querySelector('[data-role="wiz-submit"]')?.addEventListener('click', () => save());
 }
 
-async function save(data){
-  const btn = document.getElementById('btnSubmitEval');
+async function save(){
+  const btn = document.querySelector('[data-role="wiz-submit"]');
   const feedback = document.getElementById('submitFeedback');
   const guestName = document.getElementById('fGuestName').value.trim();
   if(!guestName){
-    feedback.style.color = 'var(--danger)';
-    feedback.textContent = 'Please enter your name before submitting.';
+    document.getElementById('fGuestName').scrollIntoView({ behavior: 'smooth', block: 'center' });
     document.getElementById('fGuestName').focus();
+    feedback.style.color = 'var(--danger)';
+    feedback.textContent = 'Please enter your name (at the top of the page) before submitting.';
     return;
   }
-  if(!data.expiresAt || data.expiresAt <= Date.now()){
+  if(!linkData.expiresAt || linkData.expiresAt <= Date.now()){
     showBanner('This evaluation link has expired (links last 24 hours) while this page was open. Your answers were not saved — please ask for a new link.', 'error');
     return;
   }
@@ -234,7 +326,7 @@ async function save(data){
     const responseId = generateResponseId();
     await setDoc(doc(db, 'evaluationResponses', responseId), {
       linkToken: token,
-      trialId: data.trialId,
+      trialId: linkData.trialId,
       guestName,
       submittedAt: Date.now(),
       imported: false,
