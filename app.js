@@ -913,7 +913,8 @@ const CHANGELOG = [
   { version: "3.0.509", date: "2026-09-16", note: "Summary Table now groups tests by their linked Project — Project/PD shown once per group instead of repeated on every row — with each project's own tests listed newest to oldest underneath" },
   { version: "3.0.510", date: "2026-09-16", note: "Suggested Improvements and Just Right lines (in both Summary Test and Summary Table) now show that criteria's own Improvement Guidelines Note when there is one, instead of just the direction/%" },
   { version: "3.0.511", date: "2026-09-16", note: "Added a \"Continue Development?\" row to Improvement Guidelines — a per-product Continue/Discontinue decision. Only a product marked Continue now shows up in Summary Test / Summary Table, so those pages only ever reflect samples still actively being pursued" },
-  { version: "3.0.512", date: "2026-09-16", note: "Test Results' List view now groups tests by their linked Project too (same grouping as Summary Table), with a heading above each project's own tests. Also left-aligned the Summary Table's PD and Summary Test columns, which were reading as ragged right-aligned paragraphs" }
+  { version: "3.0.512", date: "2026-09-16", note: "Test Results' List view now groups tests by their linked Project too (same grouping as Summary Table), with a heading above each project's own tests. Also left-aligned the Summary Table's PD and Summary Test columns, which were reading as ragged right-aligned paragraphs" },
+  { version: "3.0.513", date: "2026-09-16", note: "Collapsed tests in the Test Results List view are compact rows now (thin divider, no padded box) instead of full stacked cards — much tighter when a project has several tests. Expanding one still gets the full card treatment for its own detailed form" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

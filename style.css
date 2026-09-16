@@ -5410,6 +5410,20 @@
     border-bottom:1px solid var(--border);
   }
   .trial-project-group-header:first-child{margin-top:0;}
+  /* Collapsed test rows read as more compact list rows here, not full
+     boxed cards -- .part-block itself is shared with recipes.js's own
+     Part editing UI, so this only applies inside the Test Results list
+     specifically, and only to the collapsed (default browsing) state --
+     an expanded test still gets the full padded/backgrounded card, since
+     its own detailed form content needs that room to breathe. */
+  #trialsList .part-block.collapsed{
+    background:transparent;
+    padding:8px 0;
+    margin-bottom:0;
+    border-radius:0;
+    border-bottom:1px solid var(--border);
+  }
+  #trialsList .part-block.collapsed:last-child{border-bottom:none;}
   .eval-wizard-review-product{
     background:var(--bg);
     border:1px solid var(--border);
