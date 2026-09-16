@@ -5166,7 +5166,10 @@
   .eval-wizard-jar-legend-item b{color:var(--primary-dark);}
   .eval-wizard-question{margin-bottom:22px;}
   .eval-wizard-question-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;}
-  .eval-wizard-jar-row{display:flex;gap:8px;}
+  /* Widened from a 5- to a 9-point JAR scale (see JAR_SCALE in trials.js)
+     -- gap/font-size trimmed slightly from the original 5-button sizing so
+     9 buttons in a row still read comfortably instead of feeling cramped. */
+  .eval-wizard-jar-row{display:flex;gap:6px;}
   .eval-wizard-jar-btn{
     flex:1;
     height:44px;
@@ -5174,9 +5177,10 @@
     border:1px solid var(--border);
     background:#fff;
     color:var(--text);
-    font-size:15px;
+    font-size:13px;
     font-weight:600;
     cursor:pointer;
+    padding:0;
     transition:background .15s ease, border-color .15s ease;
   }
   .eval-wizard-jar-btn:hover{background:var(--primary-light);border-color:var(--primary);}

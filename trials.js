@@ -213,20 +213,23 @@ function improvementFieldValue(pd, criteriaId){
 // -- Increase/Decrease + the criteria name, no restating of the JAR
 // wording itself (already shown right above in Sensory Evaluation, so
 // repeating it here read as redundant/confusing rather than helpful, per
-// user feedback). 3 ("Just right") or no numeric score yet needs no
-// suggestion -- returns ''. Only ever a smart DEFAULT shown when nobody's
-// typed their own note yet (see improvementRowsHtml below); never
-// overwrites a saved one, and only actually persists if a person edits
-// the field (its change handler is what writes pd[improve_...], this
-// function itself never touches saved data).
+// user feedback). The midpoint ("Just right") or no numeric score yet
+// needs no suggestion -- returns ''. Reads JAR_SCALE's own length/midpoint
+// rather than a hardcoded 3/5 so this keeps working if the scale is ever
+// resized again. Only ever a smart DEFAULT shown when nobody's typed
+// their own note yet (see improvementRowsHtml below); never overwrites a
+// saved one, and only actually persists if a person edits the field (its
+// change handler is what writes pd[improve_...], this function itself
+// never touches saved data).
 function autoImprovementSuggestion(c, pd){
+  const midpoint = Math.ceil(JAR_SCALE.length / 2);
   const entries = combinedEvaluationEntries(pd, c.id, null);
-  const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= 5);
+  const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= JAR_SCALE.length);
   if(!nums.length) return '';
   const avg = Math.round(nums.reduce((s,n)=>s+n,0) / nums.length);
-  if(avg === 3) return '';
-  const action = avg < 3 ? 'Increase' : 'Decrease';
-  const actionTh = avg < 3 ? 'เพิ่ม' : 'ลด';
+  if(avg === midpoint) return '';
+  const action = avg < midpoint ? 'Increase' : 'Decrease';
+  const actionTh = avg < midpoint ? 'เพิ่ม' : 'ลด';
   return `${action} (${actionTh}) ${c.label}`;
 }
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
@@ -243,26 +246,36 @@ const EVAL_WIZARD_RESULT_CLASSES = {
   'Needs Revision': 'eval-wizard-tr-needs-revision',
   'Not accepted': 'eval-wizard-tr-not-accepted'
 };
-// The "Perform Evaluation" wizard scores each criteria on a 1-5
+// The "Perform Evaluation" wizard scores each criteria on a 1-9
 // Just-About-Right (JAR) scale -- same generic wording for every
 // criteria (per request) rather than custom per-criteria phrasing, so
 // it works automatically for any criteria, including ones added later
-// via "+ Add Criteria", with no extra setup needed per row.
+// via "+ Add Criteria", with no extra setup needed per row. Widened from
+// 1-5 to 1-9 per request -- 5 stays the midpoint ("Just right"), so an
+// existing saved "3" (the old midpoint) no longer reads as Just Right;
+// every other old 1/2/4/5 answer likewise now lands on a different,
+// finer-grained step than it meant under the old 5-point scale. This is
+// an inherent tradeoff of widening the scale's resolution, not a bug --
+// nothing rewrites old answers, they just now read against new anchors.
 const JAR_SCALE = [
-  { value: '1', label: 'Much less than ideal (น้อยเกินไปมาก)' },
-  { value: '2', label: 'Slightly less than ideal (น้อยเกินไปเล็กน้อย)' },
-  { value: '3', label: 'Just right (พอดี)' },
-  { value: '4', label: 'Slightly more than ideal (มากเกินไปเล็กน้อย)' },
-  { value: '5', label: 'Much more than ideal (มากเกินไปมาก)' }
+  { value: '1', label: 'Extremely less than ideal (น้อยเกินไปที่สุด)' },
+  { value: '2', label: 'Much less than ideal (น้อยเกินไปมาก)' },
+  { value: '3', label: 'Moderately less than ideal (น้อยเกินไปปานกลาง)' },
+  { value: '4', label: 'Slightly less than ideal (น้อยเกินไปเล็กน้อย)' },
+  { value: '5', label: 'Just right (พอดี)' },
+  { value: '6', label: 'Slightly more than ideal (มากเกินไปเล็กน้อย)' },
+  { value: '7', label: 'Moderately more than ideal (มากเกินไปปานกลาง)' },
+  { value: '8', label: 'Much more than ideal (มากเกินไปมาก)' },
+  { value: '9', label: 'Extremely more than ideal (มากเกินไปที่สุด)' }
 ];
 function jarScoreLabel(value){
   const found = JAR_SCALE.find(s => s.value === value);
   return found ? found.label : (value || '');
 }
 // A legacy free-text answer (from before this JAR redesign) shows as-is
-// rather than crashing on the "N/5" format.
+// rather than crashing on the "N/9" format.
 function jarScoreDisplay(value){
-  return /^[1-5]$/.test(value || '') ? `${value}/5` : (value || '');
+  return /^[1-9]$/.test(value || '') ? `${value}/9` : (value || '');
 }
 // Shared by the main render pass and the evaluation wizard so both list
 // products being compared the same way (linked recipes first, then manual
