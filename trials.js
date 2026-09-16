@@ -1093,6 +1093,23 @@ async function dismissShareResponse(resp){
   resp.dismissed = true;
   loadSharePendingCounts();
 }
+// Undoes a Dismiss -- gated behind the same password re-entry as deleting
+// a trial (see requestAuthConfirm at the "Dismissed" button's own click
+// handler below), since restoring one back to "pending" is the one action
+// here that puts it back in front of Import, where a moment's carelessness
+// could fold something that was deliberately excluded into the test's real
+// scores.
+async function undismissShareResponse(resp){
+  try{
+    await setDoc(doc(evaluationResponsesCol, resp.id), { dismissed: false }, { merge: true });
+  }catch(err){
+    console.error('Forge: failed to restore dismissed guest response', err);
+    showCloudError('Failed to restore this response: ' + err.message);
+    return;
+  }
+  resp.dismissed = false;
+  loadSharePendingCounts();
+}
 // One trialId -> count of guest responses still awaiting a decision
 // (neither imported nor dismissed), shown as a small badge on each row's
 // own "Share External Evaluation" button so a pending response is
@@ -1183,7 +1200,7 @@ function renderTrialShareModal(){
               ${resp.imported
                 ? '<span class="trial-share-response-imported">' + icon('check', 14) + ' Imported</span>'
                 : resp.dismissed
-                  ? '<span class="trial-share-response-dismissed">' + icon('eye-off', 14) + ' Dismissed</span>'
+                  ? `<button type="button" class="btn btn-sm trial-share-response-dismissed" data-role="undismiss-share-response" data-response-id="${escapeHtml(resp.id)}" title="Click to un-dismiss (asks for your password first)">${icon('eye-off', 14)} Dismissed</button>`
                   : `
                     <button type="button" class="btn btn-sm" data-role="dismiss-share-response" data-response-id="${escapeHtml(resp.id)}" title="Keep the response, but stop offering to import it">${icon('eye-off', 14)} Dismiss</button>
                     <button type="button" class="btn btn-sm" data-role="import-share-response" data-response-id="${escapeHtml(resp.id)}">Import</button>
@@ -1231,6 +1248,20 @@ function renderTrialShareModal(){
       const resp = trialShareResponses.find(r => r.id === btn.dataset.responseId);
       if(resp) await dismissShareResponse(resp);
       renderTrialShareModal();
+    });
+  });
+  overlay.querySelectorAll('[data-role="undismiss-share-response"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const resp = trialShareResponses.find(r => r.id === btn.dataset.responseId);
+      if(!resp) return;
+      requestAuthConfirm(
+        'Confirm Identity to Undismiss',
+        'Enter your password to bring this response back as pending (so it offers Import again).',
+        async () => {
+          await undismissShareResponse(resp);
+          renderTrialShareModal();
+        }
+      );
     });
   });
   overlay.querySelectorAll('[data-role="preview-share-response"]').forEach(btn => {
