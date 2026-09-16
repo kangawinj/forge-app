@@ -1020,6 +1020,33 @@
     color:var(--text-dim);
     white-space:nowrap;
   }
+  /* Test Results row header -- Tested date + tested product name(s) stack
+     as their own two-line block so long product lists wrap inside it
+     instead of pushing the row's action buttons off the edge of the card. */
+  .trial-row-title-block{
+    display:flex;
+    flex-direction:column;
+    gap:2px;
+    min-width:0;
+    flex:1;
+  }
+  .trial-row-date{
+    font-weight:700;
+    font-size:14px;
+    color:var(--primary-dark);
+  }
+  .trial-row-products{
+    font-size:12px;
+    color:var(--text-dim);
+  }
+  .trial-row-actions{
+    display:flex;
+    align-items:center;
+    gap:6px;
+    flex-wrap:wrap;
+    flex-shrink:0;
+    justify-content:flex-end;
+  }
   /* A top-level Part's own editable %-of-recipe / weight fields — same
      bidirectional behavior as an ingredient's own % OF PART field (see
      .ing-edit-row), just one level up: editing either one scales every
