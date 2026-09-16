@@ -32,6 +32,13 @@ let evalWizard = null;
 // test actually say" at a glance instead of reading the full editable
 // tables. Holds the trial id while open, null when closed.
 let trialSummaryId = null;
+// "List" (the default card-per-test view, with Edit/Perform Evaluation/
+// Summary Test/Print/Delete) vs "table" (a read-only, scannable overview
+// -- Project / PD / inline Summary Test per row, most-recently-updated
+// first -- see renderTrialsSummaryTable). Kept as its own toggle rather
+// than replacing the list outright, since the table has none of the
+// list's own actions.
+let trialsViewMode = 'list';
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
@@ -589,6 +596,58 @@ const TRIAL_SUMMARY_VERDICT_CLASSES = {
   'Needs Revision': 'trial-summary-verdict-needs-revision',
   'Not accepted': 'trial-summary-verdict-not-accepted'
 };
+// Shared by the Summary Test modal (detailed cards) and the Summary Table
+// view (compact inline) -- one product's verdict plus which of its
+// scored criteria still need adjusting vs are already Just Right.
+function summarizeTrialProduct(t, criteria, p){
+  const pd = getTrialProductData(t, p.id);
+  const verdict = combinedVerdict(pd);
+  const scoredCriteria = criteria.filter(c => criteriaAverageJarScore(c, pd) !== null);
+  const improvements = scoredCriteria
+    .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd) }))
+    .filter(x => x.suggestion);
+  const justRight = scoredCriteria.filter(c => !autoImprovementSuggestion(c, pd));
+  return { label: p.label, verdict, improvements, justRight };
+}
+// Read-only overview -- one row per test (already sorted most-recently-
+// updated first by the caller), columns Project / PD (Responsible Person)
+// / Summary Test. The last column reuses summarizeTrialProduct's own
+// numbers but inline/compact (comma-joined) rather than the modal's
+// bulleted cards, since this has to fit a table cell instead of its own
+// full-width card.
+function renderTrialsSummaryTable(container, sortedTrials){
+  container.innerHTML = `
+    <div style="overflow-x:auto;">
+    <table class="compare-table trial-summary-table">
+      <thead><tr><th>Project</th><th>PD / Responsible Person</th><th>Summary Test</th></tr></thead>
+      <tbody>
+        ${sortedTrials.map(t => {
+          const linkedProject = t.linkedProjectId ? projects.find(pr => pr.id === t.linkedProjectId) : null;
+          const criteria = getEvaluationCriteria(t);
+          const evalTargets = trialEvalTargets(t);
+          const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
+          return `
+            <tr>
+              <td>${escapeHtml(linkedProject?.name || '-')}</td>
+              <td>${escapeHtml(linkedProject?.responsiblePerson || '-')}</td>
+              <td>${products.length === 0 ? '<span class="overview-empty">No products yet</span>' : products.map(pr => `
+                <div class="trial-table-summary-product">
+                  <div class="trial-table-summary-head">
+                    <b>${escapeHtml(pr.label)}</b>
+                    ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
+                  </div>
+                  ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion)).join(', ')}</div>` : ''}
+                  ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label)).join(', ')}</div>` : ''}
+                </div>
+              `).join('')}</td>
+            </tr>
+          `;
+        }).join('')}
+      </tbody>
+    </table>
+    </div>
+  `;
+}
 function renderTrialSummaryModal(){
   const existing = document.getElementById('trialSummaryOverlay');
   if(!trialSummaryId){ existing?.remove(); return; }
@@ -622,23 +681,11 @@ function renderTrialSummaryModal(){
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
-        const pd = getTrialProductData(t, p.id);
-        const verdict = combinedVerdict(pd);
-        // Every scored criteria, split by whether it still needs
-        // adjusting (autoImprovementSuggestion returns something) or is
-        // already at the midpoint (Just Right) -- criteriaAverageJarScore
-        // tells those two apart from "not scored yet at all" (which shows
-        // in neither list, same as it already doesn't get a row in
-        // Improvement Guidelines' own auto-suggestion).
-        const scoredCriteria = criteria.filter(c => criteriaAverageJarScore(c, pd) !== null);
-        const improvements = scoredCriteria
-          .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd) }))
-          .filter(x => x.suggestion);
-        const justRight = scoredCriteria.filter(c => !autoImprovementSuggestion(c, pd));
+        const { label, verdict, improvements, justRight } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
             <div class="trial-summary-product-head">
-              <div class="trial-summary-product-name">${escapeHtml(p.label)}</div>
+              <div class="trial-summary-product-name">${escapeHtml(label)}</div>
               ${verdict
                 ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[verdict] || ''}">${escapeHtml(verdict)}</span>`
                 : '<span class="overview-empty">Not yet evaluated</span>'}
@@ -731,10 +778,24 @@ export function mountTrialsView(){
       <div class="section-title-display">${icon('flask-conical', 24)} Test Results</div>
     </div>
     <div class="card">
-      <button class="btn btn-primary btn-sm" id="btnAddTrial" style="margin-bottom:16px;">+ New Test</button>
+      <div style="display:flex;align-items:center;margin-bottom:16px;">
+        <button class="btn btn-primary btn-sm" id="btnAddTrial">+ New Test</button>
+        <div class="view-mode-toggle" id="trialsViewToggle">
+          <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
+          <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'table' ? ' active' : ''}" data-mode="table">${icon('file-text', 14)} Summary Table</button>
+        </div>
+      </div>
       <div id="trialsList"></div>
     </div>
   `;
+
+  document.getElementById('trialsViewToggle').querySelectorAll('.view-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      trialsViewMode = btn.dataset.mode;
+      renderTrialsList();
+      document.querySelectorAll('#trialsViewToggle .view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === trialsViewMode));
+    });
+  });
 
   document.getElementById('btnAddTrial').addEventListener('click', () => {
     const t = blankTrial();
@@ -758,6 +819,12 @@ export function renderTrialsList(){
     return;
   }
   const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
+  if(trialsViewMode === 'table'){
+    renderTrialsSummaryTable(container, sorted);
+    renderEvaluationWizard();
+    renderTrialSummaryModal();
+    return;
+  }
   container.innerHTML = sorted.map(t => {
     const isEditing = t.id === trialEditingId;
     const isExpanded = isEditing || trialExpandedIds.has(t.id);
