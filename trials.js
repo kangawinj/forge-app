@@ -740,10 +740,10 @@ function addSectionTitleBar(ws, title, colSpan){
 // same as the live page's own layout.
 function buildTrialsSummarySheet(wb, groups){
   const ws = wb.addWorksheet('Summary Table');
-  ws.columns = [{ width: 26 }, { width: 22 }, { width: 74 }];
-  addSectionTitleBar(ws, 'Test Results — Summary Table', 3);
+  ws.columns = [{ width: 26 }, { width: 22 }, { width: 18 }, { width: 74 }];
+  addSectionTitleBar(ws, 'Test Results — Summary Table', 4);
 
-  const headerRow = ws.addRow(['Project', 'PD / Responsible Person', 'Summary Test']);
+  const headerRow = ws.addRow(['Project', 'PD / Responsible Person', 'Tested Date', 'Summary Test']);
   headerRow.eachCell(cell => {
     cell.font = { bold: true, size: 11, color: { argb: XL_COLORS.groupText } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
@@ -760,7 +760,6 @@ function buildTrialsSummarySheet(wb, groups){
       const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
 
       const runs = [];
-      runs.push({ text: (t.testDate ? 'TESTED ' + formatDateLong(t.testDate).toUpperCase() : 'NO TEST DATE') + '\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.dim } } });
       if(!products.length){
         runs.push({ text: 'No products marked "Continue Development"', font: { italic: true, size: 11, color: { argb: XL_COLORS.dim } } });
       } else {
@@ -795,15 +794,16 @@ function buildTrialsSummarySheet(wb, groups){
       const row = ws.addRow([
         i === 0 ? (linkedProject?.name || '-') : '',
         i === 0 ? (linkedProject?.responsiblePerson || '-') : '',
+        t.testDate ? formatDateLong(t.testDate).toUpperCase() : 'NO TEST DATE',
         { richText: runs }
       ]);
-      [1, 2, 3].forEach(col => {
+      [1, 2, 3, 4].forEach(col => {
         row.getCell(col).alignment = { wrapText: true, vertical: 'top' };
-        row.getCell(col).font = row.getCell(col).font || { size: 11, color: { argb: XL_COLORS.text } };
         row.getCell(col).border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
       });
       row.getCell(1).font = { size: 11, color: { argb: XL_COLORS.text } };
       row.getCell(2).font = { size: 11, color: { argb: XL_COLORS.text } };
+      row.getCell(3).font = { bold: true, size: 9, color: { argb: XL_COLORS.dim } };
       const fullText = runs.map(r => r.text).join('');
       const lineCount = (fullText.match(/\n/g) || []).length + 1;
       row.height = Math.max(30, lineCount * 15);
@@ -843,7 +843,7 @@ function renderTrialsSummaryTable(container, sortedTrials){
   container.innerHTML = `
     <div style="overflow-x:auto;">
     <table class="compare-table trial-summary-table">
-      <thead><tr><th>Project</th><th>PD / Responsible Person</th><th>Summary Test</th></tr></thead>
+      <thead><tr><th>Project</th><th>PD / Responsible Person</th><th>Tested Date</th><th>Summary Test</th></tr></thead>
       <tbody>
         ${groups.map(g => {
           const linkedProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
@@ -861,8 +861,8 @@ function renderTrialsSummaryTable(container, sortedTrials){
                   <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.name || '-')}</td>
                   <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.responsiblePerson || '-')}</td>
                 ` : ''}
+                <td class="trial-table-summary-date-cell">${t.testDate ? escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</td>
                 <td>
-                  <div class="trial-table-summary-test-label">${t.testDate ? 'Tested ' + escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</div>
                   ${products.length === 0 ? '<span class="overview-empty">No products marked "Continue Development"</span>' : products.map(pr => `
                     <div class="trial-table-summary-product">
                       <div class="trial-table-summary-head">

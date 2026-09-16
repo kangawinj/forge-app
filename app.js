@@ -922,7 +922,8 @@ const CHANGELOG = [
   { version: "3.0.518", date: "2026-09-16", note: "Added the same Translate button (Thai <-> English, no account/API key needed) used elsewhere in Forge to each criteria's Note field in the Perform Evaluation wizard (Appearance/Odor/Taste/Texture etc.)" },
   { version: "3.0.519", date: "2026-09-16", note: "Test Results List view: moved the product count next to the Tested date, and changed the tested product name(s) below it into a one-per-line list instead of one comma-separated line" },
   { version: "3.0.520", date: "2026-09-16", note: "Added the Translate button to Improvement Guidelines' per-criteria Note column and Part 2's own Note field, same as the Perform Evaluation wizard's criteria notes" },
-  { version: "3.0.521", date: "2026-09-16", note: "Added an Export Excel button to Test Results' Summary Table view, producing a workbook formatted to match the on-screen table exactly (Project/PD grouping, verdict colors, Improve/Just Right bullet lists)" }
+  { version: "3.0.521", date: "2026-09-16", note: "Added an Export Excel button to Test Results' Summary Table view, producing a workbook formatted to match the on-screen table exactly (Project/PD grouping, verdict colors, Improve/Just Right bullet lists)" },
+  { version: "3.0.522", date: "2026-09-16", note: "Test Results' Summary Table: moved the Tested date out of the Summary Test column into its own Tested Date column, on-screen and in the Excel export" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -5409,6 +5409,7 @@
      of the same per-product summary the modal shows as full cards. */
   .trial-summary-table th:first-child, .trial-summary-table td:first-child{width:160px;}
   .trial-summary-table th:nth-child(2), .trial-summary-table td:nth-child(2){width:160px;}
+  .trial-summary-table th:nth-child(3), .trial-summary-table td:nth-child(3){width:130px;}
   /* .compare-table's own default (th, td{text-align:right}) only left-
      aligns the first column -- none of these three are numbers, so
      right-aligned PD/Summary Test read as ragged, awkward paragraphs.
@@ -5426,11 +5427,11 @@
   .trial-table-summary-list{margin:2px 0 0;padding-left:16px;font-size:12px;color:var(--text);}
   .trial-table-summary-list li{margin-bottom:2px;}
   .trial-table-summary-list.trial-table-summary-ok{color:var(--ok);}
-  /* One per test within a Project's own group of rows (see
-     renderTrialsSummaryTable's rowspan grouping) -- distinguishes which
-     test's own results follow, since the Project/PD columns are no
-     longer repeated on every row to say so. */
-  .trial-table-summary-test-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);margin-bottom:6px;}
+  /* Its own column now (see renderTrialsSummaryTable) rather than a label
+     line inside the Summary Test cell -- distinguishes which test's own
+     results follow, since the Project/PD columns are no longer repeated on
+     every row to say so. */
+  .trial-table-summary-date-cell{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);}
   /* List view's own project grouping (see groupTrialsByProject /
      renderTrialsList) -- one heading above every project's own run of
      .part-block cards, same idea as the Summary Table's grouped rows. */
