@@ -743,12 +743,11 @@ export function renderTrialsList(){
     // monthlyUpdates (see migrateMonthlyUpdate).
     const mt = migrateTrial(t);
     const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
-    // First of the linked Project's own Idea/Reference Images (see
-    // projRefImagesHtml in projects.js) -- shown as a small thumbnail on
-    // the collapsed row so a test with a linked project reads visually,
-    // not just by name, same as every other list in this app that shows
-    // a thumbnail when one's on file.
-    const linkedProjectImage = linkedProject ? (getRequirements(linkedProject).referenceImages || [])[0] : null;
+    // The linked Project's own cover photo (p.image -- the same field the
+    // Projects list/detail view itself shows, see .proj-row-photo-btn in
+    // projects.js), not its separate Idea/Reference Images gallery, which
+    // is inspiration material rather than "the project's own picture".
+    const linkedProjectImage = linkedProject?.image || null;
     const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
     const manualProducts = t.manualProducts || [];
     const combinedCount = (t.recipeIds || []).length + manualProducts.length;
@@ -1083,7 +1082,7 @@ export function renderTrialsList(){
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
         <div class="part-header" style="margin-bottom:12px;">
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
-          ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage.dataUrl)}" class="material-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
+          ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
           <span style="font-weight:700;font-size:14px;color:var(--primary-dark);">${escapeHtml(productLabel)}</span>
           <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
