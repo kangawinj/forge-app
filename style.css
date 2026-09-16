@@ -5236,7 +5236,12 @@
   /* Widened from a 5- to a 9-point JAR scale (see JAR_SCALE in trials.js)
      -- gap/font-size trimmed slightly from the original 5-button sizing so
      9 buttons in a row still read comfortably instead of feeling cramped. */
-  .eval-wizard-jar-row{display:flex;gap:6px;}
+  /* touch-action:pan-y -- lets a vertical drag starting on this row still
+     scroll the page normally, while leaving horizontal drags (press-and-
+     slide across the 1-9 buttons, see wireJarDragSelect in evaluate.js)
+     free for that JS to handle itself instead of the browser trying to
+     pan/zoom on them. */
+  .eval-wizard-jar-row{display:flex;gap:6px;touch-action:pan-y;}
   .eval-wizard-jar-btn{
     flex:1;
     height:44px;

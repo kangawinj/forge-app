@@ -295,6 +295,65 @@ function renderWizardStep(){
   wireWizardStep();
 }
 
+// Press-and-drag across the 1-9 row to scrub through scores, like a slider
+// -- per request, holding a finger down and sliding it across the buttons
+// should pick whichever one it's currently over, not require lifting and
+// re-tapping each one. Only ever active for an actual drag: a touch that
+// starts and ends on the same button never marks itself as "moved", so it
+// falls through to the ordinary click handler above untouched (same
+// toggle-off-if-already-selected behavior as a plain tap always had) --
+// this only takes over once the finger has crossed onto a different
+// button. touchmove's own preventDefault (while a button is under the
+// finger) is what stops the browser from treating the drag as a page
+// scroll instead, and per spec that also suppresses the synthetic click
+// event a touch normally fires afterward, so a real drag's own commit
+// below is the only thing that runs for it -- nothing double-fires.
+function wireJarDragSelect(row, mine){
+  let dragValue = null;
+  let dragMoved = false;
+  function buttonAtPoint(x, y){
+    const el = document.elementFromPoint(x, y);
+    const btn = el && el.closest ? el.closest('[data-role="eval-jar"]') : null;
+    return (btn && row.contains(btn)) ? btn : null;
+  }
+  function preview(btn){
+    row.querySelectorAll('[data-role="eval-jar"]').forEach(b => {
+      b.classList.toggle('selected', b === btn);
+    });
+    const question = row.closest('.eval-wizard-question');
+    const caption = question?.querySelector(`[data-jar-caption="${btn.dataset.criteriaId}"]`);
+    if(caption) caption.textContent = jarScoreLabel(btn.dataset.value);
+  }
+  row.addEventListener('touchstart', e => {
+    const t = e.touches[0];
+    const btn = buttonAtPoint(t.clientX, t.clientY);
+    dragValue = btn ? btn.dataset.value : null;
+    dragMoved = false;
+  }, { passive: true });
+  row.addEventListener('touchmove', e => {
+    const t = e.touches[0];
+    const btn = buttonAtPoint(t.clientX, t.clientY);
+    if(btn){
+      e.preventDefault();
+      if(btn.dataset.value !== dragValue){
+        dragValue = btn.dataset.value;
+        dragMoved = true;
+        preview(btn);
+      }
+    }
+  }, { passive: false });
+  row.addEventListener('touchend', () => {
+    if(dragMoved && dragValue){
+      const criteriaId = row.querySelector('[data-role="eval-jar"]').dataset.criteriaId;
+      mine[criteriaId] = dragValue;
+      renderWizardStep();
+    }
+    dragValue = null;
+    dragMoved = false;
+  });
+  row.addEventListener('touchcancel', () => { dragValue = null; dragMoved = false; });
+}
+
 function wireWizardStep(){
   document.querySelectorAll('#wizardRoot [data-product-id]').forEach(section => {
     const productId = section.dataset.productId;
@@ -310,6 +369,7 @@ function wireWizardStep(){
         renderWizardStep();
       });
     });
+    section.querySelectorAll('.eval-wizard-jar-row').forEach(row => wireJarDragSelect(row, mine));
     section.querySelectorAll('[data-role="eval-criteria-note"]').forEach(el => {
       el.addEventListener('change', () => { mine[`${el.dataset.criteriaId}_note`] = el.value.trim(); });
     });
