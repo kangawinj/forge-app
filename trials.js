@@ -332,6 +332,22 @@ function renderEvalWizardStep(t, products, criteria, step){
   const p = products[step];
   const pd = getTrialProductData(t, p.id);
   const mine = getMyEvaluation(pd);
+  // Same shared per-product photo gallery as Part 1's product card
+  // (pd.photos / normalizeTrialPhotos / TRIAL_PHOTO_MAX) -- one physical
+  // sample, so a photo added here shows there too and vice versa, rather
+  // than every evaluator keeping their own separate copy. Deliberately no
+  // caption field here (unlike Part 1's own gallery) to keep this step
+  // quick to get through -- a caption can still be added afterwards from
+  // Part 1 if it's ever needed.
+  const wizardPhotos = normalizeTrialPhotos(pd);
+  const wizardPhotosHtml = wizardPhotos.map(photo => `
+    <div class="proj-ref-image-item">
+      <div class="proj-ref-image-thumb-wrap">
+        <img src="${escapeHtml(photo.dataUrl)}" class="proj-ref-image-thumb" alt="${escapeHtml(photo.caption || 'Sample photo')}">
+        <button type="button" class="proj-ref-image-remove" data-role="eval-wizard-remove-photo" data-photo-id="${escapeHtml(photo.id)}" title="Remove">${icon('x', 12)}</button>
+      </div>
+    </div>
+  `).join('');
   return `
     <div class="eval-wizard-card">
       <div class="eval-wizard-header">
@@ -340,6 +356,10 @@ function renderEvalWizardStep(t, products, criteria, step){
       </div>
       <div class="eval-wizard-progress">Sample ${step + 1} of ${products.length}</div>
       <div class="eval-wizard-product-name">${escapeHtml(p.label)}</div>
+      <div class="eval-wizard-photos">
+        ${wizardPhotosHtml ? `<div class="proj-ref-images-grid">${wizardPhotosHtml}</div>` : ''}
+        ${wizardPhotos.length < TRIAL_PHOTO_MAX ? `<input type="file" class="eval-wizard-photo-input" accept="image/*">` : ''}
+      </div>
       <div class="eval-wizard-jar-legend">
         ${JAR_SCALE.map(s => `<div class="eval-wizard-jar-legend-item"><b>${s.value}</b><span>${escapeHtml(s.label)}</span></div>`).join('')}
       </div>
@@ -416,6 +436,31 @@ function wireEvaluationWizard(overlay, t, products){
       const value = btn.dataset.value;
       mine[criteriaId] = mine[criteriaId] === value ? '' : value;
       registerEvaluationParticipant(t);
+      scheduleTrialSave(t);
+      renderTrialsList();
+      renderEvaluationWizard();
+    });
+  });
+  overlay.querySelector('.eval-wizard-photo-input')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    const p = products[evalWizard.step];
+    const pd = getTrialProductData(t, p.id);
+    const photos = normalizeTrialPhotos(pd);
+    if(photos.length >= TRIAL_PHOTO_MAX) return;
+    photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500), caption: '' });
+    scheduleTrialSave(t);
+    renderTrialsList();
+    renderEvaluationWizard();
+  });
+  overlay.querySelectorAll('[data-role="eval-wizard-remove-photo"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const p = products[evalWizard.step];
+      const pd = getTrialProductData(t, p.id);
+      const photos = normalizeTrialPhotos(pd);
+      const idx = photos.findIndex(ph => ph.id === btn.dataset.photoId);
+      if(idx !== -1) photos.splice(idx, 1);
       scheduleTrialSave(t);
       renderTrialsList();
       renderEvaluationWizard();
