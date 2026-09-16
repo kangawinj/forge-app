@@ -653,7 +653,11 @@ function renderTrialsSummaryTable(container, sortedTrials){
           const linkedProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
           return g.trials.map((t, i) => {
             const criteria = getEvaluationCriteria(t);
-            const evalTargets = trialEvalTargets(t);
+            // Only products marked "Continue Development" (see the new row
+            // at the bottom of Improvement Guidelines) -- same rule as the
+            // Summary Test modal, so the two never disagree about what
+            // counts as "worth showing on a summary".
+            const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
             const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
             return `
               <tr>
@@ -663,7 +667,7 @@ function renderTrialsSummaryTable(container, sortedTrials){
                 ` : ''}
                 <td>
                   <div class="trial-table-summary-test-label">${t.testDate ? 'Tested ' + escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</div>
-                  ${products.length === 0 ? '<span class="overview-empty">No products yet</span>' : products.map(pr => `
+                  ${products.length === 0 ? '<span class="overview-empty">No products marked "Continue Development"</span>' : products.map(pr => `
                     <div class="trial-table-summary-product">
                       <div class="trial-table-summary-head">
                         <b>${escapeHtml(pr.label)}</b>
@@ -688,7 +692,12 @@ function renderTrialSummaryModal(){
   if(!trialSummaryId){ existing?.remove(); return; }
   const t = trials.find(x => x.id === trialSummaryId);
   if(!t){ trialSummaryId = null; existing?.remove(); return; }
-  const evalTargets = trialEvalTargets(t);
+  // Only a product explicitly marked "Continue Development" (see the new
+  // row at the bottom of Improvement Guidelines) belongs here -- per
+  // request, a sample nobody's decided to carry forward (or one flagged
+  // Discontinue) shouldn't keep showing up on a page meant for a quick
+  // read of where things stand.
+  const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
   const criteria = getEvaluationCriteria(t);
 
   const overlay = existing || document.createElement('div');
@@ -715,7 +724,7 @@ function renderTrialSummaryModal(){
         <div class="eval-wizard-title">Forge · Test Summary</div>
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
-      ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
+      ${evalTargets.length === 0 ? '<div class="overview-empty">No products marked "Continue Development" yet — mark one in Improvement Guidelines to see it here</div>' : evalTargets.map(p => {
         const { label, verdict, improvements, justRight } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
@@ -1197,6 +1206,30 @@ export function renderTrialsList(){
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
     `).join('');
+    // One decision per product -- separate from Test Result (which is a
+    // per-evaluator sensory verdict) -- for whoever reviews the
+    // Improvement Guidelines above to say whether this specific sample is
+    // still worth carrying forward. Only "Continue" gets a product into
+    // the Summary Test / Summary Table (see summarizeTrialProduct) --
+    // "Discontinue" and not-yet-decided both stay out, so a page that's
+    // meant to be a quick read doesn't keep showing samples nobody's
+    // pursuing any more.
+    const continueDevRowHtml = `
+      <tr>
+        <td><b>Continue Development?</b></td>
+        ${evalTargets.map((p, i) => {
+          const pd = getTrialProductData(mt, p.id);
+          const val = pd.continueDevelopment || '';
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
+            <div class="trial-continue-dev-row">
+              <button type="button" class="btn btn-sm trial-continue-dev-btn trial-continue-dev-yes${val === 'continue' ? ' selected' : ''}" data-role="continue-dev" data-product-id="${escapeHtml(p.id)}" data-value="continue" ${isEditing ? '' : 'disabled'}>${icon('check', 12)} Continue</button>
+              <button type="button" class="btn btn-sm trial-continue-dev-btn trial-continue-dev-no${val === 'discontinue' ? ' selected' : ''}" data-role="continue-dev" data-product-id="${escapeHtml(p.id)}" data-value="discontinue" ${isEditing ? '' : 'disabled'}>${icon('x', 12)} Discontinue</button>
+            </div>
+          </td>`;
+        }).join('')}
+        <td class="recipe-boundary"></td>
+      </tr>
+    `;
 
     // 220px leading column mirrors the product-card spacer above so the two
     // grids share the same column ruler — rows are fixed now, so no
@@ -1329,7 +1362,7 @@ export function renderTrialsList(){
                 <table class="compare-table">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${improvementHeaderCells}<th class="recipe-boundary">Note<span class="teval-header-hint">Enter your own info (ระบุข้อมูลด้วยตัวเอง)</span></th></tr></thead>
-                  <tbody>${improvementRowsHtml}</tbody>
+                  <tbody>${improvementRowsHtml}${continueDevRowHtml}</tbody>
                 </table>
               </div>
               ` : '<div class="overview-empty">Add a product above first</div>'}
@@ -1595,6 +1628,14 @@ export function renderTrialsList(){
         const notes = getCriteriaNotes(t, el.dataset.bucket);
         notes[el.dataset.criteriaId] = el.value.trim();
         scheduleTrialSave(t);
+      });
+    });
+    block.querySelectorAll('[data-role="continue-dev"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const pd = getTrialProductData(t, btn.dataset.productId);
+        pd.continueDevelopment = pd.continueDevelopment === btn.dataset.value ? '' : btn.dataset.value;
+        scheduleTrialSave(t);
+        renderTrialsList();
       });
     });
     block.querySelectorAll('.trial-criteria-label-input').forEach(input => {

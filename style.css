@@ -3927,6 +3927,22 @@
     color:var(--accent);
     background:var(--accent-light);
   }
+  /* "Continue Development?" row at the bottom of Improvement Guidelines
+     (see continueDevRowHtml in trials.js) -- a per-product decision, one
+     of which (Continue) gates whether that product shows up in Summary
+     Test / Summary Table at all (see summarizeTrialProduct's callers). */
+  .trial-continue-dev-row{display:flex;flex-direction:column;gap:6px;}
+  .trial-continue-dev-btn{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:6px;
+    background:#fff;
+    border-color:var(--border);
+    color:var(--text);
+  }
+  .trial-continue-dev-yes.selected{background:var(--ok);border-color:var(--ok);color:#fff;}
+  .trial-continue-dev-no.selected{background:var(--danger);border-color:var(--danger);color:#fff;}
   /* Sensory Evaluation/Test Result's combined "Overall" view (see
      combinedEvaluationEntries in trials.js) -- one line per evaluator who
      weighed in, instead of a single shared textarea anyone could
