@@ -229,13 +229,19 @@ function improvementFieldValue(pd, criteriaId){
 // saved one, and only actually persists if a person edits the field (its
 // change handler is what writes pd[improve_...], this function itself
 // never touches saved data).
-function autoImprovementSuggestion(c, pd){
-  const midpoint = Math.ceil(JAR_SCALE.length / 2);
+// Shared by autoImprovementSuggestion below and the Summary Test modal
+// (which needs to tell "no suggestion because it's already Just Right"
+// apart from "no suggestion because nobody's scored it yet").
+function criteriaAverageJarScore(c, pd){
   const entries = combinedEvaluationEntries(pd, c.id, null);
   const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= JAR_SCALE.length);
-  if(!nums.length) return '';
-  const avg = Math.round(nums.reduce((s,n)=>s+n,0) / nums.length);
-  if(avg === midpoint) return '';
+  if(!nums.length) return null;
+  return Math.round(nums.reduce((s,n)=>s+n,0) / nums.length);
+}
+function autoImprovementSuggestion(c, pd){
+  const midpoint = Math.ceil(JAR_SCALE.length / 2);
+  const avg = criteriaAverageJarScore(c, pd);
+  if(avg === null || avg === midpoint) return '';
   const action = avg < midpoint ? 'Increase' : 'Decrease';
   const actionTh = avg < midpoint ? 'เพิ่ม' : 'ลด';
   // Same -100%/+100% figure as the wizard's own Idea Guideline
@@ -618,9 +624,17 @@ function renderTrialSummaryModal(){
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
         const pd = getTrialProductData(t, p.id);
         const verdict = combinedVerdict(pd);
-        const improvements = criteria
+        // Every scored criteria, split by whether it still needs
+        // adjusting (autoImprovementSuggestion returns something) or is
+        // already at the midpoint (Just Right) -- criteriaAverageJarScore
+        // tells those two apart from "not scored yet at all" (which shows
+        // in neither list, same as it already doesn't get a row in
+        // Improvement Guidelines' own auto-suggestion).
+        const scoredCriteria = criteria.filter(c => criteriaAverageJarScore(c, pd) !== null);
+        const improvements = scoredCriteria
           .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd) }))
           .filter(x => x.suggestion);
+        const justRight = scoredCriteria.filter(c => !autoImprovementSuggestion(c, pd));
         return `
           <div class="trial-summary-product">
             <div class="trial-summary-product-head">
@@ -633,6 +647,10 @@ function renderTrialSummaryModal(){
               <div class="trial-summary-improve-title">Suggested Improvements</div>
               <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}</li>`).join('')}</ul>
             ` : (verdict ? '<div class="trial-summary-ok">✓ All criteria are Just Right — no changes suggested</div>' : '')}
+            ${justRight.length ? `
+              <div class="trial-summary-improve-title">Just Right (พอดี)</div>
+              <ul class="trial-summary-justright-list">${justRight.map(c => `<li>${escapeHtml(c.label)}</li>`).join('')}</ul>
+            ` : ''}
           </div>
         `;
       }).join('')}

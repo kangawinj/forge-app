@@ -5343,6 +5343,11 @@
   .trial-summary-improve-list li{margin-bottom:4px;}
   .trial-summary-improve-list li b{color:var(--primary-dark);}
   .trial-summary-ok{font-size:13px;color:var(--ok);margin-top:10px;}
+  /* Criteria already at the midpoint -- plain list, no bold/action wording
+     since there's nothing to act on, just dimmer than the improvements
+     list so it reads as the secondary, "already fine" half of the page. */
+  .trial-summary-justright-list{margin:0;padding-left:18px;font-size:13px;color:var(--ok);}
+  .trial-summary-justright-list li{margin-bottom:4px;}
   .eval-wizard-review-product{
     background:var(--bg);
     border:1px solid var(--border);
