@@ -610,38 +610,62 @@ function summarizeTrialProduct(t, criteria, p){
   return { label: p.label, verdict, improvements, justRight };
 }
 // Read-only overview -- one row per test (already sorted most-recently-
-// updated first by the caller), columns Project / PD (Responsible Person)
-// / Summary Test. The last column reuses summarizeTrialProduct's own
-// numbers but inline/compact (comma-joined) rather than the modal's
-// bulleted cards, since this has to fit a table cell instead of its own
-// full-width card.
+// updated first by the caller), grouped by linked Project -- Project/PD
+// shown once per group (rowspan) rather than repeated on every test's own
+// row, with each test inside the group getting its own Summary Test row,
+// newest first. Since sortedTrials already arrives newest-first, building
+// each group by first-seen order naturally puts both the tests WITHIN a
+// group and the groups THEMSELVES (by whichever one's most recent test
+// appears earliest in sortedTrials) in that same recency order, with no
+// extra sort needed. Untracked/unlinked tests each get their own
+// single-test "group" (never merged with each other, since there's no
+// shared project to group them by).
 function renderTrialsSummaryTable(container, sortedTrials){
+  const groups = [];
+  const groupByKey = new Map();
+  sortedTrials.forEach(t => {
+    const key = t.linkedProjectId || ('__unlinked__' + t.id);
+    if(!groupByKey.has(key)){
+      const g = { projectId: t.linkedProjectId || null, trials: [] };
+      groupByKey.set(key, g);
+      groups.push(g);
+    }
+    groupByKey.get(key).trials.push(t);
+  });
+
   container.innerHTML = `
     <div style="overflow-x:auto;">
     <table class="compare-table trial-summary-table">
       <thead><tr><th>Project</th><th>PD / Responsible Person</th><th>Summary Test</th></tr></thead>
       <tbody>
-        ${sortedTrials.map(t => {
-          const linkedProject = t.linkedProjectId ? projects.find(pr => pr.id === t.linkedProjectId) : null;
-          const criteria = getEvaluationCriteria(t);
-          const evalTargets = trialEvalTargets(t);
-          const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
-          return `
-            <tr>
-              <td>${escapeHtml(linkedProject?.name || '-')}</td>
-              <td>${escapeHtml(linkedProject?.responsiblePerson || '-')}</td>
-              <td>${products.length === 0 ? '<span class="overview-empty">No products yet</span>' : products.map(pr => `
-                <div class="trial-table-summary-product">
-                  <div class="trial-table-summary-head">
-                    <b>${escapeHtml(pr.label)}</b>
-                    ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
-                  </div>
-                  ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion)).join(', ')}</div>` : ''}
-                  ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label)).join(', ')}</div>` : ''}
-                </div>
-              `).join('')}</td>
-            </tr>
-          `;
+        ${groups.map(g => {
+          const linkedProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
+          return g.trials.map((t, i) => {
+            const criteria = getEvaluationCriteria(t);
+            const evalTargets = trialEvalTargets(t);
+            const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
+            return `
+              <tr>
+                ${i === 0 ? `
+                  <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.name || '-')}</td>
+                  <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.responsiblePerson || '-')}</td>
+                ` : ''}
+                <td>
+                  <div class="trial-table-summary-test-label">${t.testDate ? 'Tested ' + escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</div>
+                  ${products.length === 0 ? '<span class="overview-empty">No products yet</span>' : products.map(pr => `
+                    <div class="trial-table-summary-product">
+                      <div class="trial-table-summary-head">
+                        <b>${escapeHtml(pr.label)}</b>
+                        ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
+                      </div>
+                      ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion)).join(', ')}</div>` : ''}
+                      ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label)).join(', ')}</div>` : ''}
+                    </div>
+                  `).join('')}
+                </td>
+              </tr>
+            `;
+          }).join('');
         }).join('')}
       </tbody>
     </table>
