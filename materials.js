@@ -33,8 +33,8 @@ function blankSubIngredient(){
 // page re-render, matching how editingSubIngredients above stays local
 // until "+ Add to Library"/"Save Changes" actually commits it.
 let editingFactories = [];
-const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes','mf-insNumber'];
-const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number' };
+const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes','mf-insNumber','mf-brand'];
+const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number', brand: 'Brand' };
 let materialEditSnapshotBefore = null;
 // The form field only ever holds the digits after "INS-" (that prefix is a
 // fixed, non-editable label next to the input, see the "10. E-Number / INS"
@@ -222,6 +222,10 @@ export function mountMaterialsView(){
           </div>
           <button class="btn btn-sm add-row-btn" type="button" id="btnAddSubIngredient">+ Add Sub Ingredient</button>
         </div>
+        <div class="field">
+          <label>13. Brand (optional)</label>
+          <input type="text" id="mf-brand" placeholder="e.g. Kite">
+        </div>
         <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
         <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
         <span class="ing-hint" id="materialFormError"></span>
@@ -293,6 +297,7 @@ export function mountMaterialsView(){
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
       insNumber: formatInsNumber(document.getElementById('mf-insNumber').value),
+      brand: document.getElementById('mf-brand').value.trim(),
       factories: editingFactories.map(f => (f || '').trim()).filter(Boolean),
       subIngredients: editingSubIngredients.map(si => ({...si})),
       image: editingMaterialImage || '',
@@ -315,6 +320,7 @@ export function openMaterialDetail(m){
   materialDetailCurrentId = m.id;
   const body = document.getElementById('materialDetailBody');
   const rows = [
+    ['Brand', m.brand],
     ['Vendor Code', m.vendorCode],
     ['Vendor Name', m.vendorName],
     ['Manufacturer', m.manufacturer],
@@ -403,6 +409,7 @@ function fillMaterialForm(m){
   document.getElementById('mf-moq').value = extractMoqNumber(m.moq);
   document.getElementById('mf-usageNotes').value = m.usageNotes || '';
   document.getElementById('mf-insNumber').value = (m.insNumber || '').replace(/^INS-/i, '');
+  document.getElementById('mf-brand').value = m.brand || '';
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(m.image || null);
   editingSubIngredients = (m.subIngredients || []).map(si => ({...si}));

@@ -877,7 +877,8 @@ const CHANGELOG = [
   { version: "3.0.473", date: "2026-09-16", note: "Test Results' Sensory Evaluation table now shows each JAR score's meaning (e.g. \"Just right (พอดี)\") right next to the number, not just on hover" },
   { version: "3.0.474", date: "2026-09-16", note: "The Costing card's eye toggle now also hides the explanatory paragraph below the numbers, not just the Overhead Multiplier/Margins/Selling Price fields" },
   { version: "3.0.475", date: "2026-09-16", note: "Ingredient Library: added an E-Number / INS field to the Add/Edit Ingredient form — the \"INS-\" prefix is fixed, just type the number after it. Shows on the ingredient's detail view too" },
-  { version: "3.0.476", date: "2026-09-16", note: "Replaced the navbar's unused \"?\" Help button with an online-users indicator — a photo (or initials) with a green dot for each teammate currently active in Forge. Help moved into the Account menu" }
+  { version: "3.0.476", date: "2026-09-16", note: "Replaced the navbar's unused \"?\" Help button with an online-users indicator — a photo (or initials) with a green dot for each teammate currently active in Forge. Help moved into the Account menu" },
+  { version: "3.0.477", date: "2026-09-16", note: "Ingredient Library: added a Brand field to the Add/Edit Ingredient form and detail view" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
