@@ -5240,7 +5240,7 @@
   .eval-wizard-idea-track-wrap{
     position:relative;
     margin:0 10px;
-    padding-bottom:18px;
+    padding-bottom:26px;
   }
   .eval-wizard-idea-track{
     position:relative;
@@ -5282,7 +5282,7 @@
     justify-content:space-between;
     font-size:10px;
     color:var(--text-dim);
-    margin:0 10px;
+    margin:4px 10px 0;
   }
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
@@ -5336,6 +5336,17 @@
   .eval-wizard-review-row-3col{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;}
   .eval-wizard-review-row-3col b{text-align:right;}
   .eval-wizard-review-note-col{text-align:left;font-style:italic;color:var(--text-dim);white-space:normal;word-break:break-word;}
+  /* The JAR score's own meaning (jarScoreLabel), same idea as the wizard
+     step's own .eval-wizard-jar-caption / Sensory Evaluation's
+     .teval-jar-meaning -- font-weight:400 here deliberately overrides the
+     bold inherited from the parent <b> (score + meaning + % badge all
+     share that one cell), so only the bare score itself reads as bold. */
+  .eval-wizard-review-jar-meaning{
+    font-weight:400;
+    font-size:11px;
+    color:var(--text-dim);
+    margin-left:4px;
+  }
   /* Idea Guideline summary next to the JAR score (see jarAdjustmentPercent
      in trials.js) -- same figure as each step's own Idea Guideline line,
      just compacted into a small pill here since the review page is a

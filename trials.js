@@ -464,7 +464,8 @@ function renderEvalWizardReview(t, products, criteria){
             const note = mine[`${c.id}_note`];
             const pct = jarAdjustmentPercent(mine[c.id]);
             const pctBadge = (pct !== null && pct !== 0) ? `<span class="eval-wizard-review-idea-badge">${pct > 0 ? '+' : ''}${pct}%</span>` : '';
-            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${pctBadge}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
+            const meaning = mine[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(mine[c.id]))}</span>` : '';
+            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${meaning}${pctBadge}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
           }).join('')}
           ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
