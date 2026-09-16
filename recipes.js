@@ -4692,25 +4692,33 @@ function buildCostingSheet(wb, r){
   kv('Cost RM / 100 g', c.costPer100 ? `${c.costPer100}${c.costSuffix}` : '—');
   kv('Cost RM / kg', c.costPerKg ? `${c.costPerKg}${c.costSuffix}` : '—');
 
-  row++;
-  const sectionCell = ws.getCell(row, 1);
-  sectionCell.value = 'Overhead & Margins';
-  sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
-  row++;
-  kv('Overhead Multiplier', c.overheadMultiplier != null ? `×${c.overheadMultiplier}` : '(none, ×1)');
-  kv('Factory Margin (Min–Max % Markup on Cost)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
-  kv('Factory Selling Price / Serving', c.factoryPriceRange);
-  kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
-  kv('Company Selling Price / Serving', c.companyPriceRange);
-  kv('Customer Margin (Min–Max % Markup on Company Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
-  kv('Customer Selling Price / Serving', c.customerPriceRange);
+  // Overhead Multiplier / Margins / Selling Price (and the explanatory note
+  // below them) mirror the live Costing card's own eye toggle
+  // (btnToggleCostingMargin / costingMarginVisible, a per-browser
+  // localStorage preference -- see its wiring further up this file) --
+  // whichever state it's currently in when Export Excel is clicked is what
+  // ships in the workbook, same as what Print/Preview would show right now.
+  if(costingMarginVisible){
+    row++;
+    const sectionCell = ws.getCell(row, 1);
+    sectionCell.value = 'Overhead & Margins';
+    sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
+    row++;
+    kv('Overhead Multiplier', c.overheadMultiplier != null ? `×${c.overheadMultiplier}` : '(none, ×1)');
+    kv('Factory Margin (Min–Max % Markup on Cost)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
+    kv('Factory Selling Price / Serving', c.factoryPriceRange);
+    kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
+    kv('Company Selling Price / Serving', c.companyPriceRange);
+    kv('Customer Margin (Min–Max % Markup on Company Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
+    kv('Customer Selling Price / Serving', c.customerPriceRange);
 
-  row++;
-  ws.mergeCells(row, 1, row, 2);
-  const noteCell = ws.getCell(row, 1);
-  noteCell.value = 'Costs are calculated from weight × the ingredient\'s Price/kg in the library (always stored in Thai Baht). Selling Price figures round up to the nearest 0.05 of the selected currency.';
-  noteCell.font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
-  noteCell.alignment = { wrapText: true };
+    row++;
+    ws.mergeCells(row, 1, row, 2);
+    const noteCell = ws.getCell(row, 1);
+    noteCell.value = 'Costs are calculated from weight × the ingredient\'s Price/kg in the library (always stored in Thai Baht). Selling Price figures round up to the nearest 0.05 of the selected currency.';
+    noteCell.font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
+    noteCell.alignment = { wrapText: true };
+  }
 }
 
 function buildIngredientsSheet(wb, r){
