@@ -1451,7 +1451,7 @@ export function renderTrialsList(){
       renderTrialsList();
     });
 
-    block.querySelector('[data-role="print-trial"]').addEventListener('click', () => {
+    block.querySelector('[data-role="print-trial"]')?.addEventListener('click', () => {
       block.classList.add('printing-only');
       const cleanup = () => {
         block.classList.remove('printing-only');
@@ -1461,7 +1461,7 @@ export function renderTrialsList(){
       window.print();
     });
 
-    block.querySelector('[data-role="delete-trial"]').addEventListener('click', () => {
+    block.querySelector('[data-role="delete-trial"]')?.addEventListener('click', () => {
       if(!confirm('Delete this test result? This cannot be undone.')) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',
