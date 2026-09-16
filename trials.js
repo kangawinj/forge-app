@@ -680,8 +680,14 @@ function renderTrialsSummaryTable(container, sortedTrials){
                         <b>${escapeHtml(pr.label)}</b>
                         ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
                       </div>
-                      ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion) + (x.note ? ` (${escapeHtml(x.note)})` : '')).join(', ')}</div>` : ''}
-                      ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label) + (c.note ? ` (${escapeHtml(c.note)})` : '')).join(', ')}</div>` : ''}
+                      ${pr.improvements.length ? `
+                        <div class="trial-table-summary-line-title">Improve:</div>
+                        <ul class="trial-table-summary-list">${pr.improvements.map(x => `<li>${escapeHtml(x.suggestion)}${x.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
+                      ` : ''}
+                      ${pr.justRight.length ? `
+                        <div class="trial-table-summary-line-title">Just Right:</div>
+                        <ul class="trial-table-summary-list trial-table-summary-ok">${pr.justRight.map(c => `<li>${escapeHtml(c.label)}${c.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(c.note)}</span>` : ''}</li>`).join('')}</ul>
+                      ` : ''}
                     </div>
                   `).join('')}
                 </td>
@@ -869,7 +875,15 @@ export function renderTrialsList(){
     container.innerHTML = '<div class="overview-empty">No test results yet — click "+ New Test" above to start one</div>';
     return;
   }
-  const sorted = [...trials].sort((a,b) => b.updatedAt - a.updatedAt);
+  // Most recent Tested date first (not last-edited timestamp) -- per user
+  // feedback, "recent" here means when the test itself happened
+  // (t.testDate, an ISO yyyy-mm-dd string from its own <input type="date">
+  // so it already sorts correctly as plain text), not when the record was
+  // last saved in Firestore, which can drift out of sync with that (e.g.
+  // editing an OLDER test's Note today bumps its updatedAt past a newer
+  // test nobody's touched since). Falls back to updatedAt only to break
+  // ties between same-date (or both-blank-date) tests.
+  const sorted = [...trials].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
   if(trialsViewMode === 'table'){
     renderTrialsSummaryTable(container, sorted);
     renderEvaluationWizard();

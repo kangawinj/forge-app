@@ -5387,9 +5387,14 @@
   .trial-table-summary-product{margin-bottom:10px;}
   .trial-table-summary-product:last-child{margin-bottom:0;}
   .trial-table-summary-head{display:flex;align-items:center;gap:8px;margin-bottom:2px;}
-  .trial-table-summary-line{font-size:12px;color:var(--text);}
-  .trial-table-summary-line b{color:var(--primary-dark);}
-  .trial-table-summary-ok{color:var(--ok);}
+  /* Improve/Just Right are proper bulleted lists here now (not one
+     comma-joined line) -- same reasoning as the modal's own lists, more
+     so now that each item can carry its own note in parentheses/dash,
+     which made a single joined line hard to parse. */
+  .trial-table-summary-line-title{font-size:11px;font-weight:700;color:var(--primary-dark);margin-top:4px;}
+  .trial-table-summary-list{margin:2px 0 0;padding-left:16px;font-size:12px;color:var(--text);}
+  .trial-table-summary-list li{margin-bottom:2px;}
+  .trial-table-summary-list.trial-table-summary-ok{color:var(--ok);}
   /* One per test within a Project's own group of rows (see
      renderTrialsSummaryTable's rowspan grouping) -- distinguishes which
      test's own results follow, since the Project/PD columns are no
