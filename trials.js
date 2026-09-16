@@ -630,8 +630,11 @@ function summarizeTrialProduct(t, criteria, p){
 // appears earliest in sortedTrials) in that same recency order, with no
 // extra sort needed. Untracked/unlinked tests each get their own
 // single-test "group" (never merged with each other, since there's no
-// shared project to group them by).
-function renderTrialsSummaryTable(container, sortedTrials){
+// shared project to group them by). Shared by the Summary Table below and
+// the List view's own card layout (see renderTrialsList) -- both group the
+// same already-recency-sorted input the same way, so a project's tests
+// stay together and in the same order regardless of which view is active.
+function groupTrialsByProject(sortedTrials){
   const groups = [];
   const groupByKey = new Map();
   sortedTrials.forEach(t => {
@@ -643,6 +646,10 @@ function renderTrialsSummaryTable(container, sortedTrials){
     }
     groupByKey.get(key).trials.push(t);
   });
+  return groups;
+}
+function renderTrialsSummaryTable(container, sortedTrials){
+  const groups = groupTrialsByProject(sortedTrials);
 
   container.innerHTML = `
     <div style="overflow-x:auto;">
@@ -869,7 +876,15 @@ export function renderTrialsList(){
     renderTrialSummaryModal();
     return;
   }
-  container.innerHTML = sorted.map(t => {
+  // Grouped by linked Project (see groupTrialsByProject, shared with the
+  // Summary Table's own grouping) -- a header names the group when it has
+  // one, tests inside it stay in the caller's own recency order (newest
+  // first), same as before this was grouped. Untracked/unlinked tests
+  // get no header, same as they always rendered.
+  const groups = groupTrialsByProject(sorted);
+  container.innerHTML = groups.map(g => {
+    const groupProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
+    const cardsHtml = g.trials.map(t => {
     const isEditing = t.id === trialEditingId;
     const isExpanded = isEditing || trialExpandedIds.has(t.id);
     // Migrated view used only for building this HTML string below — the
@@ -1376,6 +1391,8 @@ export function renderTrialsList(){
         </div>
       </div>
     `;
+    }).join('');
+    return groupProject ? `<div class="trial-project-group-header">${icon('folder', 14)} ${escapeHtml(groupProject.name || 'Untitled project')}</div>${cardsHtml}` : cardsHtml;
   }).join('');
 
   container.querySelectorAll('.part-block[data-trial-id]').forEach(block => {

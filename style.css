@@ -5378,6 +5378,11 @@
      of the same per-product summary the modal shows as full cards. */
   .trial-summary-table th:first-child, .trial-summary-table td:first-child{width:160px;}
   .trial-summary-table th:nth-child(2), .trial-summary-table td:nth-child(2){width:160px;}
+  /* .compare-table's own default (th, td{text-align:right}) only left-
+     aligns the first column -- none of these three are numbers, so
+     right-aligned PD/Summary Test read as ragged, awkward paragraphs.
+     Left-align every column here instead. */
+  .trial-summary-table th, .trial-summary-table td{text-align:left;}
   .trial-summary-table td{vertical-align:top;}
   .trial-table-summary-product{margin-bottom:10px;}
   .trial-table-summary-product:last-child{margin-bottom:0;}
@@ -5390,6 +5395,21 @@
      test's own results follow, since the Project/PD columns are no
      longer repeated on every row to say so. */
   .trial-table-summary-test-label{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);margin-bottom:6px;}
+  /* List view's own project grouping (see groupTrialsByProject /
+     renderTrialsList) -- one heading above every project's own run of
+     .part-block cards, same idea as the Summary Table's grouped rows. */
+  .trial-project-group-header{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    font-size:13px;
+    font-weight:700;
+    color:var(--primary-dark);
+    margin:20px 0 10px;
+    padding-bottom:6px;
+    border-bottom:1px solid var(--border);
+  }
+  .trial-project-group-header:first-child{margin-top:0;}
   .eval-wizard-review-product{
     background:var(--bg);
     border:1px solid var(--border);
