@@ -24,6 +24,14 @@ let trialEditingId = null;
 // productIds (one wizard "page" per product), or equals productIds.length
 // for the trailing Review page. null when the wizard is closed.
 let evalWizard = null;
+// "Summary Test" opens a read-only, body-appended overlay (same pattern
+// as evalWizard above, see renderTrialSummaryModal) showing a condensed
+// per-product readout -- overall verdict + only the criteria that still
+// need adjusting (auto-suggested direction/%, same data Improvement
+// Guidelines already computes) -- so someone can see "what does this
+// test actually say" at a glance instead of reading the full editable
+// tables. Holds the trial id while open, null when closed.
+let trialSummaryId = null;
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
@@ -553,6 +561,89 @@ function wireEvaluationWizard(overlay, t, products){
   });
 }
 
+// Combines every evaluator's Test Result answers for a product into one
+// headline verdict -- Needs Revision if even one flagged it (same "one
+// taster's catch is enough" rule as productNeedsRevision), Accepted only
+// if every answer that exists agrees, Not accepted if any answer does
+// and none needed revision, or null if nobody's answered yet at all.
+function combinedVerdict(pd){
+  if(productNeedsRevision(pd)) return 'Needs Revision';
+  const entries = combinedEvaluationEntries(pd, null, null);
+  if(!entries.length) return null;
+  if(entries.every(e => e.value === 'Accepted')) return 'Accepted';
+  if(entries.some(e => e.value === 'Not accepted')) return 'Not accepted';
+  return null;
+}
+// EVAL_WIZARD_RESULT_CLASSES' own classes only carry color when nested
+// under the specific selectors the wizard/Review page already use
+// (.eval-wizard-testresult-btn.selected.X, .eval-wizard-review-row b.X) --
+// this modal's verdict badge needs its own standalone-usable classes.
+const TRIAL_SUMMARY_VERDICT_CLASSES = {
+  'Accepted': 'trial-summary-verdict-accepted',
+  'Needs Revision': 'trial-summary-verdict-needs-revision',
+  'Not accepted': 'trial-summary-verdict-not-accepted'
+};
+function renderTrialSummaryModal(){
+  const existing = document.getElementById('trialSummaryOverlay');
+  if(!trialSummaryId){ existing?.remove(); return; }
+  const t = trials.find(x => x.id === trialSummaryId);
+  if(!t){ trialSummaryId = null; existing?.remove(); return; }
+  const evalTargets = trialEvalTargets(t);
+  const criteria = getEvaluationCriteria(t);
+
+  const overlay = existing || document.createElement('div');
+  overlay.id = 'trialSummaryOverlay';
+  overlay.className = 'eval-wizard-overlay';
+  if(!existing){
+    document.body.appendChild(overlay);
+    // Read-only content, nothing typed here to accidentally lose -- so
+    // (unlike the Perform Evaluation wizard above) a click on the
+    // backdrop closes this one, same mousedown+click-both-on-overlay
+    // guard as wireModalOverlayClose (app.js) uses, just inlined since
+    // this overlay is built dynamically rather than living in index.html.
+    let mousedownOnOverlay = false;
+    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if(mousedownOnOverlay && e.target === overlay){ trialSummaryId = null; renderTrialSummaryModal(); }
+      mousedownOnOverlay = false;
+    });
+  }
+
+  overlay.innerHTML = `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Test Summary</div>
+        <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
+      </div>
+      ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
+        const pd = getTrialProductData(t, p.id);
+        const verdict = combinedVerdict(pd);
+        const improvements = criteria
+          .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd) }))
+          .filter(x => x.suggestion);
+        return `
+          <div class="trial-summary-product">
+            <div class="trial-summary-product-head">
+              <div class="trial-summary-product-name">${escapeHtml(p.label)}</div>
+              ${verdict
+                ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[verdict] || ''}">${escapeHtml(verdict)}</span>`
+                : '<span class="overview-empty">Not yet evaluated</span>'}
+            </div>
+            ${improvements.length ? `
+              <div class="trial-summary-improve-title">Suggested Improvements</div>
+              <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}</li>`).join('')}</ul>
+            ` : (verdict ? '<div class="trial-summary-ok">✓ All criteria are Just Right — no changes suggested</div>' : '')}
+          </div>
+        `;
+      }).join('')}
+    </div>
+  `;
+  overlay.querySelector('[data-role="summary-close"]')?.addEventListener('click', () => {
+    trialSummaryId = null;
+    renderTrialSummaryModal();
+  });
+}
+
 // A product being compared that isn't one of this app's own Recipes — a
 // competitor sample, a customer's existing product, anything typed in by
 // name rather than picked from the list. Same detail fields as a linked
@@ -997,6 +1088,7 @@ export function renderTrialsList(){
           <span class="part-header-summary">${combinedCount} product${combinedCount === 1 ? '' : 's'}${mt.testDate ? ' · Tested ' + escapeHtml(formatDateLong(mt.testDate)) : ''}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
           ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
+          ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
           <button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>
           <button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>
         </div>
@@ -1162,6 +1254,11 @@ export function renderTrialsList(){
       if(!productIds.length) return;
       trialExpandedIds.add(id);
       evalWizard = { trialId: id, step: 0, productIds };
+      renderTrialsList();
+    });
+
+    block.querySelector('[data-role="open-trial-summary"]')?.addEventListener('click', () => {
+      trialSummaryId = id;
       renderTrialsList();
     });
 
@@ -1435,6 +1532,7 @@ export function renderTrialsList(){
   });
 
   renderEvaluationWizard();
+  renderTrialSummaryModal();
 }
 
 function attachTrialsListener(){

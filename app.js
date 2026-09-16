@@ -904,7 +904,8 @@ const CHANGELOG = [
   { version: "3.0.500", date: "2026-09-16", note: "Fixed the Idea Guideline's reading landing directly on top of the -100%/+100% axis label at the extreme ends (a score of 1 or 9) — that axis label now hides itself in that one case instead of double-printing the same number" },
   { version: "3.0.501", date: "2026-09-16", note: "Left-aligned the score column on the Review Your Evaluation page — it was right-aligned inside its own auto-width column, so each row's score/meaning/% text started at a different, inconsistent X position instead of a shared left edge" },
   { version: "3.0.502", date: "2026-09-16", note: "Fixed the Review page's score column still not sharing one left edge across rows even after left-aligning it — each row is its own independent grid, so a fixed-width (not flexible) first column was needed to keep the criteria-name column the same width everywhere" },
-  { version: "3.0.503", date: "2026-09-16", note: "The Test Results list now shows a small thumbnail from the linked Project's Idea/Reference Images (if it has one) on each test's collapsed row, next to the name" }
+  { version: "3.0.503", date: "2026-09-16", note: "The Test Results list now shows a small thumbnail from the linked Project's Idea/Reference Images (if it has one) on each test's collapsed row, next to the name" },
+  { version: "3.0.504", date: "2026-09-16", note: "Added a \"Summary Test\" button to each Test Results row — a condensed, read-only readout per product showing the overall verdict and only the criteria that still need adjusting (same auto-suggested direction/% as Improvement Guidelines), instead of the full editable tables" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
