@@ -883,7 +883,8 @@ const CHANGELOG = [
   { version: "3.0.479", date: "2026-09-16", note: "Recipe editor now shows each ingredient's Brand — in the \"Recipe Overview (all parts combined)\" table's sub-label, and in the ingredient search dropdown when adding/editing an ingredient" },
   { version: "3.0.480", date: "2026-09-16", note: "Fixed: editing an ingredient's name in a recipe no longer wipes the weight you already entered for it — the field just stays disabled (greyed, value kept) until the new name matches a library ingredient again" },
   { version: "3.0.481", date: "2026-09-16", note: "Brought back \"Export Excel\" on a recipe's toolbar (next to Print/PDF), rebuilt from scratch — downloads a real, editable .xlsx workbook (Overview / Ingredients / Process sheets) styled to match the app's own Print/Preview page, not just a flat data dump" },
-  { version: "3.0.482", date: "2026-09-16", note: "Export Excel now mirrors the Preview page section-for-section — added the \"2. Recipe Overview\" (grouped ingredients with Brand/Vendor, cost) and \"3. Costing\" (currency, cost/100g, cost/kg, Overhead Multiplier, Factory/Company/Customer margins) sheets that were missing, and every sheet now carries the same numbered card title (\"1. Product Details\" ... \"5. Process Steps\") as its on-screen counterpart" }
+  { version: "3.0.482", date: "2026-09-16", note: "Export Excel now mirrors the Preview page section-for-section — added the \"2. Recipe Overview\" (grouped ingredients with Brand/Vendor, cost) and \"3. Costing\" (currency, cost/100g, cost/kg, Overhead Multiplier, Factory/Company/Customer margins) sheets that were missing, and every sheet now carries the same numbered card title (\"1. Product Details\" ... \"5. Process Steps\") as its on-screen counterpart" },
+  { version: "3.0.483", date: "2026-09-16", note: "A plain refresh (F5, the tab waking back up, etc.) now resumes exactly where you left off — whichever page or recipe was open — instead of always bouncing back to Home. Only clearing the browser's site data resets it, since that's the only way a website can distinguish that from a normal refresh" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -1002,6 +1003,7 @@ function goToAuth(){
 function goToApp(){
   closeRecipe();
   mainFeatureView = null;
+  restoreLastView();
   appView = 'app';
   renderApp();
   renderSidebar();
@@ -1615,6 +1617,44 @@ export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materi
 // assignment in an importing module isn't possible, since ES modules
 // can't reassign a sibling module's imported `let` binding.
 export function setMainFeatureView(v){ mainFeatureView = v; }
+
+// Remembers which page (mainFeatureView) and, for the Recipes module, which
+// recipe (currentId) was open, so a plain reload (F5, the tab waking back
+// up, etc.) resumes there instead of always bouncing back to the Home
+// dashboard -- only an action that actually clears site data (localStorage
+// included) resets it, which is what "Hard Refresh" means for this app in
+// practice, since a browser can't tell a website whether Ctrl+Shift+R was
+// used instead of a plain reload. Written on every renderMain() call (the
+// one place every navigation in this app already funnels through), so
+// there's no need to instrument each individual "go to X" call site.
+const LAST_VIEW_KEY = 'forge_lastView';
+function persistLastView(){
+  try {
+    localStorage.setItem(LAST_VIEW_KEY, JSON.stringify({ mainFeatureView, currentId: currentId || null }));
+  } catch(e) { /* private browsing / storage disabled -- just skip persisting */ }
+}
+function loadLastView(){
+  try {
+    const raw = localStorage.getItem(LAST_VIEW_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch(e) { return null; }
+}
+// Restores the saved view on boot, but only into a module the signed-in
+// account can still actually see -- permissions can change between visits,
+// and a stale saved view pointing at a now-revoked module should fall back
+// to Home rather than render a page this account no longer has. Same
+// "recipes spans three mainFeatureView values" reasoning as the live
+// permission-revoked check in onAuthStateChanged below.
+function restoreLastView(){
+  const last = loadLastView();
+  if(!last) return;
+  const view = last.mainFeatureView || null;
+  const isRecipesView = view === 'recipesList' || view === 'compare' || (view === null && !!last.currentId);
+  if(isRecipesView && !hasModuleAccess('recipes')) return;
+  if(view && MODULE_PERMISSIONS.some(m => m.key === view) && !hasModuleAccess(view)) return;
+  mainFeatureView = view;
+  if(last.currentId) openRecipe(last.currentId);
+}
 let saveTimer = null;
 // One entry per recipe with a pending "haven't clicked Save in a while"
 // checkpoint — keyed by id (not a single global timer) so editing recipe A
@@ -3365,6 +3405,7 @@ export function openRecipeFromDashboard(recipeId){
 }
 
 export function renderMain(){
+  persistLastView();
   const main = document.getElementById('mainArea');
   // The recipe-navigator sidebar (New Recipe / Compare / search / list) only
   // makes sense while actively viewing/editing one specific recipe — Home,
