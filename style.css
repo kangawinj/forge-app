@@ -5337,7 +5337,12 @@
      one combined value column like every other row (Comments, Test
      Result) still uses. */
   .eval-wizard-review-row-3col{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;}
-  .eval-wizard-review-row-3col b{text-align:right;}
+  /* Left- not right-aligned (overriding .eval-wizard-review-row b's own
+     right-align above) -- the score column is auto-width sized to the
+     widest row's content, so right-aligning left every shorter row's own
+     text start at a different, inconsistent X position; left-aligning
+     gives every row the same starting edge instead, per user feedback. */
+  .eval-wizard-review-row-3col b{text-align:left;}
   .eval-wizard-review-note-col{text-align:left;font-style:italic;color:var(--text-dim);white-space:normal;word-break:break-word;}
   /* The JAR score's own meaning (jarScoreLabel), same idea as the wizard
      step's own .eval-wizard-jar-caption / Sensory Evaluation's
