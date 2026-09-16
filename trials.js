@@ -1284,7 +1284,12 @@ export function renderTrialsList(){
           const autoTitle = 'Automatically suggested from this criteria\'s JAR score above — edit to write your own instead';
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve${isAuto ? ' teval-improve-auto' : ''}" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? (isAuto ? autoTitle : '') : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(displayValue)}</textarea></td>`;
         }).join('')}
-        <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea></td>
+        <td class="recipe-boundary">
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
+            ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
+          </div>
+        </td>
       </tr>
     `).join('');
     // One decision per product -- separate from Test Result (which is a
@@ -1455,7 +1460,10 @@ export function renderTrialsList(){
 
             <div class="field" style="margin-bottom:0;">
               <label>Note</label>
-              <textarea class="trial-part2-note" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(mt.note)}</textarea>
+              <div class="mu-field-with-translate" style="width:auto;">
+                <textarea class="trial-part2-note" ${isEditing ? '' : 'readonly'} placeholder="Anything else worth noting">${escapeHtml(mt.note)}</textarea>
+                ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
+              </div>
             </div>
           </div>
         </div>
@@ -1717,6 +1725,7 @@ export function renderTrialsList(){
         scheduleTrialSave(t);
       });
     });
+    block.querySelectorAll('.mu-field-with-translate').forEach(wireTrialTranslateButton);
     block.querySelectorAll('[data-role="continue-dev"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const pd = getTrialProductData(t, btn.dataset.productId);
