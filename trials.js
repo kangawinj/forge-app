@@ -422,7 +422,10 @@ function renderEvalWizardStep(t, products, criteria, step){
               <button type="button" class="eval-wizard-jar-btn${mine[c.id] === s.value ? ' selected' : ''}" data-role="eval-jar" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" title="${escapeHtml(s.label)}">${s.value}</button>
             `).join('')}
           </div>
-          <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
+            <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+          </div>
           ${(() => {
             const pct = jarAdjustmentPercent(mine[c.id]);
             if(pct === null || pct === 0) return '';
@@ -502,6 +505,50 @@ function renderEvalWizardReview(t, products, criteria){
     </div>
   `;
 }
+// Same pattern as Recipes' Note/Description translate button (see
+// guessRecipeTranslateTargetLang/translateRecipeText/wireRecipeTranslateButton
+// in recipes.js, itself copied from Projects' Activities Updates) -- free,
+// keyless machine translation via the same public endpoint
+// translate.google.com's own web page calls (client=gtx), an unofficial use
+// of it so it could be rate-limited or blocked without notice. Kept as its
+// own copy here rather than imported, since trials.js doesn't otherwise
+// depend on recipes.js/projects.js internals -- if this ever needs to
+// change, the same edit has to be made in all three places.
+function guessTrialTranslateTargetLang(text){
+  return /[฀-๿]/.test(text) ? 'en' : 'th';
+}
+async function translateTrialText(text, targetLang){
+  const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=${targetLang}&dt=t&q=${encodeURIComponent(text)}`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('Translation service unavailable');
+  const data = await res.json();
+  return data[0].map(chunk => chunk[0]).join('');
+}
+// Puts the translated text first with the original following in
+// parentheses, replacing the field's own content. Dispatches a real
+// 'change' event (not 'input') after setting the value, since the criteria
+// note textarea this wraps only saves on 'change' (see
+// .eval-wizard-criteria-note's own listener above), not on every keystroke.
+function wireTrialTranslateButton(wrapEl){
+  const textarea = wrapEl.querySelector('textarea');
+  const btn = wrapEl.querySelector('.mu-translate-btn');
+  if(!textarea || !btn) return;
+  btn.addEventListener('click', async () => {
+    const original = textarea.value.trim();
+    if(!original) return;
+    btn.classList.add('loading');
+    try{
+      const translated = await translateTrialText(original, guessTrialTranslateTargetLang(original));
+      textarea.value = `${translated}\n(${original})`;
+      textarea.dispatchEvent(new Event('change', { bubbles: true }));
+    }catch(err){
+      console.error('Forge: translation failed', err);
+      alert('Translation failed — the free translation service may be temporarily unavailable. Please try again in a moment.');
+    }finally{
+      btn.classList.remove('loading');
+    }
+  });
+}
 function wireEvaluationWizard(overlay, t, products){
   overlay.querySelector('[data-role="eval-wizard-close"]')?.addEventListener('click', () => {
     evalWizard = null;
@@ -535,6 +582,7 @@ function wireEvaluationWizard(overlay, t, products){
       renderTrialsList();
     });
   });
+  overlay.querySelectorAll('.mu-field-with-translate').forEach(wireTrialTranslateButton);
   overlay.querySelector('.eval-wizard-comment')?.addEventListener('change', e => {
     const p = products[evalWizard.step];
     const pd = getTrialProductData(t, p.id);
