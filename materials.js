@@ -33,9 +33,18 @@ function blankSubIngredient(){
 // page re-render, matching how editingSubIngredients above stays local
 // until "+ Add to Library"/"Save Changes" actually commits it.
 let editingFactories = [];
-const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes'];
-const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes' };
+const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes','mf-insNumber'];
+const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number' };
 let materialEditSnapshotBefore = null;
+// The form field only ever holds the digits after "INS-" (that prefix is a
+// fixed, non-editable label next to the input, see the "10. E-Number / INS"
+// field) -- this is what turns "211" into the stored "INS-211", stripping
+// a redundant "INS-"/"ins-" if someone types it anyway so it's never
+// doubled up.
+function formatInsNumber(raw){
+  const digits = (raw || '').trim().replace(/^ins-?/i, '').trim();
+  return digits ? `INS-${digits}` : '';
+}
 
 function saveMaterialToCloud(m){
   return setDoc(doc(materialsCol, m.id), m);
@@ -193,11 +202,18 @@ export function mountMaterialsView(){
           <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
         </div>
         <div class="field">
-          <label>10. Factories/Companies Using This Material (optional)</label>
+          <label>10. E-Number / INS (optional)</label>
+          <div class="ins-number-row">
+            <span class="ins-number-prefix">INS-</span>
+            <input type="text" id="mf-insNumber" placeholder="e.g. 211">
+          </div>
+        </div>
+        <div class="field">
+          <label>11. Factories/Companies Using This Material (optional)</label>
           <div id="materialFactoriesRows"></div>
         </div>
         <div class="field">
-          <label>11. Sub Ingredients (optional)</label>
+          <label>12. Sub Ingredients (optional)</label>
           <div class="flavor-table-scroll">
             <table class="flavor-table" id="subIngredientsTable">
               <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th></th></tr></thead>
@@ -276,6 +292,7 @@ export function mountMaterialsView(){
       price: document.getElementById('mf-price').value.trim(),
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
+      insNumber: formatInsNumber(document.getElementById('mf-insNumber').value),
       factories: editingFactories.map(f => (f || '').trim()).filter(Boolean),
       subIngredients: editingSubIngredients.map(si => ({...si})),
       image: editingMaterialImage || '',
@@ -302,7 +319,8 @@ export function openMaterialDetail(m){
     ['Vendor Name', m.vendorName],
     ['Manufacturer', m.manufacturer],
     ['Price/kg', (m.price !== '' && m.price != null) ? `฿${m.price}` : ''],
-    ['MOQ', formatMoq(m.moq)]
+    ['MOQ', formatMoq(m.moq)],
+    ['E-Number', m.insNumber]
   ].map(([label, value]) => `
     <dt>${escapeHtml(label)}</dt>
     <dd>${escapeHtml(value || '-')}</dd>
@@ -384,6 +402,7 @@ function fillMaterialForm(m){
   document.getElementById('mf-price').value = m.price || '';
   document.getElementById('mf-moq').value = extractMoqNumber(m.moq);
   document.getElementById('mf-usageNotes').value = m.usageNotes || '';
+  document.getElementById('mf-insNumber').value = (m.insNumber || '').replace(/^INS-/i, '');
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(m.image || null);
   editingSubIngredients = (m.subIngredients || []).map(si => ({...si}));

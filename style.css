@@ -1906,6 +1906,28 @@
     padding:16px;
     margin-bottom:20px;
   }
+  /* "INS-" is a fixed label, not something the user should be able to
+     accidentally delete or retype -- rendered as an attached, non-input
+     prefix so only the digits after it are ever actually editable (see
+     formatInsNumber, which reassembles the two into one stored value). */
+  .ins-number-row{display:flex;align-items:stretch;}
+  .ins-number-prefix{
+    display:flex;
+    align-items:center;
+    padding:0 10px;
+    background:var(--bg);
+    border:1px solid var(--border);
+    border-right:none;
+    border-radius:var(--radius) 0 0 var(--radius);
+    font-size:14px;
+    color:var(--text-dim);
+    white-space:nowrap;
+  }
+  .ins-number-row input{
+    border-radius:0 var(--radius) var(--radius) 0;
+    flex:1;
+    min-width:0;
+  }
   .material-search{margin-bottom:12px;}
   .material-table th{white-space:nowrap;}
   .material-table td{font-size:12px;}
