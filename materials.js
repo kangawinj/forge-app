@@ -50,10 +50,6 @@ function saveMaterialToCloud(m){
   return setDoc(doc(materialsCol, m.id), m);
 }
 
-function deleteMaterialFromCloud(id){
-  return deleteDoc(doc(materialsCol, id));
-}
-
 export function attachMaterialsListener(){
   unsubscribeMaterials = onSnapshot(materialsCol, snapshot => {
     ingredientMaster = snapshot.docs.map(d => d.data());

@@ -1078,9 +1078,27 @@ async function generateShareLink(t){
     showCloudError('Failed to create the share link: ' + err.message);
     return;
   }
+  // Best-effort: clean up the PREVIOUS link's own doc now that this trial
+  // no longer points to it, so repeatedly regenerating doesn't leave a
+  // trail of dead evaluationLinks docs behind forever. Only when it's
+  // already expired, though -- a guest could still have that old link/QR
+  // open mid-submission right up until its own real expiry, and deleting
+  // it out from under them here would break a perfectly legitimate
+  // in-flight submission that has nothing to do with this regenerate.
+  // (Their /evaluationResponses aren't affected either way -- Import/
+  // Dismiss/Preview all look them up by trialId, never by linkToken.)
+  const oldToken = t.shareToken;
+  const oldExpired = t.shareExpiresAt && t.shareExpiresAt <= Date.now();
   t.shareToken = shareToken;
   t.shareExpiresAt = expiresAt;
   scheduleTrialSave(t);
+  if(oldToken && oldExpired){
+    try{
+      await deleteDoc(doc(evaluationLinksCol, oldToken));
+    }catch(err){
+      console.error('Forge: failed to delete previous share link', err);
+    }
+  }
 }
 // Fetched fresh (not a live listener) each time the modal opens or
 // "Refresh" is clicked -- a guest survey isn't the kind of thing someone's
@@ -1549,7 +1567,29 @@ function saveTrialToCloud(t){
   return setDoc(doc(trialsCol, t.id), t);
 }
 function deleteTrialFromCloud(id){
+  deleteTrialShareArtifacts(id);
   return deleteDoc(doc(trialsCol, id));
+}
+// A deleted trial has no cascade delete of its own in Firestore -- without
+// this, any evaluationLinks/evaluationResponses docs it ever generated
+// (see generateShareLink/save in evaluate.js) would become permanently
+// orphaned, referencing a trialId nothing points to any more. Best-effort
+// and fire-and-forget, same as the trial delete itself above: if this
+// fails, the worst case is a harmless orphaned doc, exactly the pre-
+// existing behavior this is meant to improve on, not a regression.
+async function deleteTrialShareArtifacts(trialId){
+  try{
+    const [linksSnap, responsesSnap] = await Promise.all([
+      getDocs(query(evaluationLinksCol, where('trialId', '==', trialId))),
+      getDocs(query(evaluationResponsesCol, where('trialId', '==', trialId)))
+    ]);
+    await Promise.all([
+      ...linksSnap.docs.map(d => deleteDoc(d.ref)),
+      ...responsesSnap.docs.map(d => deleteDoc(d.ref))
+    ]);
+  }catch(err){
+    console.error('Forge: failed to clean up this trial\'s share links/responses', err);
+  }
 }
 function scheduleTrialSave(t){
   t.updatedAt = Date.now();

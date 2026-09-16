@@ -948,7 +948,8 @@ const CHANGELOG = [
   { version: "3.0.537", date: "2026-09-17", note: "evaluate.html: moved each product's Comments field from its own step page onto the Review page (before Submit), and added an optional reference photo (up to 2 per product) alongside it there" },
   { version: "3.0.538", date: "2026-09-17", note: "Fixed the JAR press-and-drag picking up an ordinary page-scroll that merely passed over the 1-9 buttons and silently changing whatever score was under the finger -- a gesture is no longer treated as a drag until it's clearly moving more horizontally than vertically" },
   { version: "3.0.539", date: "2026-09-17", note: "Perform Evaluation and External Evaluation: consolidated Comments from one-per-product into a single field covering the whole test, asked once on the Review page, and added an optional reference photo there (up to 2) to both" },
-  { version: "3.0.540", date: "2026-09-17", note: "Made an already-Imported guest response clickable to remove its scores/comment/photo from the test's results -- asks for your password first, same as Undismiss; the response itself is kept and can be imported again" }
+  { version: "3.0.540", date: "2026-09-17", note: "Made an already-Imported guest response clickable to remove its scores/comment/photo from the test's results -- asks for your password first, same as Undismiss; the response itself is kept and can be imported again" },
+  { version: "3.0.541", date: "2026-09-17", note: "Housekeeping: Trash now purges expired items automatically each session (not only when the Trash screen is opened); deleting a Test Result now also cleans up its own Share External Evaluation links/responses instead of leaving them orphaned; regenerating a share link now deletes the previous one once it's expired; removed an unused deleteMaterialFromCloud function" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -4295,6 +4296,22 @@ document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible') sendPresenceHeartbeat();
 });
 
+// Runs once per session right when the app unlocks, rather than only when
+// someone happens to open the Trash screen (see purgeExpiredTrash's own
+// comment about that being the only other trigger) -- Trash is opened
+// rarely, so without this, items past their 30-day retention could sit
+// around indefinitely on an install nobody ever manually checks Trash on.
+// Fire-and-forget: doesn't touch trashItemsCache/renderTrashList, since
+// the Trash modal isn't necessarily open when this runs.
+async function purgeExpiredTrashOnLoad(){
+  try{
+    const snap = await getDocs(trashCol);
+    const items = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    await purgeExpiredTrash(items);
+  }catch(err){
+    console.error('Forge: background Trash purge failed', err);
+  }
+}
 function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
@@ -4307,6 +4324,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeActivityEvents) attachActivityEventsListener();
   if(!unsubscribeMyProfile) attachMyProfileListener();
   if(!unsubscribePresence) attachPresenceListeners();
+  purgeExpiredTrashOnLoad();
   if(appView === 'auth' || appView === 'pending') goToApp();
 }
 
