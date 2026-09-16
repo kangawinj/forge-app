@@ -3734,6 +3734,15 @@
     display:flex;
     flex-direction:column;
   }
+  /* .pf-allergen-suggestions{display:flex} above outranks the browser's own
+     [hidden]{display:none} default (same specificity, but an author-
+     stylesheet class beats a UA-stylesheet attribute selector) -- so
+     setting box.hidden = true from JS (blur/scroll/click-outside, see
+     products.js) was silently doing nothing, leaving the dropdown visibly
+     stuck open and floating over whatever the page scrolled to underneath
+     it. This rule -- one class + the [hidden] attribute, genuinely more
+     specific than the plain class rule above -- is what actually hides it. */
+  .pf-allergen-suggestions[hidden]{display:none;}
   .pf-allergen-suggestion{display:block;width:100%;text-align:left;padding:8px 12px;font-size:13px;background:none;border:none;cursor:pointer;color:var(--text);}
   .pf-allergen-suggestion:hover, .pf-allergen-suggestion:active{background:var(--primary-light);}
   /* Attachment Preview popup — image/PDF render inline, other file types
