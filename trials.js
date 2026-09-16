@@ -209,14 +209,16 @@ function improvementFieldValue(pd, criteriaId){
 // criteria's own JAR score(s) from Sensory Evaluation above (same
 // combinedEvaluationEntries the JAR table itself reads, so it's always
 // exactly what's shown there, across however many evaluators scored it),
-// rounds to the nearest JAR step, and reuses that step's own bilingual
-// wording (JAR_SCALE/jarScoreLabel) so "slightly" vs "much" carries
-// through into the suggestion too. 3 ("Just right") or no numeric score
-// yet needs no suggestion -- returns ''. Only ever a smart DEFAULT shown
-// when nobody's typed their own note yet (see improvementRowsHtml below);
-// never overwrites a saved one, and only actually persists if a person
-// edits the field (its change handler is what writes pd[improve_...],
-// this function itself never touches saved data).
+// rounds to the nearest JAR step, and says just the direction to adjust in
+// -- Increase/Decrease + the criteria name, no restating of the JAR
+// wording itself (already shown right above in Sensory Evaluation, so
+// repeating it here read as redundant/confusing rather than helpful, per
+// user feedback). 3 ("Just right") or no numeric score yet needs no
+// suggestion -- returns ''. Only ever a smart DEFAULT shown when nobody's
+// typed their own note yet (see improvementRowsHtml below); never
+// overwrites a saved one, and only actually persists if a person edits
+// the field (its change handler is what writes pd[improve_...], this
+// function itself never touches saved data).
 function autoImprovementSuggestion(c, pd){
   const entries = combinedEvaluationEntries(pd, c.id, null);
   const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= 5);
@@ -225,7 +227,7 @@ function autoImprovementSuggestion(c, pd){
   if(avg === 3) return '';
   const action = avg < 3 ? 'Increase' : 'Decrease';
   const actionTh = avg < 3 ? 'เพิ่ม' : 'ลด';
-  return `${action} (${actionTh}) ${c.label} — ${jarScoreLabel(String(avg))}`;
+  return `${action} (${actionTh}) ${c.label}`;
 }
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 const TRIAL_TEST_RESULT_CLASSES = {
