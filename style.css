@@ -5317,6 +5317,26 @@
   .eval-wizard-review-row-3col{display:grid;grid-template-columns:1fr auto 1fr;align-items:baseline;}
   .eval-wizard-review-row-3col b{text-align:right;}
   .eval-wizard-review-note-col{text-align:left;font-style:italic;color:var(--text-dim);white-space:normal;word-break:break-word;}
+  /* Idea Guideline summary next to the JAR score (see jarAdjustmentPercent
+     in trials.js) -- same figure as each step's own Idea Guideline line,
+     just compacted into a small pill here since the review page is a
+     dense summary table, not the interactive step. */
+  .eval-wizard-review-idea-badge{
+    display:inline-block;
+    margin-left:6px;
+    padding:1px 6px;
+    border-radius:999px;
+    background:var(--accent-light);
+    color:var(--accent);
+    font-size:10px;
+    font-weight:700;
+  }
+  .eval-wizard-review-disclaimer{
+    font-size:11px;
+    color:var(--text-dim);
+    font-style:italic;
+    margin:4px 2px 14px;
+  }
   @media (max-width:600px){
     .eval-wizard-jar-row{flex-wrap:wrap;}
     .eval-wizard-jar-btn{min-width:38px;}

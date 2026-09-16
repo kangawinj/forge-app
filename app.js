@@ -895,7 +895,8 @@ const CHANGELOG = [
   { version: "3.0.491", date: "2026-09-16", note: "The Perform Evaluation wizard's photo is read-only now — uploading only happens on Part 1's product card (the form filled in before testing), the wizard just shows whatever's already there instead of offering its own Choose File button" },
   { version: "3.0.492", date: "2026-09-16", note: "Widened the JAR scale from 1-5 to 1-9 (Perform Evaluation, Sensory Evaluation, Improvement Guidelines all follow) — 5 is the new \"Just right\" midpoint. A score saved under the old 5-point scale now reads against these finer-grained anchors instead, since nothing about widening the scale can rewrite what an old answer meant at the time" },
   { version: "3.0.493", date: "2026-09-16", note: "Added an \"Idea Guideline\" to each criteria in the Perform Evaluation wizard — a -100%/+100% line with a dot showing how far off Just Right that JAR answer is (e.g. a score of 4 on the 9-point scale shows +25%), so it's clear at a glance how much to adjust and in which direction" },
-  { version: "3.0.494", date: "2026-09-16", note: "Fixed the Idea Guideline's percentage label overlapping its own caption text above it — folded the percentage into the caption line instead of floating it as a separate label over the dot" }
+  { version: "3.0.494", date: "2026-09-16", note: "Fixed the Idea Guideline's percentage label overlapping its own caption text above it — folded the percentage into the caption line instead of floating it as a separate label over the dot" },
+  { version: "3.0.495", date: "2026-09-16", note: "The Perform Evaluation wizard's Review page now shows each criteria's Idea Guideline adjustment (e.g. \"+25%\") next to its score, with a note that the final improvement direction may change once the overall average and other evaluators' opinions are in" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

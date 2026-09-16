@@ -455,13 +455,16 @@ function renderEvalWizardReview(t, products, criteria){
           <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
           ${criteria.map(c => {
             const note = mine[`${c.id}_note`];
-            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
+            const pct = jarAdjustmentPercent(mine[c.id]);
+            const pctBadge = (pct !== null && pct !== 0) ? `<span class="eval-wizard-review-idea-badge">${pct > 0 ? '+' : ''}${pct}%</span>` : '';
+            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${pctBadge}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
           }).join('')}
           ${mine.comment ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(mine.comment)}</b></div>` : ''}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
         </div>
         `;
       }).join('')}
+      <div class="eval-wizard-review-disclaimer">Note: This Idea Guideline reflects only your own scores — the final improvement direction may change based on the overall average and other evaluators' opinions (คำแนะนำนี้อ้างอิงจากคะแนนของคุณเท่านั้น ผลสุดท้ายอาจเปลี่ยนแปลงตามค่าเฉลี่ยโดยรวมและความเห็นจากผู้เข้าร่วมทดสอบคนอื่นๆ)</div>
       <div class="eval-wizard-nav">
         <button type="button" class="btn btn-sm" data-role="eval-back">Back</button>
         <button type="button" class="btn btn-sm btn-primary" data-role="eval-done">${icon('check')} Done</button>
