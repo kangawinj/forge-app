@@ -277,6 +277,24 @@ function jarScoreLabel(value){
 function jarScoreDisplay(value){
   return /^[1-9]$/.test(value || '') ? `${value}/9` : (value || '');
 }
+// "Idea Guideline" -- how far off-ideal a JAR answer is, as a percentage
+// toward the midpoint ("Just right"), assuming the distance from the
+// midpoint to either end of the scale is a full 100% change in whatever's
+// being judged (e.g. 4 steps from 5 to 1 on a 9-point scale == 100%, so
+// each step off is 25%). Positive means "increase", negative "decrease" --
+// a score of 4 (one step below the midpoint 5, on a 9-point scale) comes
+// out to +25%, matching the worked example this was built from. Reads
+// JAR_SCALE's own length/midpoint (not hardcoded) so it keeps working if
+// the scale is ever resized again, same reasoning as autoImprovementSuggestion.
+// Returns null for no/invalid answer yet, 0 exactly at the midpoint.
+function jarAdjustmentPercent(value){
+  const n = parseInt(value, 10);
+  if(!(n >= 1 && n <= JAR_SCALE.length)) return null;
+  const midpoint = Math.ceil(JAR_SCALE.length / 2);
+  const maxDeviation = midpoint - 1;
+  if(maxDeviation <= 0) return 0;
+  return Math.round(-((n - midpoint) / maxDeviation) * 100);
+}
 // Shared by the main render pass and the evaluation wizard so both list
 // products being compared the same way (linked recipes first, then manual
 // products, each labeled the same way the product cards/table headers are).
@@ -380,6 +398,23 @@ function renderEvalWizardStep(t, products, criteria, step){
             `).join('')}
           </div>
           <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
+          ${(() => {
+            const pct = jarAdjustmentPercent(mine[c.id]);
+            if(pct === null || pct === 0) return '';
+            const markerPos = 50 + pct / 2;
+            return `
+              <div class="eval-wizard-idea-guideline">
+                <div class="eval-wizard-idea-label">Idea Guideline — adjust toward Just Right (พอดี)</div>
+                <div class="eval-wizard-idea-track">
+                  <div class="eval-wizard-idea-center"></div>
+                  <div class="eval-wizard-idea-marker" style="left:${markerPos}%;">
+                    <span class="eval-wizard-idea-marker-label">${pct > 0 ? '+' : ''}${pct}%</span>
+                  </div>
+                </div>
+                <div class="eval-wizard-idea-scale-labels"><span>-100%</span><span>Just right</span><span>+100%</span></div>
+              </div>
+            `;
+          })()}
         </div>
       `).join('')}
       <div class="eval-wizard-question">
