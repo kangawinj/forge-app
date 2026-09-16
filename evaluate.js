@@ -215,7 +215,7 @@ function stepHtml(product, criteria, total){
   return `
     <div class="eval-wizard-progress" style="margin-bottom:8px;">Sample ${step + 1} of ${total}</div>
     ${productSectionHtml(product, criteria)}
-    <div class="card eval-wizard-nav" style="margin-bottom:0;">
+    <div class="card eval-wizard-nav" style="margin-bottom:0;margin-top:0;">
       <button type="button" class="btn btn-sm" data-role="wiz-back" ${step === 0 ? 'disabled' : ''}>Back</button>
       <button type="button" class="btn btn-sm btn-primary" data-role="wiz-next">${step === total - 1 ? 'Review' : 'Next Sample'}</button>
     </div>

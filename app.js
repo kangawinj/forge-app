@@ -938,7 +938,8 @@ const CHANGELOG = [
   { version: "3.0.527", date: "2026-09-16", note: "Rebuilt the guest evaluate.html survey to walk through one product per page (Back/Next Sample), same as the Perform Evaluation wizard, ending on a Review page listing every answer with its own Back button so a guest can fix a wrong tap before the one and only Submit" },
   { version: "3.0.528", date: "2026-09-16", note: "Made a Dismissed guest response clickable to undo -- asks for your password first, same as deleting a test result, since restoring it puts it back in front of Import" },
   { version: "3.0.529", date: "2026-09-16", note: "Guest evaluate.html: added the Idea Guideline widget under each JAR question, same as the real Perform Evaluation wizard, and a \"Back to Edit\" button on the Thank You page that returns to the Review page to fix and resend an answer" },
-  { version: "3.0.530", date: "2026-09-16", note: "Fixed the password confirmation dialog appearing behind (not in front of) Perform Evaluation / Summary Test / Share External Evaluation / Response Preview when triggered from inside one of them, e.g. undismissing a guest response" }
+  { version: "3.0.530", date: "2026-09-16", note: "Fixed the password confirmation dialog appearing behind (not in front of) Perform Evaluation / Summary Test / Share External Evaluation / Response Preview when triggered from inside one of them, e.g. undismissing a guest response" },
+  { version: "3.0.531", date: "2026-09-16", note: "Optimized the JAR (1-9) and Test Result buttons for narrow phone screens (e.g. 402x873) -- switched from an unevenly-wrapping row to a clean 3x3 grid / single column instead of stretched leftover buttons, and tightened extra empty space above Back/Next Sample" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
