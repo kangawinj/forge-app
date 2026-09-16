@@ -3919,6 +3919,14 @@
      is Needs Revision -- Accepted/Not accepted are already a final call.
      Muted to read as "not needed" rather than "still blank". */
   .trial-improve-na textarea{background:var(--bg);color:var(--text-dim);}
+  /* A computed default (autoImprovementSuggestion in trials.js), not
+     something a person actually typed yet -- italic + accent-tinted so it
+     visibly reads as "suggested", not as saved data, until it's edited. */
+  .teval-improve-auto{
+    font-style:italic;
+    color:var(--accent);
+    background:var(--accent-light);
+  }
   /* Sensory Evaluation/Test Result's combined "Overall" view (see
      combinedEvaluationEntries in trials.js) -- one line per evaluator who
      weighed in, instead of a single shared textarea anyone could

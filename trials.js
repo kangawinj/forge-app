@@ -205,6 +205,28 @@ function improvementFieldValue(pd, criteriaId){
   const legacyKey = LEGACY_IMPROVEMENT_KEYS[criteriaId];
   return (legacyKey ? pd[legacyKey] : '') || '';
 }
+// The "Automatic suggestion" column's actual auto part -- averages this
+// criteria's own JAR score(s) from Sensory Evaluation above (same
+// combinedEvaluationEntries the JAR table itself reads, so it's always
+// exactly what's shown there, across however many evaluators scored it),
+// rounds to the nearest JAR step, and reuses that step's own bilingual
+// wording (JAR_SCALE/jarScoreLabel) so "slightly" vs "much" carries
+// through into the suggestion too. 3 ("Just right") or no numeric score
+// yet needs no suggestion -- returns ''. Only ever a smart DEFAULT shown
+// when nobody's typed their own note yet (see improvementRowsHtml below);
+// never overwrites a saved one, and only actually persists if a person
+// edits the field (its change handler is what writes pd[improve_...],
+// this function itself never touches saved data).
+function autoImprovementSuggestion(c, pd){
+  const entries = combinedEvaluationEntries(pd, c.id, null);
+  const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= 5);
+  if(!nums.length) return '';
+  const avg = Math.round(nums.reduce((s,n)=>s+n,0) / nums.length);
+  if(avg === 3) return '';
+  const action = avg < 3 ? 'Increase' : 'Decrease';
+  const actionTh = avg < 3 ? 'เพิ่ม' : 'ลด';
+  return `${action} (${actionTh}) ${c.label} — ${jarScoreLabel(String(avg))}`;
+}
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 const TRIAL_TEST_RESULT_CLASSES = {
   'Accepted': 'trial-result-accepted',
@@ -862,7 +884,12 @@ export function renderTrialsList(){
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const needsRevision = productNeedsRevision(pd);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? '' : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(improvementFieldValue(pd, c.id))}</textarea></td>`;
+          const stored = improvementFieldValue(pd, c.id);
+          const auto = (stored || !needsRevision) ? '' : autoImprovementSuggestion(c, pd);
+          const displayValue = stored || auto;
+          const isAuto = !stored && !!auto;
+          const autoTitle = 'Automatically suggested from this criteria\'s JAR score above — edit to write your own instead';
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve${isAuto ? ' teval-improve-auto' : ''}" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? (isAuto ? autoTitle : '') : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(displayValue)}</textarea></td>`;
         }).join('')}
         <td class="recipe-boundary"><textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea></td>
       </tr>
