@@ -2740,6 +2740,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         suggestBox.innerHTML = matches.map(m => `
           <div class="ing-suggestion-item" data-id="${escapeHtml(m.id)}">
             <span class="ing-suggestion-name">${escapeHtml(materialLabel(m))}</span>
+            ${m.brand ? `<span class="ing-suggestion-brand">${escapeHtml(m.brand)}</span>` : ''}
           </div>
         `).join('');
         suggestBox.classList.add('open');
@@ -3024,6 +3025,7 @@ function renderOverview(allIngredients, prepareWeightByIng){
         image: material ? material.image : '',
         vendorName: material ? material.vendorName : '',
         manufacturer: material ? material.manufacturer : '',
+        brand: material ? material.brand : '',
         pricePerKg,
         // Kept only so clicking the thumbnail below can open the same
         // Material Detail popup the Ingredient Library page itself uses
@@ -3101,7 +3103,7 @@ function renderOverview(allIngredients, prepareWeightByIng){
           <div class="overview-ing-info">
             <span>${escapeHtml(g.name)}</span>
             ${g.note ? `<span class="overview-ing-prep">${escapeHtml(g.note)}</span>` : ''}
-            ${(g.vendorName || g.manufacturer) ? `<span class="overview-ing-sub">${escapeHtml([g.vendorName, g.manufacturer].filter(Boolean).join(' · '))}</span>` : ''}
+            ${(g.brand || g.vendorName || g.manufacturer) ? `<span class="overview-ing-sub">${escapeHtml([g.brand, g.vendorName, g.manufacturer].filter(Boolean).join(' · '))}</span>` : ''}
           </div>
         </div>
       </td>

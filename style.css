@@ -1739,11 +1739,25 @@
     padding:8px 12px;
     font-size:13px;
     cursor:pointer;
+    display:flex;
+    align-items:baseline;
+    gap:8px;
   }
   .ing-suggestion-item:hover, .ing-suggestion-item:active{
     background:var(--primary-light);
   }
-  .ing-suggestion-name{color:var(--text);}
+  .ing-suggestion-name{
+    color:var(--text);
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  .ing-suggestion-brand{
+    font-size:11px;
+    color:var(--text-dim);
+    flex-shrink:0;
+    margin-left:auto;
+  }
   .overview-ing-cell{
     display:flex;
     align-items:center;
