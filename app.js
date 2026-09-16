@@ -910,7 +910,8 @@ const CHANGELOG = [
   { version: "3.0.506", date: "2026-09-16", note: "Summary Test now also lists which criteria are already Just Right (พอดี), not just the ones that still need adjusting, so it reads as the complete picture instead of only the problems" },
   { version: "3.0.507", date: "2026-09-16", note: "Summary Test now shows the test's own Note (same field as Part 2's Note textarea) at the bottom, when there is one" },
   { version: "3.0.508", date: "2026-09-16", note: "Added a \"Summary Table\" view to Test Results, alongside the existing List view (toggle at the top) — one row per test, sorted most-recently-updated first, with Project / PD (Responsible Person) / an inline Summary Test readout per column, for quickly scanning many tests at once" },
-  { version: "3.0.509", date: "2026-09-16", note: "Summary Table now groups tests by their linked Project — Project/PD shown once per group instead of repeated on every row — with each project's own tests listed newest to oldest underneath" }
+  { version: "3.0.509", date: "2026-09-16", note: "Summary Table now groups tests by their linked Project — Project/PD shown once per group instead of repeated on every row — with each project's own tests listed newest to oldest underneath" },
+  { version: "3.0.510", date: "2026-09-16", note: "Suggested Improvements and Just Right lines (in both Summary Test and Summary Table) now show that criteria's own Improvement Guidelines Note when there is one, instead of just the direction/%" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

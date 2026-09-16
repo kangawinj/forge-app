@@ -5342,6 +5342,10 @@
   .trial-summary-improve-list{margin:0;padding-left:18px;font-size:13px;color:var(--text);}
   .trial-summary-improve-list li{margin-bottom:4px;}
   .trial-summary-improve-list li b{color:var(--primary-dark);}
+  /* Improvement Guidelines' own per-criteria Note (t.criteriaImproveNotes),
+     shown right after that criteria's own line in both the modal's
+     bulleted list and the table's compact one. */
+  .trial-summary-item-note{font-style:italic;color:var(--text-dim);}
   .trial-summary-ok{font-size:13px;color:var(--ok);margin-top:10px;}
   /* Criteria already at the midpoint -- plain list, no bold/action wording
      since there's nothing to act on, just dimmer than the improvements

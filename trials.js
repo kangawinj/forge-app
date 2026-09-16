@@ -598,15 +598,26 @@ const TRIAL_SUMMARY_VERDICT_CLASSES = {
 };
 // Shared by the Summary Test modal (detailed cards) and the Summary Table
 // view (compact inline) -- one product's verdict plus which of its
-// scored criteria still need adjusting vs are already Just Right.
+// scored criteria still need adjusting vs are already Just Right, each
+// carrying its own Improvement Guidelines Note (t.criteriaImproveNotes --
+// the SAME per-criteria note typed into that table's own Note column,
+// not Sensory Evaluation's separate criteriaNotes bucket) when there is
+// one. Read directly off t rather than through getCriteriaNotes, since
+// that helper lazily writes an empty {} onto t if the bucket is missing
+// -- fine for the editable table it's normally used from, but this is a
+// read-only summary with nothing to ever save, so there's no reason to
+// mutate the live trial object just to read from it.
 function summarizeTrialProduct(t, criteria, p){
   const pd = getTrialProductData(t, p.id);
   const verdict = combinedVerdict(pd);
+  const improveNotes = (t.criteriaImproveNotes && typeof t.criteriaImproveNotes === 'object') ? t.criteriaImproveNotes : {};
   const scoredCriteria = criteria.filter(c => criteriaAverageJarScore(c, pd) !== null);
   const improvements = scoredCriteria
-    .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd) }))
+    .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd), note: (improveNotes[c.id] || '').trim() }))
     .filter(x => x.suggestion);
-  const justRight = scoredCriteria.filter(c => !autoImprovementSuggestion(c, pd));
+  const justRight = scoredCriteria
+    .filter(c => !autoImprovementSuggestion(c, pd))
+    .map(c => ({ label: c.label, note: (improveNotes[c.id] || '').trim() }));
   return { label: p.label, verdict, improvements, justRight };
 }
 // Read-only overview -- one row per test (already sorted most-recently-
@@ -658,8 +669,8 @@ function renderTrialsSummaryTable(container, sortedTrials){
                         <b>${escapeHtml(pr.label)}</b>
                         ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
                       </div>
-                      ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion)).join(', ')}</div>` : ''}
-                      ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label)).join(', ')}</div>` : ''}
+                      ${pr.improvements.length ? `<div class="trial-table-summary-line"><b>Improve:</b> ${pr.improvements.map(x => escapeHtml(x.suggestion) + (x.note ? ` (${escapeHtml(x.note)})` : '')).join(', ')}</div>` : ''}
+                      ${pr.justRight.length ? `<div class="trial-table-summary-line trial-table-summary-ok"><b>Just Right:</b> ${pr.justRight.map(c => escapeHtml(c.label) + (c.note ? ` (${escapeHtml(c.note)})` : '')).join(', ')}</div>` : ''}
                     </div>
                   `).join('')}
                 </td>
@@ -716,11 +727,11 @@ function renderTrialSummaryModal(){
             </div>
             ${improvements.length ? `
               <div class="trial-summary-improve-title">Suggested Improvements</div>
-              <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}</li>`).join('')}</ul>
+              <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
             ` : (verdict ? '<div class="trial-summary-ok">✓ All criteria are Just Right — no changes suggested</div>' : '')}
             ${justRight.length ? `
               <div class="trial-summary-improve-title">Just Right (พอดี)</div>
-              <ul class="trial-summary-justright-list">${justRight.map(c => `<li>${escapeHtml(c.label)}</li>`).join('')}</ul>
+              <ul class="trial-summary-justright-list">${justRight.map(c => `<li>${escapeHtml(c.label)}${c.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(c.note)}</span>` : ''}</li>`).join('')}</ul>
             ` : ''}
           </div>
         `;
