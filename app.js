@@ -907,7 +907,8 @@ const CHANGELOG = [
   { version: "3.0.503", date: "2026-09-16", note: "The Test Results list now shows a small thumbnail from the linked Project's Idea/Reference Images (if it has one) on each test's collapsed row, next to the name" },
   { version: "3.0.504", date: "2026-09-16", note: "Added a \"Summary Test\" button to each Test Results row — a condensed, read-only readout per product showing the overall verdict and only the criteria that still need adjusting (same auto-suggested direction/% as Improvement Guidelines), instead of the full editable tables" },
   { version: "3.0.505", date: "2026-09-16", note: "Fixed the Test Results list's linked-project thumbnail to pull from the Project's own cover photo (same one the Projects list itself shows) instead of its separate Idea/Reference Images gallery" },
-  { version: "3.0.506", date: "2026-09-16", note: "Summary Test now also lists which criteria are already Just Right (พอดี), not just the ones that still need adjusting, so it reads as the complete picture instead of only the problems" }
+  { version: "3.0.506", date: "2026-09-16", note: "Summary Test now also lists which criteria are already Just Right (พอดี), not just the ones that still need adjusting, so it reads as the complete picture instead of only the problems" },
+  { version: "3.0.507", date: "2026-09-16", note: "Summary Test now shows the test's own Note (same field as Part 2's Note textarea) at the bottom, when there is one" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

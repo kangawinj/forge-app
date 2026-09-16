@@ -654,6 +654,12 @@ function renderTrialSummaryModal(){
           </div>
         `;
       }).join('')}
+      ${(t.note || '').trim() ? `
+        <div class="trial-summary-note">
+          <div class="trial-summary-improve-title">Note</div>
+          <div class="trial-summary-note-text">${escapeHtml(t.note)}</div>
+        </div>
+      ` : ''}
     </div>
   `;
   overlay.querySelector('[data-role="summary-close"]')?.addEventListener('click', () => {

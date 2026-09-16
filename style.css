@@ -5348,6 +5348,11 @@
      list so it reads as the secondary, "already fine" half of the page. */
   .trial-summary-justright-list{margin:0;padding-left:18px;font-size:13px;color:var(--ok);}
   .trial-summary-justright-list li{margin-bottom:4px;}
+  /* Test-level Note (t.note, same field as Part 2's own "Note" textarea)
+     -- shown once for the whole test below every product card, not
+     repeated per product, since it isn't scoped to any one of them. */
+  .trial-summary-note{border-top:1px solid var(--border);padding-top:14px;margin-top:6px;}
+  .trial-summary-note-text{font-size:13px;color:var(--text);white-space:pre-wrap;margin-top:6px;}
   .eval-wizard-review-product{
     background:var(--bg);
     border:1px solid var(--border);
