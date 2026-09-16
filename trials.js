@@ -701,6 +701,15 @@ export function renderTrialsList(){
       ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
     ];
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
+    // Improvement Guidelines' own header row (NOT shared with Sensory
+    // Evaluation's identical-looking one above, even though both tables
+    // otherwise reuse evalTargets/evaluationCriteria). Both the per-sample
+    // columns and the trailing Note column are plain free-text fields either
+    // way -- but per-sample is meant for the app's own suggested fix for
+    // that criteria/sample, while Note is a person's own separate remark,
+    // and that distinction wasn't obvious from the column labels alone, so
+    // each gets a small caption explaining which is which.
+    const improvementHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}<span class="teval-header-hint">Automatic suggestion (คำแนะนำอัตโนมัติ)</span></th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
     const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => {
@@ -987,7 +996,7 @@ export function renderTrialsList(){
               <div style="overflow-x:auto;">
                 <table class="compare-table">
                   ${trialColgroup}
-                  <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
+                  <thead><tr><th>Criteria</th>${improvementHeaderCells}<th class="recipe-boundary">Note<span class="teval-header-hint">Enter your own info (ระบุข้อมูลด้วยตัวเอง)</span></th></tr></thead>
                   <tbody>${improvementRowsHtml}</tbody>
                 </table>
               </div>

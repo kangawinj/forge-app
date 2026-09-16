@@ -2457,6 +2457,20 @@
     color:var(--text-dim);
     border-bottom:2px solid var(--border);
   }
+  /* Small caption under a header's own label (see improvementHeaderCells /
+     the Note <th> in trials.js's Improvement Guidelines table) -- normal
+     case since the parent th's text-transform:uppercase above would
+     otherwise shout the Thai/English hint text too. */
+  .teval-header-hint{
+    display:block;
+    font-size:9.5px;
+    font-weight:400;
+    text-transform:none;
+    letter-spacing:normal;
+    color:var(--text-dim);
+    margin-top:2px;
+    white-space:normal;
+  }
   .compare-table tr.diff-row{background:var(--accent-light);}
   .compare-table tr.total-row td{
     border-top:2px solid var(--border);

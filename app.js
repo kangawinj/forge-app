@@ -887,7 +887,8 @@ const CHANGELOG = [
   { version: "3.0.483", date: "2026-09-16", note: "A plain refresh (F5, the tab waking back up, etc.) now resumes exactly where you left off — whichever page or recipe was open — instead of always bouncing back to Home. Only clearing the browser's site data resets it, since that's the only way a website can distinguish that from a normal refresh" },
   { version: "3.0.484", date: "2026-09-16", note: "Export Excel's \"3. Costing\" sheet now respects the Costing card's eye toggle — Overhead Multiplier, Factory/Company/Customer Margins, and the explanatory note are left out of the workbook whenever that section is currently hidden on screen, not just visually hidden" },
   { version: "3.0.485", date: "2026-09-16", note: "Moved the +New Trial / Compare Trials buttons down from the recipe header into the Trial History card, right next to the T08...T23 stepper they act on, instead of sitting up top next to Print/Export Excel" },
-  { version: "3.0.486", date: "2026-09-16", note: "Fixed: the Allergens suggestion dropdown (Products form, field 17) could get stuck floating open over the page below it — a CSS rule was silently overriding the code that was already closing it correctly on scroll/click-away/blur" }
+  { version: "3.0.486", date: "2026-09-16", note: "Fixed: the Allergens suggestion dropdown (Products form, field 17) could get stuck floating open over the page below it — a CSS rule was silently overriding the code that was already closing it correctly on scroll/click-away/blur" },
+  { version: "3.0.487", date: "2026-09-16", note: "Test Results' Improvement Guidelines table now labels its two kinds of input — each sample's own column is captioned \"Automatic suggestion (คำแนะนำอัตโนมัติ)\", the trailing Note column \"Enter your own info (ระบุข้อมูลด้วยตัวเอง)\" — so it's clear which is which" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
