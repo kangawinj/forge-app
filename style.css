@@ -5440,7 +5440,11 @@
   .trial-share-response-meta{font-size:11px;color:var(--text-dim);}
   .trial-share-response-actions{display:flex;align-items:center;gap:8px;flex-shrink:0;}
   .trial-share-response-imported{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ok);font-weight:600;flex-shrink:0;}
-  .trial-share-response-dismissed{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--text-dim);font-weight:600;flex-shrink:0;}
+  .trial-share-response-dismissed{
+    display:flex;align-items:center;gap:4px;flex-shrink:0;
+    background:var(--bg);border-color:var(--border);color:var(--text-dim);font-weight:600;
+  }
+  .trial-share-response-dismissed:hover{background:var(--border);border-color:var(--border);color:var(--text-dim);}
   /* Count of guest responses still awaiting Import/Dismiss (see
      trialSharePendingCounts) -- a small filled circle on the row's own
      "Share External Evaluation" button, same idea as an unread-count

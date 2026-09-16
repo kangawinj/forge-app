@@ -939,7 +939,8 @@ const CHANGELOG = [
   { version: "3.0.528", date: "2026-09-16", note: "Made a Dismissed guest response clickable to undo -- asks for your password first, same as deleting a test result, since restoring it puts it back in front of Import" },
   { version: "3.0.529", date: "2026-09-16", note: "Guest evaluate.html: added the Idea Guideline widget under each JAR question, same as the real Perform Evaluation wizard, and a \"Back to Edit\" button on the Thank You page that returns to the Review page to fix and resend an answer" },
   { version: "3.0.530", date: "2026-09-16", note: "Fixed the password confirmation dialog appearing behind (not in front of) Perform Evaluation / Summary Test / Share External Evaluation / Response Preview when triggered from inside one of them, e.g. undismissing a guest response" },
-  { version: "3.0.531", date: "2026-09-16", note: "Optimized the JAR (1-9) and Test Result buttons for narrow phone screens (e.g. 402x873) -- switched from an unevenly-wrapping row to a clean 3x3 grid / single column instead of stretched leftover buttons, and tightened extra empty space above Back/Next Sample" }
+  { version: "3.0.531", date: "2026-09-16", note: "Optimized the JAR (1-9) and Test Result buttons for narrow phone screens (e.g. 402x873) -- switched from an unevenly-wrapping row to a clean 3x3 grid / single column instead of stretched leftover buttons, and tightened extra empty space above Back/Next Sample" },
+  { version: "3.0.532", date: "2026-09-17", note: "Gave the \"Dismissed\" guest response button a gray fill (not white like the other buttons) so its off/inactive state is visible at a glance" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
