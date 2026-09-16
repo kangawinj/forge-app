@@ -419,7 +419,9 @@ function renderEvalWizardStep(t, products, criteria, step){
                   <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
                 </div>
                 <div class="eval-wizard-idea-scale-labels">
-                  <span>-100%</span><span>Just right</span><span>+100%</span>
+                  <span${pct <= -100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>-100%</span>
+                  <span>Just right</span>
+                  <span${pct >= 100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>+100%</span>
                   <span class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</span>
                 </div>
               </div>

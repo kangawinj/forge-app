@@ -900,7 +900,8 @@ const CHANGELOG = [
   { version: "3.0.496", date: "2026-09-16", note: "Test Results' Improvement Guidelines auto-suggestion now includes the adjustment percentage too (e.g. \"Increase (เพิ่ม) Appearance +50%\"), computed from the same averaged JAR score as the direction itself" },
   { version: "3.0.497", date: "2026-09-16", note: "Moved the Idea Guideline's percentage back onto the track itself — sits directly under the orange dot now instead of in the caption line above it" },
   { version: "3.0.498", date: "2026-09-16", note: "Fixed the Idea Guideline's percentage overlapping the -100%/Just right/+100% labels below it (not enough space was reserved), and the Review page now shows each JAR score's own meaning (e.g. \"Moderately less than ideal (น้อยเกินไปปานกลาง)\") next to the number, same as every other JAR score display in the app" },
-  { version: "3.0.499", date: "2026-09-16", note: "The Idea Guideline's percentage now sits right on the -100%/Just right/+100% axis-label row instead of its own separate line above it" }
+  { version: "3.0.499", date: "2026-09-16", note: "The Idea Guideline's percentage now sits right on the -100%/Just right/+100% axis-label row instead of its own separate line above it" },
+  { version: "3.0.500", date: "2026-09-16", note: "Fixed the Idea Guideline's reading landing directly on top of the -100%/+100% axis label at the extreme ends (a score of 1 or 9) — that axis label now hides itself in that one case instead of double-printing the same number" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

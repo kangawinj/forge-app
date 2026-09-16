@@ -5282,6 +5282,11 @@
     color:var(--accent);
     white-space:nowrap;
   }
+  /* At the extreme ends (score of 1 or 9, ±100%) the live reading lands
+     exactly on top of the fixed "-100%"/"+100%" axis label -- visibility
+     (not display:none) so the flex row's own space-between spacing/width
+     doesn't shift and "Just right" stays centered either way. */
+  .eval-wizard-idea-scale-hidden{visibility:hidden;}
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
     flex:1;
