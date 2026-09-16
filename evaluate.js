@@ -353,7 +353,24 @@ function renderWizardStep(){
 // scroll instead, and per spec that also suppresses the synthetic click
 // event a touch normally fires afterward, so a real drag's own commit
 // below is the only thing that runs for it -- nothing double-fires.
+//
+// Per follow-up: an ordinary page-scroll gesture that merely *passes over*
+// this row (finger travelling mostly vertically, e.g. starting on or near
+// a button while scrolling down the page) was being misread as a
+// horizontal drag -- it hijacked the scroll and silently changed whatever
+// score happened to be under the finger at that instant. Fixed by not
+// deciding what the gesture even IS until it's moved far enough to have a
+// clear direction: the first ~8px of movement are only used to compare
+// |dx| vs |dy| once, which locks the whole touch into either 'drag'
+// (proceeds as before) or 'scroll' (never touched again -- no
+// preventDefault, no value change, the browser scrolls exactly as if this
+// code didn't exist). A tap that never moves that far never resolves
+// either way, so it still falls through to the plain click handler
+// untouched, same as always.
 function wireJarDragSelect(row, mine){
+  const DIRECTION_THRESHOLD = 8;
+  let startX = 0, startY = 0;
+  let mode = null; // null (undecided) | 'drag' | 'scroll'
   let dragValue = null;
   let dragMoved = false;
   function buttonAtPoint(x, y){
@@ -371,12 +388,21 @@ function wireJarDragSelect(row, mine){
   }
   row.addEventListener('touchstart', e => {
     const t = e.touches[0];
-    const btn = buttonAtPoint(t.clientX, t.clientY);
-    dragValue = btn ? btn.dataset.value : null;
+    startX = t.clientX;
+    startY = t.clientY;
+    mode = null;
+    dragValue = null;
     dragMoved = false;
   }, { passive: true });
   row.addEventListener('touchmove', e => {
     const t = e.touches[0];
+    if(mode === null){
+      const dx = t.clientX - startX;
+      const dy = t.clientY - startY;
+      if(Math.abs(dx) < DIRECTION_THRESHOLD && Math.abs(dy) < DIRECTION_THRESHOLD) return;
+      mode = Math.abs(dx) > Math.abs(dy) ? 'drag' : 'scroll';
+    }
+    if(mode === 'scroll') return;
     const btn = buttonAtPoint(t.clientX, t.clientY);
     if(btn){
       e.preventDefault();
@@ -388,15 +414,16 @@ function wireJarDragSelect(row, mine){
     }
   }, { passive: false });
   row.addEventListener('touchend', () => {
-    if(dragMoved && dragValue){
+    if(mode === 'drag' && dragMoved && dragValue){
       const criteriaId = row.querySelector('[data-role="eval-jar"]').dataset.criteriaId;
       mine[criteriaId] = dragValue;
       renderWizardStep();
     }
+    mode = null;
     dragValue = null;
     dragMoved = false;
   });
-  row.addEventListener('touchcancel', () => { dragValue = null; dragMoved = false; });
+  row.addEventListener('touchcancel', () => { mode = null; dragValue = null; dragMoved = false; });
 }
 
 function wireWizardStep(){
