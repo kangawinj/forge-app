@@ -947,7 +947,8 @@ const CHANGELOG = [
   { version: "3.0.536", date: "2026-09-17", note: "Fixed a light-colored band getting stuck on the last button touched after a press-and-drag score selection on a phone -- that was the JAR button's own :hover style, which mobile browsers can leave stuck on after a touch ends; now only applies on real pointer devices (mouse/trackpad)" },
   { version: "3.0.537", date: "2026-09-17", note: "evaluate.html: moved each product's Comments field from its own step page onto the Review page (before Submit), and added an optional reference photo (up to 2 per product) alongside it there" },
   { version: "3.0.538", date: "2026-09-17", note: "Fixed the JAR press-and-drag picking up an ordinary page-scroll that merely passed over the 1-9 buttons and silently changing whatever score was under the finger -- a gesture is no longer treated as a drag until it's clearly moving more horizontally than vertically" },
-  { version: "3.0.539", date: "2026-09-17", note: "Perform Evaluation and External Evaluation: consolidated Comments from one-per-product into a single field covering the whole test, asked once on the Review page, and added an optional reference photo there (up to 2) to both" }
+  { version: "3.0.539", date: "2026-09-17", note: "Perform Evaluation and External Evaluation: consolidated Comments from one-per-product into a single field covering the whole test, asked once on the Review page, and added an optional reference photo there (up to 2) to both" },
+  { version: "3.0.540", date: "2026-09-17", note: "Made an already-Imported guest response clickable to remove its scores/comment/photo from the test's results -- asks for your password first, same as Undismiss; the response itself is kept and can be imported again" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

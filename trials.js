@@ -1139,6 +1139,34 @@ async function importShareResponse(t, resp){
   loadSharePendingCounts();
   renderTrialsList();
 }
+// Undoes an Import -- the exact reverse of importShareResponse above,
+// deleting the same guestKey entries it wrote (per-product
+// pd.evaluations, plus the trial-level evaluatorComments/evaluatorPhotos)
+// so this response's scores/comment/photo stop counting toward the test's
+// real results. The response itself and everything it holds is untouched
+// (imported flips back to false in Firestore, so it reappears as pending
+// -- offering Import again or Dismiss instead). Gated behind the same
+// password re-entry as Undismiss, since this removes data that may
+// already be reflected in Improvement Guidelines/Summary elsewhere.
+async function removeImportedResponse(t, resp){
+  const guestKey = `guest:${resp.guestName || 'Guest'}:${resp.id}`;
+  Object.keys(resp.answers || {}).forEach(productId => {
+    const pd = getTrialProductData(t, productId);
+    if(pd.evaluations && typeof pd.evaluations === 'object') delete pd.evaluations[guestKey];
+  });
+  if(t.evaluatorComments && typeof t.evaluatorComments === 'object') delete t.evaluatorComments[guestKey];
+  if(t.evaluatorPhotos && typeof t.evaluatorPhotos === 'object') delete t.evaluatorPhotos[guestKey];
+  scheduleTrialSave(t);
+  try{
+    await setDoc(doc(evaluationResponsesCol, resp.id), { imported: false }, { merge: true });
+  }catch(err){
+    console.error('Forge: failed to mark guest response as no longer imported', err);
+    showCloudError('The response was removed from this test\'s results, but could not be updated in Firebase (it may still show as Imported next time): ' + err.message);
+  }
+  resp.imported = false;
+  loadSharePendingCounts();
+  renderTrialsList();
+}
 // "Skip this one" -- keeps the response (and everything in it) exactly as
 // submitted, just stops it from counting toward the pending badge or
 // offering an Import button, for a response nobody's going to want folded
@@ -1261,7 +1289,7 @@ function renderTrialShareModal(){
             <div class="trial-share-response-actions">
               <button type="button" class="btn btn-sm" data-role="preview-share-response" data-response-id="${escapeHtml(resp.id)}">${icon('eye', 14)} Preview</button>
               ${resp.imported
-                ? '<span class="trial-share-response-imported">' + icon('check', 14) + ' Imported</span>'
+                ? `<button type="button" class="btn btn-sm trial-share-response-imported" data-role="remove-imported-response" data-response-id="${escapeHtml(resp.id)}" title="Click to remove this response's data from the test results (asks for your password first)">${icon('check', 14)} Imported</button>`
                 : resp.dismissed
                   ? `<button type="button" class="btn btn-sm trial-share-response-dismissed" data-role="undismiss-share-response" data-response-id="${escapeHtml(resp.id)}" title="Click to un-dismiss (asks for your password first)">${icon('eye-off', 14)} Dismissed</button>`
                   : `
@@ -1322,6 +1350,20 @@ function renderTrialShareModal(){
         'Enter your password to bring this response back as pending (so it offers Import again).',
         async () => {
           await undismissShareResponse(resp);
+          renderTrialShareModal();
+        }
+      );
+    });
+  });
+  overlay.querySelectorAll('[data-role="remove-imported-response"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const resp = trialShareResponses.find(r => r.id === btn.dataset.responseId);
+      if(!resp) return;
+      requestAuthConfirm(
+        'Confirm Identity to Remove',
+        'Enter your password to remove this response\'s scores/comment/photo from this test\'s results (the response itself is kept, and can be imported again).',
+        async () => {
+          await removeImportedResponse(t, resp);
           renderTrialShareModal();
         }
       );
