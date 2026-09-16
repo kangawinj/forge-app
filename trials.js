@@ -1961,8 +1961,6 @@ export function renderTrialsList(){
         </div>
       `;
     })();
-      </tr>
-    `;
     // Improvement notes only make sense for a product at least one
     // evaluator flagged Needs Revision -- Accepted/Not accepted from
     // everyone is already a final call, nothing left to improve toward.
