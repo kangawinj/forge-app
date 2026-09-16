@@ -165,55 +165,59 @@ export function mountMaterialsView(){
             <input type="text" id="mf-nameTh" placeholder="Thai name">
           </div>
           <div class="field">
-            <label>3. Vendor Code (from supplier)</label>
-            <input type="text" id="mf-vendorCode" placeholder="e.g. RM-00123">
+            <label>3. Brand (optional)</label>
+            <input type="text" id="mf-brand" placeholder="e.g. Kite">
           </div>
         </div>
         <div class="grid-3">
           <div class="field">
-            <label>4. Vendor Name</label>
+            <label>4. Vendor Code (from supplier)</label>
+            <input type="text" id="mf-vendorCode" placeholder="e.g. RM-00123">
+          </div>
+          <div class="field">
+            <label>5. Vendor Name</label>
             <input type="text" id="mf-vendorName" placeholder="e.g. ABC Co., Ltd.">
           </div>
           <div class="field">
-            <label>5. Manufacturer Name (if any)</label>
+            <label>6. Manufacturer Name (if any)</label>
             <input type="text" id="mf-manufacturer" placeholder="e.g. XYZ Manufacturing">
-          </div>
-          <div class="field">
-            <label>6. Price/kg (฿)</label>
-            <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00">
           </div>
         </div>
         <div class="grid-3">
           <div class="field">
-            <label>7. MOQ/kg (if any)</label>
+            <label>7. Price/kg (฿)</label>
+            <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00">
+          </div>
+          <div class="field">
+            <label>8. MOQ/kg (if any)</label>
             <input type="number" id="mf-moq" min="0" step="0.01" placeholder="e.g. 25">
           </div>
           <div class="field">
-            <label>8. Photo (optional)</label>
+            <label>9. Photo (optional)</label>
             <input type="file" id="mf-image" accept="image/*">
-          </div>
-          <div class="field" style="display:flex;align-items:center;gap:10px;">
-            <img id="mf-imagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
-            <button type="button" class="btn btn-sm" id="btnRemoveMaterialImage" style="display:none;">Remove photo</button>
+            <div style="display:flex;align-items:center;gap:10px;margin-top:6px;">
+              <img id="mf-imagePreview" style="display:none;width:56px;height:56px;object-fit:cover;border-radius:6px;border:1px solid var(--border);">
+              <button type="button" class="btn btn-sm" id="btnRemoveMaterialImage" style="display:none;">Remove photo</button>
+            </div>
           </div>
         </div>
         <div class="field">
-          <label>9. Usage Notes (optional)</label>
+          <label>10. Usage Notes (optional)</label>
           <textarea id="mf-usageNotes" rows="2" placeholder="e.g. Hydrate for 10 min before mixing; max 2% of batch weight"></textarea>
         </div>
         <div class="field">
-          <label>10. E-Number / INS (optional)</label>
+          <label>11. E-Number / INS (optional)</label>
           <div class="ins-number-row">
             <span class="ins-number-prefix">INS-</span>
             <input type="text" id="mf-insNumber" placeholder="e.g. 211">
           </div>
         </div>
         <div class="field">
-          <label>11. Factories/Companies Using This Material (optional)</label>
+          <label>12. Factories/Companies Using This Material (optional)</label>
           <div id="materialFactoriesRows"></div>
         </div>
         <div class="field">
-          <label>12. Sub Ingredients (optional)</label>
+          <label>13. Sub Ingredients (optional)</label>
           <div class="flavor-table-scroll">
             <table class="flavor-table" id="subIngredientsTable">
               <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th></th></tr></thead>
@@ -221,10 +225,6 @@ export function mountMaterialsView(){
             </table>
           </div>
           <button class="btn btn-sm add-row-btn" type="button" id="btnAddSubIngredient">+ Add Sub Ingredient</button>
-        </div>
-        <div class="field">
-          <label>13. Brand (optional)</label>
-          <input type="text" id="mf-brand" placeholder="e.g. Kite">
         </div>
         <button class="btn btn-primary btn-sm" id="btnAddMaterial">+ Add to Library</button>
         <button class="btn btn-sm" id="btnCancelEditMaterial" style="display:none;">Cancel</button>
