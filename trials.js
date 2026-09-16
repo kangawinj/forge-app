@@ -230,7 +230,11 @@ function autoImprovementSuggestion(c, pd){
   if(avg === midpoint) return '';
   const action = avg < midpoint ? 'Increase' : 'Decrease';
   const actionTh = avg < midpoint ? 'เพิ่ม' : 'ลด';
-  return `${action} (${actionTh}) ${c.label}`;
+  // Same -100%/+100% figure as the wizard's own Idea Guideline
+  // (jarAdjustmentPercent), computed from this same averaged/rounded
+  // score so the two always agree.
+  const pct = jarAdjustmentPercent(String(avg));
+  return `${action} (${actionTh}) ${c.label} ${pct > 0 ? '+' : ''}${pct}%`;
 }
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 const TRIAL_TEST_RESULT_CLASSES = {
