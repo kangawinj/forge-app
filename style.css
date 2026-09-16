@@ -1939,10 +1939,14 @@
   }
   .modal-overlay.open{display:flex;}
   /* The password-confirm dialog can be triggered while another modal is
-     already open (e.g. deleting from inside Reference Lists), and the
-     cloud-error banner (z-index 200) can appear at any time — this must
-     stack above both so it's never hidden or made unreachable. */
-  #authConfirmModalOverlay{z-index:210;}
+     already open (e.g. deleting from inside Reference Lists, or
+     undismissing a guest response from inside the Share External
+     Evaluation panel), and the cloud-error banner (z-index 200) can
+     appear at any time — this must stack above all of them, including
+     .eval-wizard-overlay's own 220 (Perform Evaluation / Summary Test /
+     Share External Evaluation / Preview Response), so it's never hidden
+     or made unreachable behind whichever modal triggered it. */
+  #authConfirmModalOverlay{z-index:230;}
   .modal{
     background:var(--panel);
     border-radius:var(--radius);
