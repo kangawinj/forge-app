@@ -117,6 +117,42 @@ function generateResponseId(){
   return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
 }
 
+// Same resize as resizeImageFile in app.js (trials.js's own product photo
+// upload calls it with the same maxDim:500) -- kept as its own copy here
+// for the usual "this public page doesn't import the authenticated app"
+// reason. Capped at 2 per product (EVAL_COMMENT_PHOTO_MAX below) rather
+// than the real app's 4, since these ride inside the same
+// /evaluationResponses doc as every other answer on this page and
+// Firestore caps a single document at 1MiB -- 500px JPEGs at quality 0.7
+// stay small enough (tens of KB each) that a couple per product is safe,
+// unbounded wouldn't be.
+function resizeImageFile(file, maxDim){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error('Could not read that image file'));
+      img.onload = () => {
+        const scale = Math.min(1, maxDim / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale);
+        const h = Math.round(img.height * scale);
+        const canvas = document.createElement('canvas');
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(0, 0, w, h);
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', 0.7));
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+const EVAL_COMMENT_PHOTO_MAX = 2;
+
 async function init(){
   if(!token){
     showBanner('This link is missing its evaluation code. Please ask for a full link or QR code.', 'error');
@@ -193,10 +229,6 @@ function productSectionHtml(product, criteria){
         </div>
       `).join('')}
       <div class="eval-wizard-question">
-        <div class="eval-wizard-question-label">Comments</div>
-        <textarea class="eval-wizard-comment" data-role="eval-comment" placeholder="Anything else worth noting about this sample">${escapeHtml(mine.comment || '')}</textarea>
-      </div>
-      <div class="eval-wizard-question">
         <div class="eval-wizard-question-label">Test Result</div>
         <div class="eval-wizard-testresult-row">
           ${TRIAL_TEST_RESULT_OPTIONS.map(o => `
@@ -247,8 +279,21 @@ function reviewHtml(products, criteria){
               </div>
             `;
             }).join('')}
-            ${(ans.comment || '').trim() ? `<div class="eval-wizard-review-row"><span>Comments</span><b>${escapeHtml(ans.comment)}</b></div>` : ''}
             <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[ans.testResult] || ''}">${escapeHtml(ans.testResult || '-')}</b></div>
+            <div class="eval-wizard-question" style="margin-top:14px;margin-bottom:0;" data-review-product-id="${escapeHtml(p.id)}">
+              <div class="eval-wizard-question-label">Comments</div>
+              <textarea class="eval-wizard-comment" data-role="review-comment" data-product-id="${escapeHtml(p.id)}" placeholder="Anything else worth noting about this sample">${escapeHtml(ans.comment || '')}</textarea>
+              <div class="eval-wizard-question-label" style="margin-top:12px;margin-bottom:6px;">Reference Photo (optional)</div>
+              ${(ans.commentPhotos || []).length ? `<div class="proj-ref-images-grid">${(ans.commentPhotos || []).map(ph => `
+                <div class="proj-ref-image-item">
+                  <div class="proj-ref-image-thumb-wrap">
+                    <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb">
+                    <button type="button" class="proj-ref-image-remove" data-role="remove-review-photo" data-product-id="${escapeHtml(p.id)}" data-photo-id="${escapeHtml(ph.id)}" title="Remove">×</button>
+                  </div>
+                </div>
+              `).join('')}</div>` : ''}
+              ${(ans.commentPhotos || []).length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="review-photo-input" data-product-id="${escapeHtml(p.id)}" accept="image/*" style="margin-top:8px;">` : ''}
+            </div>
           </div>
         `;
       }).join('')}
@@ -373,9 +418,6 @@ function wireWizardStep(){
     section.querySelectorAll('[data-role="eval-criteria-note"]').forEach(el => {
       el.addEventListener('change', () => { mine[`${el.dataset.criteriaId}_note`] = el.value.trim(); });
     });
-    section.querySelector('[data-role="eval-comment"]')?.addEventListener('change', e => {
-      mine.comment = e.target.value.trim();
-    });
     section.querySelectorAll('[data-role="eval-testresult"]').forEach(btn => {
       btn.addEventListener('click', () => {
         mine.testResult = mine.testResult === btn.dataset.value ? '' : btn.dataset.value;
@@ -384,6 +426,34 @@ function wireWizardStep(){
           Object.values(EVAL_WIZARD_RESULT_CLASSES).forEach(cls => b.classList.remove(cls));
           if(b.dataset.value === mine.testResult && EVAL_WIZARD_RESULT_CLASSES[mine.testResult]) b.classList.add(EVAL_WIZARD_RESULT_CLASSES[mine.testResult]);
         });
+      });
+    });
+  });
+  // Comments + optional reference photo now live on the Review page (per
+  // request) instead of each product's own step -- one block per product,
+  // scoped by data-review-product-id since the Review page shows every
+  // product at once rather than one at a time.
+  document.querySelectorAll('[data-review-product-id]').forEach(block => {
+    const productId = block.dataset.reviewProductId;
+    const mine = answers[productId] || (answers[productId] = {});
+    block.querySelector('[data-role="review-comment"]')?.addEventListener('change', e => {
+      mine.comment = e.target.value.trim();
+    });
+    block.querySelector('.review-photo-input')?.addEventListener('change', async e => {
+      const file = e.target.files[0];
+      e.target.value = '';
+      if(!file) return;
+      if(!Array.isArray(mine.commentPhotos)) mine.commentPhotos = [];
+      if(mine.commentPhotos.length >= EVAL_COMMENT_PHOTO_MAX) return;
+      mine.commentPhotos.push({ id: crypto.randomUUID(), dataUrl: await resizeImageFile(file, 500) });
+      renderWizardStep();
+    });
+    block.querySelectorAll('[data-role="remove-review-photo"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        if(!Array.isArray(mine.commentPhotos)) return;
+        const idx = mine.commentPhotos.findIndex(ph => ph.id === btn.dataset.photoId);
+        if(idx !== -1) mine.commentPhotos.splice(idx, 1);
+        renderWizardStep();
       });
     });
   });

@@ -5255,7 +5255,17 @@
     padding:0;
     transition:background .15s ease, border-color .15s ease;
   }
-  .eval-wizard-jar-btn:hover{background:var(--primary-light);border-color:var(--primary);}
+  /* (hover: hover) -- a touch release near/on a button makes mobile
+     WebKit/Blink apply :hover to it and leave it "stuck" that way until
+     something else is tapped, which read as a stray light-colored band
+     left behind right where a press-and-drag score selection (see
+     wireJarDragSelect in evaluate.js) had just been. Real pointer devices
+     (mouse/trackpad) still get the hover feedback; a touchscreen, which
+     has no real "hover" gesture to genuinely trigger this from, never
+     does. */
+  @media (hover: hover){
+    .eval-wizard-jar-btn:hover{background:var(--primary-light);border-color:var(--primary);}
+  }
   .eval-wizard-jar-btn.selected{
     background:var(--primary);
     border-color:var(--primary);

@@ -943,7 +943,9 @@ const CHANGELOG = [
   { version: "3.0.532", date: "2026-09-17", note: "Gave the \"Dismissed\" guest response button a gray fill (not white like the other buttons) so its off/inactive state is visible at a glance" },
   { version: "3.0.533", date: "2026-09-17", note: "Per follow-up feedback, changed the JAR (1-9) buttons on narrow phone screens from a 3x3 grid back to one single row (same as desktop), just narrower per button, since 3 rows read as more boxes to scan than a quick 1-9 row" },
   { version: "3.0.534", date: "2026-09-17", note: "Fixed evaluate.html zooming in and staying zoomed after typing into Your Name/Comments/Note on a phone -- iOS Safari auto-zooms any text field smaller than 16px on focus, so those fields are now 16px on narrow screens" },
-  { version: "3.0.535", date: "2026-09-17", note: "evaluate.html: pressing and sliding a finger across the 1-9 buttons now scrubs through scores like a slider, instead of needing to lift and re-tap each one" }
+  { version: "3.0.535", date: "2026-09-17", note: "evaluate.html: pressing and sliding a finger across the 1-9 buttons now scrubs through scores like a slider, instead of needing to lift and re-tap each one" },
+  { version: "3.0.536", date: "2026-09-17", note: "Fixed a light-colored band getting stuck on the last button touched after a press-and-drag score selection on a phone -- that was the JAR button's own :hover style, which mobile browsers can leave stuck on after a touch ends; now only applies on real pointer devices (mouse/trackpad)" },
+  { version: "3.0.537", date: "2026-09-17", note: "evaluate.html: moved each product's Comments field from its own step page onto the Review page (before Submit), and added an optional reference photo (up to 2 per product) alongside it there" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
