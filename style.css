@@ -5404,6 +5404,21 @@
      repeated per product, since it isn't scoped to any one of them. */
   .trial-summary-note{border-top:1px solid var(--border);padding-top:14px;margin-top:6px;}
   .trial-summary-note-text{font-size:13px;color:var(--text);white-space:pre-wrap;margin-top:6px;}
+  /* Share External Evaluation panel (see renderTrialShareModal) -- the
+     link/QR box, then the incoming guest responses list below it. */
+  .trial-share-intro{font-size:13px;color:var(--text-dim);margin-bottom:16px;line-height:1.5;}
+  .trial-share-link-box{display:flex;gap:16px;align-items:flex-start;padding:14px;border:1px solid var(--border);border-radius:var(--radius);margin-bottom:20px;}
+  .trial-share-qr{flex-shrink:0;width:160px;height:160px;}
+  .trial-share-link-details{flex:1;min-width:0;}
+  .trial-share-link-url{font-size:12px;color:var(--text);word-break:break-all;background:var(--bg);border-radius:6px;padding:8px 10px;margin-bottom:8px;}
+  .trial-share-actions-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;}
+  .trial-share-expiry{font-size:12px;color:var(--text-dim);}
+  .trial-share-responses-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;}
+  .trial-share-responses-title{font-size:13px;font-weight:700;color:var(--primary-dark);}
+  .trial-share-response-row{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 0;border-top:1px solid var(--border);}
+  .trial-share-response-main{display:flex;flex-direction:column;gap:2px;}
+  .trial-share-response-meta{font-size:11px;color:var(--text-dim);}
+  .trial-share-response-imported{display:flex;align-items:center;gap:4px;font-size:12px;color:var(--ok);font-weight:600;flex-shrink:0;}
   /* Summary Table (Test Results' alternate view -- see trialsViewMode /
      renderTrialsSummaryTable) -- Project / PD / a compact inline version
      of the same per-product summary the modal shows as full cards. */

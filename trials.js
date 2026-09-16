@@ -4,10 +4,11 @@ import {
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
   trialStringListHtml, trialsCol, showCloudError,
-  metaLists, metaItemName, getRequirements, certificateSummaryText, moveToTrash
+  metaLists, metaItemName, getRequirements, certificateSummaryText, moveToTrash,
+  evaluationLinksCol, evaluationResponsesCol
 } from './app.js';
 import {
-  onSnapshot, setDoc, doc, deleteDoc
+  onSnapshot, setDoc, doc, deleteDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let trials = [];
@@ -39,6 +40,16 @@ let trialSummaryId = null;
 // than replacing the list outright, since the table has none of the
 // list's own actions.
 let trialsViewMode = 'list';
+// "Share External Evaluation" -- a no-login link/QR (see
+// renderTrialShareModal, generateShareLink) that lets someone outside the
+// org submit a Perform-Evaluation-shaped survey for this one trial from
+// their own phone, without an account. Holds the trial id while its modal
+// is open, null when closed; trialShareResponses is that trial's guest
+// submissions, fetched fresh (not a live listener) each time the modal
+// opens or "Refresh" is clicked -- see loadShareResponses.
+let trialShareId = null;
+let trialShareResponses = [];
+const EVAL_LINK_LIFETIME_MS = 24 * 60 * 60 * 1000;
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
@@ -972,6 +983,181 @@ function renderTrialSummaryModal(){
   });
 }
 
+// Same 192-bit CSPRNG token shape as submit.js's own generateToken (the
+// public "share a link" project intake page) -- not derivable/enumerable,
+// so the token itself (not a login) is what Firestore's rules use to scope
+// access to exactly one trial's evaluationLinks doc. Kept as its own copy
+// here for the same "these two public-link pages don't import each other"
+// reason as every other duplicated helper in this file.
+function generateShareToken(){
+  const bytes = crypto.getRandomValues(new Uint8Array(24));
+  return Array.from(bytes, b => b.toString(16).padStart(2, '0')).join('');
+}
+function evaluateShareUrl(shareToken){
+  return `${location.origin}/evaluate.html?token=${shareToken}`;
+}
+// Mints a fresh evaluationLinks doc holding a read-only SNAPSHOT of exactly
+// what a guest evaluator needs (product list + photos + criteria) -- never
+// a reference to the live /trials doc, see the firestore.rules comment on
+// /evaluationLinks for why. The trial itself only remembers the token/
+// expiry (t.shareToken/t.shareExpiresAt) so this panel can tell at a
+// glance whether a link is still live without an extra query -- generating
+// a new one simply overwrites those two fields; the old evaluationLinks
+// doc is left alone and just quietly expires on its own.
+async function generateShareLink(t){
+  const shareToken = generateShareToken();
+  const criteria = getEvaluationCriteria(t);
+  const products = trialEvalTargets(t).map(p => ({
+    id: p.id,
+    label: p.label,
+    photos: normalizeTrialPhotos(getTrialProductData(t, p.id)).map(ph => ({ dataUrl: ph.dataUrl, caption: ph.caption || '' }))
+  }));
+  const createdAt = Date.now();
+  const expiresAt = createdAt + EVAL_LINK_LIFETIME_MS;
+  await setDoc(doc(evaluationLinksCol, shareToken), {
+    trialId: t.id,
+    createdAt,
+    expiresAt,
+    createdBy: currentUser?.email || '',
+    trialLabel: trialLabel(t),
+    testDate: t.testDate || '',
+    products,
+    criteria: criteria.map(c => ({ id: c.id, label: c.label }))
+  });
+  t.shareToken = shareToken;
+  t.shareExpiresAt = expiresAt;
+  scheduleTrialSave(t);
+}
+// Fetched fresh (not a live listener) each time the modal opens or
+// "Refresh" is clicked -- a guest survey isn't the kind of thing someone's
+// expected to watch update in real time the way the rest of this app does,
+// and a plain getDocs keeps this panel from needing its own listener
+// teardown when the modal closes.
+async function loadShareResponses(trialId){
+  const snap = await getDocs(query(evaluationResponsesCol, where('trialId', '==', trialId)));
+  trialShareResponses = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (b.submittedAt || 0) - (a.submittedAt || 0));
+}
+// Folds one guest response into the trial's own data the exact same shape
+// a real evaluator's answers take (pd.evaluations[someKey]) -- so every
+// existing reader (combinedEvaluationEntries, criteriaAverageJarScore,
+// combinedVerdict, the Summary Test/Table) picks it up automatically with
+// no changes of its own, the same way it already handles any number of
+// real evaluators. Keyed "guest:<name>:<responseId>" rather than an email
+// so it reads clearly as an outside opinion wherever evaluator names show
+// up. Marks the response imported (both locally and in Firestore) so
+// re-opening this panel doesn't offer to import the same answers twice.
+async function importShareResponse(t, resp){
+  Object.entries(resp.answers || {}).forEach(([productId, answers]) => {
+    const target = trialEvalTargets(t).find(p => p.id === productId);
+    if(!target) return;
+    const pd = getTrialProductData(t, productId);
+    if(!pd.evaluations || typeof pd.evaluations !== 'object') pd.evaluations = {};
+    pd.evaluations[`guest:${resp.guestName || 'Guest'}:${resp.id}`] = answers;
+  });
+  scheduleTrialSave(t);
+  await setDoc(doc(evaluationResponsesCol, resp.id), { imported: true }, { merge: true });
+  resp.imported = true;
+  renderTrialsList();
+}
+function renderTrialShareModal(){
+  const existing = document.getElementById('trialShareOverlay');
+  if(!trialShareId){ existing?.remove(); return; }
+  const t = trials.find(x => x.id === trialShareId);
+  if(!t){ trialShareId = null; existing?.remove(); return; }
+
+  const overlay = existing || document.createElement('div');
+  overlay.id = 'trialShareOverlay';
+  overlay.className = 'eval-wizard-overlay';
+  if(!existing){
+    document.body.appendChild(overlay);
+    // Read-only/link-management content, same click-outside-closes shape
+    // as the Summary Test modal above (nothing here can be lost by an
+    // accidental close -- Refresh just re-fetches).
+    let mousedownOnOverlay = false;
+    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if(mousedownOnOverlay && e.target === overlay){ trialShareId = null; renderTrialShareModal(); }
+      mousedownOnOverlay = false;
+    });
+  }
+
+  const hasActiveLink = t.shareToken && t.shareExpiresAt > Date.now();
+  const shareUrl = hasActiveLink ? evaluateShareUrl(t.shareToken) : '';
+
+  overlay.innerHTML = `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Share External Evaluation</div>
+        <button type="button" class="eval-wizard-close" data-role="share-close" title="Close">${icon('x')}</button>
+      </div>
+      <div class="trial-share-intro">Anyone with this link or QR code can submit a sensory evaluation for this test from their own phone — no Forge account needed. It works for 24 hours from when it's generated, and any number of people can use it at once, each landing on their own independent response.</div>
+      ${hasActiveLink ? `
+        <div class="trial-share-link-box">
+          <div class="trial-share-qr" id="trialShareQr"></div>
+          <div class="trial-share-link-details">
+            <div class="trial-share-link-url">${escapeHtml(shareUrl)}</div>
+            <div class="trial-share-actions-row">
+              <button type="button" class="btn btn-sm" data-role="copy-share-link">${icon('copy', 14)} Copy Link</button>
+              <button type="button" class="btn btn-sm" data-role="generate-share-link">${icon('refresh-cw', 14)} Generate New Link</button>
+            </div>
+            <div class="trial-share-expiry">Expires ${escapeHtml(formatActivityDateTime(t.shareExpiresAt))}</div>
+          </div>
+        </div>
+      ` : `
+        <button type="button" class="btn btn-primary btn-sm" data-role="generate-share-link">${icon('share-2', 14)} Generate Link</button>
+        ${t.shareToken ? '<div class="trial-share-expiry">The previous link has expired.</div>' : ''}
+      `}
+      <div class="trial-share-responses">
+        <div class="trial-share-responses-head">
+          <div class="trial-share-responses-title">Guest Responses (${trialShareResponses.length})</div>
+          <button type="button" class="btn btn-sm" data-role="refresh-share-responses">${icon('refresh-cw', 14)} Refresh</button>
+        </div>
+        ${trialShareResponses.length === 0 ? '<div class="overview-empty">No responses yet.</div>' : trialShareResponses.map(resp => `
+          <div class="trial-share-response-row">
+            <div class="trial-share-response-main">
+              <b>${escapeHtml(resp.guestName || 'Guest')}</b>
+              <span class="trial-share-response-meta">${resp.submittedAt ? escapeHtml(formatActivityDateTime(resp.submittedAt)) : ''}</span>
+            </div>
+            ${resp.imported
+              ? '<span class="trial-share-response-imported">' + icon('check', 14) + ' Imported</span>'
+              : `<button type="button" class="btn btn-sm" data-role="import-share-response" data-response-id="${escapeHtml(resp.id)}">Import</button>`}
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+
+  if(hasActiveLink){
+    const qrEl = document.getElementById('trialShareQr');
+    if(qrEl && window.QRCode) new window.QRCode(qrEl, { text: shareUrl, width: 160, height: 160 });
+  }
+
+  overlay.querySelector('[data-role="share-close"]')?.addEventListener('click', () => {
+    trialShareId = null;
+    renderTrialShareModal();
+  });
+  overlay.querySelector('[data-role="copy-share-link"]')?.addEventListener('click', async () => {
+    try{ await navigator.clipboard.writeText(shareUrl); }catch{}
+  });
+  overlay.querySelector('[data-role="generate-share-link"]')?.addEventListener('click', async e => {
+    e.target.disabled = true;
+    await generateShareLink(t);
+    renderTrialsList();
+  });
+  overlay.querySelector('[data-role="refresh-share-responses"]')?.addEventListener('click', async () => {
+    await loadShareResponses(t.id);
+    renderTrialShareModal();
+  });
+  overlay.querySelectorAll('[data-role="import-share-response"]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      btn.disabled = true;
+      const resp = trialShareResponses.find(r => r.id === btn.dataset.responseId);
+      if(resp) await importShareResponse(t, resp);
+      renderTrialShareModal();
+    });
+  });
+}
+
 // A product being compared that isn't one of this app's own Recipes — a
 // competitor sample, a customer's existing product, anything typed in by
 // name rather than picked from the list. Same detail fields as a linked
@@ -1095,6 +1281,7 @@ export function renderTrialsList(){
     renderTrialsSummaryTable(container, sorted);
     renderEvaluationWizard();
     renderTrialSummaryModal();
+    renderTrialShareModal();
     return;
   }
   // Grouped by linked Project (see groupTrialsByProject, shared with the
@@ -1494,6 +1681,7 @@ export function renderTrialsList(){
           <div class="trial-row-actions">
             ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
+            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-share">${icon('share-2')} Share External Evaluation</button>` : ''}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>` : ''}
@@ -1672,6 +1860,14 @@ export function renderTrialsList(){
     block.querySelector('[data-role="open-trial-summary"]')?.addEventListener('click', () => {
       trialSummaryId = id;
       renderTrialsList();
+    });
+
+    block.querySelector('[data-role="open-trial-share"]')?.addEventListener('click', async () => {
+      trialShareId = id;
+      trialShareResponses = [];
+      renderTrialsList();
+      await loadShareResponses(id);
+      renderTrialShareModal();
     });
 
     block.querySelector('[data-role="print-trial"]')?.addEventListener('click', () => {
@@ -1954,6 +2150,7 @@ export function renderTrialsList(){
 
   renderEvaluationWizard();
   renderTrialSummaryModal();
+  renderTrialShareModal();
 }
 
 function attachTrialsListener(){

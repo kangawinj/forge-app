@@ -142,6 +142,46 @@ service cloud.firestore {
     // signed-in team member (isAllowedUser()), not by the public
     // submitter, so a link can't be used to un-lock itself after the app
     // has already locked it.
+    // A trial's own share link/QR code for external (no-login) sensory
+    // evaluation (see the "Share External Evaluation" button in trials.js
+    // and the standalone evaluate.html/evaluate.js page it points to).
+    // Token-keyed exactly like /pendingSubmissions above, but the doc holds
+    // a SNAPSHOT of only what a guest evaluator needs (product list,
+    // photos, criteria) rather than the real /trials doc -- a guest link
+    // must never be able to read another evaluator's scores/comments, this
+    // trial's Improvement Guidelines notes, or any other team-only field,
+    // so it's never given read access to /trials at all. expiresAt (set by
+    // the team member's own client to createdAt + 24h) is enforced here
+    // server-side too, not just hidden client-side, so a guest tab left
+    // open past expiry can't still write in.
+    match /evaluationLinks/{token} {
+      allow get: if true;
+      allow list: if isAllowedUser();
+      allow create, update, delete: if isAllowedUser();
+    }
+    // One doc per guest submission, id'd by a fresh random token the guest
+    // page generates itself on load (never coordinated with a server) --
+    // that's what lets any number of people open the exact same shared
+    // link/QR at once and each land on their own independent doc with no
+    // collision, instead of overwriting each other or needing a freshly
+    // "rotated" code per scan. A response can only be created against a
+    // still-live (non-expired) /evaluationLinks doc, checked server-side
+    // via expiresAt on that doc -- never against a real /trials doc
+    // directly, and a guest can never read back, list, or edit ANY
+    // response (their own or anyone else's) once submitted, only create
+    // one. A team member reviews and imports each response from inside
+    // the app (see "Import" in the Share External Evaluation panel),
+    // same reviewed-before-it-counts shape as /pendingSubmissions ->
+    // /projects above -- imported flips to true only from that review
+    // step, never settable by the public create.
+    match /evaluationResponses/{responseId} {
+      allow get, list: if isAllowedUser();
+      allow create: if request.resource.data.linkToken is string
+        && exists(/databases/$(database)/documents/evaluationLinks/$(request.resource.data.linkToken))
+        && get(/databases/$(database)/documents/evaluationLinks/$(request.resource.data.linkToken)).data.expiresAt > request.time.toMillis()
+        && request.resource.data.imported == false;
+      allow update, delete: if isAllowedUser();
+    }
     match /pendingSubmissions/{token} {
       // Split from a single `read` on purpose: the public page only ever
       // fetches ONE doc it already has the token for (a "get"), it never

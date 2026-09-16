@@ -11,7 +11,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
-  query, orderBy, limit, getDocs
+  query, orderBy, limit, getDocs, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { mountCompareView, setCompareSeriesPrefilter } from './compare.js';
 import { mountSeriesMigrationView } from './seriesMigration.js';
@@ -175,6 +175,13 @@ export async function purgeExpiredTrash(items){
 // access there. Only ever read/written from inside the app by an
 // approved team member reviewing and importing a submission.
 export const pendingSubmissionsCol = collection(db, "pendingSubmissions");
+// A trial's own "Share External Evaluation" link/QR (see
+// renderTrialShareModal in trials.js) and the guest responses that come
+// back through it -- see the matching /evaluationLinks and
+// /evaluationResponses rules in firestore.rules for the token-scoped,
+// no-login access model, same shape as pendingSubmissionsCol above.
+export const evaluationLinksCol = collection(db, "evaluationLinks");
+export const evaluationResponsesCol = collection(db, "evaluationResponses");
 // Append-only audit log of sign-ins — who, and when. Read by everyone on the
 // team (via the notification bell), written once per successful login/signup
 // by that same user (see the Firestore rule: create is allowed only when the
@@ -924,7 +931,8 @@ const CHANGELOG = [
   { version: "3.0.520", date: "2026-09-16", note: "Added the Translate button to Improvement Guidelines' per-criteria Note column and Part 2's own Note field, same as the Perform Evaluation wizard's criteria notes" },
   { version: "3.0.521", date: "2026-09-16", note: "Added an Export Excel button to Test Results' Summary Table view, producing a workbook formatted to match the on-screen table exactly (Project/PD grouping, verdict colors, Improve/Just Right bullet lists)" },
   { version: "3.0.522", date: "2026-09-16", note: "Test Results' Summary Table: moved the Tested date out of the Summary Test column into its own Tested Date column, on-screen and in the Excel export" },
-  { version: "3.0.523", date: "2026-09-16", note: "Perform Evaluation wizard: Back/Next Sample/Review now scroll back to the top of the page, instead of opening the next sample's questions still scrolled to wherever the previous page was left" }
+  { version: "3.0.523", date: "2026-09-16", note: "Perform Evaluation wizard: Back/Next Sample/Review now scroll back to the top of the page, instead of opening the next sample's questions still scrolled to wherever the previous page was left" },
+  { version: "3.0.524", date: "2026-09-16", note: "Added \"Share External Evaluation\" to Test Results: generate a link + QR code (expires after 24 hours, usable by any number of people at once, no account needed) that opens a standalone evaluate.html survey for that test; incoming guest responses can be reviewed and imported into that test's own Sensory Evaluation with one click" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
@@ -2244,6 +2252,7 @@ const LUCIDE_ICONS = {
   'printer': '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2" /><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6" /><rect x="6" y="14" width="12" height="8" rx="1" />',
   'refresh-cw': '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8" /><path d="M21 3v5h-5" /><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16" /><path d="M8 16H3v5" />',
   'save': '<path d="M15.2 3a2 2 0 0 1 1.4.6l3.8 3.8a2 2 0 0 1 .6 1.4V19a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2z" /><path d="M17 21v-7a1 1 0 0 0-1-1H8a1 1 0 0 0-1 1v7" /><path d="M7 3v4a1 1 0 0 0 1 1h7" />',
+  'share-2': '<circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" x2="15.42" y1="13.51" y2="17.49" /><line x1="15.41" x2="8.59" y1="6.51" y2="10.49" />',
   'sliders-horizontal': '<line x1="21" x2="14" y1="4" y2="4" /><line x1="10" x2="3" y1="4" y2="4" /><line x1="21" x2="12" y1="12" y2="12" /><line x1="8" x2="3" y1="12" y2="12" /><line x1="21" x2="16" y1="20" y2="20" /><line x1="12" x2="3" y1="20" y2="20" /><line x1="14" x2="14" y1="2" y2="6" /><line x1="8" x2="8" y1="10" y2="14" /><line x1="16" x2="16" y1="18" y2="22" />',
   'scale': '<path d="M12 3v18" /><path d="m19 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M3 7h1a17 17 0 0 0 8-2 17 17 0 0 0 8 2h1" /><path d="m5 8 3 8a5 5 0 0 1-6 0zV7" /><path d="M7 21h10" />',
   'trash-2': '<path d="M10 11v6" /><path d="M14 11v6" /><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6" /><path d="M3 6h18" /><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />',

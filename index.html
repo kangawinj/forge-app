@@ -545,6 +545,11 @@
      documented open-parameter can remove. workerSrc has to be set once,
      from JS, before the first getDocument() call — see initPdfJsWorker(). -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<!-- qrcodejs — pinned version, loaded as a plain global so trials.js can
+     render a scannable QR code for a trial's own "Share External
+     Evaluation" link (see renderTrialShareModal), without the guest-facing
+     evaluate.html page needing this library at all. -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 <script type="module" src="app.js"></script>
 <script>
   if ("serviceWorker" in navigator) {
