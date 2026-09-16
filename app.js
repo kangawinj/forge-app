@@ -897,7 +897,8 @@ const CHANGELOG = [
   { version: "3.0.493", date: "2026-09-16", note: "Added an \"Idea Guideline\" to each criteria in the Perform Evaluation wizard — a -100%/+100% line with a dot showing how far off Just Right that JAR answer is (e.g. a score of 4 on the 9-point scale shows +25%), so it's clear at a glance how much to adjust and in which direction" },
   { version: "3.0.494", date: "2026-09-16", note: "Fixed the Idea Guideline's percentage label overlapping its own caption text above it — folded the percentage into the caption line instead of floating it as a separate label over the dot" },
   { version: "3.0.495", date: "2026-09-16", note: "The Perform Evaluation wizard's Review page now shows each criteria's Idea Guideline adjustment (e.g. \"+25%\") next to its score, with a note that the final improvement direction may change once the overall average and other evaluators' opinions are in" },
-  { version: "3.0.496", date: "2026-09-16", note: "Test Results' Improvement Guidelines auto-suggestion now includes the adjustment percentage too (e.g. \"Increase (เพิ่ม) Appearance +50%\"), computed from the same averaged JAR score as the direction itself" }
+  { version: "3.0.496", date: "2026-09-16", note: "Test Results' Improvement Guidelines auto-suggestion now includes the adjustment percentage too (e.g. \"Increase (เพิ่ม) Appearance +50%\"), computed from the same averaged JAR score as the direction itself" },
+  { version: "3.0.497", date: "2026-09-16", note: "Moved the Idea Guideline's percentage back onto the track itself — sits directly under the orange dot now instead of in the caption line above it" }
 ];
 const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
