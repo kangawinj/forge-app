@@ -5581,17 +5581,18 @@
     margin:4px 2px 14px;
   }
   @media (max-width:600px){
-    /* 9 buttons at flex:1 each used to wrap unevenly at this width -- 7
-       fit on the first line, then the remaining 2 stretched to roughly
-       half the row each, since flex:1 only shares space among whatever
-       ends up sharing its own wrapped line. A fixed 3-column grid instead
-       gives every button the same size on every row -- a clean 3x3 for
-       the 9-point scale, same total button count either way. Matters most
-       on the guest-facing evaluate.html (opened on a phone via the Share
-       External Evaluation QR code), but applies to the real Perform
-       Evaluation wizard too since they share this exact markup/class. */
-    .eval-wizard-jar-row{display:grid;grid-template-columns:repeat(3, 1fr);gap:6px;}
-    .eval-wizard-jar-btn{min-width:0;}
+    /* Per follow-up feedback, a 3x3 grid read as "3 boxes, 3 lines" --
+       all 9 still belong on one row, same as desktop, just narrower per
+       button. .eval-wizard-jar-row's own base rule (display:flex, no
+       wrap) already does exactly that once nothing here forces a wrap or
+       a minimum width wider than a single digit needs -- gap/font-size
+       trimmed a little so 9 buttons in one row still read comfortably
+       around ~36px each on a ~360px-wide card. Matters most on the guest-
+       facing evaluate.html (opened on a phone via the Share External
+       Evaluation QR code), but applies to the real Perform Evaluation
+       wizard too since they share this exact markup/class. */
+    .eval-wizard-jar-row{gap:4px;}
+    .eval-wizard-jar-btn{min-width:0;height:40px;font-size:12px;}
     /* Same reasoning, 3 items instead of 9 -- Accepted/Not accepted wrap
        onto one line with Needs Revision stretched alone below it, an
        inconsistent-looking pair. One full-width button per row instead. */
