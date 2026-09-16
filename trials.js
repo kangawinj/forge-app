@@ -406,23 +406,22 @@ function renderEvalWizardStep(t, products, criteria, step){
             const pct = jarAdjustmentPercent(mine[c.id]);
             if(pct === null || pct === 0) return '';
             const markerPos = 50 + pct / 2;
-            // The percentage sits directly under the dot now, inside its
-            // own reserved-space wrapper (.eval-wizard-idea-track-wrap) --
-            // it used to float above the dot with no space reserved for
-            // it and overlapped the caption line, then got folded into
-            // that caption line instead, but per follow-up feedback it
-            // reads better right under the marker it's labeling.
+            // The percentage sits ON the -100%/Just right/+100% axis-label
+            // row itself now (absolutely positioned inside it, same line),
+            // rather than on its own line above or below it -- per
+            // follow-up feedback, two separate lines still read as
+            // disconnected even once they stopped visually overlapping.
             return `
               <div class="eval-wizard-idea-guideline">
                 <div class="eval-wizard-idea-label">Idea Guideline — toward Just Right (พอดี)</div>
-                <div class="eval-wizard-idea-track-wrap">
-                  <div class="eval-wizard-idea-track">
-                    <div class="eval-wizard-idea-center"></div>
-                    <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
-                  </div>
-                  <div class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</div>
+                <div class="eval-wizard-idea-track">
+                  <div class="eval-wizard-idea-center"></div>
+                  <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
                 </div>
-                <div class="eval-wizard-idea-scale-labels"><span>-100%</span><span>Just right</span><span>+100%</span></div>
+                <div class="eval-wizard-idea-scale-labels">
+                  <span>-100%</span><span>Just right</span><span>+100%</span>
+                  <span class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</span>
+                </div>
               </div>
             `;
           })()}

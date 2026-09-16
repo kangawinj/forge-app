@@ -5231,22 +5231,12 @@
      off the midpoint -- nothing to adjust toward once it reads 0%. */
   .eval-wizard-idea-guideline{margin-top:12px;}
   .eval-wizard-idea-label{font-size:11px;color:var(--text-dim);margin-bottom:8px;}
-  /* Reserves room below the track for .eval-wizard-idea-marker-value (the
-     "+50%" under the dot) via padding-bottom, rather than the value
-     floating with no space accounted for -- that's what overlapped the
-     caption line above it before. left:X% on the value below is relative
-     to this same wrapper, matching the track's own coordinate space
-     exactly since the track fills the wrapper's full width. */
-  .eval-wizard-idea-track-wrap{
-    position:relative;
-    margin:0 10px;
-    padding-bottom:26px;
-  }
   .eval-wizard-idea-track{
     position:relative;
     height:4px;
     border-radius:2px;
     background:var(--border);
+    margin:0 10px;
   }
   .eval-wizard-idea-center{
     position:absolute;
@@ -5268,21 +5258,29 @@
     box-shadow:0 1px 4px rgba(0,0,0,.25);
     transform:translate(-50%,-50%);
   }
+  /* The -100%/Just right/+100% axis labels and the live "+50%" reading
+     now share this one row/line -- the reading is absolutely positioned
+     at its own left:X% (position:relative on this container makes that
+     coordinate space match the track's above it exactly), overlaid on
+     top of the fixed axis labels instead of getting its own separate
+     line, per follow-up feedback that two lines still read as
+     disconnected even once they stopped overlapping outright. */
+  .eval-wizard-idea-scale-labels{
+    position:relative;
+    display:flex;
+    justify-content:space-between;
+    font-size:10px;
+    color:var(--text-dim);
+    margin:6px 10px 0;
+  }
   .eval-wizard-idea-marker-value{
     position:absolute;
-    top:12px;
+    top:0;
     transform:translateX(-50%);
     font-size:11px;
     font-weight:700;
     color:var(--accent);
     white-space:nowrap;
-  }
-  .eval-wizard-idea-scale-labels{
-    display:flex;
-    justify-content:space-between;
-    font-size:10px;
-    color:var(--text-dim);
-    margin:4px 10px 0;
   }
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
