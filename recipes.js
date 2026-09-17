@@ -46,7 +46,7 @@ import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
   pushVersionCheckpoint, scheduleVersionCheckpoint, cancelVersionCheckpoint
 } from './recipes-versions.js';
-import { renderDescPoints, renderDescPhotos, wireRecipeTranslateButton } from './recipes-print.js';
+import { renderDescPoints, renderDescPhotos, wireRecipeTranslateButton, renderPrintView } from './recipes-print.js';
 import { exportRecipeToExcel } from './recipes-excel.js';
 // Circular imports back to the four files split out below -- safe, same
 // pattern proven throughout this session's other splits: every cross-call
