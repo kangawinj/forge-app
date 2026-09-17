@@ -29,11 +29,21 @@ import {
 } from './app-dashboard.js';
 // Re-exported for the same reason as `icon` above.
 export { renderBarList, openRecipeFromDashboard };
+// Circular imports back from the account modals + notifications split out
+// below -- safe, same pattern proven throughout this session's splits:
+// every cross-call happens either inside an event handler or, for the
+// four init* calls near the bottom of this file, well after everything
+// they read (auth, ADMIN_EMAIL, escapeHtml, etc.) is already initialized
+// earlier in this file's own evaluation order.
+import {
+  initUserAdminPanel, initMyProfileModal, initSecurityModal, initDataManagementModal,
+  unsubscribeUserApprovalsAdmin, setUnsubscribeUserApprovalsAdmin
+} from './app-account-modals.js';
+import { renderNotificationsBell, initActivityChangesModal, LOGIN_EVENTS_LAST_SEEN_KEY } from './app-notifications.js';
 import {
   getAuth, onAuthStateChanged, signInWithEmailAndPassword,
   createUserWithEmailAndPassword, signOut,
-  EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail,
-  updatePassword
+  EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
   getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
@@ -123,7 +133,7 @@ const firebaseConfig = {
 };
 
 const firebaseApp = initializeApp(firebaseConfig);
-const auth = getAuth(firebaseApp);
+export const auth = getAuth(firebaseApp);
 export const db = getFirestore(firebaseApp);
 export const recipesCol = collection(db, "recipes");
 // One doc per Recipe Series (e.g. "AU26-SAU06"), holding the atomic Trial-
@@ -197,7 +207,7 @@ export const activityEventsCol = collection(db, "activityEvents");
 // One doc per Firebase Auth account (keyed by uid), tracking whether an
 // admin has approved that sign-up to actually use the app — see
 // firestore.rules for the matching server-side enforcement (isApproved()).
-const userApprovalsCol = collection(db, "userApprovals");
+export const userApprovalsCol = collection(db, "userApprovals");
 // One doc per account (keyed by uid) holding My Profile's display name +
 // photo — separate from Firebase Auth's own displayName/photoURL fields
 // since a resized photo as a data URI can exceed what Auth's profile
@@ -245,7 +255,7 @@ export const DELETE_APPROVER_EMAIL = "kangawin@th-umios.com";
 // gates a broader "admin" role (approving new sign-ups, sending a member a
 // password-reset email), not just deletions. Keep in sync manually with
 // isAdmin() in firestore.rules if this ever changes.
-const ADMIN_EMAIL = "kangawin@th-umios.com";
+export const ADMIN_EMAIL = "kangawin@th-umios.com";
 // New sign-ups (and the admin/test accounts, who are exempt from needing
 // approval at all — see isApprovalExempt) go through this: their
 // userApprovals doc must say 'approved' before they get real app access.
@@ -264,7 +274,7 @@ function isApprovalExempt(email){
 // it anyway. This is UI-only enforcement (hides the nav tab) — it does not
 // lock the underlying Firestore collections, so it's meant to declutter the
 // nav for each person's role, not as a hard security boundary.
-const MODULE_PERMISSIONS = [
+export const MODULE_PERMISSIONS = [
   { key: 'recipes', label: 'Recipes', navBtnId: 'btnRecipesTab' },
   { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
   { key: 'trials', label: 'Test Results', navBtnId: 'btnOpenTrials' },
@@ -276,7 +286,7 @@ const MODULE_PERMISSIONS = [
 // Missing/undefined defaults to true (granted) so existing approved users
 // keep full access the moment this ships, with nothing to migrate — a
 // module is only hidden once the admin explicitly flips it off.
-function userModulePermissions(item){
+export function userModulePermissions(item){
   const stored = item?.permissions || {};
   const out = {};
   MODULE_PERMISSIONS.forEach(m => { out[m.key] = stored[m.key] !== false; });
@@ -386,17 +396,11 @@ let pendingAuthCallback = null;
 // immediately, no re-login needed.
 let myApprovalStatus = null;
 let unsubscribeMyApproval = null;
-// Only the admin ever attaches this — see renderUserAdminPanel — a live
-// listener over every userApprovals doc so the panel can list pending
-// requests and every account's status.
-let unsubscribeUserApprovalsAdmin = null;
-let userApprovalsAdminList = [];
 // This account's own My Profile doc — kept live so the navbar name/avatar
 // (and the My Profile modal, if open) always reflect the latest saved
 // value without needing a manual refresh.
 export let myProfile = { displayName: '', photoImage: '' };
 let unsubscribeMyProfile = null;
-let editingProfileImage = ''; // staged photo for the My Profile modal, same pattern as newProjectImage
 
 // ---------- Online presence (navbar avatar cluster) ----------
 // Raw presence docs (one per account that's ever signed in, keyed by uid)
@@ -416,7 +420,7 @@ let presenceRenderInterval = null;
 const PRESENCE_HEARTBEAT_MS = 25000;
 const PRESENCE_STALE_MS = 70000;
 
-function authErrorMessage(err){
+export function authErrorMessage(err){
   const map = {
     'auth/invalid-email': 'Invalid email',
     'auth/user-not-found': 'Account not found — please sign up first',
@@ -739,247 +743,6 @@ function initTrialsView(){
   }));
 }
 
-
-
-/* ---------- Manage Users (admin-only) ----------
-   Visible only to ADMIN_EMAIL (see renderApp's btnOpenUserAdmin toggle).
-   Lists every userApprovals doc — pending requests up top with Approve/
-   Reject, then everyone underneath with their current status and a "Send
-   Reset Email" action (the closest thing to an admin-driven password reset
-   this client-only app can do — see ADMIN_EMAIL's own comment). */
-const USER_ADMIN_STATUS_LABEL = { pending: 'Pending', approved: 'Approved', rejected: 'Rejected' };
-function userAdminRowHtml(item, isPendingSection){
-  const statusLabel = USER_ADMIN_STATUS_LABEL[item.status] || item.status;
-  return `
-    <div class="user-admin-row">
-      <div class="user-admin-row-main">
-        <div class="user-admin-row-email">${escapeHtml(item.email || '(no email)')}</div>
-        <div class="user-admin-row-meta">
-          ${isPendingSection
-            ? `Requested ${escapeHtml(formatActivityDateTime(item.requestedAt) || '')}`
-            : `<span class="user-admin-status user-admin-status-${escapeHtml(item.status || 'pending')}">${escapeHtml(statusLabel)}</span>${item.decidedBy ? ` &nbsp;·&nbsp; by ${escapeHtml(item.decidedBy)}` : ''}`}
-        </div>
-      </div>
-      <div class="user-admin-row-actions">
-        ${item.status !== 'approved' ? `<button class="btn btn-sm btn-primary" data-role="approve" data-uid="${escapeHtml(item.id)}">Approve</button>` : ''}
-        ${item.status !== 'rejected' ? `<button class="btn btn-sm btn-danger" data-role="reject" data-uid="${escapeHtml(item.id)}">Reject</button>` : ''}
-        <button class="btn btn-sm" data-role="reset-email" data-email="${escapeHtml(item.email || '')}">Send Reset Email</button>
-      </div>
-      ${!isPendingSection && item.email !== ADMIN_EMAIL ? `
-      <div class="user-admin-permissions">
-        ${MODULE_PERMISSIONS.map(m => `
-          <label class="user-admin-permission-toggle">
-            <input type="checkbox" data-role="toggle-permission" data-uid="${escapeHtml(item.id)}" data-module="${m.key}" ${userModulePermissions(item)[m.key] ? 'checked' : ''}>
-            ${escapeHtml(m.label)}
-          </label>
-        `).join('')}
-      </div>
-      ` : ''}
-    </div>
-  `;
-}
-function renderUserAdminLists(){
-  const pendingList = document.getElementById('userAdminPendingList');
-  const allList = document.getElementById('userAdminAllList');
-  if(!pendingList || !allList) return;
-  const sorted = [...userApprovalsAdminList].sort((a, b) => (a.email || '').localeCompare(b.email || ''));
-  const pending = sorted.filter(u => u.status === 'pending');
-  pendingList.innerHTML = pending.length
-    ? pending.map(u => userAdminRowHtml(u, true)).join('')
-    : '<div class="overview-empty">Nothing pending</div>';
-  allList.innerHTML = sorted.length
-    ? sorted.map(u => userAdminRowHtml(u, false)).join('')
-    : '<div class="overview-empty">No sign-ups yet</div>';
-  document.querySelectorAll('#userAdminModalOverlay [data-role="approve"]').forEach(btn => {
-    btn.addEventListener('click', () => decideUserApproval(btn.dataset.uid, 'approved'));
-  });
-  document.querySelectorAll('#userAdminModalOverlay [data-role="reject"]').forEach(btn => {
-    btn.addEventListener('click', () => decideUserApproval(btn.dataset.uid, 'rejected'));
-  });
-  document.querySelectorAll('#userAdminModalOverlay [data-role="toggle-permission"]').forEach(cb => {
-    cb.addEventListener('change', () => {
-      const checked = cb.checked;
-      setDoc(doc(userApprovalsCol, cb.dataset.uid), { permissions: { [cb.dataset.module]: checked } }, { merge: true })
-        .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
-    });
-  });
-  document.querySelectorAll('#userAdminModalOverlay [data-role="reset-email"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const email = btn.dataset.email;
-      if(!email) return;
-      const originalLabel = btn.textContent;
-      btn.disabled = true;
-      sendPasswordResetEmail(auth, email)
-        .then(() => { btn.textContent = 'Sent!'; setTimeout(() => { btn.textContent = originalLabel; btn.disabled = false; }, 2500); })
-        .catch(err => { alert(authErrorMessage(err)); btn.textContent = originalLabel; btn.disabled = false; });
-    });
-  });
-}
-function decideUserApproval(uidToDecide, status){
-  if(!uidToDecide) return;
-  setDoc(doc(userApprovalsCol, uidToDecide), {
-    status,
-    decidedBy: currentUser?.email || '',
-    decidedAt: Date.now()
-  }, { merge: true }).catch(err => alert('Failed to update: ' + err.message));
-}
-function initUserAdminPanel(){
-  document.getElementById('btnOpenUserAdmin').addEventListener('click', () => {
-    document.getElementById('navbarAccount').classList.remove('open');
-    document.getElementById('userAdminModalOverlay').classList.add('open');
-    if(!unsubscribeUserApprovalsAdmin){
-      unsubscribeUserApprovalsAdmin = onSnapshot(userApprovalsCol, snapshot => {
-        userApprovalsAdminList = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        renderUserAdminLists();
-      }, err => {
-        console.error('Forge: user admin listener error', err);
-        showCloudError('Failed to load user list: ' + err.message);
-      });
-    }
-  });
-  document.getElementById('btnCloseUserAdmin').addEventListener('click', () => {
-    document.getElementById('userAdminModalOverlay').classList.remove('open');
-  });
-  document.getElementById('userAdminModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'userAdminModalOverlay') document.getElementById('userAdminModalOverlay').classList.remove('open');
-  });
-}
-
-/* ---------- My Profile ---------- */
-function initMyProfileModal(){
-  const nameInput = document.getElementById('myProfileNameInput');
-  const imageInput = document.getElementById('myProfileImageInput');
-  const imagePreview = document.getElementById('myProfileImagePreview');
-  const imageRemoveBtn = document.getElementById('myProfileImageRemove');
-  const errEl = document.getElementById('myProfileError');
-  const successEl = document.getElementById('myProfileSuccess');
-
-  function openMyProfileModal(){
-    document.getElementById('navbarAccount').classList.remove('open');
-    nameInput.value = myProfile.displayName || '';
-    editingProfileImage = myProfile.photoImage || '';
-    if(editingProfileImage){
-      imagePreview.src = editingProfileImage;
-      imagePreview.style.display = '';
-      imageRemoveBtn.style.display = '';
-    }else{
-      imagePreview.src = '';
-      imagePreview.style.display = 'none';
-      imageRemoveBtn.style.display = 'none';
-    }
-    imageInput.value = '';
-    errEl.textContent = '';
-    successEl.textContent = '';
-    document.getElementById('myProfileModalOverlay').classList.add('open');
-  }
-  function closeMyProfileModal(){
-    document.getElementById('myProfileModalOverlay').classList.remove('open');
-  }
-
-  document.getElementById('btnOpenMyProfile').addEventListener('click', openMyProfileModal);
-  document.getElementById('btnCloseMyProfile').addEventListener('click', closeMyProfileModal);
-  document.getElementById('btnCancelMyProfile').addEventListener('click', closeMyProfileModal);
-  wireModalOverlayClose('myProfileModalOverlay', closeMyProfileModal);
-
-  imageInput.addEventListener('change', async e => {
-    const file = e.target.files[0];
-    if(!file) return;
-    try{
-      editingProfileImage = await resizeImageFile(file, 300);
-      imagePreview.src = editingProfileImage;
-      imagePreview.style.display = '';
-      imageRemoveBtn.style.display = '';
-    }catch(err){
-      errEl.textContent = err.message || 'Could not read that image file';
-    }
-  });
-  imageRemoveBtn.addEventListener('click', () => {
-    editingProfileImage = '';
-    imageInput.value = '';
-    imagePreview.src = '';
-    imagePreview.style.display = 'none';
-    imageRemoveBtn.style.display = 'none';
-  });
-
-  document.getElementById('btnSaveMyProfile').addEventListener('click', () => {
-    errEl.textContent = '';
-    setDoc(doc(userProfilesCol, currentUser.uid), {
-      displayName: nameInput.value.trim(),
-      photoImage: editingProfileImage,
-      updatedAt: Date.now()
-    }, { merge: true })
-      .then(() => {
-        successEl.textContent = 'Saved!';
-        setTimeout(closeMyProfileModal, 800);
-      })
-      .catch(err => { errEl.textContent = 'Failed to save: ' + err.message; });
-  });
-}
-
-/* ---------- Security (self-service Change Password) ---------- */
-function initSecurityModal(){
-  const form = document.getElementById('changePasswordForm');
-  const errEl = document.getElementById('securityError');
-  const successEl = document.getElementById('securitySuccess');
-
-  function openSecurityModal(){
-    document.getElementById('navbarAccount').classList.remove('open');
-    form.reset();
-    errEl.textContent = '';
-    successEl.textContent = '';
-    document.getElementById('securityModalOverlay').classList.add('open');
-  }
-  function closeSecurityModal(){
-    document.getElementById('securityModalOverlay').classList.remove('open');
-  }
-
-  document.getElementById('btnOpenSecurity').addEventListener('click', openSecurityModal);
-  document.getElementById('btnCloseSecurity').addEventListener('click', closeSecurityModal);
-  wireModalOverlayClose('securityModalOverlay', closeSecurityModal);
-
-  form.addEventListener('submit', e => {
-    e.preventDefault();
-    errEl.textContent = '';
-    successEl.textContent = '';
-    const currentPassword = document.getElementById('securityCurrentPassword').value;
-    const newPassword = document.getElementById('securityNewPassword').value;
-    const newPassword2 = document.getElementById('securityNewPassword2').value;
-    if(newPassword.length < 6){
-      errEl.textContent = 'New password must be at least 6 characters';
-      return;
-    }
-    if(newPassword !== newPassword2){
-      errEl.textContent = 'New passwords do not match';
-      return;
-    }
-    reauthenticateWithCredential(currentUser, EmailAuthProvider.credential(currentUser.email, currentPassword))
-      .then(() => updatePassword(currentUser, newPassword))
-      .then(() => {
-        successEl.textContent = 'Password changed!';
-        form.reset();
-      })
-      .catch(err => { errEl.textContent = authErrorMessage(err); });
-  });
-}
-
-/* ---------- Data Management (Export/Import, moved out of the account
-   dropdown itself — see the request that split this out) ---------- */
-function initDataManagementModal(){
-  function openDataManagementModal(){
-    document.getElementById('navbarAccount').classList.remove('open');
-    document.getElementById('dataManagementModalOverlay').classList.add('open');
-  }
-  function closeDataManagementModal(){
-    document.getElementById('dataManagementModalOverlay').classList.remove('open');
-  }
-  document.getElementById('btnOpenDataManagement').addEventListener('click', openDataManagementModal);
-  document.getElementById('btnCloseDataManagement').addEventListener('click', closeDataManagementModal);
-  wireModalOverlayClose('dataManagementModalOverlay', closeDataManagementModal);
-}
-
-
-
-
 function initCompareView(){
   document.getElementById('btnCompare').addEventListener('click', () => {
     setCompareSeriesPrefilter(null); // plain "Compare Recipes" entry — unfiltered, unlike "Compare Trials"
@@ -1058,8 +821,8 @@ let saveTimer = null;
 const versionCheckpointTimers = new Map();
 let unsubscribeLoginEvents = null;
 let unsubscribeActivityEvents = null;
-let loginEvents = [];
-let activityEvents = [];
+export let loginEvents = [];
+export let activityEvents = [];
 
 export function uid(){ return 'r' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -1451,86 +1214,6 @@ export function formatTimeOnly(ts){
   if(!ts) return '';
   return new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 }
-
-// "Unread" is tracked client-side only (localStorage, per browser) against
-// the newest sign-in the user has actually opened this panel to see —
-// there's no per-user read-state stored in Firestore for this, since it's
-// just a lightweight badge count, not something that needs to sync across
-// devices.
-const LOGIN_EVENTS_LAST_SEEN_KEY = 'forgeLastSeenLoginEventAt';
-const ACTIVITY_ENTITY_LABELS = { recipe: 'Recipe', project: 'Project', trial: 'Test', material: 'Ingredient', submission: 'Submission' };
-const ACTIVITY_VERB_LABELS = { created: 'added', updated: 'edited', deleted: 'deleted', imported: 'imported', rejected: 'rejected' };
-// Merges the sign-in log with the add/edit/delete activity log into one
-// feed, newest first — this is the only place the two collections meet;
-// everywhere else (attachLoginEventsListener/attachActivityEventsListener)
-// they're loaded and stored completely separately.
-function renderNotificationsBell(){
-  const list = document.getElementById('navbarNotifList');
-  const badge = document.getElementById('navbarNotifBadge');
-  if(!list || !badge) return;
-  const merged = [
-    ...loginEvents.map(ev => ({ at: ev.timestamp, title: `${ev.email || 'Unknown'} signed in`, by: '', id: null, changes: [] })),
-    ...activityEvents.map(ev => ({
-      at: ev.at,
-      title: `${ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType} "${ev.entityName || 'Untitled'}" ${ACTIVITY_VERB_LABELS[ev.type] || ev.type}`,
-      by: `by ${ev.by || 'Unknown'}`,
-      id: ev.id,
-      changes: ev.changes || []
-    }))
-  ].sort((a, b) => b.at - a.at).slice(0, 50);
-  list.innerHTML = merged.length
-    ? merged.map(item => `
-        <div class="navbar-notif-item${item.changes.length ? ' navbar-notif-item-clickable' : ''}" ${item.changes.length ? `data-activity-id="${escapeHtml(item.id)}"` : ''}>
-          <div class="ni-email">${escapeHtml(item.title)}</div>
-          ${item.by ? `<div class="ni-by">${escapeHtml(item.by)}</div>` : ''}
-          <div class="ni-time">${escapeHtml(formatActivityDateTime(item.at) || '')}</div>
-          ${item.changes.length ? `<div class="ni-changes-hint">${item.changes.length} field${item.changes.length === 1 ? '' : 's'} changed — click to view</div>` : ''}
-        </div>
-      `).join('')
-    : '<div class="navbar-notif-empty">No activity recorded yet</div>';
-  list.querySelectorAll('[data-activity-id]').forEach(el => {
-    el.addEventListener('click', () => {
-      const ev = activityEvents.find(e => e.id === el.dataset.activityId);
-      if(ev) openActivityChangesModal(ev);
-    });
-  });
-  const lastSeen = Number(localStorage.getItem(LOGIN_EVENTS_LAST_SEEN_KEY) || 0);
-  const unreadCount = merged.filter(item => item.at > lastSeen).length;
-  badge.textContent = unreadCount > 9 ? '9+' : String(unreadCount);
-  badge.style.display = unreadCount > 0 ? 'flex' : 'none';
-}
-
-// Opens the "what changed" modal for one activity event — see the
-// [data-activity-id] click wiring right above, in renderNotificationsBell.
-function openActivityChangesModal(ev){
-  const entityLabel = ACTIVITY_ENTITY_LABELS[ev.entityType] || ev.entityType;
-  document.getElementById('activityChangesTitle').textContent = `${entityLabel} "${ev.entityName || 'Untitled'}"`;
-  const list = document.getElementById('activityChangesList');
-  const changes = ev.changes || [];
-  list.innerHTML = `
-    <p style="font-size:12px;color:var(--text-dim);margin-top:0;">Edited by ${escapeHtml(ev.by || 'Unknown')} · ${escapeHtml(formatActivityDateTime(ev.at) || '')}</p>
-    ${changes.length ? changes.map(c => `
-      <div class="activity-change-row">
-        <div class="activity-change-field">${escapeHtml(c.field)}</div>
-        <div class="activity-change-values">
-          <span class="activity-change-before">${escapeHtml(c.before)}</span>
-          <span class="activity-change-arrow">→</span>
-          <span class="activity-change-after">${escapeHtml(c.after)}</span>
-        </div>
-      </div>
-    `).join('') : '<div class="overview-empty">No field changes recorded for this edit</div>'}
-  `;
-  document.getElementById('activityChangesModalOverlay').classList.add('open');
-}
-function initActivityChangesModal(){
-  document.getElementById('btnCloseActivityChanges').addEventListener('click', () => {
-    document.getElementById('activityChangesModalOverlay').classList.remove('open');
-  });
-  document.getElementById('activityChangesModalOverlay').addEventListener('click', e => {
-    if(e.target.id === 'activityChangesModalOverlay') document.getElementById('activityChangesModalOverlay').classList.remove('open');
-  });
-}
-
 
 export function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -1983,7 +1666,7 @@ onAuthStateChanged(auth, user => {
     resetTrialsState();
     if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
     if(unsubscribeActivityEvents){ unsubscribeActivityEvents(); unsubscribeActivityEvents = null; }
-    if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); unsubscribeUserApprovalsAdmin = null; }
+    if(unsubscribeUserApprovalsAdmin){ unsubscribeUserApprovalsAdmin(); setUnsubscribeUserApprovalsAdmin(null); }
     if(unsubscribeMyProfile){ unsubscribeMyProfile(); unsubscribeMyProfile = null; }
     if(unsubscribePresence){ unsubscribePresence(); unsubscribePresence = null; }
     if(unsubscribeAllUserProfiles){ unsubscribeAllUserProfiles(); unsubscribeAllUserProfiles = null; }
