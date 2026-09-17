@@ -1,3 +1,5 @@
+import { addRecipePreviewSheet } from './recipe-excel-preview.js';
+import { finishRecipeWorksheets } from './excel-layout.js';
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
   logActivityEvent, diffMainFields, showCloudError, playContentTransition,
@@ -1969,9 +1971,21 @@ export function renderRecipeEditor(r){
     window.addEventListener('afterprint', restoreTitle);
     window.print();
   });
-  document.getElementById('btnExportExcel').addEventListener('click', () => {
+  document.getElementById('btnExportExcel').addEventListener('click', async event => {
     document.getElementById('recipeMoreMenu')?.classList.remove('open');
-    exportRecipeToExcel(r);
+    const button = event.currentTarget;
+    if(button.disabled) return;
+    button.disabled = true;
+    button.setAttribute('aria-busy', 'true');
+    try {
+      await exportRecipeToExcel(r);
+    } catch(error) {
+      console.error('Recipe Excel export failed', error);
+      alert('Could not export the complete Excel preview. Please try again.\n' + error.message);
+    } finally {
+      button.disabled = false;
+      button.removeAttribute('aria-busy');
+    }
   });
 
   // Full-screen on-screen mirror of what Print / PDF would produce --
@@ -4377,6 +4391,9 @@ function renderPrintView(r){
 }
 
 /* ---------- Export Excel ----------
+   The first worksheet measures the live Preview and exports its text and
+   numbers as editable cells via recipe-excel-preview.js. The five detail
+   worksheets below remain available for simpler tabular editing.
    Builds a real, editable .xlsx workbook (via the ExcelJS global loaded in
    index.html -- see the <script> tag near the bottom of index.html) that
    mirrors the Print/Preview page section by section -- one sheet each for
@@ -4892,7 +4909,10 @@ function buildProcessSheet(wb, r){
     setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
     const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
     if(steps.length){
-      steps.forEach((s, idx) => setRow(['', `${idx+1}.`, s]));
+      steps.forEach((s, idx) => {
+        ws.mergeCells(row, 3, row, 6);
+        setRow(['', `${idx+1}.`, s]);
+      });
     } else {
       setRow(['', 'No steps yet']);
     }
@@ -4906,15 +4926,19 @@ async function exportRecipeToExcel(r){
     alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
     return;
   }
+  r = structuredClone(r);
   const wb = new window.ExcelJS.Workbook();
   wb.creator = 'Forge';
   wb.created = new Date();
 
+  renderPrintView(r);
+  await addRecipePreviewSheet(wb, document.getElementById('recipeCards'));
   buildProductDetailsSheet(wb, r);
   buildRecipeOverviewSheet(wb, r);
   buildCostingSheet(wb, r);
   buildIngredientsSheet(wb, r);
   buildProcessSheet(wb, r);
+  finishRecipeWorksheets(wb);
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -4924,8 +4948,10 @@ async function exportRecipeToExcel(r){
   const code = fullCode(r);
   const namePart = [r.name || 'Untitled recipe', code].filter(Boolean).join(' ');
   a.download = `Recipe ${namePart}`.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  document.body.appendChild(a);
   a.click();
-  URL.revokeObjectURL(url);
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 
 /* ---------- Recipe actions ---------- */
