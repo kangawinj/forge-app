@@ -47,20 +47,28 @@ import {
 } from './projects.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
-  RECIPE_DIFF_FIELDS, findProjectForRecipe, fullCode, recipeDisplayLabel,
-  descriptionListHtml, attachRecipesListener, mountRecipesListView,
-  renderRecipeCards, renderSidebarRecipeCards, renderRecipesListGrid, yearPrefix, suggestNextRecipeSeq,
+  RECIPE_DIFF_FIELDS, attachRecipesListener,
   refreshCodeCountryBadge, updateRecipeTitleDisplay, getCurrent, scheduleSave,
-  saveNow, scheduleVersionCheckpoint, cancelVersionCheckpoint,
-  autoCheckpointVersion, openVersionsModal, initVersionPreviewModal,
-  initVersionsModal, renderLinkedProjectSection, renderProductTypeSelect,
-  refreshCodeProductTypeBadge, bindComboField, blankPart, migrateRecipe,
-  saveRecipeToCloud, resetRecipesState, openRecipe, closeRecipe,
+  saveNow, renderLinkedProjectSection, renderProductTypeSelect,
+  refreshCodeProductTypeBadge, bindComboField,
+  resetRecipesState, openRecipe, closeRecipe,
   setRecipeEditSnapshotBefore, setUnlockedRecipeId, removeRecipe,
-  renderRecipeEditor, recomputeFromWeights, allIngredientsInPart,
-  allIngredientsInRecipe, formatWeight, partTotalWeight, computeFlowNodeText,
-  DEFAULT_FLOW_NODE_W, rectOf, clipToRectEdge, FLOW_ARROWHEAD_DEFS
+  renderRecipeEditor
 } from './recipes.js';
+import {
+  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
+  yearPrefix, suggestNextRecipeSeq, blankPart, migrateRecipe, saveRecipeToCloud,
+  recomputeFromWeights, allIngredientsInPart, allIngredientsInRecipe, formatWeight,
+  partTotalWeight, computeFlowNodeText, DEFAULT_FLOW_NODE_W, rectOf, clipToRectEdge,
+  FLOW_ARROWHEAD_DEFS
+} from './recipes-data.js';
+import {
+  scheduleVersionCheckpoint, cancelVersionCheckpoint, autoCheckpointVersion,
+  openVersionsModal, initVersionPreviewModal, initVersionsModal
+} from './recipes-versions.js';
+import {
+  mountRecipesListView, renderRecipeCards, renderSidebarRecipeCards, renderRecipesListGrid
+} from './recipes-list.js';
 // metaLists/metaItemName are imported above for app.js's own use (Recipes'
 // bindComboField etc.) — re-exported as-is so projects.js can import them
 // from app.js too, keeping every split module's imports pointed at
