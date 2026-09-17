@@ -3,7 +3,7 @@
 // top-of-file comment for the overall file split.
 import {
   escapeHtml, icon, computePrepareWeight, partPrepareWeight,
-  readOnlyProcessesHtml, renderReadOnlyProcessFlowchart
+  readOnlyProcessesHtml
 } from './app.js';
 import {
   allIngredientsInPart, allIngredientsInRecipe, partTotalWeight, formatWeight,
@@ -194,13 +194,6 @@ export function printIngredientTableHtml(parts, totalWeight){
   `;
 }
 
-export function withTemporaryVisibility(el, fn){
-  const prevCss = el.style.cssText;
-  el.style.cssText = 'display:block !important;position:absolute;left:-9999px;top:-9999px;visibility:visible;';
-  fn();
-  el.style.cssText = prevCss;
-}
-
 export function renderPrintView(r){
   const infoEl = document.getElementById('printInfoCard');
   if(infoEl){
@@ -243,8 +236,8 @@ export function renderPrintView(r){
   // process flow sit side by side on one page (see
   // .components-process-print-grid). The full step detail (times,
   // temperatures, tolerances) still prints on its own page further down
-  // via printProcessesView/printProcessFlowchart -- this is a summary, not
-  // a replacement. Every node renders the same neutral way (numbered
+  // via printProcessesView -- this is a summary, not a replacement.
+  // Every node renders the same neutral way (numbered
   // circle) -- there's no "step completed" concept in the data model, so
   // this never fabricates progress/done-state that isn't actually tracked.
   const flowStepsEl = document.getElementById('printProcessStepsFlow');
@@ -279,18 +272,6 @@ export function renderPrintView(r){
     ` : '';
   }
 
-  // Mutually exclusive with the flowchart print view below, matching
-  // whichever mode is currently selected on-screen (see processViewMode).
-  const isFlowMode = r.processViewMode === 'flowchart' && r.processFlowchart.nodes.length > 0;
   const procEl = document.getElementById('printProcessesView');
-  if(procEl) procEl.innerHTML = isFlowMode ? '' : readOnlyProcessesHtml(r.processes, r.parts);
-
-  const flowEl = document.getElementById('printProcessFlowchart');
-  if(flowEl){
-    if(isFlowMode){
-      withTemporaryVisibility(flowEl, () => renderReadOnlyProcessFlowchart(flowEl, r.processFlowchart, r.processes));
-    } else {
-      flowEl.innerHTML = '';
-    }
-  }
+  if(procEl) procEl.innerHTML = readOnlyProcessesHtml(r.processes, r.parts);
 }

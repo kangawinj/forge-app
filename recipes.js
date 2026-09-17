@@ -9,7 +9,6 @@
 //   - recipes-excel.js      -- Export Excel
 //   - recipes-overview.js   -- Recipe Overview / BOM / costing table
 //   - recipes-processes.js  -- Process Steps editor
-//   - recipes-flowchart.js  -- Process Flowchart drag/drop editor
 //   - recipes-lifecycle.js  -- New Trial / Duplicate / delete actions
 // renderRecipeEditor and the Parts tree renderers below are deliberately
 // left as one large, unsplit block (same reasoning as trials.js's
@@ -24,7 +23,7 @@ import {
   metaItemName, productTypeCode, ingredientMaster, migrateTrialsFromRecipes,
   countryToIso2, guardNavigation,
   readOnlyIngredientTreeHtml, readOnlyProcessesHtml,
-  renderReadOnlyProcessFlowchart, renderMain,
+  renderMain,
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
   findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
@@ -54,7 +53,6 @@ import { exportRecipeToExcel } from './recipes-excel.js';
 // happens inside an event handler, never at module-evaluation time.
 import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible } from './recipes-overview.js';
 import { renderProcesses } from './recipes-processes.js';
-import { addFlowNode, deleteFlowEdge, setProcessViewMode, refreshProcessViewMode } from './recipes-flowchart.js';
 import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent } from './recipes-lifecycle.js';
 // recipes-excel.js imports costingMarginVisible straight from this file --
 // a bare import above doesn't automatically re-export it, so this keeps
@@ -795,30 +793,13 @@ export function renderRecipeEditor(r){
     <div class="card">
       <div class="card-title">
         5. Process Steps
-        <div class="view-mode-toggle" id="processViewToggle">
-          <button type="button" class="btn btn-sm view-mode-btn" data-mode="list">${icon('list', 14)} List</button>
-          <button type="button" class="btn btn-sm view-mode-btn" data-mode="flowchart">${icon('git-branch', 14)} Flowchart</button>
-        </div>
       </div>
       <div id="processesListWrap">
         <div class="processes-list" id="processesList"></div>
         <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
       </div>
 
-      <div class="flow-canvas-wrap process-view-hidden" id="flowchartCanvasWrap">
-        <div class="flow-toolbar">
-          <button type="button" class="btn btn-sm" id="btnAddFlowNode">${icon('plus', 14)} Add Node</button>
-        </div>
-        <div class="flow-canvas-scroll" id="flowchartCanvasScroll">
-          <div class="flow-canvas" id="flowchartCanvas">
-            <svg class="flow-edges-svg" id="flowEdgesSvg"></svg>
-            <div class="flow-nodes-layer" id="flowNodesLayer"></div>
-          </div>
-        </div>
-      </div>
-
       <div id="printProcessesView" class="print-only compare-steps-col"></div>
-      <div id="printProcessFlowchart" class="print-only"></div>
     </div>
     </div>
 
@@ -1085,15 +1066,6 @@ export function renderRecipeEditor(r){
 
   renderParts(r);
   renderProcesses(r);
-  refreshProcessViewMode(r);
-  document.getElementById('processViewToggle').addEventListener('click', e => {
-    const btn = e.target.closest('.view-mode-btn');
-    if(btn) setProcessViewMode(r, btn.dataset.mode);
-  });
-  document.getElementById('btnAddFlowNode').addEventListener('click', () => addFlowNode(r));
-  document.getElementById('flowEdgesSvg').addEventListener('click', e => {
-    if(e.target.classList.contains('flow-edge-hit')) deleteFlowEdge(r, e.target.dataset.edgeId);
-  });
 
   document.getElementById('btnAddPart').addEventListener('click', () => {
     r.parts.push(blankPart(`Part ${r.parts.length+1}`));
@@ -1625,10 +1597,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
             <span class="ing-unit">%</span>
           </div>
           <button class="icon-btn" title="Delete">${icon('x')}</button>
-          <div class="ing-flow-link-wrap">
-            <span class="ing-flow-link-arrow">→</span>
-            <select class="ing-flow-link" title="Link this ingredient to a Process Flowchart node"></select>
-          </div>
         </div>
         <div class="ing-hint"></div>
         <div class="ing-subs"></div>
@@ -1643,23 +1611,6 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       const noteInput = branch.querySelector('.ing-note');
       const delBtn = branch.querySelector('.icon-btn');
       const prepareDisplay = branch.querySelector('.ing-prepare-display');
-
-      // Optional link to a Process Flowchart node (see the Process
-      // Flowchart section) — e.g. "this ingredient goes into step B".
-      // Hidden entirely (not just left blank) until the recipe actually
-      // has at least one flowchart node, so recipes that never touch that
-      // feature see zero visual change to this row.
-      const flowLinkWrap = branch.querySelector('.ing-flow-link-wrap');
-      const flowLinkSelect = branch.querySelector('.ing-flow-link');
-      const flowNodes = (r.processFlowchart && r.processFlowchart.nodes) || [];
-      flowLinkWrap.classList.toggle('hidden-if-empty', flowNodes.length === 0);
-      flowLinkSelect.innerHTML = `<option value="">—</option>` +
-        flowNodes.map(n => `<option value="${escapeHtml(n.id)}">${escapeHtml(n.label || '?')}</option>`).join('');
-      flowLinkSelect.value = ing.flowNodeId || '';
-      flowLinkSelect.addEventListener('change', e => {
-        ing.flowNodeId = e.target.value || null;
-        scheduleSave();
-      });
 
       ingDragHandle.addEventListener('dragstart', e => {
         dragPayload = { type: 'ingredient', item: ing, sourcePart: part };

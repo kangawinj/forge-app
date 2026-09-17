@@ -10,13 +10,13 @@ import { icon } from './app-icons.js';
 // to app-icons.js must not change that public surface.
 export { icon };
 import {
-  readOnlyProcessesHtml, renderReadOnlyProcessFlowchart, readOnlyIngredientTreeHtml,
+  readOnlyProcessesHtml, readOnlyIngredientTreeHtml,
   computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight
 } from './app-shared-render.js';
 // Re-exported for the same reason as `icon` above -- these all used to be
 // declared directly in this file.
 export {
-  readOnlyProcessesHtml, renderReadOnlyProcessFlowchart, readOnlyIngredientTreeHtml,
+  readOnlyProcessesHtml, readOnlyIngredientTreeHtml,
   computePrepareWeight, computeIngredientCost, isValidYieldPct, partPrepareWeight
 };
 import { moveToTrash, initTrashModal, purgeExpiredTrashOnLoad } from './app-trash.js';
@@ -85,8 +85,7 @@ import {
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   yearPrefix, suggestNextRecipeSeq, blankPart, migrateRecipe, saveRecipeToCloud,
   recomputeFromWeights, allIngredientsInPart, allIngredientsInRecipe, formatWeight,
-  partTotalWeight, computeFlowNodeText, DEFAULT_FLOW_NODE_W, rectOf, clipToRectEdge,
-  FLOW_ARROWHEAD_DEFS
+  partTotalWeight
 } from './recipes-data.js';
 import {
   scheduleVersionCheckpoint, cancelVersionCheckpoint, autoCheckpointVersion,

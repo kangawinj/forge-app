@@ -6,7 +6,7 @@
 import { escapeHtml, icon, uid, resizeImageFile } from './app.js';
 import {
   partTotalWeight, allIngredientsInPart, findPartByName, collectPartsFlat,
-  collectIngredientsFlat, round2, formatWeight, computeFlowNodeText
+  collectIngredientsFlat, round2, formatWeight
 } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, same pattern proven
 // throughout this session's other splits: every cross-call below happens
@@ -457,19 +457,8 @@ export function renderProcesses(r){
       scheduleSave();
     });
     deleteProcessBtn.addEventListener('click', () => {
-      const deletedProc = r.processes[pIdx];
       r.processes.splice(pIdx, 1);
       if(r.processes.length === 0) r.processes.push({ id: uid(), title: '', steps: [''], components: [] });
-      // Any Process Flowchart node currently live-linked to this Process
-      // (see computeFlowNodeText) gets detached rather than losing its
-      // content silently — its last-shown text is frozen as an ordinary
-      // free-typed node instead.
-      (r.processFlowchart.nodes || []).forEach(node => {
-        if(node.linkedProcessId === deletedProc.id){
-          node.text = computeFlowNodeText({ linkedProcessId: deletedProc.id, text: node.text }, [deletedProc]);
-          node.linkedProcessId = null;
-        }
-      });
       renderProcesses(r);
       scheduleSave();
     });
@@ -484,8 +473,8 @@ export function renderProcesses(r){
 // between them" preview — the simple two-column Ingredient|Process layout
 // the user's own reference spreadsheet uses, shown live in section 3 next
 // to the ingredient tree. Read-only: the actual editing still happens in
-// section 4's List view (or the Flowchart view) — this just mirrors
-// whatever's there right now, refreshed on every renderProcesses(r) call
+// section 4's List view — this just mirrors whatever's there right now,
+// refreshed on every renderProcesses(r) call
 // so it never goes stale. No connector arrows between separate Process
 // entries, only between a Process's own consecutive steps, matching the
 // reference layout's visually distinct titled groups.

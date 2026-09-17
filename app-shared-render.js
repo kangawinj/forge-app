@@ -1,12 +1,9 @@
-// Read-only ingredient-tree/process/flowchart renderers (shared by
-// Print, Version Preview, and Compare) plus the Prepare-weight/costing
-// math they and the live editor both depend on. Split out of app.js --
-// see app.js's own top-of-file comment for the overall file split.
+// Read-only ingredient-tree/process renderers (shared by Print, Version
+// Preview, and Compare) plus the Prepare-weight/costing math they and the
+// live editor both depend on. Split out of app.js -- see app.js's own
+// top-of-file comment for the overall file split.
 import { escapeHtml } from './app.js';
-import {
-  formatWeight, allIngredientsInPart, partTotalWeight, DEFAULT_FLOW_NODE_W,
-  computeFlowNodeText, FLOW_ARROWHEAD_DEFS, rectOf, clipToRectEdge
-} from './recipes-data.js';
+import { formatWeight, allIngredientsInPart, partTotalWeight } from './recipes-data.js';
 
 // Finds a Part anywhere in the recipe's tree (including nested Sub-parts)
 // by name -- a local copy of recipes.js's own findPartByName (not shared
@@ -132,69 +129,6 @@ export function readOnlyProcessesHtml(processes, parts){
   }).join('');
 }
 
-// Static, non-interactive mirror of the live Process Flowchart canvas (see
-// renderProcessFlowchart) for Printing and Version Preview — reuses the
-// exact stored node x/y/w so the read-only view matches what was actually
-// designed, just without drag handles/connector dots/delete buttons.
-// containerEl-scoped rather than a fixed global id, since Print and
-// Version Preview can both hold their own copy in the document at once.
-function readOnlyProcessFlowchartHtml(flowchart, processes){
-  const nodes = (flowchart && flowchart.nodes) || [];
-  if(nodes.length === 0) return '<div class="compare-missing">No flowchart yet</div>';
-  const nodesHtml = nodes.map(n => `
-    <div class="ro-flow-node" data-node-id="${escapeHtml(n.id)}" style="left:${n.x}px;top:${n.y}px;width:${n.w || DEFAULT_FLOW_NODE_W}px;">
-      <div class="flow-node-label">${escapeHtml(n.label || '')}</div>
-      <div class="flow-node-text">${escapeHtml(computeFlowNodeText(n, processes))}</div>
-    </div>
-  `).join('');
-  return `
-    <div class="flow-canvas-scroll">
-      <div class="flow-canvas ro-flow-canvas">
-        <svg class="flow-edges-svg"></svg>
-        <div class="flow-nodes-layer">${nodesHtml}</div>
-      </div>
-    </div>
-  `;
-}
-
-// Measures the just-rendered static nodes (only valid once containerEl is
-// actually laid out — see withTemporaryVisibility) and draws the edges +
-// sizes the canvas to fit, mirroring redrawFlowEdges/resizeFlowCanvasToFitNodes
-// but read-only (no hit-stroke, no click handler, no ghost line).
-function finalizeReadOnlyFlowchartEdges(containerEl, flowchart){
-  const svg = containerEl.querySelector('.flow-edges-svg');
-  const canvas = containerEl.querySelector('.ro-flow-canvas');
-  if(!svg || !canvas) return;
-  let maxRight = 0, maxBottom = 0;
-  canvas.querySelectorAll('.ro-flow-node').forEach(el => {
-    maxRight = Math.max(maxRight, el.offsetLeft + el.offsetWidth);
-    maxBottom = Math.max(maxBottom, el.offsetTop + el.offsetHeight);
-  });
-  canvas.style.width = (maxRight + 40) + 'px';
-  canvas.style.height = (maxBottom + 40) + 'px';
-
-  let html = FLOW_ARROWHEAD_DEFS;
-  ((flowchart && flowchart.edges) || []).forEach(edge => {
-    const fromEl = canvas.querySelector(`[data-node-id="${edge.from}"]`);
-    const toEl = canvas.querySelector(`[data-node-id="${edge.to}"]`);
-    if(!fromEl || !toEl) return;
-    const fromRect = rectOf(fromEl), toRect = rectOf(toEl);
-    const fromCenter = { x: fromRect.x + fromRect.w/2, y: fromRect.y + fromRect.h/2 };
-    const toCenter = { x: toRect.x + toRect.w/2, y: toRect.y + toRect.h/2 };
-    const start = clipToRectEdge(fromRect, toCenter);
-    const end = clipToRectEdge(toRect, fromCenter);
-    html += `<path class="flow-edge-line" d="M${start.x},${start.y} L${end.x},${end.y}" marker-end="url(#flowArrowhead)"></path>`;
-  });
-  svg.innerHTML = html;
-}
-
-export function renderReadOnlyProcessFlowchart(containerEl, flowchart, processes){
-  containerEl.innerHTML = readOnlyProcessFlowchartHtml(flowchart, processes);
-  if(((flowchart && flowchart.nodes) || []).length > 0){
-    finalizeReadOnlyFlowchartEdges(containerEl, flowchart);
-  }
-}
-
 
 // ---------- Ingredient Preparation Yield ----------
 // Shared by Recipe Overview, the Components/Process ingredient row, the
@@ -250,15 +184,9 @@ export function partPrepareWeight(part){
 // while still visually reading as a tree the way the on-screen elbow-line
 // artwork does. Recursive so nested Sub-parts show up too, not just each
 // top-level Part's direct ingredients.
-export function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
+export function readOnlyIngredientTreeHtml(parts, totalWeight){
   const namedParts = (parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
   if(namedParts.length === 0) return '<div class="overview-empty">No ingredients</div>';
-  // The whole Node column is omitted entirely (not just left blank) unless
-  // the recipe actually has flowchart nodes, so recipes that never touch
-  // that feature get byte-identical print/preview output to before it
-  // existed.
-  const nodeLabelById = new Map((flowNodes || []).map(n => [n.id, n.label || '?']));
-  const showNodeCol = nodeLabelById.size > 0;
   const totalPrepareWeight = namedParts.reduce((s,p)=>s+partPrepareWeight(p), 0);
   const rootRow = `
     <tr class="ro-tree-row ro-tree-root">
@@ -269,15 +197,14 @@ export function readOnlyIngredientTreeHtml(parts, totalWeight, flowNodes){
       <td class="ro-tree-yield"></td>
       <td class="ro-tree-wt">${fmtNum(totalPrepareWeight)}</td>
       <td class="ro-tree-pct">100.00%</td>
-      ${showNodeCol ? '<td class="ro-tree-nodecol"></td>' : ''}
     </tr>
   `;
   const bodyRows = namedParts.map((part, idx) =>
-    readOnlyPartBranchRows(part, false, totalWeight, totalWeight, [], idx === namedParts.length - 1, nodeLabelById, 1)
+    readOnlyPartBranchRows(part, false, totalWeight, totalWeight, [], idx === namedParts.length - 1, 1)
   ).join('');
   return `
     <table class="ro-tree-table">
-      <thead><tr><th class="ro-tree-name">Component</th><th class="ro-tree-note">Note</th><th class="ro-tree-pct">%</th><th class="ro-tree-wt">Formula (g)</th><th class="ro-tree-yield">Yield</th><th class="ro-tree-wt">Prepare (g)</th><th class="ro-tree-pct">% of Recipe</th>${showNodeCol ? '<th class="ro-tree-nodecol">Node</th>' : ''}</tr></thead>
+      <thead><tr><th class="ro-tree-name">Component</th><th class="ro-tree-note">Note</th><th class="ro-tree-pct">%</th><th class="ro-tree-wt">Formula (g)</th><th class="ro-tree-yield">Yield</th><th class="ro-tree-wt">Prepare (g)</th><th class="ro-tree-pct">% of Recipe</th></tr></thead>
       <tbody>${rootRow}${bodyRows}</tbody>
     </table>
   `;
@@ -314,14 +241,13 @@ export function treeGuideHtml(ancestorContinues, isLast){
 // actual weights rather than trusting a stored .percent, since older
 // versions saved before Sub-parts existed never had one on their Part
 // objects.
-export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancestorContinues, isLast, nodeLabelById, ancestorMultiplier){
+export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancestorContinues, isLast, ancestorMultiplier){
   const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
   const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
   const label = (part.name||'').trim() || 'Unnamed part';
   const partWeight = partTotalWeight(part);
   const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
   const partPctOfRecipe = grandTotal > 0 ? (partWeight / grandTotal * 100) : 0;
-  const showNodeCol = nodeLabelById && nodeLabelById.size > 0;
   // A Part can now carry its own Yield too (on top of any of its
   // ingredients' own) -- shown here, and its Prepare column is this Part's
   // own local rollup (partPrepareWeight), not further multiplied by any
@@ -340,7 +266,6 @@ export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, 
       <td class="ro-tree-yield">${partYieldDisplay.toFixed(2)}%</td>
       <td class="ro-tree-wt">${fmtNum(partPrepareWeight(part))}</td>
       <td class="ro-tree-pct">${partPctOfRecipe.toFixed(2)}%</td>
-      ${showNodeCol ? '<td class="ro-tree-nodecol"></td>' : ''}
     </tr>
   `;
   const childAncestorContinues = [...ancestorContinues, !isLast];
@@ -348,7 +273,6 @@ export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, 
   const childMultiplier = ancestorMultiplier * ownMultiplier;
   const ingRows = namedIngredients.map((ing, idx) => {
     const childIsLast = idx === childCount - 1;
-    const nodeLabel = showNodeCol && ing.flowNodeId ? nodeLabelById.get(ing.flowNodeId) : null;
     const formulaWt = parseFloat(ing.weight) || 0;
     const y = parseFloat(ing.prepYieldPct);
     const yieldDisplay = (isFinite(y) && y > 0) ? y : 100;
@@ -362,13 +286,12 @@ export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, 
         <td class="ro-tree-yield">${yieldDisplay.toFixed(2)}%</td>
         <td class="ro-tree-wt">${fmtNum(computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier)}</td>
         <td class="ro-tree-pct">${pctOfRecipe.toFixed(2)}%</td>
-        ${showNodeCol ? `<td class="ro-tree-nodecol">${nodeLabel ? '→' + escapeHtml(nodeLabel) : ''}</td>` : ''}
       </tr>
     `;
   }).join('');
   const subRows = namedSubParts.map((sub, idx) => {
     const childIsLast = namedIngredients.length + idx === childCount - 1;
-    return readOnlyPartBranchRows(sub, true, partWeight, grandTotal, childAncestorContinues, childIsLast, nodeLabelById, childMultiplier);
+    return readOnlyPartBranchRows(sub, true, partWeight, grandTotal, childAncestorContinues, childIsLast, childMultiplier);
   }).join('');
   return partRow + ingRows + subRows;
 }

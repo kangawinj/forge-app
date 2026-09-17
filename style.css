@@ -1352,9 +1352,9 @@
   }
   /* Print-only pairing of the ingredient tree with a compact top-to-bottom
      Process Flow (step titles only, full detail prints separately on its
-     own page via printProcessesView/printProcessFlowchart) -- see
-     renderPrintView. Screen layout is untouched since this whole grid only
-     ever renders inside a .print-only wrapper. */
+     own page via printProcessesView) -- see renderPrintView. Screen layout
+     is untouched since this whole grid only ever renders inside a
+     .print-only wrapper. */
   .components-process-print-grid{
     /* 75/25 fr split -- fr shares out the row's actual available width
        proportionally (unlike the old fixed-320px right column), so the
@@ -2832,107 +2832,8 @@
   .process-header .process-title:focus{background:#fff;}
   .process-steps-list{margin-bottom:10px;}
 
-  /* Section 4's List/Flowchart switch — see setProcessViewMode. */
   .view-mode-toggle{margin-left:auto;display:flex;gap:6px;}
   .view-mode-btn.active{background:var(--primary-light);border-color:var(--primary);color:var(--primary-dark);font-weight:600;}
-  .process-view-hidden{display:none;}
-
-  /* Freeform Process Flowchart canvas (see renderProcessFlowchart) — the
-     first freeform/draggable-node UI in the app, so this whole block has
-     no prior sibling to match against. */
-  .flow-canvas-wrap{margin-bottom:10px;}
-  .flow-toolbar{display:flex;gap:8px;margin-bottom:10px;}
-  .flow-canvas-scroll{
-    border:1px solid var(--border);
-    border-radius:var(--radius);
-    overflow:auto;
-    max-height:560px;
-    background:var(--bg);
-  }
-  .flow-canvas{position:relative;min-width:100%;min-height:400px;}
-  .flow-edges-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;}
-  .flow-edge-line{fill:none;stroke:var(--primary);stroke-width:2;}
-  .flow-edge-hit{fill:none;stroke:transparent;stroke-width:14;pointer-events:stroke;cursor:pointer;}
-  .flow-edge-hit:hover + .flow-edge-line{stroke:var(--danger);}
-  .flow-ghost-edge{fill:none;stroke:var(--text-dim);stroke-width:2;stroke-dasharray:5 4;}
-
-  .flow-node{
-    position:absolute;
-    background:var(--panel);
-    border:1px solid var(--border);
-    border-radius:10px;
-    box-shadow:var(--shadow);
-    font-size:12px;
-    user-select:none;
-  }
-  .flow-node.dragging{opacity:.7;box-shadow:0 4px 16px rgba(0,0,0,.2);z-index:5;}
-  .flow-node-strip{
-    display:flex;align-items:center;gap:4px;
-    padding:4px 6px;
-    border-bottom:1px solid var(--border);
-    background:var(--bg);
-    border-radius:10px 10px 0 0;
-    cursor:grab;
-    color:var(--text-dim);
-  }
-  .flow-node-strip:active{cursor:grabbing;}
-  .flow-node-label{
-    width:34px;flex:0 0 auto;
-    font-weight:700;color:var(--primary-dark);
-    border:1px solid transparent;background:transparent;
-    padding:2px 3px;border-radius:5px;font-size:12px;text-align:center;
-  }
-  .flow-node-label:hover{border-color:var(--border);}
-  .flow-node-label:focus{background:#fff;border-color:var(--primary);}
-  .flow-node-strip .icon-btn{margin-left:auto;flex-shrink:0;padding:2px;}
-  /* Optionally live-links this node to a Process from the List view — see
-     computeFlowNodeText. Sits between the strip and the text area. */
-  .flow-node-link{
-    display:block;width:100%;
-    border:none;border-bottom:1px solid var(--border);
-    background:var(--bg);color:var(--text-dim);
-    font-size:11px;padding:3px 8px;
-    border-radius:0;
-  }
-  .flow-node-text{
-    width:100%;border:none;background:transparent;resize:none;
-    font-family:inherit;font-size:12px;padding:6px 8px;
-    min-height:36px;overflow:hidden;display:block;
-  }
-  .flow-node-text:focus{outline:none;background:var(--primary-light);}
-  /* Linked nodes show their live-derived text read-only — edit the actual
-     Process in List view instead, since typing here would just be
-     overwritten on the next render. */
-  .flow-node-text:disabled{color:var(--text-dim);background:var(--bg);cursor:default;}
-  .flow-connector-dot{
-    position:absolute;width:10px;height:10px;border-radius:50%;
-    background:var(--primary);border:2px solid var(--panel);
-    opacity:.45;cursor:crosshair;
-  }
-  .flow-node:hover .flow-connector-dot{opacity:1;}
-  .flow-connector-dot.top{top:-5px;left:50%;transform:translateX(-50%);}
-  .flow-connector-dot.bottom{bottom:-5px;left:50%;transform:translateX(-50%);}
-  .flow-connector-dot.left{left:-5px;top:50%;transform:translateY(-50%);}
-  .flow-connector-dot.right{right:-5px;top:50%;transform:translateY(-50%);}
-
-  /* Read-only variant (Print/Version Preview) — same box look, no
-     interactive chrome (no strip/handle/dots/delete button). */
-  .ro-flow-node{
-    position:absolute;
-    background:#fff;
-    border:1px solid var(--border);
-    border-radius:10px;
-    font-size:11px;
-    padding:6px 8px;
-  }
-  .ro-flow-node .flow-node-label{
-    width:auto;border:none;padding:0;text-align:left;
-    font-weight:700;color:var(--primary-dark);margin-bottom:2px;display:block;
-  }
-  .ro-flow-node .flow-node-text{
-    width:auto;padding:0;min-height:0;
-    white-space:pre-wrap;word-break:break-word;color:var(--text);
-  }
 
   .process-components{
     margin-bottom:16px;
@@ -4643,7 +4544,6 @@
   body.preview-print-mode .recipe-fields-edit,
   body.preview-print-mode .processes-list,
   body.preview-print-mode .ingredients-edit-view,
-  body.preview-print-mode .flow-canvas-wrap,
   body.preview-print-mode .view-mode-toggle,
   body.preview-print-mode .danger-zone{display:none !important;}
   body.preview-print-mode .print-only{display:block !important;}
@@ -4658,7 +4558,6 @@
   }
   body.preview-print-mode .main{max-width:210mm !important;padding:32px 0 60px !important;margin:0 auto !important;}
   body.preview-print-mode .card{box-shadow:none;border:1px solid #999;padding:16px 18px;}
-  body.preview-print-mode #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
   body.preview-print-mode #printInfoCard .trial-photo-thumb{width:150px;height:150px;}
   body.preview-print-mode .recipe-title-display{
     font-size:32px !important;
@@ -4696,7 +4595,7 @@
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
-    .flow-canvas-wrap, .view-mode-toggle{display:none !important;}
+    .view-mode-toggle{display:none !important;}
     .print-only{display:block !important;}
     /* Higher specificity than .print-only{display:block} above (both
        !important, so specificity decides) -- keeps the ingredient tree +
@@ -4727,10 +4626,6 @@
        what lets more content fit per page instead of leaving blank
        space around a shrunk block. */
     body{background:#fff;zoom:0.75;}
-    /* The read-only flowchart's on-screen scroll box has a fixed
-       max-height/overflow for the browser viewport — on paper it should
-       just lay out at full size instead of being clipped. */
-    #printProcessFlowchart .flow-canvas-scroll{max-height:none !important;overflow:visible !important;}
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room

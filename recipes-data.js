@@ -33,8 +33,6 @@ export function blankRecipe(){
     batchWeight: 1000,
     parts: [],
     processes: [ { id: uid(), title: "", steps: [], components: [] } ],
-    processFlowchart: { nodes: [], edges: [] },
-    processViewMode: 'list',
     yieldPct: '',
     servingSizeG: '',
     pricingCurrency: 'THB',
@@ -95,7 +93,6 @@ export function migrateRecipe(r){
       p.ingredients = [];
     }
     p.ingredients.forEach(ing => {
-      if(ing.flowNodeId === undefined) ing.flowNodeId = null;
       // Backfilled the same way Processes already get one above -- older
       // saved ingredients never had a stable id, which quietly broke the
       // Sub Ingredients panel's per-row expand/collapse state (it keys off
@@ -119,23 +116,15 @@ export function migrateRecipe(r){
     r.processes.push({ id: uid(), title: "", steps: [''], components: [] });
   }
   r.processes.forEach(p => {
-    // Backfilled so Process Flowchart nodes can live-link to a specific
-    // Process by a stable id — an array index would break the moment
-    // Processes get reordered or one before it is deleted.
+    // Backfilled -- older saved Processes never had a stable id, which an
+    // array index can't replace once Processes get reordered or one
+    // before it is deleted.
     if(!p.id) p.id = uid();
     // A Process is valid with just a title and no steps yet — no longer
     // force a blank placeholder step just to have something to render.
     if(!Array.isArray(p.steps)) p.steps = [];
     if(!Array.isArray(p.components)) p.components = [];
   });
-
-  if(!r.processFlowchart || typeof r.processFlowchart !== 'object'){
-    r.processFlowchart = { nodes: [], edges: [] };
-  }
-  if(!Array.isArray(r.processFlowchart.nodes)) r.processFlowchart.nodes = [];
-  if(!Array.isArray(r.processFlowchart.edges)) r.processFlowchart.edges = [];
-  // Normalizes any missing/garbage value to 'list' too, not just undefined.
-  if(r.processViewMode !== 'flowchart') r.processViewMode = 'list';
 
   // Description used to be a single free-text field — upgrade it to a list
   // of separate points (characteristics, selling points, etc.).
@@ -427,68 +416,3 @@ export function formatWeight(n){
   return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
 }
 
-export const DEFAULT_FLOW_NODE_W = 170;
-
-// Spreadsheet-style column labels (A, B, ... Z, AA, AB, ...) — picks the
-// first one not already used by an existing node, so a deleted node's
-// letter can be reused by the next Add, and existing labels are never
-// renumbered out from under an ingredient that already links to them.
-export function excelColumnLabel(i){
-  let n = i + 1, label = '';
-  while(n > 0){
-    const rem = (n - 1) % 26;
-    label = String.fromCharCode(65 + rem) + label;
-    n = Math.floor((n - 1) / 26);
-  }
-  return label;
-}
-export function nextFlowNodeLabel(nodes){
-  const used = new Set((nodes || []).map(n => (n.label || '').trim().toUpperCase()).filter(Boolean));
-  for(let i = 0; i < 18278; i++){ // A..Z, AA..ZZ, AAA..ZZZ — far more than any real recipe needs
-    const label = excelColumnLabel(i);
-    if(!used.has(label)) return label;
-  }
-  return 'X' + (nodes.length + 1); // astronomically unlikely fallback
-}
-
-export function blankFlowNode(label, x, y){
-  return { id: uid(), x: Math.round(x), y: Math.round(y), w: DEFAULT_FLOW_NODE_W, label, text: '', linkedProcessId: null };
-}
-
-// A node's displayed text is either its own free-typed .text, or — when
-// linked to a Process (see the node's "Link" dropdown) — live-derived
-// fresh from that Process's current title + steps every time this is
-// called, so editing the List always shows up the next time the
-// Flowchart is rendered without any separate push-sync step. Falls back
-// to whatever .text was last set if the linked Process no longer exists
-// (shouldn't normally happen — Process deletion detaches the link and
-// freezes the text instead — but never crash on a dangling reference).
-export function computeFlowNodeText(node, processes){
-  if(!node.linkedProcessId) return node.text || '';
-  const proc = (processes || []).find(p => p.id === node.linkedProcessId);
-  if(!proc) return node.text || '';
-  const steps = (proc.steps || []).filter(s => (s||'').trim() !== '');
-  return [proc.title || 'Untitled process', ...steps].join('\n');
-}
-
-// Every node div is position:absolute inside #flowchartCanvas (itself
-// position:relative), so offsetLeft/offsetTop are ALREADY canvas-local
-// coordinates — no viewport/scroll conversion needed for node-to-node
-// geometry, only for the one case that needs a real pointer position (the
-// live ghost-edge preview line, handled separately in redrawFlowEdges).
-export function rectOf(el){
-  return { x: el.offsetLeft, y: el.offsetTop, w: el.offsetWidth, h: el.offsetHeight };
-}
-
-// Where a straight line from a rect's center to `target` crosses that
-// rect's own border — used to clip an edge so it visually starts/ends at
-// a node's edge instead of its center.
-export function clipToRectEdge(rect, target){
-  const cx = rect.x + rect.w/2, cy = rect.y + rect.h/2;
-  const dx = target.x - cx, dy = target.y - cy;
-  if(dx === 0 && dy === 0) return { x: cx, y: cy };
-  const scale = Math.min((rect.w/2) / Math.abs(dx || 1e-6), (rect.h/2) / Math.abs(dy || 1e-6));
-  return { x: cx + dx*scale, y: cy + dy*scale };
-}
-
-export const FLOW_ARROWHEAD_DEFS = `<defs><marker id="flowArrowhead" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--primary)"></path></marker></defs>`;

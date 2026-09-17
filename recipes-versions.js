@@ -3,7 +3,7 @@
 // top-of-file comment for the overall file split.
 import {
   escapeHtml, icon, uid, wireModalOverlayClose, renderMain,
-  readOnlyIngredientTreeHtml, readOnlyProcessesHtml, renderReadOnlyProcessFlowchart
+  readOnlyIngredientTreeHtml, readOnlyProcessesHtml
 } from './app.js';
 import { migrateRecipe, allIngredientsInRecipe, formatWeight, descriptionListHtml } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
@@ -25,8 +25,6 @@ export function snapshotRecipeCore(r){
     batchWeight: r.batchWeight,
     parts: JSON.parse(JSON.stringify(r.parts)),
     processes: JSON.parse(JSON.stringify(r.processes)),
-    processFlowchart: r.processFlowchart ? JSON.parse(JSON.stringify(r.processFlowchart)) : { nodes: [], edges: [] },
-    processViewMode: r.processViewMode || 'list',
     yieldPct: r.yieldPct
   };
 }
@@ -110,9 +108,6 @@ export function openVersionPreview(r, v){
   const snap = v.snapshot || {};
   const totalWt = allIngredientsInRecipe(snap).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
 
-  const snapFlowchart = snap.processFlowchart || { nodes: [], edges: [] };
-  const isFlowMode = snap.processViewMode === 'flowchart' && snapFlowchart.nodes.length > 0;
-
   document.getElementById('versionPreviewTitle').textContent = v.label || 'Untitled version';
   document.getElementById('versionPreviewContent').innerHTML = `
     <div class="reflist-item-meta" style="margin-bottom:12px;">Saved ${escapeHtml(new Date(v.savedAt).toLocaleString())}</div>
@@ -124,14 +119,11 @@ export function openVersionPreview(r, v){
       ${descriptionListHtml(snap)}
     </div>
     <div class="overview-title" style="margin-top:16px;">Ingredients</div>
-    ${readOnlyIngredientTreeHtml(snap.parts, totalWt, snapFlowchart.nodes)}
+    ${readOnlyIngredientTreeHtml(snap.parts, totalWt)}
     <div class="overview-title" style="margin-top:16px;">Process Steps</div>
-    ${isFlowMode ? '<div id="versionPreviewFlowchart"></div>' : `<div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes, snap.parts)}</div>`}
+    <div class="compare-steps-col">${readOnlyProcessesHtml(snap.processes, snap.parts)}</div>
   `;
   document.getElementById('versionPreviewModalOverlay').classList.add('open');
-  if(isFlowMode){
-    renderReadOnlyProcessFlowchart(document.getElementById('versionPreviewFlowchart'), snapFlowchart, snap.processes);
-  }
 }
 
 export function closeVersionPreview(){
