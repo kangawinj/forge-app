@@ -3,7 +3,7 @@ import {
   DELETE_APPROVER_EMAIL, approverMaterialsCol, logActivityEvent, currentUser, uid,
   diffMainFields, snapshotMainFields, playContentTransition, resizeImageFile,
   formatActivityDateTime, mainFeatureView, currentId, recipesLoaded, renderMain,
-  materialsCol, showCloudError, trialStringListHtml, moveToTrash
+  materialsCol, showCloudError, trialStringListHtml, moveToTrash, FOOD_ALLERGEN_COLUMNS
 } from './app.js';
 import {
   onSnapshot, setDoc, doc, deleteDoc
@@ -33,8 +33,81 @@ function blankSubIngredient(){
 // page re-render, matching how editingSubIngredients above stays local
 // until "+ Add to Library"/"Save Changes" actually commits it.
 let editingFactories = [];
+// Allergens -- same search + multi-tick picker sourced from the Food
+// Allergens reference chart's 25 categories as products.js's own
+// Allergens field (see FOOD_ALLERGEN_COLUMNS in reflists-charts.js),
+// plus free text for anything not on that list. Kept as a comma-joined
+// string on save, same "editing draft" staging pattern as
+// editingFactories above.
+let allergensEditing = [];
+function getAllergens(allergens){
+  if(Array.isArray(allergens)) return allergens.filter(Boolean);
+  if(typeof allergens === 'string' && allergens.trim()) return allergens.split(',').map(a => a.trim()).filter(Boolean);
+  return [];
+}
+function renderAllergenChips(){
+  const wrap = document.getElementById('mf-allergenChips');
+  if(!wrap) return;
+  wrap.innerHTML = allergensEditing.map((a, idx) => `
+    <span class="pf-allergen-chip">${escapeHtml(a)}<button type="button" class="pf-allergen-chip-remove" data-idx="${idx}" title="Remove">${icon('x', 12)}</button></span>
+  `).join('');
+  wrap.querySelectorAll('.pf-allergen-chip-remove').forEach(btn => {
+    btn.addEventListener('click', () => {
+      allergensEditing.splice(parseInt(btn.dataset.idx, 10), 1);
+      renderAllergenChips();
+    });
+  });
+}
+function addAllergen(name){
+  const v = (name || '').trim();
+  if(!v || allergensEditing.some(a => a.toLowerCase() === v.toLowerCase())) return;
+  allergensEditing.push(v);
+  renderAllergenChips();
+}
+// Suggestions are the 25 reference categories that match what's typed
+// (or all of them, focused with nothing typed yet) and aren't already
+// picked -- clicking one adds it without closing the field, so several
+// can be ticked in a row. Same behavior as products.js's own allergen
+// picker, just scoped to this file's own mf-allergen* element ids.
+function renderAllergenSuggestions(query){
+  const box = document.getElementById('mf-allergenSuggestions');
+  if(!box) return;
+  const q = (query || '').trim().toLowerCase();
+  const matches = FOOD_ALLERGEN_COLUMNS.filter(c =>
+    !allergensEditing.some(a => a.toLowerCase() === c.toLowerCase()) &&
+    (!q || c.toLowerCase().includes(q))
+  ).slice(0, 8);
+  if(!matches.length){ box.hidden = true; box.innerHTML = ''; return; }
+  box.innerHTML = matches.map(c => `<button type="button" class="pf-allergen-suggestion" data-name="${escapeHtml(c)}">${escapeHtml(c)}</button>`).join('');
+  box.hidden = false;
+  box.querySelectorAll('.pf-allergen-suggestion').forEach(btn => {
+    btn.addEventListener('mousedown', e => {
+      // preventDefault keeps focus in the search input instead of letting
+      // it blur first, which would hide this dropdown before the click lands.
+      e.preventDefault();
+      addAllergen(btn.dataset.name);
+      document.getElementById('mf-allergenSearch').value = '';
+      renderAllergenSuggestions('');
+    });
+  });
+}
+// Same close-on-scroll/close-on-outside-click belt-and-suspenders as
+// products.js's own allergen picker -- see that file's comments for why
+// both are needed. Registered once at module load, scoped to this file's
+// own mf-allergenSuggestions box / .mf-allergen-picker wrapper so it
+// can't interfere with products.js's separate pf- picker.
+window.addEventListener('scroll', () => {
+  const box = document.getElementById('mf-allergenSuggestions');
+  if(box && !box.hidden) box.hidden = true;
+}, { passive: true, capture: true });
+document.addEventListener('mousedown', e => {
+  if(e.target.closest('.mf-allergen-picker')) return;
+  const box = document.getElementById('mf-allergenSuggestions');
+  if(box && !box.hidden) box.hidden = true;
+}, true);
+
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes','mf-insNumber','mf-brand'];
-const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number', brand: 'Brand' };
+const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number', brand: 'Brand', allergens: 'Allergens' };
 let materialEditSnapshotBefore = null;
 // The form field only ever holds the digits after "INS-" (that prefix is a
 // fixed, non-editable label next to the input, see the "10. E-Number / INS"
@@ -172,11 +245,11 @@ export function mountMaterialsView(){
           </div>
           <div class="field">
             <label>5. Vendor Name</label>
-            <input type="text" id="mf-vendorName" placeholder="e.g. ABC Co., Ltd.">
+            <input type="text" id="mf-vendorName" list="customerDatalist" placeholder="e.g. ABC Co., Ltd.">
           </div>
           <div class="field">
             <label>6. Manufacturer Name (if any)</label>
-            <input type="text" id="mf-manufacturer" placeholder="e.g. XYZ Manufacturing">
+            <input type="text" id="mf-manufacturer" list="customerDatalist" placeholder="e.g. XYZ Manufacturing">
           </div>
         </div>
         <div class="grid-3">
@@ -209,11 +282,19 @@ export function mountMaterialsView(){
           </div>
         </div>
         <div class="field">
-          <label>12. Factories/Companies Using This Material (optional)</label>
+          <label>12. Allergens (optional)</label>
+          <div class="pf-allergen-picker mf-allergen-picker">
+            <div class="pf-allergen-chips" id="mf-allergenChips"></div>
+            <input type="text" id="mf-allergenSearch" placeholder="Search allergens (e.g. Shrimp, Wheat, Soy) or type your own and press Enter" autocomplete="off">
+            <div class="pf-allergen-suggestions" id="mf-allergenSuggestions" hidden></div>
+          </div>
+        </div>
+        <div class="field">
+          <label>13. Factories/Companies Using This Material (optional)</label>
           <div id="materialFactoriesRows"></div>
         </div>
         <div class="field">
-          <label>13. Sub Ingredients (optional)</label>
+          <label>14. Sub Ingredients (optional)</label>
           <div class="flavor-table-scroll">
             <table class="flavor-table" id="subIngredientsTable">
               <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th></th></tr></thead>
@@ -272,6 +353,23 @@ export function mountMaterialsView(){
     editingSubIngredients.push(blankSubIngredient());
     renderSubIngredientsTable();
   });
+  const materialAllergenSearch = document.getElementById('mf-allergenSearch');
+  materialAllergenSearch.addEventListener('input', () => renderAllergenSuggestions(materialAllergenSearch.value));
+  materialAllergenSearch.addEventListener('focus', () => renderAllergenSuggestions(materialAllergenSearch.value));
+  materialAllergenSearch.addEventListener('blur', () => {
+    // Delayed so a suggestion's own mousedown (which already preventDefault
+    // stops the blur that would otherwise race it) still has a moment to
+    // register as a click before this hides the dropdown.
+    setTimeout(() => { document.getElementById('mf-allergenSuggestions').hidden = true; }, 150);
+  });
+  materialAllergenSearch.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){
+      e.preventDefault();
+      addAllergen(materialAllergenSearch.value);
+      materialAllergenSearch.value = '';
+      renderAllergenSuggestions('');
+    }
+  });
   document.getElementById('btnAddMaterial').addEventListener('click', () => {
     const nameEn = document.getElementById('mf-nameEn').value.trim();
     const nameTh = document.getElementById('mf-nameTh').value.trim();
@@ -294,6 +392,7 @@ export function mountMaterialsView(){
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
       insNumber: formatInsNumber(document.getElementById('mf-insNumber').value),
       brand: document.getElementById('mf-brand').value.trim(),
+      allergens: allergensEditing.join(', '),
       factories: editingFactories.map(f => (f || '').trim()).filter(Boolean),
       subIngredients: editingSubIngredients.map(si => ({...si})),
       image: editingMaterialImage || '',
@@ -337,6 +436,10 @@ export function openMaterialDetail(m){
     ${m.usageNotes ? `
       <div class="material-detail-notes-label">Usage Notes</div>
       <div class="material-detail-notes">${escapeHtml(m.usageNotes)}</div>
+    ` : ''}
+    ${getAllergens(m.allergens).length ? `
+      <div class="material-detail-notes-label">Allergens</div>
+      <div class="material-detail-notes">${getAllergens(m.allergens).map(a => escapeHtml(a)).join(', ')}</div>
     ` : ''}
     ${(m.factories || []).length ? `
       <div class="material-detail-notes-label">Factories/Companies Using This Material</div>
@@ -412,6 +515,10 @@ function fillMaterialForm(m){
   renderSubIngredientsTable();
   editingFactories = Array.isArray(m.factories) ? [...m.factories] : [];
   renderMaterialFactoriesList();
+  allergensEditing = getAllergens(m.allergens);
+  renderAllergenChips();
+  document.getElementById('mf-allergenSearch').value = '';
+  renderAllergenSuggestions('');
 }
 
 function subIngredientRowHtml(si){
@@ -507,6 +614,10 @@ function cancelEditMaterial(){
   renderSubIngredientsTable();
   editingFactories = [];
   renderMaterialFactoriesList();
+  allergensEditing = [];
+  renderAllergenChips();
+  document.getElementById('mf-allergenSearch').value = '';
+  renderAllergenSuggestions('');
   document.getElementById('materialFormTitle').textContent = '+ Add New Ingredient';
   document.getElementById('btnAddMaterial').textContent = '+ Add to Library';
   document.getElementById('btnCancelEditMaterial').style.display = 'none';
