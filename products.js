@@ -118,6 +118,16 @@ function addAllergen(name){
 function renderAllergenSuggestions(query){
   const box = document.getElementById('pf-allergenSuggestions');
   if(!box) return;
+  // Also called from form reset/load (to clear out stale suggestion
+  // content for next time) with an empty query -- an empty query matches
+  // every category, so without this check the box would pop back open
+  // on its own right after a save/cancel, not just while the search
+  // input is actually focused.
+  if(document.activeElement !== document.getElementById('pf-allergenSearch')){
+    box.hidden = true;
+    box.innerHTML = '';
+    return;
+  }
   const q = (query || '').trim().toLowerCase();
   const matches = FOOD_ALLERGEN_COLUMNS.filter(c =>
     !allergensEditing.some(a => a.toLowerCase() === c.toLowerCase()) &&
