@@ -800,16 +800,24 @@ export function renderRecipeEditor(r){
           </div>
         </div>
       </div>
+      <div class="process-comp-add-row">
+        <div class="comp-multiselect" id="portionCompMultiselect">
+          <button type="button" class="comp-multiselect-toggle" id="portionCompToggle">— Select parts to add —</button>
+          <div class="comp-multiselect-panel" id="portionCompPanel"></div>
+        </div>
+        <button class="btn btn-sm" type="button" id="btnAddPortionComponent">+ Add</button>
+      </div>
       <div style="overflow-x:auto;">
         <table class="process-comp-table">
           <thead>
             <tr>
               <th class="col-no">#</th>
               <th>Component</th>
-              <th class="col-pct">% of Recipe</th>
               <th class="col-wt">Weight in Portion (g)</th>
+              <th class="col-pct">% of Portion</th>
               <th class="col-tol">Tolerance (±%)</th>
               <th class="col-range">Range (g)</th>
+              <th class="col-del"></th>
             </tr>
           </thead>
           <tbody id="portionComponentsBody"></tbody>
@@ -977,6 +985,29 @@ export function renderRecipeEditor(r){
 
   document.getElementById('f-portionWt').addEventListener('input', e => {
     r.portionWeightG = e.target.value;
+    renderPortionComponents(r);
+    scheduleSave();
+  });
+
+  portionSelectedKeys = new Set();
+  document.getElementById('portionCompToggle').addEventListener('click', () => {
+    document.getElementById('portionCompPanel').classList.toggle('open');
+  });
+  document.getElementById('portionCompMultiselect').addEventListener('focusout', e => {
+    if(e.currentTarget.contains(e.relatedTarget)) return;
+    document.getElementById('portionCompPanel').classList.remove('open');
+  });
+  document.getElementById('btnAddPortionComponent').addEventListener('click', () => {
+    if(portionSelectedKeys.size === 0) return;
+    const portionWt = parseFloat(r.portionWeightG) || 0;
+    portionSelectedKeys.forEach(key => {
+      const part = r.parts[+key];
+      if(!part) return;
+      const weight = round2((parseFloat(part.percent) || 0) / 100 * portionWt);
+      r.portionComponents.push({ id: uid(), name: part.name || 'Untitled part', weight, tolerancePct: '' });
+    });
+    portionSelectedKeys.clear();
+    document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
     scheduleSave();
   });
@@ -1311,58 +1342,103 @@ export function renderParts(r){
   renderPortionComponents(r);
 }
 
-// "Components of Portion" -- a single portion's worth (Portion Weight, g)
-// broken down across the top-level Parts only (not the full ingredient
-// tree), using each Part's own .percent -- already kept current by
-// recomputeFromWeights(r) above on every call -- against that portion size,
-// plus an optional per-Part QC tolerance (±%) the user types in here.
-// Called at the end of every renderParts(r), so it always reflects
-// whatever the ingredient tree currently shows.
+// "Components of Portion" -- a free-standing list (r.portionComponents),
+// separate from the actual ingredient tree/Parts: "+ Add" snapshots a
+// top-level Part's current name + its share of the Portion Weight in at
+// the moment it's picked, then every field (including name) is fully
+// editable and stays put even if the real Part is later renamed, resized,
+// or deleted -- same "copy once, then independent" behavior as a Process
+// Step's own Components table (see recipes-processes.js). % of Portion and
+// Range are the only auto-computed fields, both derived from Portion
+// Weight (g) above and each row's own Weight/Tolerance.
+// Called at the end of every renderParts(r), so Weight in Portion for a
+// NEWLY added row (still equal to its source Part's live share) stays in
+// sync until the user edits it directly -- existing rows are untouched by
+// re-renders, since their weight already lives on the row itself.
+let portionSelectedKeys = new Set();
+
 function renderPortionComponents(r){
   const body = document.getElementById('portionComponentsBody');
   if(!body) return;
 
   const wtInput = document.getElementById('f-portionWt');
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
+  const portionWt = parseFloat(r.portionWeightG) || 0;
+
+  // Picker panel -- top-level Parts only, per this feature's scope.
+  const panel = document.getElementById('portionCompPanel');
+  const toggle = document.getElementById('portionCompToggle');
+  if(panel && toggle){
+    panel.innerHTML = r.parts.length ? r.parts.map((part, idx) => `
+      <label class="comp-multiselect-item">
+        <input type="checkbox" value="${idx}">
+        <span>${escapeHtml(part.name || `Part ${idx+1}`)}</span>
+      </label>
+    `).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
+    panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
+      cb.checked = portionSelectedKeys.has(cb.value);
+      cb.addEventListener('change', () => {
+        if(cb.checked) portionSelectedKeys.add(cb.value); else portionSelectedKeys.delete(cb.value);
+        updatePortionToggleLabel();
+      });
+    });
+    updatePortionToggleLabel();
+  }
 
   body.innerHTML = '';
-  if(r.parts.length === 0){
-    body.innerHTML = '<tr><td colspan="6"><div class="overview-empty">No parts yet</div></td></tr>';
+  if(r.portionComponents.length === 0){
+    body.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No components added yet — select a part above and click "+ Add"</div></td></tr>';
     return;
   }
-  const portionWt = parseFloat(r.portionWeightG) || 0;
-  r.parts.forEach((part, idx) => {
+  r.portionComponents.forEach((comp, idx) => {
     const tr = document.createElement('tr');
-    const pct = parseFloat(part.percent) || 0;
-    const wt = round2(portionWt * pct / 100);
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
-      <td>${escapeHtml(part.name || `Part ${idx+1}`)}</td>
-      <td class="col-pct">${pct.toFixed(2)}%</td>
-      <td class="col-wt">${wt.toFixed(2)}</td>
+      <td><input type="text" class="comp-name"></td>
+      <td class="col-wt"><input type="number" class="comp-wt num-input" step="0.01" min="0"></td>
+      <td class="col-pct comp-pct-display"></td>
       <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
       <td class="col-range comp-range"></td>
+      <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
     `;
+    const nameInput = tr.querySelector('.comp-name');
+    const wtInput2 = tr.querySelector('.comp-wt');
     const tolInput = tr.querySelector('.comp-tol');
+    const pctCell = tr.querySelector('.comp-pct-display');
     const rangeCell = tr.querySelector('.comp-range');
-    tolInput.value = part.portionTolerancePct ?? '';
+    nameInput.value = comp.name || '';
+    wtInput2.value = comp.weight ?? 0;
+    tolInput.value = comp.tolerancePct ?? '';
 
-    function updateRange(){
+    function updateComputed(){
+      const wt = parseFloat(wtInput2.value) || 0;
+      pctCell.textContent = portionWt > 0 ? (wt/portionWt*100).toFixed(2) + '%' : '—';
       const tol = parseFloat(tolInput.value) || 0;
       if(tol <= 0){ rangeCell.textContent = '—'; return; }
       const delta = round2(wt * tol / 100);
       rangeCell.textContent = `${(wt-delta).toFixed(2)}-${(wt+delta).toFixed(2)} g`;
     }
-    updateRange();
+    updateComputed();
 
-    tolInput.addEventListener('input', e => {
-      part.portionTolerancePct = e.target.value;
-      updateRange();
+    nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
+    wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateComputed(); scheduleSave(); });
+    tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateComputed(); scheduleSave(); });
+    tr.querySelector('.icon-btn').addEventListener('click', () => {
+      r.portionComponents.splice(idx, 1);
+      renderPortionComponents(r);
       scheduleSave();
     });
 
     body.appendChild(tr);
   });
+}
+
+function updatePortionToggleLabel(){
+  const toggle = document.getElementById('portionCompToggle');
+  if(!toggle) return;
+  const n = portionSelectedKeys.size;
+  toggle.textContent = n === 0 ? '— Select parts to add —' : `${n} selected`;
+  toggle.classList.toggle('has-selection', n > 0);
 }
 
 // Renders one Part — and, recursively, every Sub-part nested inside it — as

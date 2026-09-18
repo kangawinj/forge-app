@@ -12,7 +12,7 @@ import {
 export const PART_COUNT = 4;
 
 export function blankPart(name){
-  return { name, ingredients: [ { id: uid(), name:"", percent:0, weight:0, note:"" } ], parts: [], portionTolerancePct: '' };
+  return { name, ingredients: [ { id: uid(), name:"", percent:0, weight:0, note:"" } ], parts: [] };
 }
 
 export function blankRecipe(){
@@ -47,6 +47,7 @@ export function blankRecipe(){
     customerMarginMax: '',
     versions: [],
     portionWeightG: '',
+    portionComponents: [],
     // Recipe Series / Trial identity -- absent (null/'') means "legacy,
     // no Series" everywhere this is checked (fullCode, recipeDisplayLabel,
     // the Recipe Detail header/toolbar, sidebar grouping). Only ever set
@@ -104,7 +105,6 @@ export function migrateRecipe(r){
     const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
     if(oldPartName) p.name = `Part ${oldPartName[1]}`;
     if(!Array.isArray(p.parts)) p.parts = [];
-    if(p.portionTolerancePct === undefined) p.portionTolerancePct = '';
     p.parts.forEach(migratePart);
   }
   r.parts.forEach(migratePart);
@@ -141,6 +141,8 @@ export function migrateRecipe(r){
   if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
   if(!Array.isArray(r.versions)) r.versions = [];
   if(r.portionWeightG === undefined || r.portionWeightG === null) r.portionWeightG = '';
+  if(!Array.isArray(r.portionComponents)) r.portionComponents = [];
+  r.portionComponents.forEach(c => { if(!c.id) c.id = uid(); });
 
   // Older recipes saved before activity tracking existed won't have these —
   // leave them blank rather than guessing a creator/date that isn't real.
