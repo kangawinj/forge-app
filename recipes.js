@@ -70,7 +70,7 @@ let saveTimer = null;
 export let unsubscribeRecipes = null;
 export let recipesLoaded = false;
 
-export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', note: 'Note', devStatus: 'Development Status' };
+export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', portionWeightG: 'Portion Weight (g)', note: 'Note', devStatus: 'Development Status' };
 
 // Where a recipe is at in its own development lifecycle -- shown as a
 // colored dropdown next to the recipe title (see renderRecipeEditor /
@@ -791,6 +791,33 @@ export function renderRecipeEditor(r){
     </div>
 
     <div class="card">
+      <div class="card-title">Components of Portion</div>
+      <div class="batch-summary">
+        <div>
+          <div class="batch-stat-label">Portion Weight (g)</div>
+          <div class="batch-scale-row">
+            <input type="number" id="f-portionWt" min="0" step="0.01" placeholder="e.g. 20">
+          </div>
+        </div>
+      </div>
+      <div style="overflow-x:auto;">
+        <table class="process-comp-table">
+          <thead>
+            <tr>
+              <th class="col-no">#</th>
+              <th>Component</th>
+              <th class="col-pct">% of Recipe</th>
+              <th class="col-wt">Weight in Portion (g)</th>
+              <th class="col-tol">Tolerance (±%)</th>
+              <th class="col-range">Range (g)</th>
+            </tr>
+          </thead>
+          <tbody id="portionComponentsBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
       <div class="card-title">
         5. Process Steps
       </div>
@@ -945,6 +972,12 @@ export function renderRecipeEditor(r){
     r.parts.forEach(part => scaleIngredientsInPart(part, factor));
     recomputeFromWeights(r);
     renderParts(r);
+    scheduleSave();
+  });
+
+  document.getElementById('f-portionWt').addEventListener('input', e => {
+    r.portionWeightG = e.target.value;
+    renderPortionComponents(r);
     scheduleSave();
   });
 
@@ -1275,6 +1308,61 @@ export function renderParts(r){
 
   updateGrandTotal(r);
   updateTreeRoot(r);
+  renderPortionComponents(r);
+}
+
+// "Components of Portion" -- a single portion's worth (Portion Weight, g)
+// broken down across the top-level Parts only (not the full ingredient
+// tree), using each Part's own .percent -- already kept current by
+// recomputeFromWeights(r) above on every call -- against that portion size,
+// plus an optional per-Part QC tolerance (±%) the user types in here.
+// Called at the end of every renderParts(r), so it always reflects
+// whatever the ingredient tree currently shows.
+function renderPortionComponents(r){
+  const body = document.getElementById('portionComponentsBody');
+  if(!body) return;
+
+  const wtInput = document.getElementById('f-portionWt');
+  if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
+
+  body.innerHTML = '';
+  if(r.parts.length === 0){
+    body.innerHTML = '<tr><td colspan="6"><div class="overview-empty">No parts yet</div></td></tr>';
+    return;
+  }
+  const portionWt = parseFloat(r.portionWeightG) || 0;
+  r.parts.forEach((part, idx) => {
+    const tr = document.createElement('tr');
+    const pct = parseFloat(part.percent) || 0;
+    const wt = round2(portionWt * pct / 100);
+    tr.innerHTML = `
+      <td class="col-no">${idx+1}</td>
+      <td>${escapeHtml(part.name || `Part ${idx+1}`)}</td>
+      <td class="col-pct">${pct.toFixed(2)}%</td>
+      <td class="col-wt">${wt.toFixed(2)}</td>
+      <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
+      <td class="col-range comp-range"></td>
+    `;
+    const tolInput = tr.querySelector('.comp-tol');
+    const rangeCell = tr.querySelector('.comp-range');
+    tolInput.value = part.portionTolerancePct ?? '';
+
+    function updateRange(){
+      const tol = parseFloat(tolInput.value) || 0;
+      if(tol <= 0){ rangeCell.textContent = '—'; return; }
+      const delta = round2(wt * tol / 100);
+      rangeCell.textContent = `${(wt-delta).toFixed(2)}-${(wt+delta).toFixed(2)} g`;
+    }
+    updateRange();
+
+    tolInput.addEventListener('input', e => {
+      part.portionTolerancePct = e.target.value;
+      updateRange();
+      scheduleSave();
+    });
+
+    body.appendChild(tr);
+  });
 }
 
 // Renders one Part — and, recursively, every Sub-part nested inside it — as
