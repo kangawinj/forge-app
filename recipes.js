@@ -37,7 +37,7 @@ import {
   blankPart, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, recipeDisplayLabel, descriptionListHtml,
-  recomputeFromWeights, partTotalWeight, collectPartsFlat,
+  recomputeFromWeights, partTotalWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
   round2, formatWeight
@@ -1000,7 +1000,7 @@ export function renderRecipeEditor(r){
     const checked = [...document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked')];
     if(checked.length === 0) return;
     const portionWt = parseFloat(r.portionWeightG) || 0;
-    const flatParts = collectPartsFlat(r.parts, '');
+    const flatParts = flattenPartsWithDepth(r.parts);
     checked.forEach(cb => {
       const entry = flatParts[+cb.value];
       if(!entry) return;
@@ -1349,16 +1349,30 @@ export function renderParts(r){
 // separate from the actual ingredient tree/Parts: "+ Add" snapshots a
 // Part's (or Sub-part's, at any nesting depth) current name + its share of
 // the Portion Weight in at the moment it's picked, then every field
-// (including name) is fully
-// editable and stays put even if the real Part is later renamed, resized,
-// or deleted -- same "copy once, then independent" behavior as a Process
-// Step's own Components table (see recipes-processes.js). % of Portion and
-// Range are the only auto-computed fields, both derived from Portion
-// Weight (g) above and each row's own Weight/Tolerance.
+// (including name) is fully editable and stays put even if the real Part
+// is later renamed, resized, or deleted -- same "copy once, then
+// independent" behavior as a Process Step's own Components table (see
+// recipes-processes.js). % of Portion and Range are the only auto-computed
+// fields, both derived from Portion Weight (g) above and each row's own
+// Weight/Tolerance.
 // Called at the end of every renderParts(r), so Weight in Portion for a
 // NEWLY added row (still equal to its source Part's live share) stays in
 // sync until the user edits it directly -- existing rows are untouched by
 // re-renders, since their weight already lives on the row itself.
+
+// Every Part, at any nesting depth, as one flat pre-order list with its
+// depth -- used by the picker panel below both to indent as a tree and to
+// address a Part or Sub-part by flat index (same order both places build
+// it in, so a checkbox's index always lines up with this list).
+function flattenPartsWithDepth(parts, depth = 0){
+  let out = [];
+  (parts || []).forEach(part => {
+    out.push({ part, depth });
+    out = out.concat(flattenPartsWithDepth(part.parts, depth + 1));
+  });
+  return out;
+}
+
 function renderPortionComponents(r){
   const body = document.getElementById('portionComponentsBody');
   if(!body) return;
@@ -1367,21 +1381,21 @@ function renderPortionComponents(r){
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
   const portionWt = parseFloat(r.portionWeightG) || 0;
 
-  // Picker panel -- every Part AND Sub-part, at any nesting depth (flat
-  // list, breadcrumb label so a Sub-part still reads unambiguously). Which
-  // checkboxes are ticked lives only on the checkboxes themselves (no
-  // shadow Set to keep in sync) -- simplest way to guarantee the "+ Add"
-  // button always acts on exactly what's visibly checked, even if this
-  // whole table gets rebuilt (e.g. Portion Weight changes) while a
-  // selection is in progress.
+  // Picker panel -- every Part AND Sub-part, at any nesting depth, shown as
+  // an indented tree (own name only -- depth/indent already shows the
+  // nesting, no need for a breadcrumb). Which checkboxes are ticked lives
+  // only on the checkboxes themselves (no shadow Set to keep in sync) --
+  // simplest way to guarantee the "+ Add" button always acts on exactly
+  // what's visibly checked, even if this whole table gets rebuilt (e.g.
+  // Portion Weight changes) while a selection is in progress.
   const panel = document.getElementById('portionCompPanel');
   const toggle = document.getElementById('portionCompToggle');
   if(panel && toggle){
-    const flatParts = collectPartsFlat(r.parts, '');
+    const flatParts = flattenPartsWithDepth(r.parts);
     panel.innerHTML = flatParts.length ? flatParts.map((entry, idx) => `
-      <label class="comp-multiselect-item">
+      <label class="comp-multiselect-item" style="padding-left:${12 + entry.depth*20}px;">
         <input type="checkbox" value="${idx}">
-        <span>${escapeHtml(entry.label)}</span>
+        <span>${entry.depth > 0 ? '↳ ' : ''}${escapeHtml(entry.part.name || 'Untitled part')}</span>
       </label>
     `).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
     panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
