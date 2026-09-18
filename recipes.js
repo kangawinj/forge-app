@@ -2170,7 +2170,7 @@ function materialTooltip(m){
     m.vendorCode ? `Code: ${m.vendorCode}` : null,
     m.vendorName ? `Vendor: ${m.vendorName}` : null,
     m.manufacturer ? `Manufacturer: ${m.manufacturer}` : null,
-    (m.price !== '' && m.price != null) ? `Price/kg: ฿${m.price}` : null,
+    (m.price !== '' && m.price != null) ? `Price/kg: ฿${m.price}${m.priceIsIdea ? ' (Idea Price — not confirmed)' : ''}` : null,
     formatMoq(m.moq) ? `MOQ: ${formatMoq(m.moq)}` : null,
     m.usageNotes ? `Usage: ${m.usageNotes}` : null
   ].filter(Boolean);

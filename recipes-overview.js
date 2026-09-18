@@ -224,7 +224,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
       <td class="col-pct">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
       <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
       <td class="col-wt${isLossy ? ' col-prepare-highlight' : ''}" title="${isLossy ? `Prep Yield: ${y.toFixed(2)}%` : ''}">${formatWeight(g.prepareWt)}</td>
-      <td class="col-cost">${numCellHtml(money(g.cost) ?? '—', costBarPct)}</td>
+      <td class="col-cost">${numCellHtml((money(g.cost) ?? '—') + (g.material?.priceIsIdea ? ' <span class="mu-badge" title="Estimated price, not yet confirmed with the vendor">IDEA</span>' : ''), costBarPct)}</td>
     `;
     // Reuses the exact same Material Detail popup the Ingredient Library
     // page itself opens (see openMaterialDetail in materials.js) -- only

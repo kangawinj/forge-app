@@ -117,7 +117,7 @@ document.addEventListener('mousedown', e => {
 }, true);
 
 const MATERIAL_FORM_FIELD_IDS = ['mf-nameEn','mf-nameTh','mf-vendorCode','mf-vendorName','mf-manufacturer','mf-price','mf-moq','mf-usageNotes','mf-insNumber','mf-brand'];
-const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number', brand: 'Brand', allergens: 'Allergens' };
+const MATERIAL_DIFF_FIELDS = { nameEn: 'Name (EN)', nameTh: 'Name (TH)', vendorCode: 'Vendor Code', vendorName: 'Vendor Name', manufacturer: 'Manufacturer', price: 'Price', priceIsIdea: 'Idea Price', moq: 'MOQ', usageNotes: 'Usage Notes', insNumber: 'E-Number', brand: 'Brand', allergens: 'Allergens' };
 let materialEditSnapshotBefore = null;
 // The form field only ever holds the digits after "INS-" (that prefix is a
 // fixed, non-editable label next to the input, see the "10. E-Number / INS"
@@ -171,7 +171,7 @@ export function renderMaterialTable(){
       <td>${escapeHtml(m.vendorCode || '-')}</td>
       <td>${escapeHtml(m.vendorName || '-')}</td>
       <td>${escapeHtml(m.manufacturer || '-')}</td>
-      <td>${m.price !== '' && m.price != null ? '฿' + escapeHtml(String(m.price)) : '-'}</td>
+      <td>${m.price !== '' && m.price != null ? '฿' + escapeHtml(String(m.price)) + (m.priceIsIdea ? ' <span class="mu-badge" title="Estimated price, not yet confirmed with the vendor">IDEA</span>' : '') : '-'}</td>
       <td>${escapeHtml(formatMoq(m.moq) || '-')}</td>
       <td>
         <button class="icon-btn" data-edit-material="${escapeHtml(m.id)}" title="Edit this ingredient">${icon('pencil')}</button>
@@ -266,6 +266,9 @@ export function mountMaterialsView(){
           <div class="field">
             <label>7. Price/kg (฿)</label>
             <input type="number" id="mf-price" min="0" step="0.01" placeholder="0.00">
+            <label class="mu-autocreate-label" style="margin-top:6px;" title="Mark this as an estimated price, not yet confirmed with the vendor">
+              <input type="checkbox" id="mf-priceIsIdea"> Idea Price (not confirmed)
+            </label>
           </div>
           <div class="field">
             <label>8. MOQ/kg (if any)</label>
@@ -398,6 +401,7 @@ export function mountMaterialsView(){
       vendorName: document.getElementById('mf-vendorName').value.trim(),
       manufacturer: document.getElementById('mf-manufacturer').value.trim(),
       price: document.getElementById('mf-price').value.trim(),
+      priceIsIdea: document.getElementById('mf-priceIsIdea').checked,
       moq: document.getElementById('mf-moq').value.trim(),
       usageNotes: document.getElementById('mf-usageNotes').value.trim(),
       insNumber: formatInsNumber(document.getElementById('mf-insNumber').value),
@@ -429,7 +433,7 @@ export function openMaterialDetail(m){
     ['Vendor Code', m.vendorCode],
     ['Vendor Name', m.vendorName],
     ['Manufacturer', m.manufacturer],
-    ['Price/kg', (m.price !== '' && m.price != null) ? `฿${m.price}` : ''],
+    ['Price/kg', (m.price !== '' && m.price != null) ? `฿${m.price}${m.priceIsIdea ? ' (Idea Price — not confirmed)' : ''}` : ''],
     ['MOQ', formatMoq(m.moq)],
     ['E-Number', m.insNumber]
   ].map(([label, value]) => `
@@ -515,6 +519,7 @@ function fillMaterialForm(m){
   document.getElementById('mf-vendorName').value = m.vendorName || '';
   document.getElementById('mf-manufacturer').value = m.manufacturer || '';
   document.getElementById('mf-price').value = m.price || '';
+  document.getElementById('mf-priceIsIdea').checked = !!m.priceIsIdea;
   document.getElementById('mf-moq').value = extractMoqNumber(m.moq);
   document.getElementById('mf-usageNotes').value = m.usageNotes || '';
   document.getElementById('mf-insNumber').value = (m.insNumber || '').replace(/^INS-/i, '');
@@ -618,6 +623,7 @@ function cancelEditMaterial(){
   editingMaterialId = null;
   materialEditSnapshotBefore = null;
   MATERIAL_FORM_FIELD_IDS.forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('mf-priceIsIdea').checked = false;
   document.getElementById('mf-image').value = '';
   setMaterialImagePreview(null);
   editingSubIngredients = [];
