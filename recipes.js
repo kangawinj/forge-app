@@ -37,7 +37,7 @@ import {
   blankPart, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, recipeDisplayLabel, descriptionListHtml,
-  recomputeFromWeights, partTotalWeight,
+  recomputeFromWeights, partTotalWeight, collectPartsFlat,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
   round2, formatWeight
@@ -1000,11 +1000,15 @@ export function renderRecipeEditor(r){
     const checked = [...document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked')];
     if(checked.length === 0) return;
     const portionWt = parseFloat(r.portionWeightG) || 0;
+    const flatParts = collectPartsFlat(r.parts, '');
     checked.forEach(cb => {
-      const part = r.parts[+cb.value];
-      if(!part) return;
-      const weight = round2((parseFloat(part.percent) || 0) / 100 * portionWt);
-      r.portionComponents.push({ id: uid(), name: part.name || 'Untitled part', weight, tolerancePct: '' });
+      const entry = flatParts[+cb.value];
+      if(!entry) return;
+      // partTotalWeight/r.batchWeight -- not entry.part.percent -- since a
+      // nested Sub-part's own .percent is only its share of its PARENT
+      // Part, not of the whole recipe (see recomputePartPercents).
+      const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * portionWt) : 0;
+      r.portionComponents.push({ id: uid(), name: entry.part.name || 'Untitled part', weight, tolerancePct: '' });
     });
     document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
@@ -1343,8 +1347,9 @@ export function renderParts(r){
 
 // "Components of Portion" -- a free-standing list (r.portionComponents),
 // separate from the actual ingredient tree/Parts: "+ Add" snapshots a
-// top-level Part's current name + its share of the Portion Weight in at
-// the moment it's picked, then every field (including name) is fully
+// Part's (or Sub-part's, at any nesting depth) current name + its share of
+// the Portion Weight in at the moment it's picked, then every field
+// (including name) is fully
 // editable and stays put even if the real Part is later renamed, resized,
 // or deleted -- same "copy once, then independent" behavior as a Process
 // Step's own Components table (see recipes-processes.js). % of Portion and
@@ -1362,7 +1367,8 @@ function renderPortionComponents(r){
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
   const portionWt = parseFloat(r.portionWeightG) || 0;
 
-  // Picker panel -- top-level Parts only, per this feature's scope. Which
+  // Picker panel -- every Part AND Sub-part, at any nesting depth (flat
+  // list, breadcrumb label so a Sub-part still reads unambiguously). Which
   // checkboxes are ticked lives only on the checkboxes themselves (no
   // shadow Set to keep in sync) -- simplest way to guarantee the "+ Add"
   // button always acts on exactly what's visibly checked, even if this
@@ -1371,10 +1377,11 @@ function renderPortionComponents(r){
   const panel = document.getElementById('portionCompPanel');
   const toggle = document.getElementById('portionCompToggle');
   if(panel && toggle){
-    panel.innerHTML = r.parts.length ? r.parts.map((part, idx) => `
+    const flatParts = collectPartsFlat(r.parts, '');
+    panel.innerHTML = flatParts.length ? flatParts.map((entry, idx) => `
       <label class="comp-multiselect-item">
         <input type="checkbox" value="${idx}">
-        <span>${escapeHtml(part.name || `Part ${idx+1}`)}</span>
+        <span>${escapeHtml(entry.label)}</span>
       </label>
     `).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
     panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
