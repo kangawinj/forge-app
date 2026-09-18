@@ -190,7 +190,7 @@ export function readOnlyIngredientTreeHtml(parts, totalWeight){
   const totalPrepareWeight = namedParts.reduce((s,p)=>s+partPrepareWeight(p), 0);
   const rootRow = `
     <tr class="ro-tree-row ro-tree-root">
-      <td class="ro-tree-name">Formula per Portion</td>
+      <td class="ro-tree-name">Formula Total</td>
       <td class="ro-tree-note"></td>
       <td class="ro-tree-pct">100.00%</td>
       <td class="ro-tree-wt">${fmtNum(totalWeight)}</td>

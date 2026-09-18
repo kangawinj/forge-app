@@ -759,7 +759,7 @@ export function renderRecipeEditor(r){
       <div class="ingredients-edit-view">
       <div class="ingredient-tree">
         <div class="tree-node tree-root-node">
-          <span class="tree-node-label">Formula per Portion</span>
+          <span class="tree-node-label">Formula Total</span>
           <span class="tree-node-wt tree-root-wt-wrap">
             <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
             <span class="ing-unit">g</span>

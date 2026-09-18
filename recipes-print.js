@@ -113,8 +113,8 @@ export function renderDescPhotos(r){
 // Print-only redesign of the ingredient breakdown -- Part/Sub-part rows get
 // a tinted background and bold group totals, plain padding-based indent
 // instead of box-drawing tree connectors, "–" for an empty Prep/Note, and
-// the grand total as its own row at the bottom instead of a "Formula per
-// Portion" row up top. A separate function from readOnlyIngredientTreeHtml
+// the grand total as its own row at the bottom instead of a "Formula
+// Total" row up top. A separate function from readOnlyIngredientTreeHtml
 // (app.js) rather than a rewrite of it, since that one is also reused by
 // the Versions comparison view and shouldn't change there.
 export function printIngredientTableHtml(parts, totalWeight){
