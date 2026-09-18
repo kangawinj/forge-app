@@ -39,12 +39,12 @@ export function blankRecipe(){
     exchangeRate: '',
     exchangeRateDate: '',
     overheadMultiplier: 1.625,
-    factoryMarginMin: '',
-    factoryMarginMax: '',
-    companyMarginMin: '',
-    companyMarginMax: '',
-    customerMarginMin: '',
-    customerMarginMax: '',
+    factoryMarginMin: 20,
+    factoryMarginMax: 30,
+    companyMarginMin: 10,
+    companyMarginMax: 20,
+    customerMarginMin: 20,
+    customerMarginMax: 30,
     versions: [],
     portionWeightG: '',
     portionComponents: [],
@@ -140,6 +140,15 @@ export function migrateRecipe(r){
 
   if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
   if(!Array.isArray(r.versions)) r.versions = [];
+  // Margin defaults -- only backfilled while still genuinely unset (never
+  // overwrites a value the user already typed, including 0), same as every
+  // other backfill in this function.
+  if(r.factoryMarginMin === undefined || r.factoryMarginMin === null || r.factoryMarginMin === '') r.factoryMarginMin = 20;
+  if(r.factoryMarginMax === undefined || r.factoryMarginMax === null || r.factoryMarginMax === '') r.factoryMarginMax = 30;
+  if(r.companyMarginMin === undefined || r.companyMarginMin === null || r.companyMarginMin === '') r.companyMarginMin = 10;
+  if(r.companyMarginMax === undefined || r.companyMarginMax === null || r.companyMarginMax === '') r.companyMarginMax = 20;
+  if(r.customerMarginMin === undefined || r.customerMarginMin === null || r.customerMarginMin === '') r.customerMarginMin = 20;
+  if(r.customerMarginMax === undefined || r.customerMarginMax === null || r.customerMarginMax === '') r.customerMarginMax = 30;
   if(r.portionWeightG === undefined || r.portionWeightG === null) r.portionWeightG = '';
   if(!Array.isArray(r.portionComponents)) r.portionComponents = [];
   r.portionComponents.forEach(c => { if(!c.id) c.id = uid(); });
