@@ -2622,6 +2622,12 @@
      position whether the recipe is locked or unlocked. */
   .lock-banner-action{margin-left:auto;}
 
+  /* Transparent click-catcher stacked over #recipeCards while locked -- a
+     disabled input never fires click/focus, so this is what actually
+     re-triggers the unlock prompt when you click a locked field. */
+  #recipeCards{position:relative;}
+  .recipe-lock-overlay{position:absolute;inset:0;z-index:15;cursor:pointer;}
+
   /* Trial History card (Series recipes only) -- T19 ── T20 ── T21 ── +T22,
      each a clickable pill, the Series' latest Trial marked, a trailing
      "+T{next}" pill triggering New Trial directly. Horizontal scroll

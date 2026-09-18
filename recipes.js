@@ -1174,6 +1174,21 @@ export function renderRecipeEditor(r){
   playContentTransition(main);
 }
 
+// Shared by the lock banner's own "Unlock to Edit" button and the
+// click-anywhere-to-unlock overlay below -- same password re-entry flow
+// either way.
+function promptUnlockRecipe(r){
+  requestAuthConfirm(
+    'Confirm Identity to Edit',
+    `Enter your password to unlock editing for the recipe "${r.name || 'Untitled recipe'}"`,
+    () => {
+      setUnlockedRecipeId(r.id);
+      setRecipeEditSnapshotBefore(snapshotMainFields(r, RECIPE_DIFF_FIELDS));
+      renderMain();
+    }
+  );
+}
+
 function renderLockState(r){
   const banner = document.getElementById('lockBanner');
   const cards = document.getElementById('recipeCards');
@@ -1186,18 +1201,19 @@ function renderLockState(r){
   }else{
     banner.className = 'lock-banner locked';
     banner.innerHTML = `${icon('lock')} This recipe is read-only <button class="btn btn-sm btn-primary lock-banner-action" id="btnUnlockEdit">${icon('unlock')} Unlock to Edit</button>`;
-    document.getElementById('btnUnlockEdit').addEventListener('click', () => {
-      requestAuthConfirm(
-        'Confirm Identity to Edit',
-        `Enter your password to unlock editing for the recipe "${r.name || 'Untitled recipe'}"`,
-        () => {
-          setUnlockedRecipeId(r.id);
-          setRecipeEditSnapshotBefore(snapshotMainFields(r, RECIPE_DIFF_FIELDS));
-          renderMain();
-        }
-      );
-    });
+    document.getElementById('btnUnlockEdit').addEventListener('click', () => promptUnlockRecipe(r));
     cards.querySelectorAll('input, textarea, select, button').forEach(el => { el.disabled = true; });
+    // A disabled form control never fires click/focus at all (that's what
+    // disabled means), so clicking a locked field to edit it previously
+    // just did nothing -- this transparent click-catcher sits on top of
+    // every card instead, same password-prompt flow as the banner's own
+    // button, reachable from anywhere in the form, not just that one
+    // button up top.
+    const overlay = document.createElement('div');
+    overlay.className = 'recipe-lock-overlay';
+    overlay.title = 'Click to unlock editing';
+    overlay.addEventListener('click', () => promptUnlockRecipe(r));
+    cards.appendChild(overlay);
   }
 }
 
