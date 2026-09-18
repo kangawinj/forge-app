@@ -989,7 +989,6 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
 
-  portionSelectedKeys = new Set();
   document.getElementById('portionCompToggle').addEventListener('click', () => {
     document.getElementById('portionCompPanel').classList.toggle('open');
   });
@@ -998,15 +997,15 @@ export function renderRecipeEditor(r){
     document.getElementById('portionCompPanel').classList.remove('open');
   });
   document.getElementById('btnAddPortionComponent').addEventListener('click', () => {
-    if(portionSelectedKeys.size === 0) return;
+    const checked = [...document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked')];
+    if(checked.length === 0) return;
     const portionWt = parseFloat(r.portionWeightG) || 0;
-    portionSelectedKeys.forEach(key => {
-      const part = r.parts[+key];
+    checked.forEach(cb => {
+      const part = r.parts[+cb.value];
       if(!part) return;
       const weight = round2((parseFloat(part.percent) || 0) / 100 * portionWt);
       r.portionComponents.push({ id: uid(), name: part.name || 'Untitled part', weight, tolerancePct: '' });
     });
-    portionSelectedKeys.clear();
     document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
     scheduleSave();
@@ -1355,8 +1354,6 @@ export function renderParts(r){
 // NEWLY added row (still equal to its source Part's live share) stays in
 // sync until the user edits it directly -- existing rows are untouched by
 // re-renders, since their weight already lives on the row itself.
-let portionSelectedKeys = new Set();
-
 function renderPortionComponents(r){
   const body = document.getElementById('portionComponentsBody');
   if(!body) return;
@@ -1365,7 +1362,12 @@ function renderPortionComponents(r){
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
   const portionWt = parseFloat(r.portionWeightG) || 0;
 
-  // Picker panel -- top-level Parts only, per this feature's scope.
+  // Picker panel -- top-level Parts only, per this feature's scope. Which
+  // checkboxes are ticked lives only on the checkboxes themselves (no
+  // shadow Set to keep in sync) -- simplest way to guarantee the "+ Add"
+  // button always acts on exactly what's visibly checked, even if this
+  // whole table gets rebuilt (e.g. Portion Weight changes) while a
+  // selection is in progress.
   const panel = document.getElementById('portionCompPanel');
   const toggle = document.getElementById('portionCompToggle');
   if(panel && toggle){
@@ -1376,11 +1378,7 @@ function renderPortionComponents(r){
       </label>
     `).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
     panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
-      cb.checked = portionSelectedKeys.has(cb.value);
-      cb.addEventListener('change', () => {
-        if(cb.checked) portionSelectedKeys.add(cb.value); else portionSelectedKeys.delete(cb.value);
-        updatePortionToggleLabel();
-      });
+      cb.addEventListener('change', updatePortionToggleLabel);
     });
     updatePortionToggleLabel();
   }
@@ -1436,7 +1434,7 @@ function renderPortionComponents(r){
 function updatePortionToggleLabel(){
   const toggle = document.getElementById('portionCompToggle');
   if(!toggle) return;
-  const n = portionSelectedKeys.size;
+  const n = document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked').length;
   toggle.textContent = n === 0 ? '— Select parts to add —' : `${n} selected`;
   toggle.classList.toggle('has-selection', n > 0);
 }
