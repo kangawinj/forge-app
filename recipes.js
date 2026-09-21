@@ -1004,11 +1004,17 @@ export function renderRecipeEditor(r){
     checked.forEach(cb => {
       const entry = flatParts[+cb.value];
       if(!entry) return;
-      // partTotalWeight/r.batchWeight -- not entry.part.percent -- since a
-      // nested Sub-part's own .percent is only its share of its PARENT
-      // Part, not of the whole recipe (see recomputePartPercents).
-      const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * portionWt) : 0;
-      r.portionComponents.push({ id: uid(), name: entry.part.name || 'Untitled part', weight, tolerancePct: '' });
+      // partTotalWeight/r.batchWeight (Part) or ing.weight/r.batchWeight
+      // (single ingredient) -- not .percent -- since a nested Sub-part or
+      // ingredient's own .percent is only its share of its PARENT, not of
+      // the whole recipe (see recomputePartPercents).
+      if(entry.kind === 'ingredient'){
+        const weight = r.batchWeight > 0 ? round2((parseFloat(entry.ing.weight) || 0) / r.batchWeight * portionWt) : 0;
+        r.portionComponents.push({ id: uid(), name: entry.ing.name || 'Untitled ingredient', weight, tolerancePct: '' });
+      } else {
+        const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * portionWt) : 0;
+        r.portionComponents.push({ id: uid(), name: entry.part.name || 'Untitled part', weight, tolerancePct: '' });
+      }
     });
     document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
@@ -1360,14 +1366,22 @@ export function renderParts(r){
 // sync until the user edits it directly -- existing rows are untouched by
 // re-renders, since their weight already lives on the row itself.
 
-// Every Part, at any nesting depth, as one flat pre-order list with its
-// depth -- used by the picker panel below both to indent as a tree and to
-// address a Part or Sub-part by flat index (same order both places build
-// it in, so a checkbox's index always lines up with this list).
+// Every Part (picking one aggregates everything nested inside it -- see
+// partTotalWeight below) AND every individual ingredient, at any nesting
+// depth, as one flat pre-order list with its depth -- used by the picker
+// panel below both to indent as a tree and to address an entry by flat
+// index (same order both places build it in, so a checkbox's index always
+// lines up with this list). Each Part is followed by its own direct
+// ingredients (an empty-name placeholder row skipped), then its Sub-parts,
+// matching the ingredient tree's own reading order above.
 function flattenPartsWithDepth(parts, depth = 0){
   let out = [];
   (parts || []).forEach(part => {
-    out.push({ part, depth });
+    out.push({ kind: 'part', part, depth });
+    (part.ingredients || []).forEach(ing => {
+      if((ing.name || '').trim() === '') return;
+      out.push({ kind: 'ingredient', part, ing, depth: depth + 1 });
+    });
     out = out.concat(flattenPartsWithDepth(part.parts, depth + 1));
   });
   return out;
@@ -1381,9 +1395,12 @@ function renderPortionComponents(r){
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
   const portionWt = parseFloat(r.portionWeightG) || 0;
 
-  // Picker panel -- every Part AND Sub-part, at any nesting depth, shown as
-  // an indented tree (own name only -- depth/indent already shows the
-  // nesting, no need for a breadcrumb). Which checkboxes are ticked lives
+  // Picker panel -- every Part/Sub-part AND every individual ingredient, at
+  // any nesting depth, shown as an indented tree matching the ingredient
+  // tree above (own name only -- depth/indent already shows the nesting,
+  // no need for a breadcrumb). Picking a Part aggregates everything
+  // nested inside it (see partTotalWeight below); picking an ingredient
+  // adds just that one line. Which checkboxes are ticked lives
   // only on the checkboxes themselves (no shadow Set to keep in sync) --
   // simplest way to guarantee the "+ Add" button always acts on exactly
   // what's visibly checked, even if this whole table gets rebuilt (e.g.
@@ -1392,12 +1409,15 @@ function renderPortionComponents(r){
   const toggle = document.getElementById('portionCompToggle');
   if(panel && toggle){
     const flatParts = flattenPartsWithDepth(r.parts);
-    panel.innerHTML = flatParts.length ? flatParts.map((entry, idx) => `
+    panel.innerHTML = flatParts.length ? flatParts.map((entry, idx) => {
+      const name = entry.kind === 'ingredient' ? entry.ing.name : (entry.part.name || 'Untitled part');
+      return `
       <label class="comp-multiselect-item" style="padding-left:${12 + entry.depth*20}px;">
         <input type="checkbox" value="${idx}">
-        <span>${entry.depth > 0 ? '↳ ' : ''}${escapeHtml(entry.part.name || 'Untitled part')}</span>
+        <span>${entry.depth > 0 ? '↳ ' : ''}${escapeHtml(name)}</span>
       </label>
-    `).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
+    `;
+    }).join('') : '<div class="comp-multiselect-empty">No parts yet</div>';
     panel.querySelectorAll('input[type=checkbox]').forEach(cb => {
       cb.addEventListener('change', updatePortionToggleLabel);
     });
