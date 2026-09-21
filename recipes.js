@@ -1435,7 +1435,7 @@ function renderPortionComponents(r){
       <td class="col-no">${idx+1}</td>
       <td><input type="text" class="comp-name"></td>
       <td class="col-wt"><input type="number" class="comp-wt num-input" step="0.01" min="0"></td>
-      <td class="col-pct comp-pct-display"></td>
+      <td class="col-pct"><input type="number" class="comp-pct num-input" step="0.01" min="0"></td>
       <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
       <td class="col-range comp-range"></td>
       <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
@@ -1443,15 +1443,21 @@ function renderPortionComponents(r){
     const nameInput = tr.querySelector('.comp-name');
     const wtInput2 = tr.querySelector('.comp-wt');
     const tolInput = tr.querySelector('.comp-tol');
-    const pctCell = tr.querySelector('.comp-pct-display');
+    const pctInput = tr.querySelector('.comp-pct');
     const rangeCell = tr.querySelector('.comp-range');
     nameInput.value = comp.name || '';
     wtInput2.value = comp.weight ?? 0;
     tolInput.value = comp.tolerancePct ?? '';
 
+    // % of Portion is derived from Weight (and vice versa, see the pctInput
+    // listener below) -- never touched while the OTHER field is what the
+    // user is actively typing into, so neither field fights the one being
+    // edited.
     function updateComputed(){
       const wt = parseFloat(wtInput2.value) || 0;
-      pctCell.textContent = portionWt > 0 ? (wt/portionWt*100).toFixed(2) + '%' : '—';
+      if(document.activeElement !== pctInput){
+        pctInput.value = portionWt > 0 ? (wt/portionWt*100).toFixed(2) : '';
+      }
       const tol = parseFloat(tolInput.value) || 0;
       if(tol <= 0){ rangeCell.textContent = '—'; return; }
       const delta = round2(wt * tol / 100);
@@ -1461,6 +1467,18 @@ function renderPortionComponents(r){
 
     nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
     wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateComputed(); scheduleSave(); });
+    // Back-solves Weight from the typed %, holding Portion Weight fixed --
+    // no-op while Portion Weight is blank/zero, same as every other
+    // %-drives-weight field in this app (there's nothing to solve against).
+    pctInput.addEventListener('input', e => {
+      const pct = parseFloat(e.target.value);
+      if(portionWt > 0 && isFinite(pct) && pct >= 0){
+        comp.weight = round2(pct / 100 * portionWt);
+        wtInput2.value = comp.weight.toFixed(2);
+      }
+      updateComputed();
+      scheduleSave();
+    });
     tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateComputed(); scheduleSave(); });
     tr.querySelector('.icon-btn').addEventListener('click', () => {
       r.portionComponents.splice(idx, 1);
