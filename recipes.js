@@ -1486,7 +1486,13 @@ function renderPortionComponents(r){
       pctInput.value = totalWt > 0 ? (wt/totalWt*100).toFixed(2) : '';
     });
     if(totalWtEl && totalPctEl){
-      const totalPct = portionWt > 0 ? totalWt/portionWt*100 : 0;
+      // Sum of the SAME rounded numbers each row's own % cell shows (not
+      // 100 flat, and not vs. Portion Weight) -- so this always matches
+      // what you'd get adding up the % column yourself, floating-point
+      // rounding included.
+      const totalPct = totalWt > 0
+        ? r.portionComponents.reduce((s,c) => s + parseFloat(((parseFloat(c.weight)||0)/totalWt*100).toFixed(2)), 0)
+        : 0;
       const mismatch = r.portionComponents.length > 0 && portionWt > 0 && Math.abs(totalWt - portionWt) > 0.01;
       totalWtEl.textContent = formatWeight(totalWt);
       totalPctEl.textContent = totalPct.toFixed(2) + '%';
