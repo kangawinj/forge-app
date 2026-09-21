@@ -821,6 +821,17 @@ export function renderRecipeEditor(r){
             </tr>
           </thead>
           <tbody id="portionComponentsBody"></tbody>
+          <tfoot id="portionComponentsFoot">
+            <tr>
+              <td></td>
+              <td>Total</td>
+              <td class="col-wt" id="portionComponentsTotalWt"></td>
+              <td class="col-pct" id="portionComponentsTotalPct"></td>
+              <td></td>
+              <td></td>
+              <td></td>
+            </tr>
+          </tfoot>
         </table>
       </div>
     </div>
@@ -1432,9 +1443,28 @@ function renderPortionComponents(r){
     updatePortionToggleLabel();
   }
 
+  // Total row -- lets you see at a glance whether the components added so
+  // far actually add up to the whole portion (they should, once every
+  // component has been added), instead of only catching a mismatch by
+  // eyeballing the individual rows. Flagged in red whenever it doesn't
+  // match Portion Weight -- 0.01 g of float slop still counts as a match.
+  function updateTotals(){
+    const totalWtEl = document.getElementById('portionComponentsTotalWt');
+    const totalPctEl = document.getElementById('portionComponentsTotalPct');
+    if(!totalWtEl || !totalPctEl) return;
+    const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
+    const totalPct = portionWt > 0 ? totalWt/portionWt*100 : 0;
+    const mismatch = r.portionComponents.length > 0 && Math.abs(totalWt - portionWt) > 0.01;
+    totalWtEl.textContent = formatWeight(totalWt);
+    totalPctEl.textContent = totalPct.toFixed(2) + '%';
+    totalWtEl.classList.toggle('totals-warn', mismatch);
+    totalPctEl.classList.toggle('totals-warn', mismatch);
+  }
+
   body.innerHTML = '';
   if(r.portionComponents.length === 0){
     body.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No components added yet — select a part above and click "+ Add"</div></td></tr>';
+    updateTotals();
     return;
   }
   r.portionComponents.forEach((comp, idx) => {
@@ -1474,7 +1504,7 @@ function renderPortionComponents(r){
     updateComputed();
 
     nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
-    wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateComputed(); scheduleSave(); });
+    wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateComputed(); updateTotals(); scheduleSave(); });
     // Back-solves Weight from the typed %, holding Portion Weight fixed --
     // no-op while Portion Weight is blank/zero, same as every other
     // %-drives-weight field in this app (there's nothing to solve against).
@@ -1485,6 +1515,7 @@ function renderPortionComponents(r){
         wtInput2.value = comp.weight.toFixed(2);
       }
       updateComputed();
+      updateTotals();
       scheduleSave();
     });
     tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateComputed(); scheduleSave(); });
@@ -1496,6 +1527,7 @@ function renderPortionComponents(r){
 
     body.appendChild(tr);
   });
+  updateTotals();
 }
 
 function updatePortionToggleLabel(){
