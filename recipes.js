@@ -984,6 +984,14 @@ export function renderRecipeEditor(r){
   });
 
   document.getElementById('f-portionWt').addEventListener('input', e => {
+    // Rescales every existing row's Weight so its % of Portion stays put --
+    // otherwise every row would silently drift off the % it was added/set
+    // at just because Portion Weight itself changed.
+    const oldWt = parseFloat(r.portionWeightG) || 0;
+    const newWt = parseFloat(e.target.value) || 0;
+    if(oldWt > 0 && newWt > 0){
+      r.portionComponents.forEach(comp => { comp.weight = round2((parseFloat(comp.weight) || 0) / oldWt * newWt); });
+    }
     r.portionWeightG = e.target.value;
     renderPortionComponents(r);
     scheduleSave();
