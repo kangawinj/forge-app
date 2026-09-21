@@ -834,6 +834,18 @@ export function renderRecipeEditor(r){
           </tfoot>
         </table>
       </div>
+      <div class="batch-summary" style="margin-top:12px;">
+        <div>
+          <div class="batch-stat-label" title="Weight change during the final assembly/cook step, applied to the Total above -- e.g. 92% means the finished portion loses some weight">Yield % (final process)</div>
+          <div class="batch-scale-row">
+            <input type="number" id="f-portionYield" min="0" step="0.01" placeholder="e.g. 92">
+          </div>
+        </div>
+        <div>
+          <div class="batch-stat-label" title="Total above × Yield % -- compare this against Portion Weight (g)">Final Weight (g)</div>
+          <div class="batch-stat-value" id="portionFinalWeightDisplay">—</div>
+        </div>
+      </div>
     </div>
 
     <div class="card">
@@ -994,16 +1006,18 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
 
+  // Portion Weight is just the target you compare the Total/Final Weight
+  // below against -- % of Portion is worked out from the component Weights
+  // themselves (see renderPortionComponents), not from this field, so
+  // editing it only re-checks the Total/Final Weight mismatch flag, never
+  // touches any row's own Weight.
   document.getElementById('f-portionWt').addEventListener('input', e => {
-    // Rescales every existing row's Weight so its % of Portion stays put --
-    // otherwise every row would silently drift off the % it was added/set
-    // at just because Portion Weight itself changed.
-    const oldWt = parseFloat(r.portionWeightG) || 0;
-    const newWt = parseFloat(e.target.value) || 0;
-    if(oldWt > 0 && newWt > 0){
-      r.portionComponents.forEach(comp => { comp.weight = round2((parseFloat(comp.weight) || 0) / oldWt * newWt); });
-    }
     r.portionWeightG = e.target.value;
+    renderPortionComponents(r);
+    scheduleSave();
+  });
+  document.getElementById('f-portionYield').addEventListener('input', e => {
+    r.portionYieldPct = e.target.value;
     renderPortionComponents(r);
     scheduleSave();
   });
@@ -1414,6 +1428,9 @@ function renderPortionComponents(r){
   if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
   const portionWt = parseFloat(r.portionWeightG) || 0;
 
+  const yieldInput = document.getElementById('f-portionYield');
+  if(yieldInput && document.activeElement !== yieldInput) yieldInput.value = r.portionYieldPct ?? '';
+
   // Picker panel -- every Part/Sub-part AND every individual ingredient, at
   // any nesting depth, shown as an indented tree matching the ingredient
   // tree above (own name only -- depth/indent already shows the nesting,
@@ -1443,22 +1460,44 @@ function renderPortionComponents(r){
     updatePortionToggleLabel();
   }
 
+  const pctRows = []; // { comp, pctInput } -- every row's own % input, refreshed together in updateTotals()
+
   // Total row -- lets you see at a glance whether the components added so
   // far actually add up to the whole portion (they should, once every
   // component has been added), instead of only catching a mismatch by
   // eyeballing the individual rows. Flagged in red whenever it doesn't
   // match Portion Weight -- 0.01 g of float slop still counts as a match.
+  // Final Weight applies the Yield % below to that Total -- the actual
+  // finished weight after the last assembly/cook step, to compare against
+  // Portion Weight yourself (this doesn't re-flag the Total's own mismatch
+  // state, which stays about the raw Total, not the yielded figure).
+  // Each row's own % of Portion is its share of this SAME Total (always
+  // sums to 100% by construction, like a Process Step's own Components
+  // table) -- never touched while that row's % field is what the user is
+  // actively typing into.
   function updateTotals(){
     const totalWtEl = document.getElementById('portionComponentsTotalWt');
     const totalPctEl = document.getElementById('portionComponentsTotalPct');
-    if(!totalWtEl || !totalPctEl) return;
+    const finalWtEl = document.getElementById('portionFinalWeightDisplay');
     const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
-    const totalPct = portionWt > 0 ? totalWt/portionWt*100 : 0;
-    const mismatch = r.portionComponents.length > 0 && Math.abs(totalWt - portionWt) > 0.01;
-    totalWtEl.textContent = formatWeight(totalWt);
-    totalPctEl.textContent = totalPct.toFixed(2) + '%';
-    totalWtEl.classList.toggle('totals-warn', mismatch);
-    totalPctEl.classList.toggle('totals-warn', mismatch);
+    pctRows.forEach(({ comp, pctInput }) => {
+      if(document.activeElement === pctInput) return;
+      const wt = parseFloat(comp.weight) || 0;
+      pctInput.value = totalWt > 0 ? (wt/totalWt*100).toFixed(2) : '';
+    });
+    if(totalWtEl && totalPctEl){
+      const totalPct = portionWt > 0 ? totalWt/portionWt*100 : 0;
+      const mismatch = r.portionComponents.length > 0 && portionWt > 0 && Math.abs(totalWt - portionWt) > 0.01;
+      totalWtEl.textContent = formatWeight(totalWt);
+      totalPctEl.textContent = totalPct.toFixed(2) + '%';
+      totalWtEl.classList.toggle('totals-warn', mismatch);
+      totalPctEl.classList.toggle('totals-warn', mismatch);
+    }
+    if(finalWtEl){
+      const y = parseFloat(r.portionYieldPct);
+      const effectiveYield = (isFinite(y) && y > 0) ? y : 100;
+      finalWtEl.textContent = formatWeight(totalWt * effectiveYield / 100);
+    }
   }
 
   body.innerHTML = '';
@@ -1486,39 +1525,38 @@ function renderPortionComponents(r){
     nameInput.value = comp.name || '';
     wtInput2.value = comp.weight ?? 0;
     tolInput.value = comp.tolerancePct ?? '';
+    pctRows.push({ comp, pctInput });
 
-    // % of Portion is derived from Weight (and vice versa, see the pctInput
-    // listener below) -- never touched while the OTHER field is what the
-    // user is actively typing into, so neither field fights the one being
-    // edited.
-    function updateComputed(){
+    function updateRange(){
       const wt = parseFloat(wtInput2.value) || 0;
-      if(document.activeElement !== pctInput){
-        pctInput.value = portionWt > 0 ? (wt/portionWt*100).toFixed(2) : '';
-      }
       const tol = parseFloat(tolInput.value) || 0;
       if(tol <= 0){ rangeCell.textContent = '—'; return; }
       const delta = round2(wt * tol / 100);
       rangeCell.textContent = `${(wt-delta).toFixed(2)}-${(wt+delta).toFixed(2)} g`;
     }
-    updateComputed();
+    updateRange();
 
     nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
-    wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateComputed(); updateTotals(); scheduleSave(); });
-    // Back-solves Weight from the typed %, holding Portion Weight fixed --
-    // no-op while Portion Weight is blank/zero, same as every other
-    // %-drives-weight field in this app (there's nothing to solve against).
+    wtInput2.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateRange(); updateTotals(); scheduleSave(); });
+    // Back-solves Weight from the typed %, holding every OTHER row's own
+    // Weight fixed -- pct = w / (w + others), so w = pct * others /
+    // (1 - pct) -- same math as an ingredient row's own %-drives-weight
+    // field. No solution when this is the only row with any weight
+    // (others === 0, already at 100% at any weight) -- left alone, same
+    // edge case as that ingredient field too.
     pctInput.addEventListener('input', e => {
       const pct = parseFloat(e.target.value);
-      if(portionWt > 0 && isFinite(pct) && pct >= 0){
-        comp.weight = round2(pct / 100 * portionWt);
+      const others = r.portionComponents.reduce((s,c,i2) => i2 === idx ? s : s+(parseFloat(c.weight)||0), 0);
+      const f = pct / 100;
+      if(others > 0 && isFinite(f) && f >= 0 && f < 1){
+        comp.weight = round2(f * others / (1 - f));
         wtInput2.value = comp.weight.toFixed(2);
       }
-      updateComputed();
+      updateRange();
       updateTotals();
       scheduleSave();
     });
-    tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateComputed(); scheduleSave(); });
+    tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateRange(); scheduleSave(); });
     tr.querySelector('.icon-btn').addEventListener('click', () => {
       r.portionComponents.splice(idx, 1);
       renderPortionComponents(r);

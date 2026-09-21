@@ -48,6 +48,7 @@ export function blankRecipe(){
     versions: [],
     portionWeightG: '',
     portionComponents: [],
+    portionYieldPct: '',
     // Recipe Series / Trial identity -- absent (null/'') means "legacy,
     // no Series" everywhere this is checked (fullCode, recipeDisplayLabel,
     // the Recipe Detail header/toolbar, sidebar grouping). Only ever set
@@ -152,6 +153,7 @@ export function migrateRecipe(r){
   if(r.portionWeightG === undefined || r.portionWeightG === null) r.portionWeightG = '';
   if(!Array.isArray(r.portionComponents)) r.portionComponents = [];
   r.portionComponents.forEach(c => { if(!c.id) c.id = uid(); });
+  if(r.portionYieldPct === undefined || r.portionYieldPct === null) r.portionYieldPct = '';
 
   // Older recipes saved before activity tracking existed won't have these —
   // leave them blank rather than guessing a creator/date that isn't real.
