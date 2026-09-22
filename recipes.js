@@ -843,7 +843,10 @@ export function renderRecipeEditor(r){
         </div>
         <div>
           <div class="batch-stat-label" title="Total above × Yield % -- compare this against Portion Weight (g)">Final Weight (g)</div>
-          <div class="batch-stat-value" id="portionFinalWeightDisplay">—</div>
+          <div class="batch-scale-row" style="align-items:center;">
+            <div class="batch-stat-value" id="portionFinalWeightDisplay">—</div>
+            <button class="btn btn-sm" type="button" id="btnSyncPortionWeight" title="Copy Final Weight into Portion Weight above">↓ Use as Portion Weight</button>
+          </div>
         </div>
       </div>
     </div>
@@ -1006,11 +1009,12 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
 
-  // Portion Weight is just the target you compare the Total/Final Weight
-  // below against -- % of Portion is worked out from the component Weights
-  // themselves (see renderPortionComponents), not from this field, so
-  // editing it only re-checks the Total/Final Weight mismatch flag, never
-  // touches any row's own Weight.
+  // Portion Weight is the target Total/Final Weight are compared against
+  // -- % of Portion is worked out from the component Weights themselves
+  // (see renderPortionComponents), not from this field. Editing it DOES
+  // still feed back into any row still live-linked to its source (their
+  // Weight = source's share × Portion Weight), just not into % or a
+  // manually-edited row's own Weight.
   document.getElementById('f-portionWt').addEventListener('input', e => {
     r.portionWeightG = e.target.value;
     renderPortionComponents(r);
@@ -1018,6 +1022,19 @@ export function renderRecipeEditor(r){
   });
   document.getElementById('f-portionYield').addEventListener('input', e => {
     r.portionYieldPct = e.target.value;
+    renderPortionComponents(r);
+    scheduleSave();
+  });
+  // One-shot copy, not a standing two-way link -- Weight in Portion for a
+  // live-linked row is itself computed FROM Portion Weight, so binding
+  // Portion Weight continuously to Final Weight (which is computed from
+  // those same rows' Total) would feed back into itself, drifting a
+  // little further off on every single recipe edit instead of settling.
+  document.getElementById('btnSyncPortionWeight').addEventListener('click', () => {
+    const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
+    const y = parseFloat(r.portionYieldPct);
+    const effectiveYield = (isFinite(y) && y > 0) ? y : 100;
+    r.portionWeightG = round2(totalWt * effectiveYield / 100);
     renderPortionComponents(r);
     scheduleSave();
   });
