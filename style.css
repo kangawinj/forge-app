@@ -2330,9 +2330,9 @@
   .compare-pickers{
     display:grid;
     /* Same leading 220px spacer as .compare-info-grid below, so the Recipe
-       1/2/3 pickers line up with their own recipe's column everywhere else
+       1-5 pickers line up with their own recipe's column everywhere else
        on the page (info card, ingredient/costing tables, process steps). */
-    grid-template-columns:220px repeat(3,1fr);
+    grid-template-columns:220px repeat(5,1fr);
     gap:14px;
     margin-bottom:20px;
   }
@@ -2372,7 +2372,7 @@
     display:grid;
     /* Leading 220px spacer matches the fixed-width "Ingredient"/label column
        in the tables below, so each recipe's card lines up with its column. */
-    grid-template-columns:220px repeat(3,1fr);
+    grid-template-columns:220px repeat(5,1fr);
     gap:14px;
     margin-bottom:20px;
   }
@@ -2517,7 +2517,7 @@
     display:grid;
     /* Same leading 220px spacer as .compare-info-grid — keeps this section's
        columns aligned with the pickers/info/tables above it. */
-    grid-template-columns:220px repeat(3,1fr);
+    grid-template-columns:220px repeat(5,1fr);
     gap:14px;
   }
   .compare-steps-col{

@@ -33,7 +33,7 @@ export function mountCompareView(){
   const options = sorted.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('');
   // Always start blank — the user picks recipes fresh every time this view
   // opens, rather than defaulting to the most recently updated ones.
-  const pickersHtml = [0,1,2].map(i => `
+  const pickersHtml = [0,1,2,3,4].map(i => `
     <div class="compare-picker-col">
       <label>Recipe ${i+1}</label>
       <select class="compare-select" data-slot="${i}">
@@ -134,8 +134,8 @@ function renderCompareContent(){
   });
 
   // A visible left border on the first column of every recipe (after the
-  // first) so, when scanning 3 recipes side by side, it's obvious at a
-  // glance where one recipe's numbers end and the next one's begin.
+  // first) so, when scanning several recipes side by side, it's obvious at
+  // a glance where one recipe's numbers end and the next one's begin.
   function boundaryClass(idx){ return idx > 0 ? ' recipe-boundary' : ''; }
 
   // Fixed-width label column + N equal unset-width columns — with
