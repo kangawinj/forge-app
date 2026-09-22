@@ -18,6 +18,30 @@ export function setCompareSeriesPrefilter(v){
   compareSeriesPrefilter = v;
 }
 
+const MAX_COMPARE_SLOTS = 5;
+
+// Same "one grid track per picker/recipe" inline style trials.js already
+// uses for its own product-count grid (see .compare-info-grid's own CSS
+// comment) -- the plain CSS class's repeat(5,1fr) is only ever the
+// fallback for the very first paint, immediately overridden per mount/
+// "+ Add Recipe" click with however many slots are actually showing, so 2
+// starting slots don't leave 3 empty grid tracks' worth of dead space.
+function gridColsStyle(n){
+  return `grid-template-columns:220px repeat(${n},1fr);`;
+}
+
+function pickerColHtml(slotIdx, optionsHtml){
+  return `
+    <div class="compare-picker-col">
+      <label>Recipe ${slotIdx+1}</label>
+      <select class="compare-select" data-slot="${slotIdx}">
+        <option value="">— Not selected —</option>
+        ${optionsHtml}
+      </select>
+    </div>
+  `;
+}
+
 export function mountCompareView(){
   const main = document.getElementById('mainArea');
   main.classList.add('main-wide');
@@ -31,17 +55,12 @@ export function mountCompareView(){
     (a.code||'').localeCompare(b.code||'', undefined, {numeric:true})
   );
   const options = sorted.map(r => `<option value="${escapeHtml(r.id)}">${escapeHtml(recipeDisplayLabel(r))}</option>`).join('');
-  // Always start blank — the user picks recipes fresh every time this view
-  // opens, rather than defaulting to the most recently updated ones.
-  const pickersHtml = [0,1,2,3,4].map(i => `
-    <div class="compare-picker-col">
-      <label>Recipe ${i+1}</label>
-      <select class="compare-select" data-slot="${i}">
-        <option value="">— Not selected —</option>
-        ${options}
-      </select>
-    </div>
-  `).join('');
+  // Always start blank, at just 2 slots — the user picks recipes fresh
+  // every time this view opens, rather than defaulting to the most
+  // recently updated ones or to every slot up to the max at once. "+ Add
+  // Recipe" below grows it one slot at a time, up to MAX_COMPARE_SLOTS.
+  const startSlots = 2;
+  const pickersHtml = Array.from({length: startSlots}, (_, i) => pickerColHtml(i, options)).join('');
 
   main.innerHTML = `
     <div class="main-header">
@@ -52,7 +71,8 @@ export function mountCompareView(){
       </div>
     </div>
     <div class="card">
-      <div class="compare-pickers" id="comparePickers"><div class="compare-info-spacer"></div>${pickersHtml}</div>
+      <div class="compare-pickers" id="comparePickers" style="${gridColsStyle(startSlots)}"><div class="compare-info-spacer"></div>${pickersHtml}</div>
+      <button class="btn btn-sm" type="button" id="btnAddCompareSlot" style="margin-top:10px;">+ Add Recipe</button>
       <div id="compareContent"></div>
     </div>
   `;
@@ -64,6 +84,22 @@ export function mountCompareView(){
   });
   document.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
+  });
+
+  function updateAddSlotBtnVisibility(){
+    const addBtn = document.getElementById('btnAddCompareSlot');
+    if(addBtn) addBtn.style.display = document.querySelectorAll('.compare-select').length >= MAX_COMPARE_SLOTS ? 'none' : '';
+  }
+  updateAddSlotBtnVisibility();
+  document.getElementById('btnAddCompareSlot').addEventListener('click', () => {
+    const pickers = document.getElementById('comparePickers');
+    const slotIdx = document.querySelectorAll('.compare-select').length;
+    if(slotIdx >= MAX_COMPARE_SLOTS) return;
+    pickers.insertAdjacentHTML('beforeend', pickerColHtml(slotIdx, options));
+    pickers.setAttribute('style', gridColsStyle(slotIdx+1));
+    pickers.lastElementChild.querySelector('.compare-select').addEventListener('change', renderCompareContent);
+    updateAddSlotBtnVisibility();
+    renderCompareContent();
   });
 
   renderCompareContent();
@@ -343,7 +379,7 @@ function renderCompareContent(){
   }).join('');
 
   content.innerHTML = `
-    <div class="compare-info-grid"><div class="compare-info-spacer"></div>${infoHtml}</div>
+    <div class="compare-info-grid" style="${gridColsStyle(ids.length)}"><div class="compare-info-spacer"></div>${infoHtml}</div>
 
     <div class="compare-section-title">Compare Ingredients (% of recipe)</div>
     <label class="compare-toggle-label">
@@ -379,7 +415,7 @@ function renderCompareContent(){
     <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
 
     <div class="compare-section-title">Compare Process Steps</div>
-    <div class="compare-steps-grid"><div class="compare-info-spacer"></div>${stepsHtml}</div>
+    <div class="compare-steps-grid" style="${gridColsStyle(ids.length)}"><div class="compare-info-spacer"></div>${stepsHtml}</div>
   `;
 
   document.getElementById('compareShowCodes').addEventListener('change', e => {
