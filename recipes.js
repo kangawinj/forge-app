@@ -1622,6 +1622,10 @@ function renderPortionComponents(r){
       refreshPercentsAndTotals();
       scheduleSave();
     });
+    // Reformats to 2 decimals once you leave the field -- left as whatever
+    // was typed (e.g. "18", not "18.00") otherwise, since refreshing it on
+    // every keystroke would fight the cursor.
+    wtInput2.addEventListener('blur', () => { wtInput2.value = (parseFloat(comp.weight) || 0).toFixed(2); });
     // Back-solves Weight from the typed %, holding every OTHER row's own
     // Weight fixed -- pct = w / (w + others), so w = pct * others /
     // (1 - pct) -- same math as an ingredient row's own %-drives-weight
@@ -1639,6 +1643,7 @@ function renderPortionComponents(r){
       refreshPercentsAndTotals();
       scheduleSave();
     });
+    pctInput.addEventListener('blur', refreshPercentsAndTotals);
     tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateRange(); scheduleSave(); });
     tr.querySelector('.icon-btn').addEventListener('click', () => {
       r.portionComponents.splice(idx, 1);
