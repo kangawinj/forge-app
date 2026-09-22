@@ -37,7 +37,7 @@ import {
   blankPart, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, recipeDisplayLabel, descriptionListHtml,
-  recomputeFromWeights, partTotalWeight, findPartByName, collectIngredientsFlat,
+  recomputeFromWeights, partTotalWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
   round2, formatWeight
@@ -70,7 +70,7 @@ let saveTimer = null;
 export let unsubscribeRecipes = null;
 export let recipesLoaded = false;
 
-export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', portionWeightG: 'Portion Weight (g)', note: 'Note', devStatus: 'Development Status' };
+export const RECIPE_DIFF_FIELDS = { name: 'Product Name', code: 'Trial/Reference Code', productType: 'Product Type', recipeSeq: 'Recipe Sequence', date: 'Date', batchWeight: 'Batch Weight', yieldPct: 'Yield %', note: 'Note', devStatus: 'Development Status' };
 
 // Where a recipe is at in its own development lifecycle -- shown as a
 // colored dropdown next to the recipe title (see renderRecipeEditor /
@@ -792,14 +792,6 @@ export function renderRecipeEditor(r){
 
     <div class="card">
       <div class="card-title">Components of Portion</div>
-      <div class="batch-summary">
-        <div>
-          <div class="batch-stat-label">Portion Weight (g)</div>
-          <div class="batch-scale-row">
-            <input type="number" id="f-portionWt" min="0" step="0.01" placeholder="e.g. 20">
-          </div>
-        </div>
-      </div>
       <div class="process-comp-add-row">
         <div class="comp-multiselect" id="portionCompMultiselect">
           <button type="button" class="comp-multiselect-toggle" id="portionCompToggle">— Select parts to add —</button>
@@ -842,11 +834,8 @@ export function renderRecipeEditor(r){
           </div>
         </div>
         <div>
-          <div class="batch-stat-label" title="Total above × Yield % -- compare this against Portion Weight (g)">Final Weight (g)</div>
-          <div class="batch-scale-row" style="align-items:center;">
-            <div class="batch-stat-value" id="portionFinalWeightDisplay">—</div>
-            <button class="btn btn-sm" type="button" id="btnSyncPortionWeight" title="Copy Final Weight into Portion Weight above">↓ Use as Portion Weight</button>
-          </div>
+          <div class="batch-stat-label" title="Total above × Yield %">Final Weight (g)</div>
+          <div class="batch-stat-value" id="portionFinalWeightDisplay">—</div>
         </div>
       </div>
     </div>
@@ -1009,32 +998,8 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
 
-  // Portion Weight is the target Total/Final Weight are compared against
-  // -- % of Portion is worked out from the component Weights themselves
-  // (see renderPortionComponents), not from this field. Editing it DOES
-  // still feed back into any row still live-linked to its source (their
-  // Weight = source's share × Portion Weight), just not into % or a
-  // manually-edited row's own Weight.
-  document.getElementById('f-portionWt').addEventListener('input', e => {
-    r.portionWeightG = e.target.value;
-    renderPortionComponents(r);
-    scheduleSave();
-  });
   document.getElementById('f-portionYield').addEventListener('input', e => {
     r.portionYieldPct = e.target.value;
-    renderPortionComponents(r);
-    scheduleSave();
-  });
-  // One-shot copy, not a standing two-way link -- Weight in Portion for a
-  // live-linked row is itself computed FROM Portion Weight, so binding
-  // Portion Weight continuously to Final Weight (which is computed from
-  // those same rows' Total) would feed back into itself, drifting a
-  // little further off on every single recipe edit instead of settling.
-  document.getElementById('btnSyncPortionWeight').addEventListener('click', () => {
-    const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
-    const y = parseFloat(r.portionYieldPct);
-    const effectiveYield = (isFinite(y) && y > 0) ? y : 100;
-    r.portionWeightG = round2(totalWt * effectiveYield / 100);
     renderPortionComponents(r);
     scheduleSave();
   });
@@ -1049,31 +1014,14 @@ export function renderRecipeEditor(r){
   document.getElementById('btnAddPortionComponent').addEventListener('click', () => {
     const checked = [...document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked')];
     if(checked.length === 0) return;
-    const portionWt = parseFloat(r.portionWeightG) || 0;
-    // Portion Weight is the TARGET Final Weight (after Yield loss), so
-    // rows scale against how much raw Total is needed to land on it after
-    // that loss -- portionWt ÷ (Yield ÷ 100) -- not against portionWt
-    // itself (see the identical math in the live-resolve pass below).
-    const yieldForAdd = parseFloat(r.portionYieldPct);
-    const effectiveYieldForAdd = (isFinite(yieldForAdd) && yieldForAdd > 0) ? yieldForAdd : 100;
-    const preYieldTargetWt = portionWt / (effectiveYieldForAdd / 100);
+    // Weight always starts at 0 -- typed in by hand afterward, same as
+    // every other row's own Weight (see renderPortionComponents).
     const flatParts = flattenPartsWithDepth(r.parts);
     checked.forEach(cb => {
       const entry = flatParts[+cb.value];
       if(!entry) return;
-      // partTotalWeight/r.batchWeight (Part) or ing.weight/r.batchWeight
-      // (single ingredient) -- not .percent -- since a nested Sub-part or
-      // ingredient's own .percent is only its share of its PARENT, not of
-      // the whole recipe (see recomputePartPercents).
-      if(entry.kind === 'ingredient'){
-        const weight = r.batchWeight > 0 ? round2((parseFloat(entry.ing.weight) || 0) / r.batchWeight * preYieldTargetWt) : 0;
-        const name = entry.ing.name || 'Untitled ingredient';
-        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'ingredient', sourceName: name, syncedSourceWeight: weight });
-      } else {
-        const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * preYieldTargetWt) : 0;
-        const name = entry.part.name || 'Untitled part';
-        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'part', sourceName: name, syncedSourceWeight: weight });
-      }
+      const name = entry.kind === 'ingredient' ? (entry.ing.name || 'Untitled ingredient') : (entry.part.name || 'Untitled part');
+      r.portionComponents.push({ id: uid(), name, weight: 0, tolerancePct: '' });
     });
     document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
@@ -1435,16 +1383,13 @@ export function renderParts(r){
 }
 
 // "Components of Portion" -- a list (r.portionComponents) of Parts/
-// Sub-parts/ingredients picked out of the recipe above. Unlike a Process
-// Step's own Components table (recipes-processes.js), a row here stays
-// LIVE-linked to its source (by name, via sourceKind/sourceName) -- Weight
-// keeps tracking that source's current share of the recipe × Portion
-// Weight every time anything in the recipe changes, rather than freezing
-// at whatever it was when added. Only Name (an independent display label)
-// and Tolerance are actually edited directly; Weight, % of Portion, and
-// Range are all computed. If a row's source is later renamed away or
-// deleted, there's nothing left to re-resolve against, so Weight just
-// holds at its last-known value.
+// Sub-parts/ingredients picked out of the recipe above, same
+// pick-then-independently-edit pattern as a Process Step's own Components
+// table (recipes-processes.js): "+ Add" just seeds a row's Name from
+// whatever was checked, starting Weight at 0 -- every field from then on,
+// including Weight, is typed in by hand, with nothing further tying it
+// back to that source Part/Ingredient. % of Portion and Range are the only
+// computed fields, both derived from the Weight column itself.
 
 // Every Part (picking one aggregates everything nested inside it -- see
 // partTotalWeight below) AND every individual ingredient, at any nesting
@@ -1489,22 +1434,12 @@ function renderPortionComponents(r){
   const body = document.getElementById('portionComponentsBody');
   if(!body) return;
 
-  const wtInput = document.getElementById('f-portionWt');
-  if(wtInput && document.activeElement !== wtInput) wtInput.value = r.portionWeightG ?? '';
-  const portionWt = parseFloat(r.portionWeightG) || 0;
-
   const yieldInput = document.getElementById('f-portionYield');
   if(yieldInput && document.activeElement !== yieldInput) yieldInput.value = r.portionYieldPct ?? '';
   const effectiveYield = (() => {
     const y = parseFloat(r.portionYieldPct);
     return (isFinite(y) && y > 0) ? y : 100;
   })();
-  // Portion Weight is the TARGET Final Weight (after Yield loss) -- a
-  // live-linked row's Weight has to scale against however much raw Total
-  // is needed to land on that target once Yield is applied, i.e.
-  // portionWt ÷ (Yield ÷ 100), not portionWt directly (see "+ Add" above
-  // for the identical math).
-  const preYieldTargetWt = portionWt / (effectiveYield / 100);
 
   // Picker panel -- every Part/Sub-part AND every individual ingredient, at
   // any nesting depth, shown as an indented tree matching the ingredient
@@ -1535,52 +1470,12 @@ function renderPortionComponents(r){
     updatePortionToggleLabel();
   }
 
-  // Weight is directly editable (see the row loop below) -- but ALSO
-  // re-synced from each row's live source (the Part/Ingredient it was
-  // added from, re-found by sourceName -- see findPartByName/
-  // collectIngredientsFlat) whenever that source's share of the recipe, or
-  // preYieldTargetWt (Portion Weight/Yield -- so it, not Portion Weight
-  // alone), actually changes, so editing the recipe above keeps an
-  // untouched row in sync automatically instead of freezing it at
-  // add-time. comp.syncedSourceWeight -- what this row's Weight resolved
-  // to the last time it WAS synced -- is what tells a genuine source
-  // change apart from the user simply having typed a different number in
-  // since: only resolved !== syncedSourceWeight triggers a re-sync, so a
-  // manual edit (which changes comp.weight but not syncedSourceWeight)
-  // isn't clobbered by every unrelated render. If the source was since
-  // renamed or deleted, there's nothing to resolve against -- Weight just
-  // stays at whatever it last was. % of Portion is always a row's share of
-  // the CURRENT Weights' own total (always sums to 100%, same idea as a
-  // Process Step's own Components table), not of Portion Weight above --
-  // Portion Weight is only what Total/Final Weight are compared against.
-  let anyResolvedWeightChanged = false;
-  r.portionComponents.forEach(comp => {
-    let liveWeight = null;
-    if(comp.sourceKind === 'ingredient'){
-      const match = collectIngredientsFlat(r.parts, '').find(e => e.ing.name === comp.sourceName);
-      if(match) liveWeight = parseFloat(match.ing.weight) || 0;
-    } else {
-      const part = findPartByName(r.parts, comp.sourceName);
-      if(part) liveWeight = partTotalWeight(part);
-    }
-    if(liveWeight != null && r.batchWeight > 0){
-      const resolved = round2(liveWeight / r.batchWeight * preYieldTargetWt);
-      if(resolved !== comp.syncedSourceWeight){
-        comp.weight = resolved;
-        comp.syncedSourceWeight = resolved;
-        anyResolvedWeightChanged = true;
-      }
-    }
-  });
-  // Total row -- lets you see at a glance whether the components added so
-  // far actually add up to the whole portion (they should, once every
-  // component has been added), instead of only catching a mismatch by
-  // eyeballing the individual rows. Flagged in red whenever it doesn't
-  // match Portion Weight -- 0.01 g of float slop still counts as a match.
-  // Final Weight applies the Yield % below to that Total -- the actual
-  // finished weight after the last assembly/cook step, to compare against
-  // Portion Weight yourself (this doesn't re-flag the Total's own mismatch
-  // state, which stays about the raw Total, not the yielded figure).
+  // Weight is directly editable (see the row loop below) -- purely manual,
+  // starting at 0 when a row is added (see "+ Add" above). % of Portion is
+  // always a row's share of the CURRENT Weights' own total (always sums to
+  // 100%, same idea as a Process Step's own Components table). Final
+  // Weight applies the Yield % below to that Total -- the actual finished
+  // weight after the last assembly/cook step.
   // Also refreshes every OTHER row's own % cell (see rowRefs below) --
   // % of Portion is each row's share of the CURRENT total, so editing any
   // one row's Weight moves everyone else's % too, not just its own.
@@ -1600,11 +1495,8 @@ function renderPortionComponents(r){
     const finalWtEl = document.getElementById('portionFinalWeightDisplay');
     if(totalWtEl && totalPctEl){
       const totalPct = pcts.reduce((s,p)=>s+p,0);
-      const mismatch = r.portionComponents.length > 0 && portionWt > 0 && Math.abs(totalWt - portionWt) > 0.01;
       totalWtEl.textContent = formatWeight(totalWt);
       totalPctEl.textContent = totalPct.toFixed(2) + '%';
-      totalWtEl.classList.toggle('totals-warn', mismatch);
-      totalPctEl.classList.toggle('totals-warn', mismatch);
     }
     if(finalWtEl){
       finalWtEl.textContent = formatWeight(totalWt * effectiveYield / 100);
@@ -1687,11 +1579,6 @@ function renderPortionComponents(r){
     body.appendChild(tr);
   });
   refreshPercentsAndTotals();
-  // Only persists when a live resolve above actually changed a stored
-  // Weight -- every OTHER render of this table (which runs on every
-  // keystroke anywhere in the recipe, via renderParts) would otherwise
-  // schedule a save for nothing.
-  if(anyResolvedWeightChanged) scheduleSave();
 }
 
 function updatePortionToggleLabel(){

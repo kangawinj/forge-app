@@ -46,7 +46,6 @@ export function blankRecipe(){
     customerMarginMin: 20,
     customerMarginMax: 30,
     versions: [],
-    portionWeightG: '',
     portionComponents: [],
     portionYieldPct: '',
     // Recipe Series / Trial identity -- absent (null/'') means "legacy,
@@ -150,26 +149,8 @@ export function migrateRecipe(r){
   if(r.companyMarginMax === undefined || r.companyMarginMax === null || r.companyMarginMax === '') r.companyMarginMax = 20;
   if(r.customerMarginMin === undefined || r.customerMarginMin === null || r.customerMarginMin === '') r.customerMarginMin = 20;
   if(r.customerMarginMax === undefined || r.customerMarginMax === null || r.customerMarginMax === '') r.customerMarginMax = 30;
-  if(r.portionWeightG === undefined || r.portionWeightG === null) r.portionWeightG = '';
   if(!Array.isArray(r.portionComponents)) r.portionComponents = [];
-  r.portionComponents.forEach(c => {
-    if(!c.id) c.id = uid();
-    // Backfill for rows saved before Weight/% started tracking their
-    // source Part/Ingredient live -- best guess is "part", since that was
-    // the only kind this table could add before ingredients joined the
-    // picker. sourceName (not the row's own, possibly since-edited,
-    // display `name`) is what recipes.js re-finds the live source by.
-    if(!c.sourceKind) c.sourceKind = 'part';
-    if(!c.sourceName) c.sourceName = c.name || '';
-    // What the source's own weight resolved to the last time it was
-    // synced in -- lets recipes.js tell "the source itself changed" apart
-    // from "the user typed a different number in by hand", so a manual
-    // edit isn't silently clobbered back to the live figure on the very
-    // next render. Defaults to this row's current weight so a row saved
-    // before this existed (necessarily never manually edited, since Weight
-    // wasn't editable yet) doesn't immediately re-sync/flicker on next load.
-    if(c.syncedSourceWeight === undefined) c.syncedSourceWeight = c.weight;
-  });
+  r.portionComponents.forEach(c => { if(!c.id) c.id = uid(); });
   if(r.portionYieldPct === undefined || r.portionYieldPct === null) r.portionYieldPct = '';
 
   // Older recipes saved before activity tracking existed won't have these —
