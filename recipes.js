@@ -1044,11 +1044,11 @@ export function renderRecipeEditor(r){
       if(entry.kind === 'ingredient'){
         const weight = r.batchWeight > 0 ? round2((parseFloat(entry.ing.weight) || 0) / r.batchWeight * portionWt) : 0;
         const name = entry.ing.name || 'Untitled ingredient';
-        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'ingredient', sourceName: name });
+        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'ingredient', sourceName: name, syncedSourceWeight: weight });
       } else {
         const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * portionWt) : 0;
         const name = entry.part.name || 'Untitled part';
-        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'part', sourceName: name });
+        r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'part', sourceName: name, syncedSourceWeight: weight });
       }
     });
     document.getElementById('portionCompPanel').classList.remove('open');
@@ -1501,17 +1501,23 @@ function renderPortionComponents(r){
     updatePortionToggleLabel();
   }
 
-  // Weight is re-resolved from each row's live source (the Part/Ingredient
-  // it was added from, re-found by sourceName -- see findPartByName/
-  // collectIngredientsFlat) on every render, so editing the actual recipe
-  // above keeps every already-added row's Weight in sync automatically,
-  // instead of freezing it at whatever it was when added. If the source
-  // was since renamed or deleted, there's nothing to re-resolve against --
-  // Weight just stays at its last-known value. % of Portion is always that
-  // row's share of the resolved Weights' own total (always sums to 100%,
-  // same idea as a Process Step's own Components table), not of Portion
-  // Weight above -- Portion Weight is only what Total/Final Weight are
-  // compared against.
+  // Weight is directly editable (see the row loop below) -- but ALSO
+  // re-synced from each row's live source (the Part/Ingredient it was
+  // added from, re-found by sourceName -- see findPartByName/
+  // collectIngredientsFlat) whenever that source's share of the recipe or
+  // Portion Weight itself actually changes, so editing the recipe above
+  // keeps an untouched row in sync automatically instead of freezing it at
+  // add-time. comp.syncedSourceWeight -- what this row's Weight resolved
+  // to the last time it WAS synced -- is what tells a genuine source
+  // change apart from the user simply having typed a different number in
+  // since: only resolved !== syncedSourceWeight triggers a re-sync, so a
+  // manual edit (which changes comp.weight but not syncedSourceWeight)
+  // isn't clobbered by every unrelated render. If the source was since
+  // renamed or deleted, there's nothing to resolve against -- Weight just
+  // stays at whatever it last was. % of Portion is always a row's share of
+  // the CURRENT Weights' own total (always sums to 100%, same idea as a
+  // Process Step's own Components table), not of Portion Weight above --
+  // Portion Weight is only what Total/Final Weight are compared against.
   let anyResolvedWeightChanged = false;
   r.portionComponents.forEach(comp => {
     let liveWeight = null;
@@ -1524,12 +1530,13 @@ function renderPortionComponents(r){
     }
     if(liveWeight != null && r.batchWeight > 0){
       const resolved = round2(liveWeight / r.batchWeight * portionWt);
-      if(resolved !== comp.weight){ comp.weight = resolved; anyResolvedWeightChanged = true; }
+      if(resolved !== comp.syncedSourceWeight){
+        comp.weight = resolved;
+        comp.syncedSourceWeight = resolved;
+        anyResolvedWeightChanged = true;
+      }
     }
   });
-  const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
-  const pcts = largestRemainderPercentages(r.portionComponents.map(c=>c.weight), totalWt);
-
   // Total row -- lets you see at a glance whether the components added so
   // far actually add up to the whole portion (they should, once every
   // component has been added), instead of only catching a mismatch by
@@ -1539,15 +1546,24 @@ function renderPortionComponents(r){
   // finished weight after the last assembly/cook step, to compare against
   // Portion Weight yourself (this doesn't re-flag the Total's own mismatch
   // state, which stays about the raw Total, not the yielded figure).
-  function updateTotals(){
+  // Also refreshes every OTHER row's own % cell (see rowRefs below) --
+  // % of Portion is each row's share of the CURRENT total, so editing any
+  // one row's Weight moves everyone else's % too, not just its own.
+  // Rebuilding the % values in place like this (rather than a full
+  // body.innerHTML re-render) is what lets typing into a Weight/% field
+  // keep its focus/cursor instead of getting reset on every keystroke.
+  const rowRefs = []; // { comp, pctInput, updateRange } -- filled in by the row loop below
+  function refreshPercentsAndTotals(){
+    const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
+    const pcts = largestRemainderPercentages(r.portionComponents.map(c=>c.weight), totalWt);
+    rowRefs.forEach(({ pctInput, updateRange }, i) => {
+      if(document.activeElement !== pctInput) pctInput.value = pcts[i].toFixed(2);
+      updateRange();
+    });
     const totalWtEl = document.getElementById('portionComponentsTotalWt');
     const totalPctEl = document.getElementById('portionComponentsTotalPct');
     const finalWtEl = document.getElementById('portionFinalWeightDisplay');
     if(totalWtEl && totalPctEl){
-      // Sum of the SAME largest-remainder-rounded numbers each row's own %
-      // cell shows below -- always exactly 100.00% when there's any
-      // weight (not vs. Portion Weight), instead of drifting a hundredth
-      // off from rounding each row independently.
       const totalPct = pcts.reduce((s,p)=>s+p,0);
       const mismatch = r.portionComponents.length > 0 && portionWt > 0 && Math.abs(totalWt - portionWt) > 0.01;
       totalWtEl.textContent = formatWeight(totalWt);
@@ -1564,38 +1580,65 @@ function renderPortionComponents(r){
 
   body.innerHTML = '';
   if(r.portionComponents.length === 0){
+    refreshPercentsAndTotals();
     body.innerHTML = '<tr><td colspan="7"><div class="overview-empty">No components added yet — select a part above and click "+ Add"</div></td></tr>';
-    updateTotals();
     return;
   }
   r.portionComponents.forEach((comp, idx) => {
     const tr = document.createElement('tr');
-    const wt = parseFloat(comp.weight) || 0;
-    const pct = pcts[idx];
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
       <td><input type="text" class="comp-name"></td>
-      <td class="col-wt">${wt.toFixed(2)}</td>
-      <td class="col-pct">${pct.toFixed(2)}%</td>
+      <td class="col-wt"><input type="number" class="comp-wt num-input" step="0.01" min="0"></td>
+      <td class="col-pct"><input type="number" class="comp-pct num-input" step="0.01" min="0"></td>
       <td class="col-tol"><input type="number" class="comp-tol num-input" step="0.01" min="0"></td>
       <td class="col-range comp-range"></td>
       <td class="col-del"><button class="icon-btn" title="Delete">${icon('x')}</button></td>
     `;
     const nameInput = tr.querySelector('.comp-name');
+    const wtInput2 = tr.querySelector('.comp-wt');
     const tolInput = tr.querySelector('.comp-tol');
+    const pctInput = tr.querySelector('.comp-pct');
     const rangeCell = tr.querySelector('.comp-range');
     nameInput.value = comp.name || '';
+    if(document.activeElement !== wtInput2) wtInput2.value = (parseFloat(comp.weight) || 0).toFixed(2);
     tolInput.value = comp.tolerancePct ?? '';
 
     function updateRange(){
+      const wt = parseFloat(comp.weight) || 0;
       const tol = parseFloat(tolInput.value) || 0;
       if(tol <= 0){ rangeCell.textContent = '—'; return; }
       const delta = round2(wt * tol / 100);
       rangeCell.textContent = `${(wt-delta).toFixed(2)}-${(wt+delta).toFixed(2)} g`;
     }
-    updateRange();
+    rowRefs.push({ comp, pctInput, updateRange });
 
     nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
+    // Editing Weight directly does NOT touch syncedSourceWeight -- so this
+    // sticks until the linked source (or Portion Weight) actually changes,
+    // see the live-resolve pass above.
+    wtInput2.addEventListener('input', e => {
+      comp.weight = parseFloat(e.target.value) || 0;
+      refreshPercentsAndTotals();
+      scheduleSave();
+    });
+    // Back-solves Weight from the typed %, holding every OTHER row's own
+    // Weight fixed -- pct = w / (w + others), so w = pct * others /
+    // (1 - pct) -- same math as an ingredient row's own %-drives-weight
+    // field. No solution when this is the only row with any weight
+    // (others === 0, already at 100% at any weight) -- left alone, same
+    // edge case as that ingredient field too.
+    pctInput.addEventListener('input', e => {
+      const pct = parseFloat(e.target.value);
+      const others = r.portionComponents.reduce((s,c,i2) => i2 === idx ? s : s+(parseFloat(c.weight)||0), 0);
+      const f = pct / 100;
+      if(others > 0 && isFinite(f) && f >= 0 && f < 1){
+        comp.weight = round2(f * others / (1 - f));
+        wtInput2.value = comp.weight.toFixed(2);
+      }
+      refreshPercentsAndTotals();
+      scheduleSave();
+    });
     tolInput.addEventListener('input', e => { comp.tolerancePct = e.target.value; updateRange(); scheduleSave(); });
     tr.querySelector('.icon-btn').addEventListener('click', () => {
       r.portionComponents.splice(idx, 1);
@@ -1605,7 +1648,7 @@ function renderPortionComponents(r){
 
     body.appendChild(tr);
   });
-  updateTotals();
+  refreshPercentsAndTotals();
   // Only persists when a live resolve above actually changed a stored
   // Weight -- every OTHER render of this table (which runs on every
   // keystroke anywhere in the recipe, via renderParts) would otherwise

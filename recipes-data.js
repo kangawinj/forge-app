@@ -161,6 +161,14 @@ export function migrateRecipe(r){
     // display `name`) is what recipes.js re-finds the live source by.
     if(!c.sourceKind) c.sourceKind = 'part';
     if(!c.sourceName) c.sourceName = c.name || '';
+    // What the source's own weight resolved to the last time it was
+    // synced in -- lets recipes.js tell "the source itself changed" apart
+    // from "the user typed a different number in by hand", so a manual
+    // edit isn't silently clobbered back to the live figure on the very
+    // next render. Defaults to this row's current weight so a row saved
+    // before this existed (necessarily never manually edited, since Weight
+    // wasn't editable yet) doesn't immediately re-sync/flicker on next load.
+    if(c.syncedSourceWeight === undefined) c.syncedSourceWeight = c.weight;
   });
   if(r.portionYieldPct === undefined || r.portionYieldPct === null) r.portionYieldPct = '';
 
