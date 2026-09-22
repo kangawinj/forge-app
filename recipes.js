@@ -1050,6 +1050,13 @@ export function renderRecipeEditor(r){
     const checked = [...document.querySelectorAll('#portionCompPanel input[type=checkbox]:checked')];
     if(checked.length === 0) return;
     const portionWt = parseFloat(r.portionWeightG) || 0;
+    // Portion Weight is the TARGET Final Weight (after Yield loss), so
+    // rows scale against how much raw Total is needed to land on it after
+    // that loss -- portionWt ÷ (Yield ÷ 100) -- not against portionWt
+    // itself (see the identical math in the live-resolve pass below).
+    const yieldForAdd = parseFloat(r.portionYieldPct);
+    const effectiveYieldForAdd = (isFinite(yieldForAdd) && yieldForAdd > 0) ? yieldForAdd : 100;
+    const preYieldTargetWt = portionWt / (effectiveYieldForAdd / 100);
     const flatParts = flattenPartsWithDepth(r.parts);
     checked.forEach(cb => {
       const entry = flatParts[+cb.value];
@@ -1059,11 +1066,11 @@ export function renderRecipeEditor(r){
       // ingredient's own .percent is only its share of its PARENT, not of
       // the whole recipe (see recomputePartPercents).
       if(entry.kind === 'ingredient'){
-        const weight = r.batchWeight > 0 ? round2((parseFloat(entry.ing.weight) || 0) / r.batchWeight * portionWt) : 0;
+        const weight = r.batchWeight > 0 ? round2((parseFloat(entry.ing.weight) || 0) / r.batchWeight * preYieldTargetWt) : 0;
         const name = entry.ing.name || 'Untitled ingredient';
         r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'ingredient', sourceName: name, syncedSourceWeight: weight });
       } else {
-        const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * portionWt) : 0;
+        const weight = r.batchWeight > 0 ? round2(partTotalWeight(entry.part) / r.batchWeight * preYieldTargetWt) : 0;
         const name = entry.part.name || 'Untitled part';
         r.portionComponents.push({ id: uid(), name, weight, tolerancePct: '', sourceKind: 'part', sourceName: name, syncedSourceWeight: weight });
       }
@@ -1488,6 +1495,16 @@ function renderPortionComponents(r){
 
   const yieldInput = document.getElementById('f-portionYield');
   if(yieldInput && document.activeElement !== yieldInput) yieldInput.value = r.portionYieldPct ?? '';
+  const effectiveYield = (() => {
+    const y = parseFloat(r.portionYieldPct);
+    return (isFinite(y) && y > 0) ? y : 100;
+  })();
+  // Portion Weight is the TARGET Final Weight (after Yield loss) -- a
+  // live-linked row's Weight has to scale against however much raw Total
+  // is needed to land on that target once Yield is applied, i.e.
+  // portionWt ÷ (Yield ÷ 100), not portionWt directly (see "+ Add" above
+  // for the identical math).
+  const preYieldTargetWt = portionWt / (effectiveYield / 100);
 
   // Picker panel -- every Part/Sub-part AND every individual ingredient, at
   // any nesting depth, shown as an indented tree matching the ingredient
@@ -1521,9 +1538,10 @@ function renderPortionComponents(r){
   // Weight is directly editable (see the row loop below) -- but ALSO
   // re-synced from each row's live source (the Part/Ingredient it was
   // added from, re-found by sourceName -- see findPartByName/
-  // collectIngredientsFlat) whenever that source's share of the recipe or
-  // Portion Weight itself actually changes, so editing the recipe above
-  // keeps an untouched row in sync automatically instead of freezing it at
+  // collectIngredientsFlat) whenever that source's share of the recipe, or
+  // preYieldTargetWt (Portion Weight/Yield -- so it, not Portion Weight
+  // alone), actually changes, so editing the recipe above keeps an
+  // untouched row in sync automatically instead of freezing it at
   // add-time. comp.syncedSourceWeight -- what this row's Weight resolved
   // to the last time it WAS synced -- is what tells a genuine source
   // change apart from the user simply having typed a different number in
@@ -1546,7 +1564,7 @@ function renderPortionComponents(r){
       if(part) liveWeight = partTotalWeight(part);
     }
     if(liveWeight != null && r.batchWeight > 0){
-      const resolved = round2(liveWeight / r.batchWeight * portionWt);
+      const resolved = round2(liveWeight / r.batchWeight * preYieldTargetWt);
       if(resolved !== comp.syncedSourceWeight){
         comp.weight = resolved;
         comp.syncedSourceWeight = resolved;
@@ -1589,8 +1607,6 @@ function renderPortionComponents(r){
       totalPctEl.classList.toggle('totals-warn', mismatch);
     }
     if(finalWtEl){
-      const y = parseFloat(r.portionYieldPct);
-      const effectiveYield = (isFinite(y) && y > 0) ? y : 100;
       finalWtEl.textContent = formatWeight(totalWt * effectiveYield / 100);
     }
   }
