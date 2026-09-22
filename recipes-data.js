@@ -152,7 +152,16 @@ export function migrateRecipe(r){
   if(r.customerMarginMax === undefined || r.customerMarginMax === null || r.customerMarginMax === '') r.customerMarginMax = 30;
   if(r.portionWeightG === undefined || r.portionWeightG === null) r.portionWeightG = '';
   if(!Array.isArray(r.portionComponents)) r.portionComponents = [];
-  r.portionComponents.forEach(c => { if(!c.id) c.id = uid(); });
+  r.portionComponents.forEach(c => {
+    if(!c.id) c.id = uid();
+    // Backfill for rows saved before Weight/% started tracking their
+    // source Part/Ingredient live -- best guess is "part", since that was
+    // the only kind this table could add before ingredients joined the
+    // picker. sourceName (not the row's own, possibly since-edited,
+    // display `name`) is what recipes.js re-finds the live source by.
+    if(!c.sourceKind) c.sourceKind = 'part';
+    if(!c.sourceName) c.sourceName = c.name || '';
+  });
   if(r.portionYieldPct === undefined || r.portionYieldPct === null) r.portionYieldPct = '';
 
   // Older recipes saved before activity tracking existed won't have these —
