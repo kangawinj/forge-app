@@ -1365,6 +1365,30 @@ function updateTreeRoot(r){
 // collapsed.
 const manualPartCollapseState = new WeakMap();
 
+// Same expand/collapse memory as manualPartCollapseState above, but
+// persisted in localStorage (per-browser, not on the recipe document
+// itself -- this is a viewing preference, not recipe data) so it survives
+// a reload or reopening the recipe later, not just re-renders within the
+// same page load. Keyed by recipe id + each Part's path (ancestor names
+// joined by "/", since Parts have no stable id of their own to key by --
+// same name-based identification this app already uses elsewhere, e.g.
+// findPartByName). manualPartCollapseState (object-reference keyed) stays
+// authoritative for the current page load since it can't suffer path
+// collisions; this is only consulted as the fallback for a Part manualPart
+// CollapseState doesn't know about yet (i.e. the first render after a
+// fresh load).
+function partCollapseStorageKey(recipeId){ return `forge_partCollapse_${recipeId}`; }
+function loadPersistedPartCollapse(recipeId){
+  try { return JSON.parse(localStorage.getItem(partCollapseStorageKey(recipeId)) || '{}'); } catch(e){ return {}; }
+}
+function savePersistedPartCollapse(recipeId, path, collapsed){
+  try {
+    const all = loadPersistedPartCollapse(recipeId);
+    all[path] = collapsed;
+    localStorage.setItem(partCollapseStorageKey(recipeId), JSON.stringify(all));
+  } catch(e) {}
+}
+
 export function renderParts(r){
   recomputeFromWeights(r);
 
@@ -1612,8 +1636,13 @@ function updatePortionToggleLabel(){
 // getter and this Part's own `prepYieldPct`, read live on every call,
 // rather than a number baked in once at initial render that could go
 // stale. Defaults to "no ancestors" (1) for a top-level Part.
-function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier = () => 1){
+// `parentPath` is this Part's ancestors' own names joined by "/" (empty
+// for a top-level Part) -- used only to build this Part's own persisted
+// collapse-state key (see savePersistedPartCollapse/manualPartCollapseState
+// above), since Parts have no stable id of their own.
+function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier = () => 1, parentPath = ''){
   const isNested = siblingsCtx.ingredients !== null;
+  const partPath = parentPath + '/' + (part.name || 'Untitled');
   // This Part's OWN multiplier -- its ancestors' combined Yield effect
   // AND its own Yield -- is what a ROW belonging to THIS Part (its direct
   // ingredients) needs; a row belonging to this Part ITSELF (its own
@@ -1901,10 +1930,20 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     const next = !block.classList.contains('collapsed');
     setCollapsed(next);
     manualPartCollapseState.set(part, next);
+    savePersistedPartCollapse(r.id, partPath, next);
   });
 
   const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '') || part.parts.length > 0;
-  setCollapsed(manualPartCollapseState.has(part) ? manualPartCollapseState.get(part) : !hasContent);
+  // manualPartCollapseState (this page load, object-ref keyed) wins when
+  // it knows about this exact Part; otherwise fall back to whatever was
+  // persisted last time this recipe was open (path-keyed, survives a
+  // reload), and only default to "collapsed only if empty" if neither has
+  // ever recorded a choice for this Part.
+  const persisted = loadPersistedPartCollapse(r.id)[partPath];
+  const initialCollapsed = manualPartCollapseState.has(part)
+    ? manualPartCollapseState.get(part)
+    : (persisted !== undefined ? persisted : !hasContent);
+  setCollapsed(initialCollapsed);
 
   function renderRows(){
     body.innerHTML = '';
@@ -2208,7 +2247,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
 
   function renderSubParts(){
     subPartsContainer.innerHTML = '';
-    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }, getOwnMultiplier));
+    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }, getOwnMultiplier, partPath));
   }
   renderSubParts();
 
