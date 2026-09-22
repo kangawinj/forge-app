@@ -1419,6 +1419,24 @@ function flattenPartsWithDepth(parts, depth = 0){
   return out;
 }
 
+// Rounds each weight's share of totalWt to a 2-decimal percentage such
+// that the WHOLE set sums to exactly 100.00 -- rounding every row
+// independently (plain toFixed(2)) can land a hair off 100% (e.g.
+// 100.01%) purely from rounding drift, which reads as a real mismatch even
+// though nothing is actually wrong. Standard largest-remainder method:
+// floor every row to its own 2-decimal value first (sum <= 100.00 by
+// construction), then hand out the few leftover 0.01% increments to
+// whichever rows got cut the most by that floor, largest first.
+function largestRemainderPercentages(weights, totalWt){
+  if(totalWt <= 0) return weights.map(() => 0);
+  const units = weights.map(w => (parseFloat(w) || 0) / totalWt * 10000); // hundredths of a percent
+  const floors = units.map(u => Math.floor(u));
+  let remaining = Math.round(10000 - floors.reduce((s,v)=>s+v,0));
+  const order = floors.map((_, i) => i).sort((a,b) => (units[b]-floors[b]) - (units[a]-floors[a]));
+  const bump = new Set(order.slice(0, Math.max(0, remaining)));
+  return floors.map((f, i) => (f + (bump.has(i) ? 1 : 0)) / 100);
+}
+
 function renderPortionComponents(r){
   const body = document.getElementById('portionComponentsBody');
   if(!body) return;
@@ -1486,6 +1504,7 @@ function renderPortionComponents(r){
     }
   });
   const totalWt = r.portionComponents.reduce((s,c)=>s+(parseFloat(c.weight)||0),0);
+  const pcts = largestRemainderPercentages(r.portionComponents.map(c=>c.weight), totalWt);
 
   // Total row -- lets you see at a glance whether the components added so
   // far actually add up to the whole portion (they should, once every
@@ -1501,13 +1520,11 @@ function renderPortionComponents(r){
     const totalPctEl = document.getElementById('portionComponentsTotalPct');
     const finalWtEl = document.getElementById('portionFinalWeightDisplay');
     if(totalWtEl && totalPctEl){
-      // Sum of the SAME rounded numbers each row's own % cell shows (not
-      // 100 flat, and not vs. Portion Weight) -- so this always matches
-      // what you'd get adding up the % column yourself, floating-point
-      // rounding included.
-      const totalPct = totalWt > 0
-        ? r.portionComponents.reduce((s,c) => s + parseFloat(((parseFloat(c.weight)||0)/totalWt*100).toFixed(2)), 0)
-        : 0;
+      // Sum of the SAME largest-remainder-rounded numbers each row's own %
+      // cell shows below -- always exactly 100.00% when there's any
+      // weight (not vs. Portion Weight), instead of drifting a hundredth
+      // off from rounding each row independently.
+      const totalPct = pcts.reduce((s,p)=>s+p,0);
       const mismatch = r.portionComponents.length > 0 && portionWt > 0 && Math.abs(totalWt - portionWt) > 0.01;
       totalWtEl.textContent = formatWeight(totalWt);
       totalPctEl.textContent = totalPct.toFixed(2) + '%';
@@ -1530,7 +1547,7 @@ function renderPortionComponents(r){
   r.portionComponents.forEach((comp, idx) => {
     const tr = document.createElement('tr');
     const wt = parseFloat(comp.weight) || 0;
-    const pct = totalWt > 0 ? wt/totalWt*100 : 0;
+    const pct = pcts[idx];
     tr.innerHTML = `
       <td class="col-no">${idx+1}</td>
       <td><input type="text" class="comp-name"></td>
