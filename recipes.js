@@ -1044,12 +1044,13 @@ export function renderRecipeEditor(r){
   treeRootWtInput.addEventListener('input', e => {
     const target = parseFloat(e.target.value);
     if(!isNaN(target)) scaleRecipeTo(target);
-    refreshDisplays(r);
     scheduleSave();
   });
   treeRootWtInput.addEventListener('blur', () => {
+    refreshDisplays(r);
     treeRootWtInput.value = (r.batchWeight || 0).toFixed(2);
   });
+  commitOnEnter(treeRootWtInput);
   let treeRootWtJustFocused = false;
   treeRootWtInput.addEventListener('mousedown', () => { treeRootWtJustFocused = document.activeElement !== treeRootWtInput; });
   treeRootWtInput.addEventListener('focus', () => treeRootWtInput.select());
@@ -1392,6 +1393,16 @@ export function renderParts(r){
 // computed fields, both derived from the Weight column itself.
 
 // Every Part (picking one aggregates everything nested inside it -- see
+// Pressing Enter commits a number field the same way tabbing/clicking away
+// does (blur) -- used by every weight/%/Yield field in the ingredient tree
+// below, where the derived displays (Prepare WT., % of Recipe, sibling
+// rows' own %, Grand Total, Overview) are deferred to blur rather than
+// recomputed on every keystroke, so typing a new value doesn't flash
+// through whatever % a half-typed number works out to along the way.
+function commitOnEnter(el){
+  el.addEventListener('keydown', e => { if(e.key === 'Enter') el.blur(); });
+}
+
 // partTotalWeight below) AND every individual ingredient, at any nesting
 // depth, as one flat pre-order list with its depth -- used by the picker
 // panel below both to indent as a tree and to address an entry by flat
@@ -1841,12 +1852,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   partWtInput.addEventListener('input', e => {
     const target = parseFloat(e.target.value);
     if(!isNaN(target)) scalePartTo(target);
-    refreshDisplays(r);
     scheduleSave();
   });
   partWtInput.addEventListener('blur', () => {
+    refreshDisplays(r);
     partWtInput.value = partTotalWeight(part).toFixed(2);
   });
+  commitOnEnter(partWtInput);
   let partWtJustFocused = false;
   partWtInput.addEventListener('mousedown', () => { partWtJustFocused = document.activeElement !== partWtInput; });
   partWtInput.addEventListener('focus', () => partWtInput.select());
@@ -1864,12 +1876,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     if(othersWeight > 0 && f < 1){
       scalePartTo(f * othersWeight / (1 - f));
     }
-    refreshDisplays(r);
     scheduleSave();
   });
   partPctInput.addEventListener('blur', () => {
+    refreshDisplays(r);
     partPctInput.value = (part.percent || 0).toFixed(2);
   });
+  commitOnEnter(partPctInput);
   let partPctJustFocused = false;
   partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
   partPctInput.addEventListener('focus', () => partPctInput.select());
@@ -1884,9 +1897,10 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   partYieldInput.addEventListener('input', e => {
     const v = e.target.value;
     part.prepYieldPct = v === '' ? null : (parseFloat(v) || null);
-    refreshDisplays(r);
     scheduleSave();
   });
+  partYieldInput.addEventListener('blur', () => refreshDisplays(r));
+  commitOnEnter(partYieldInput);
 
   function setCollapsed(collapsed){
     block.classList.toggle('collapsed', collapsed);
@@ -2129,12 +2143,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
 
       wtInput.addEventListener('input', e => {
         ing.weight = parseFloat(e.target.value) || 0;
-        refreshDisplays(r);
         scheduleSave();
       });
       wtInput.addEventListener('blur', () => {
+        refreshDisplays(r);
         wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
       });
+      commitOnEnter(wtInput);
       // Select the whole number on focus so a click lets you type a new
       // value straight away — Chrome otherwise collapses the selection on
       // mouseup, so the first click's mouseup is suppressed once to let it stick.
@@ -2161,12 +2176,13 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
           ing.weight = round2(f * othersWeight / (1 - f));
           wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
         }
-        refreshDisplays(r);
         scheduleSave();
       });
       pctDisplay.addEventListener('blur', () => {
+        refreshDisplays(r);
         pctDisplay.value = (ing.percent || 0).toFixed(2);
       });
+      commitOnEnter(pctDisplay);
       let pctJustFocused = false;
       pctDisplay.addEventListener('mousedown', () => { pctJustFocused = document.activeElement !== pctDisplay; });
       pctDisplay.addEventListener('focus', () => pctDisplay.select());
