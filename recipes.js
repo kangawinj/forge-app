@@ -1392,17 +1392,29 @@ export function renderParts(r){
 // back to that source Part/Ingredient. % of Portion and Range are the only
 // computed fields, both derived from the Weight column itself.
 
-// Every Part (picking one aggregates everything nested inside it -- see
 // Pressing Enter commits a number field the same way tabbing/clicking away
 // does (blur) -- used by every weight/%/Yield field in the ingredient tree
 // below, where the derived displays (Prepare WT., % of Recipe, sibling
 // rows' own %, Grand Total, Overview) are deferred to blur rather than
 // recomputed on every keystroke, so typing a new value doesn't flash
 // through whatever % a half-typed number works out to along the way.
-function commitOnEnter(el){
-  el.addEventListener('keydown', e => { if(e.key === 'Enter') el.blur(); });
+// `nextSelector`, when given, also moves focus to whichever matching field
+// comes right after this one in the DOM -- spreadsheet-style "Enter moves
+// to the cell below" -- e.g. '.ing-wt, .part-wt-display' covers both an
+// ingredient row's own Formula WT. and a Part/Sub-part header's, since
+// they visually share one column and Enter should walk down through both.
+function commitOnEnter(el, nextSelector){
+  el.addEventListener('keydown', e => {
+    if(e.key !== 'Enter') return;
+    el.blur();
+    if(!nextSelector) return;
+    const all = [...document.querySelectorAll(nextSelector)];
+    const next = all[all.indexOf(el) + 1];
+    if(next) next.focus();
+  });
 }
 
+// Every Part (picking one aggregates everything nested inside it -- see
 // partTotalWeight below) AND every individual ingredient, at any nesting
 // depth, as one flat pre-order list with its depth -- used by the picker
 // panel below both to indent as a tree and to address an entry by flat
@@ -1858,7 +1870,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     refreshDisplays(r);
     partWtInput.value = partTotalWeight(part).toFixed(2);
   });
-  commitOnEnter(partWtInput);
+  commitOnEnter(partWtInput, '.ing-wt, .part-wt-display');
   let partWtJustFocused = false;
   partWtInput.addEventListener('mousedown', () => { partWtJustFocused = document.activeElement !== partWtInput; });
   partWtInput.addEventListener('focus', () => partWtInput.select());
@@ -1882,7 +1894,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     refreshDisplays(r);
     partPctInput.value = (part.percent || 0).toFixed(2);
   });
-  commitOnEnter(partPctInput);
+  commitOnEnter(partPctInput, '.ing-pct-display, .part-pct-display');
   let partPctJustFocused = false;
   partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
   partPctInput.addEventListener('focus', () => partPctInput.select());
@@ -2149,7 +2161,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         refreshDisplays(r);
         wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
       });
-      commitOnEnter(wtInput);
+      commitOnEnter(wtInput, '.ing-wt, .part-wt-display');
       // Select the whole number on focus so a click lets you type a new
       // value straight away — Chrome otherwise collapses the selection on
       // mouseup, so the first click's mouseup is suppressed once to let it stick.
@@ -2182,7 +2194,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         refreshDisplays(r);
         pctDisplay.value = (ing.percent || 0).toFixed(2);
       });
-      commitOnEnter(pctDisplay);
+      commitOnEnter(pctDisplay, '.ing-pct-display, .part-pct-display');
       let pctJustFocused = false;
       pctDisplay.addEventListener('mousedown', () => { pctJustFocused = document.activeElement !== pctDisplay; });
       pctDisplay.addEventListener('focus', () => pctDisplay.select());
