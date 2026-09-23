@@ -4,6 +4,16 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Forge</title>
+<script>
+  // The installed PWA's own window title bar already shows the app name
+  // ("Forge - Food Product Development" from site.webmanifest) next to
+  // whatever this <title> says, so a plain "Forge" here just showed up as a
+  // redundant duplicate right beside it. A normal browser tab doesn't have
+  // that app-name prefix, so it still needs a real title (an empty one
+  // falls back to showing the bare URL) -- only blank it out when actually
+  // running standalone/installed.
+  if(window.matchMedia('(display-mode: standalone)').matches) document.title = '';
+</script>
 <meta name="application-name" content="Forge">
 <meta name="theme-color" content="#16294a">
 <meta name="apple-mobile-web-app-capable" content="yes">
