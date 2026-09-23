@@ -418,6 +418,31 @@ function renderCompareContent(){
   }
   const partSections = buildPartSections(r => r.parts, 0, '');
 
+  // A section's own rows only cover its DIRECT ingredients (see
+  // buildPartSections above) -- its Subtotal, though, is expected to read
+  // the same way a Part header's own Formula WT./% of Recipe does in the
+  // live editor: the WHOLE subtree, every Sub-part nested inside it
+  // included, not just what's directly listed in its own table. Recurses
+  // down every subSection and adds its rows in too.
+  function sectionRecursiveTotals(section){
+    const totals = {};
+    ids.forEach(id => { totals[id] = { pct: 0, wt: 0 }; });
+    section.rows.forEach(row => {
+      ids.forEach(id => {
+        totals[id].pct += row.values[id] || 0;
+        totals[id].wt += row.weights[id] || 0;
+      });
+    });
+    section.subSections.forEach(sub => {
+      const subTotals = sectionRecursiveTotals(sub);
+      ids.forEach(id => {
+        totals[id].pct += subTotals[id].pct;
+        totals[id].wt += subTotals[id].wt;
+      });
+    });
+    return totals;
+  }
+
   function renderPartSection(section){
     const collapsed = !!comparePartCollapsed[section.path];
     const bodyRows = section.rows.map(row => {
@@ -427,10 +452,10 @@ function renderCompareContent(){
       const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
       return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
     }).join('');
+    const recursiveTotals = sectionRecursiveTotals(section);
     const subtotalCells = ids.map((id, idx) => {
       if(!selected.some(r => r.id === id)) return showWeights ? `<td class="${boundaryClass(idx)}">-</td><td>-</td>` : `<td class="${boundaryClass(idx)}">-</td>`;
-      let pct = 0, wt = 0;
-      section.rows.forEach(row => { pct += row.values[id] || 0; wt += row.weights[id] || 0; });
+      const { pct, wt } = recursiveTotals[id];
       return showWeights
         ? `<td class="col-pct${boundaryClass(idx)}">${pct.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`
         : `<td class="${boundaryClass(idx)}">${pct.toFixed(2)}%</td>`;
