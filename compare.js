@@ -96,7 +96,7 @@ export function mountCompareView(){
         <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
       </div>
     </div>
-    <div class="card">
+    <div class="card compare-root-card">
       <div class="compare-pickers" id="comparePickers" style="${gridColsStyle(startSlots)}"><div class="compare-info-spacer"></div>${pickersHtml}</div>
       <button class="btn btn-sm" type="button" id="btnAddCompareSlot" style="margin-top:10px;">+ Add Recipe</button>
       <div id="compareContent"></div>

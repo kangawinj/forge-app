@@ -4622,6 +4622,16 @@
     .app{display:block !important;}
     .main{max-width:100%;padding:0;}
     .card{box-shadow:none;border:1px solid #999;break-inside:avoid;padding:16px 18px;}
+    /* Compare Recipes/Trials wraps its ENTIRE printable report (every
+       recipe's info card, every Part section, costing, steps -- easily
+       taller than one page) in a single .card, unlike every other feature's
+       small, self-contained card the break-inside:avoid rule above is
+       actually meant for. Avoiding a break inside a card that large just
+       means it can't start until a fresh page has room for the WHOLE
+       thing, which left page 1 almost blank (only the header) and pushed
+       every bit of real content to page 2 once the report grew past what
+       fit in what was left of page 1. */
+    .compare-root-card{break-inside:auto;}
     /* "4. Components and Process" pairs a potentially long ingredient
        table with the Process Flow box side by side in a CSS grid --
        break-inside:avoid on .card above doesn't reliably hold across a
