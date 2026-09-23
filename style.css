@@ -2536,7 +2536,7 @@
     border-bottom:none;
     font-weight:700;
   }
-  .compare-missing{color:var(--text-dim);}
+  .compare-missing{background:var(--bg);color:var(--danger);}
   .compare-steps-grid{
     display:grid;
     /* Same leading 220px spacer as .compare-info-grid — keeps this section's
