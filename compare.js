@@ -1,9 +1,10 @@
 import {
   recipes, escapeHtml, icon, recipeDisplayLabel, fullCode, allIngredientsInRecipe,
-  allIngredientsInPart, formatWeight, descriptionListHtml, findMaterialByLabel,
+  formatWeight, descriptionListHtml, findMaterialByLabel,
   playContentTransition, compareSetsCol, currentUser
 } from './app.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { partIngredients, partSubParts } from './recipes-data.js';
 
 let compareShowCodes = true;
 let compareShowWeights = false;
@@ -339,45 +340,67 @@ function renderCompareContent(){
     return `<td class="col-pct${boundaryClass(idx)}">${v.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`;
   }
 
-  const maxParts = Math.max(0, ...selected.map(r => (r.parts || []).length));
-  const partSections = [];
-  for(let pIdx = 0; pIdx < maxParts; pIdx++){
-    const partRows = new Map();
+  // Builds one section per Part at a given tree level, then recurses into
+  // each one's own Sub-parts -- mirrors the recipe editor's own nesting
+  // (Part > Sub-part > Sub-sub-part...) instead of flattening everything
+  // under its top-level Part like the old position-only version did. Parts
+  // are matched across the selected recipes by NAME (trimmed,
+  // case-insensitive) at each level, same as ingredient rows are unioned by
+  // name -- position alone isn't reliable once recipes can have differently-
+  // ordered or differently-nested Sub-parts. `path` (not just the label) is
+  // the section's identity for collapse-state/DOM purposes, since two
+  // different Sub-parts under different parents can share a plain name like
+  // "Sauce".
+  function buildPartSections(getLevelParts, depth, parentPath){
+    const order = [];
+    const byKey = new Map();
     selected.forEach(r => {
-      const part = (r.parts || [])[pIdx];
-      if(!part) return;
-      const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-      // Includes ingredients nested inside this Part's own Sub-parts too
-      // (allIngredientsInPart), so the comparison numbers stay complete —
-      // this section just doesn't visually distinguish which Sub-part each
-      // one came from.
-      allIngredientsInPart(part).filter(i => (i.name||'').trim() !== '').forEach(i => {
-        const key = i.name.trim().toLowerCase();
-        if(!partRows.has(key)) partRows.set(key, { label: i.name.trim(), values: {}, weights: {} });
-        const row = partRows.get(key);
-        const wt = (row.weights[r.id] || 0) + (parseFloat(i.weight) || 0);
-        row.weights[r.id] = wt;
-        row.values[r.id] = totalWt > 0 ? (wt / totalWt * 100) : 0;
+      (getLevelParts(r) || []).forEach((part, idx) => {
+        const nm = (part.name || '').trim();
+        const key = nm ? nm.toLowerCase() : `__unnamed_${idx}`;
+        if(!byKey.has(key)){
+          byKey.set(key, { label: nm || `Part ${idx+1}`, partsByRecipe: new Map() });
+          order.push(key);
+        }
+        byKey.get(key).partsByRecipe.set(r.id, part);
       });
     });
-    if(partRows.size === 0) continue; // no recipe has ingredients at this part position — skip the empty section
-
-    let label = `Part ${pIdx+1}`;
-    for(const r of selected){
-      const nm = (r.parts?.[pIdx]?.name || '').trim();
-      if(nm){ label = nm; break; }
-    }
-
-    const sortedRows = [...partRows.values()].sort((a,b) => {
-      const maxA = Math.max(...ids.map(id => a.values[id] || 0));
-      const maxB = Math.max(...ids.map(id => b.values[id] || 0));
-      return maxB - maxA;
-    });
-    partSections.push({ label, rows: sortedRows });
+    return order.map(key => {
+      const entry = byKey.get(key);
+      const path = parentPath ? `${parentPath} > ${entry.label}` : entry.label;
+      const partRows = new Map();
+      selected.forEach(r => {
+        const part = entry.partsByRecipe.get(r.id);
+        if(!part) return;
+        const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+        // Only this Part's OWN direct ingredients -- Sub-parts get their own
+        // separate (nested) section below, not folded in here.
+        partIngredients(part).filter(i => (i.name||'').trim() !== '').forEach(i => {
+          const rowKey = i.name.trim().toLowerCase();
+          if(!partRows.has(rowKey)) partRows.set(rowKey, { label: i.name.trim(), values: {}, weights: {} });
+          const row = partRows.get(rowKey);
+          const wt = (row.weights[r.id] || 0) + (parseFloat(i.weight) || 0);
+          row.weights[r.id] = wt;
+          row.values[r.id] = totalWt > 0 ? (wt / totalWt * 100) : 0;
+        });
+      });
+      const sortedRows = [...partRows.values()].sort((a,b) => {
+        const maxA = Math.max(...ids.map(id => a.values[id] || 0));
+        const maxB = Math.max(...ids.map(id => b.values[id] || 0));
+        return maxB - maxA;
+      });
+      const subSections = buildPartSections(
+        r => partSubParts(entry.partsByRecipe.get(r.id) || { items: [] }),
+        depth + 1,
+        path
+      );
+      return { label: entry.label, path, depth, rows: sortedRows, subSections };
+    }).filter(section => section.rows.length > 0 || section.subSections.length > 0);
   }
+  const partSections = buildPartSections(r => r.parts, 0, '');
 
-  const partSectionsHtml = partSections.map(section => {
-    const collapsed = !!comparePartCollapsed[section.label];
+  function renderPartSection(section){
+    const collapsed = !!comparePartCollapsed[section.path];
     const bodyRows = section.rows.map(row => {
       const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
       const isDiff = presentCount > 0 && presentCount < selected.length;
@@ -393,11 +416,10 @@ function renderCompareContent(){
         ? `<td class="col-pct${boundaryClass(idx)}">${pct.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`
         : `<td class="${boundaryClass(idx)}">${pct.toFixed(2)}%</td>`;
     }).join('');
-    return `
-      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;">
-        <button type="button" class="compare-section-eye-btn compare-part-collapse-btn" data-section="${escapeHtml(section.label)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
-        ${escapeHtml(section.label)}
-      </div>
+    // Only this Part's own direct ingredients get a table (a Sub-part with
+    // no direct ingredients of its own, just further Sub-parts, skips
+    // straight to its children instead of showing an empty table).
+    const tableHtml = section.rows.length === 0 ? '' : `
       <div style="overflow-x:auto;">
         <table class="compare-table">
           ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
@@ -407,7 +429,19 @@ function renderCompareContent(){
         </table>
       </div>
     `;
-  }).join('');
+    const childrenHtml = collapsed ? '' : section.subSections.map(renderPartSection).join('');
+    return `
+      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth*20}px;">
+        <button type="button" class="compare-section-eye-btn compare-part-collapse-btn" data-section="${escapeHtml(section.path)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
+        ${escapeHtml(section.label)}
+      </div>
+      <div style="padding-left:${section.depth*20}px;">
+        ${tableHtml}
+        ${childrenHtml}
+      </div>
+    `;
+  }
+  const partSectionsHtml = partSections.map(renderPartSection).join('');
 
   // Combined mode ignores Part boundaries entirely -- one flat table over
   // `rows`, the same whole-recipe ingredient union already built above for
