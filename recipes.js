@@ -1416,12 +1416,16 @@ export function renderParts(r){
 // to the cell below" -- e.g. '.ing-wt, .part-wt-display' covers both an
 // ingredient row's own Formula WT. and a Part/Sub-part header's, since
 // they visually share one column and Enter should walk down through both.
+// A collapsed Part's own children stay in the DOM (just hidden via CSS) so
+// its collapse state survives re-render -- offsetParent is null for them,
+// so filtering on it skips straight to the next field actually on screen
+// instead of walking into a Part's hidden collapsed rows first.
 function commitOnEnter(el, nextSelector){
   el.addEventListener('keydown', e => {
     if(e.key !== 'Enter') return;
     el.blur();
     if(!nextSelector) return;
-    const all = [...document.querySelectorAll(nextSelector)];
+    const all = [...document.querySelectorAll(nextSelector)].filter(node => node.offsetParent !== null);
     const next = all[all.indexOf(el) + 1];
     if(next) next.focus();
   });
