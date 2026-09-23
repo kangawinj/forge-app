@@ -120,6 +120,16 @@ async function handleNewTrialClick(r){
   try{
     const newTrial = await createNewTrial(r);
     recipes.push(newTrial);
+    // The Project link isn't stored on the recipe itself (see
+    // findProjectForRecipe) -- it's the Project's own products list
+    // pointing back at a recipeId -- so the new Trial doc alone never
+    // carries it over. Same carry-forward duplicateAsNewRecipe already does
+    // for its own copy, just missing here until now.
+    const oldLink = findProjectForRecipe(r.id);
+    if(oldLink && !oldLink.project.products.some(x => x.recipeId === newTrial.id)){
+      oldLink.project.products.push(blankProduct(newTrial.id));
+      scheduleProjectSave(oldLink.project);
+    }
     openRecipe(newTrial.id);
     setUnlockedRecipeId(newTrial.id);
     logActivityEvent('created', 'recipe', newTrial.name || 'Untitled recipe');
