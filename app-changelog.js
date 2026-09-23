@@ -596,7 +596,8 @@ export const CHANGELOG = [
   { version: "3.0.554", date: "2026-09-23", note: "Fixed the installed (PWA) app's window title bar showing \"Forge\" twice -- once as part of the app name, once as the page's own title" },
   { version: "3.0.555", date: "2026-09-23", note: "+ New Trial now carries over the source Trial's linked Project, same as Duplicate as New Recipe already did" },
   { version: "3.0.556", date: "2026-09-23", note: "Added an admin-only \"Fix Trial No.\" tool to renumber a Trial after a gap from deleting one (Trial numbers only ever count up automatically, so a deleted T04 left T05 as the next one instead of reusing 04)" },
-  { version: "3.0.557", date: "2026-09-23", note: "Added Copy/Paste for a recipe's whole formula (every Part), so one recipe's ingredient tree can be copied into another without duplicating the whole recipe" }
+  { version: "3.0.557", date: "2026-09-23", note: "Added Copy/Paste for a recipe's whole formula (every Part), so one recipe's ingredient tree can be copied into another without duplicating the whole recipe" },
+  { version: "3.0.558", date: "2026-09-23", note: "Compare Recipes/Trials: \"Not used\" cells now show a gray background with red text, instead of just inheriting the row's light-orange diff highlight" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
