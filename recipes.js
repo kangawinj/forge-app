@@ -53,7 +53,7 @@ import { exportRecipeToExcel } from './recipes-excel.js';
 // happens inside an event handler, never at module-evaluation time.
 import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible } from './recipes-overview.js';
 import { renderProcesses } from './recipes-processes.js';
-import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent } from './recipes-lifecycle.js';
+import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent, fixTrialNumber } from './recipes-lifecycle.js';
 // recipes-excel.js imports costingMarginVisible straight from this file --
 // a bare import above doesn't automatically re-export it, so this keeps
 // that working.
@@ -546,6 +546,7 @@ export function renderRecipeEditor(r){
             <button type="button" class="navbar-account-menu-item" id="btnPreview">${icon('eye')} Preview</button>
             <button type="button" class="navbar-account-menu-item" id="btnPrint">${icon('printer')} Print / PDF</button>
             <button type="button" class="navbar-account-menu-item" id="btnExportExcel">${icon('download')} Export Excel</button>
+            ${r.seriesId && currentUser?.email === DELETE_APPROVER_EMAIL ? `<button type="button" class="navbar-account-menu-item" id="btnFixTrialNo">${icon('pencil')} Fix Trial No.</button>` : ''}
           </div>
         </div>
       </div>
@@ -1199,6 +1200,33 @@ export function renderRecipeEditor(r){
     setMainFeatureView('compare');
     renderMain();
     renderSidebar();
+  });
+  document.getElementById('btnFixTrialNo')?.addEventListener('click', () => {
+    document.getElementById('recipeMoreMenu')?.classList.remove('open');
+    const currentNo = r.trialNo || 0;
+    const input = prompt(`Enter the new Trial number for this Trial (currently T${trialNoDisplay(currentNo)}):`, String(currentNo));
+    if(input === null) return;
+    const newNo = parseInt(input.trim(), 10);
+    if(!Number.isInteger(newNo) || newNo <= 0){
+      alert('Enter a whole number greater than 0.');
+      return;
+    }
+    if(newNo === currentNo) return;
+    const collision = recipes.find(x => x.seriesId === r.seriesId && x.id !== r.id && x.trialNo === newNo);
+    if(collision){
+      alert(`T${trialNoDisplay(newNo)} is already used by "${collision.name || 'Untitled recipe'}" in this Series.`);
+      return;
+    }
+    if(!confirm(`Change this Trial's number from T${trialNoDisplay(currentNo)} to T${trialNoDisplay(newNo)}? This changes its Recipe Code everywhere it's shown.`)) return;
+    fixTrialNumber(r, newNo).then(() => {
+      r.trialNo = newNo;
+      updateRecipeTitleDisplay(r);
+      renderTrialHistoryTrack(r);
+      renderSidebar();
+    }).catch(err => {
+      console.error('Forge: Fix Trial No. failed', err);
+      alert('Could not update the Trial number. Please try again.' + (err && err.message === 'SERIES_NOT_FOUND' ? ' (This recipe\'s Series record is missing.)' : ''));
+    });
   });
   if(r.seriesId) renderTrialHistoryTrack(r);
   document.getElementById('btnDelete').addEventListener('click', () => {

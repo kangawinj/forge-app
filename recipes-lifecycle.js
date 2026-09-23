@@ -107,6 +107,28 @@ async function createNewTrial(r){
   });
 }
 
+// Admin-only correction for a single Trial's own number -- e.g. renumbering
+// T05 down to T04 after T04 was deleted, so the sequence reads cleanly
+// again. Collision-checking (no other Trial in this Series already has the
+// target number) is the caller's job against the in-memory `recipes` array,
+// same low-stakes tradeoff suggestNextRecipeSeq already accepts for Recipe
+// No. -- this is a rare manual admin action, not a hot concurrent path.
+// Bumps the Series' own maxTrialNo counter when the new number is higher
+// than what it already is, so a later "+ New Trial" still can't collide;
+// never lowers it, since some OTHER Trial may already sit above this one.
+export async function fixTrialNumber(r, newTrialNo){
+  if(!r.seriesId) throw new Error('NOT_A_TRIAL');
+  const seriesRef = doc(recipeSeriesCol, r.seriesId);
+  const recipeRef = doc(recipesCol, r.id);
+  return runTransaction(db, async (tx) => {
+    const seriesSnap = await tx.get(seriesRef);
+    if(!seriesSnap.exists()) throw new Error('SERIES_NOT_FOUND');
+    const maxTrialNo = seriesSnap.data().maxTrialNo || 0;
+    tx.set(recipeRef, { trialNo: newTrialNo }, { merge: true });
+    if(newTrialNo > maxTrialNo) tx.update(seriesRef, { maxTrialNo: newTrialNo });
+  });
+}
+
 // Double-click guard shared by every call site (just the Trial History
 // card's "+ T22" pill and the toolbar's "+ New Trial" button today).
 let newTrialInFlight = false;
