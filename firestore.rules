@@ -56,6 +56,11 @@ service cloud.firestore {
     match /trials/{trialId} {
       allow read, write: if isAllowedUser();
     }
+    // One saved Compare Trials picker set per Recipe Series (id = seriesId)
+    // -- see compareSetsCol in app.js. Same access level as /trials itself.
+    match /compareSets/{seriesId} {
+      allow read, write: if isAllowedUser();
+    }
     match /sampleSubmissions/{submissionId} {
       allow read, write: if isAllowedUser();
     }

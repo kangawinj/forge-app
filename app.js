@@ -147,6 +147,12 @@ export const materialsCol = collection(db, "ingredientMaster");
 export const productsCol = collection(db, "productList");
 export const projectsCol = collection(db, "projects");
 export const trialsCol = collection(db, "trials");
+// One doc per Recipe Series (id = seriesId), holding whichever Trials were
+// last picked in that series' "Compare Trials" view -- see compare.js --
+// so reopening Compare Trials for that series lands back on the same
+// comparison instead of starting from a blank picker every time. Only one
+// saved set per series; saving again overwrites it.
+export const compareSetsCol = collection(db, "compareSets");
 export const sampleSubmissionsCol = collection(db, "sampleSubmissions");
 // One doc per calendar year (id = "2026"), holding the atomic Form No.
 // counter (maxSeq) every "+ New Submission"/first-save runTransaction()

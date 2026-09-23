@@ -1,8 +1,9 @@
 import {
   recipes, escapeHtml, icon, recipeDisplayLabel, fullCode, allIngredientsInRecipe,
   allIngredientsInPart, formatWeight, descriptionListHtml, findMaterialByLabel,
-  playContentTransition
+  playContentTransition, compareSetsCol, currentUser
 } from './app.js';
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 let compareShowCodes = true;
 let compareShowWeights = false;
@@ -67,6 +68,7 @@ export function mountCompareView(){
       <div class="section-title-display">${icon('scale', 24)} ${compareSeriesPrefilter ? 'Compare Trials' : 'Compare Recipes'}${compareSeriesPrefilter ? ` — ${escapeHtml(compareSeriesPrefilter.seriesKey || '')}` : ''}</div>
       <div class="toolbar">
         ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnCompareShowAll">Show All Recipes</button>` : ''}
+        ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnSaveCompareSet">${icon('save', 14)} Save Compare Trials</button>` : ''}
         <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
       </div>
     </div>
@@ -91,18 +93,77 @@ export function mountCompareView(){
     if(addBtn) addBtn.style.display = document.querySelectorAll('.compare-select').length >= MAX_COMPARE_SLOTS ? 'none' : '';
   }
   updateAddSlotBtnVisibility();
-  document.getElementById('btnAddCompareSlot').addEventListener('click', () => {
+
+  // Appends one more picker slot (up to MAX_COMPARE_SLOTS) -- shared by the
+  // "+ Add Recipe" click below and by restoring a saved set with more than
+  // 2 recipes in it (see loadSavedCompareSet).
+  function addSlot(){
     const pickers = document.getElementById('comparePickers');
     const slotIdx = document.querySelectorAll('.compare-select').length;
-    if(slotIdx >= MAX_COMPARE_SLOTS) return;
+    if(slotIdx >= MAX_COMPARE_SLOTS) return null;
     pickers.insertAdjacentHTML('beforeend', pickerColHtml(slotIdx, options));
     pickers.setAttribute('style', gridColsStyle(slotIdx+1));
-    pickers.lastElementChild.querySelector('.compare-select').addEventListener('change', renderCompareContent);
+    const sel = pickers.lastElementChild.querySelector('.compare-select');
+    sel.addEventListener('change', renderCompareContent);
     updateAddSlotBtnVisibility();
+    return sel;
+  }
+  document.getElementById('btnAddCompareSlot').addEventListener('click', () => {
+    if(addSlot()) renderCompareContent();
+  });
+
+  // Compare Trials (series-scoped only — one saved set per series, see
+  // compareSetsCol in app.js) restores whichever Trials/toggles were last
+  // saved for this series, so reopening it doesn't start from a blank
+  // picker every time. Fetched in the background after the first paint
+  // rather than blocking it, since it's a nice-to-have, not the view's
+  // critical path.
+  async function loadSavedCompareSet(){
+    if(!compareSeriesPrefilter) return;
+    let snap;
+    try {
+      snap = await getDoc(doc(compareSetsCol, compareSeriesPrefilter.seriesId));
+    } catch(err) { return; } // offline/permission hiccup -- just stay on the blank picker
+    if(!snap.exists()) return;
+    const saved = snap.data();
+    const ids = (saved.recipeIds || []).filter(id => candidates.some(r => r.id === id));
+    if(ids.length === 0) return;
+    let selects = [...document.querySelectorAll('.compare-select')];
+    while(selects.length < ids.length){
+      const sel = addSlot();
+      if(!sel) break;
+      selects.push(sel);
+    }
+    selects.forEach((sel, idx) => { sel.value = ids[idx] || ''; });
+    // renderCompareContent() (below) rebuilds the checkbox markup from these
+    // module-level vars on every render, so setting them here is enough --
+    // no need to separately touch the (about to be replaced) checkbox DOM.
+    compareShowCodes = saved.showCodes !== false;
+    compareShowWeights = !!saved.showWeights;
     renderCompareContent();
+  }
+  document.getElementById('btnSaveCompareSet')?.addEventListener('click', async e => {
+    const btn = e.currentTarget;
+    const ids = [...document.querySelectorAll('.compare-select')].map(sel => sel.value).filter(Boolean);
+    const original = btn.innerHTML;
+    try {
+      await setDoc(doc(compareSetsCol, compareSeriesPrefilter.seriesId), {
+        seriesId: compareSeriesPrefilter.seriesId,
+        recipeIds: ids,
+        showCodes: compareShowCodes,
+        showWeights: compareShowWeights,
+        savedAt: Date.now(),
+        savedBy: currentUser?.email || '',
+      });
+      btn.innerHTML = `${icon('check', 14)} Saved`;
+    } catch(err){
+      btn.innerHTML = `${icon('save', 14)} Save failed`;
+    }
+    setTimeout(() => { btn.innerHTML = original; }, 1800);
   });
 
   renderCompareContent();
+  loadSavedCompareSet();
   playContentTransition(main);
 }
 
