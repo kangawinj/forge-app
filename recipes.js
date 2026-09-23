@@ -1864,8 +1864,14 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   // Silently a no-op when there's nothing to scale from (empty, or
   // everything inside is still 0g): with no known ratio, there's no
   // defensible way to distribute a new total.
+  // scaleBaseWeight snapshots the Part's total weight once when an edit
+  // starts (focus), not re-read live on every keystroke -- otherwise typing
+  // a new number digit-by-digit (e.g. "25" -> "0" -> "0." -> "0.1") passes
+  // through an intermediate 0, which would scale everything to 0g and, since
+  // the base is now 0, no later keystroke could ever recover from it.
+  let scaleBaseWeight = null;
   function scalePartTo(targetWeight){
-    const currentWeight = partTotalWeight(part);
+    const currentWeight = scaleBaseWeight !== null ? scaleBaseWeight : partTotalWeight(part);
     if(targetWeight < 0 || currentWeight <= 0) return;
     const factor = targetWeight / currentWeight;
     scaleIngredientsInPart(part, factor);
@@ -1877,13 +1883,14 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
     scheduleSave();
   });
   partWtInput.addEventListener('blur', () => {
+    scaleBaseWeight = null;
     refreshDisplays(r);
     setPrecisionField(partWtInput, partTotalWeight(part));
   });
   commitOnEnter(partWtInput, '.ing-wt, .part-wt-display');
   let partWtJustFocused = false;
   partWtInput.addEventListener('mousedown', () => { partWtJustFocused = document.activeElement !== partWtInput; });
-  partWtInput.addEventListener('focus', () => partWtInput.select());
+  partWtInput.addEventListener('focus', () => { scaleBaseWeight = partTotalWeight(part); partWtInput.select(); });
   partWtInput.addEventListener('mouseup', e => { if(partWtJustFocused){ e.preventDefault(); partWtJustFocused = false; } });
 
   // Same back-solve as an ingredient's own % field (see ing-edit-row
@@ -1901,13 +1908,14 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
     scheduleSave();
   });
   partPctInput.addEventListener('blur', () => {
+    scaleBaseWeight = null;
     refreshDisplays(r);
     setPrecisionField(partPctInput, part.percent);
   });
   commitOnEnter(partPctInput, '.ing-pct-display, .part-pct-display');
   let partPctJustFocused = false;
   partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
-  partPctInput.addEventListener('focus', () => partPctInput.select());
+  partPctInput.addEventListener('focus', () => { scaleBaseWeight = partTotalWeight(part); partPctInput.select(); });
   partPctInput.addEventListener('mouseup', e => { if(partPctJustFocused){ e.preventDefault(); partPctJustFocused = false; } });
 
   // This Part's own Yield -- an independent prep loss/gain for everything
