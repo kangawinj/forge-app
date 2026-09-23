@@ -13,6 +13,16 @@ let compareShowWeights = false;
 // Hiding a section hides its title too, not just its body.
 let compareShowCosting = true;
 let compareShowSteps = true;
+// Compare Ingredients: grouped into one table per Part (matching the
+// recipe editor's own breakdown, current rows collapsible per section) vs
+// one combined table across the whole recipe, ignoring Part boundaries.
+let compareGroupByPart = true;
+// Per-section collapse state while grouped by Part (keyed by the section's
+// own label, since Part has no stable id) -- collapsing hides that
+// section's ingredient rows but keeps its title/column headers/subtotal
+// visible, same idea as a Part's own collapse in the recipe editor.
+// Session-only, not persisted with the rest of a saved comparison.
+let comparePartCollapsed = {};
 // Free-text note per recipe slot (keyed by recipe id) -- typed here, not
 // auto-saved on every keystroke (renderCompareContent() fully rebuilds this
 // area on most other changes, e.g. toggling a checkbox, which would lose an
@@ -155,6 +165,7 @@ export function mountCompareView(){
     compareShowWeights = !!saved.showWeights;
     compareShowCosting = saved.showCosting !== false;
     compareShowSteps = saved.showSteps !== false;
+    compareGroupByPart = saved.groupByPart !== false;
     compareNotes = { ...(saved.notes || {}) };
     renderCompareContent();
   }
@@ -170,6 +181,7 @@ export function mountCompareView(){
         showWeights: compareShowWeights,
         showCosting: compareShowCosting,
         showSteps: compareShowSteps,
+        groupByPart: compareGroupByPart,
         notes: compareNotes,
         savedAt: Date.now(),
         savedBy: currentUser?.email || '',
@@ -365,6 +377,7 @@ function renderCompareContent(){
   }
 
   const partSectionsHtml = partSections.map(section => {
+    const collapsed = !!comparePartCollapsed[section.label];
     const bodyRows = section.rows.map(row => {
       const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
       const isDiff = presentCount > 0 && presentCount < selected.length;
@@ -381,17 +394,40 @@ function renderCompareContent(){
         : `<td class="${boundaryClass(idx)}">${pct.toFixed(2)}%</td>`;
     }).join('');
     return `
-      <div class="compare-section-title" style="font-size:13px;margin:16px 0 8px;">${escapeHtml(section.label)}</div>
+      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;">
+        <button type="button" class="compare-section-eye-btn compare-part-collapse-btn" data-section="${escapeHtml(section.label)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
+        ${escapeHtml(section.label)}
+      </div>
       <div style="overflow-x:auto;">
         <table class="compare-table">
           ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
           <thead>${ingHeaderRowsHtml}</thead>
-          <tbody>${bodyRows}</tbody>
+          <tbody>${collapsed ? '' : bodyRows}</tbody>
           <tfoot><tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr></tfoot>
         </table>
       </div>
     `;
   }).join('');
+
+  // Combined mode ignores Part boundaries entirely -- one flat table over
+  // `rows`, the same whole-recipe ingredient union already built above for
+  // the Recipe Total footer row.
+  const combinedBodyRows = rows.map(row => {
+    const presentCount = ids.filter(id => selected.some(r=>r.id===id) && row.values[id] !== undefined).length;
+    const isDiff = presentCount > 0 && presentCount < selected.length;
+    const cells = ids.map((id, idx) => ingCell(row, id, idx)).join('');
+    const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
+    return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+  }).join('');
+  const combinedTableHtml = `
+    <div style="overflow-x:auto;">
+      <table class="compare-table">
+        ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+        <thead>${ingHeaderRowsHtml}</thead>
+        <tbody>${combinedBodyRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
 
   const totalCells = ids.map((id, idx) => {
     const r = recipes.find(x => x.id === id);
@@ -489,7 +525,15 @@ function renderCompareContent(){
       <input type="checkbox" id="compareShowWeights" ${showWeights ? 'checked' : ''}>
       Also show weight (g)
     </label>
-    ${partSectionsHtml || '<div class="compare-empty">No ingredients yet</div>'}
+    <label class="compare-toggle-label">
+      <input type="radio" name="compareGroupMode" id="compareGroupByPartRadio" value="byPart" ${compareGroupByPart ? 'checked' : ''}>
+      Group by Part
+    </label>
+    <label class="compare-toggle-label">
+      <input type="radio" name="compareGroupMode" id="compareGroupCombinedRadio" value="combined" ${compareGroupByPart ? '' : 'checked'}>
+      Combined (one table)
+    </label>
+    ${compareGroupByPart ? (partSectionsHtml || '<div class="compare-empty">No ingredients yet</div>') : combinedTableHtml}
     <div style="overflow-x:auto;margin-top:16px;">
       <table class="compare-table">
         ${colgroupHtml(ids.length)}
@@ -526,6 +570,21 @@ function renderCompareContent(){
   document.getElementById('compareShowWeights').addEventListener('change', e => {
     compareShowWeights = e.target.checked;
     renderCompareContent();
+  });
+  document.getElementById('compareGroupByPartRadio').addEventListener('change', () => {
+    compareGroupByPart = true;
+    renderCompareContent();
+  });
+  document.getElementById('compareGroupCombinedRadio').addEventListener('change', () => {
+    compareGroupByPart = false;
+    renderCompareContent();
+  });
+  document.querySelectorAll('.compare-part-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const label = btn.dataset.section;
+      comparePartCollapsed[label] = !comparePartCollapsed[label];
+      renderCompareContent();
+    });
   });
   document.getElementById('toggleCostingSection').addEventListener('click', () => {
     compareShowCosting = !compareShowCosting;
