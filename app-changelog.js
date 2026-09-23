@@ -598,7 +598,8 @@ export const CHANGELOG = [
   { version: "3.0.556", date: "2026-09-23", note: "Added an admin-only \"Fix Trial No.\" tool to renumber a Trial after a gap from deleting one (Trial numbers only ever count up automatically, so a deleted T04 left T05 as the next one instead of reusing 04)" },
   { version: "3.0.557", date: "2026-09-23", note: "Added Copy/Paste for a recipe's whole formula (every Part), so one recipe's ingredient tree can be copied into another without duplicating the whole recipe" },
   { version: "3.0.558", date: "2026-09-23", note: "Compare Recipes/Trials: \"Not used\" cells now show a gray background with red text, instead of just inheriting the row's light-orange diff highlight" },
-  { version: "3.0.559", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's Subtotal now includes everything nested inside its Sub-parts too, matching the live editor's own Formula WT./% of Recipe, instead of only summing that Part's own directly-listed ingredients" }
+  { version: "3.0.559", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's Subtotal now includes everything nested inside its Sub-parts too, matching the live editor's own Formula WT./% of Recipe, instead of only summing that Part's own directly-listed ingredients" },
+  { version: "3.0.560", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's (now recursive) Subtotal moved to below all of its nested Sub-parts instead of sitting above them, so it reads as the running total for everything just shown above it" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
