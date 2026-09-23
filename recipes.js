@@ -1034,12 +1034,18 @@ export function renderRecipeEditor(r){
   // proportionally, same math as the "Scale Recipe To" button above, just
   // inline where the total is already shown. A no-op with nothing yet
   // weighed in (0g total) since there's no ratio to scale from.
+  // rootScaleBase/rootScaleSnapshot capture the starting state once at focus
+  // -- see scalePartTo above for why a live-reread base/weight breaks typing
+  // a new number digit-by-digit.
   const treeRootWtInput = document.getElementById('treeRootWt');
+  let rootScaleBase = null;
+  let rootScaleSnapshot = null;
   function scaleRecipeTo(targetWeight){
-    const currentTotal = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    const currentTotal = rootScaleBase !== null ? rootScaleBase : allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     if(targetWeight < 0 || currentTotal <= 0) return;
     const factor = targetWeight / currentTotal;
-    r.parts.forEach(part => scaleIngredientsInPart(part, factor));
+    const snapshot = rootScaleSnapshot || (() => { const m = new Map(); r.parts.forEach(part => snapshotWeights(part.items, m)); return m; })();
+    r.parts.forEach(part => applyScaleFromSnapshot(part.items, snapshot, factor));
   }
   treeRootWtInput.addEventListener('input', e => {
     const target = parseFloat(e.target.value);
@@ -1047,13 +1053,20 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
   treeRootWtInput.addEventListener('blur', () => {
+    rootScaleBase = null;
+    rootScaleSnapshot = null;
     refreshDisplays(r);
     treeRootWtInput.value = (r.batchWeight || 0).toFixed(2);
   });
   commitOnEnter(treeRootWtInput);
   let treeRootWtJustFocused = false;
   treeRootWtInput.addEventListener('mousedown', () => { treeRootWtJustFocused = document.activeElement !== treeRootWtInput; });
-  treeRootWtInput.addEventListener('focus', () => treeRootWtInput.select());
+  treeRootWtInput.addEventListener('focus', () => {
+    rootScaleBase = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
+    rootScaleSnapshot = new Map();
+    r.parts.forEach(part => snapshotWeights(part.items, rootScaleSnapshot));
+    treeRootWtInput.select();
+  });
   treeRootWtInput.addEventListener('mouseup', e => { if(treeRootWtJustFocused){ e.preventDefault(); treeRootWtJustFocused = false; } });
 
   // Recipe Overview column sort — clicking a header toggles asc/desc on
@@ -1422,6 +1435,26 @@ function setPrecisionField(el, n){
   const v = parseFloat(n) || 0;
   el.value = v.toFixed(2);
   el.title = v.toFixed(4);
+}
+
+// Used by scalePartTo/scaleRecipeTo (below) to scale a whole live-typing
+// session from one fixed starting point instead of the ingredients' own
+// current (already-scaled-by-a-previous-keystroke) weight -- scaling always
+// multiplies each ingredient's ORIGINAL weight by the factor, never a
+// previously-written one, so an intermediate keystroke that briefly implies
+// a 0 factor can't permanently zero anything out.
+function snapshotWeights(items, map = new Map()){
+  (items || []).forEach(item => {
+    if(item.kind === 'part') snapshotWeights(item.items, map);
+    else map.set(item, parseFloat(item.weight) || 0);
+  });
+  return map;
+}
+function applyScaleFromSnapshot(items, snapshot, factor){
+  (items || []).forEach(item => {
+    if(item.kind === 'part') applyScaleFromSnapshot(item.items, snapshot, factor);
+    else item.weight = round4((snapshot.get(item) || 0) * factor);
+  });
 }
 
 // Every Part (picking one aggregates everything nested inside it -- see
@@ -1861,20 +1894,34 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   // Scales everything currently inside this Part — its own ingredients AND
   // every ingredient nested inside its Sub-parts — by the same factor, so
   // weights change but every ratio between them (at every depth) doesn't.
-  // Silently a no-op when there's nothing to scale from (empty, or
-  // everything inside is still 0g): with no known ratio, there's no
-  // defensible way to distribute a new total.
-  // scaleBaseWeight snapshots the Part's total weight once when an edit
-  // starts (focus), not re-read live on every keystroke -- otherwise typing
-  // a new number digit-by-digit (e.g. "25" -> "0" -> "0." -> "0.1") passes
-  // through an intermediate 0, which would scale everything to 0g and, since
-  // the base is now 0, no later keystroke could ever recover from it.
+  // scaleBaseWeight/scaleSnapshot capture the Part's starting state once
+  // when an edit begins (focus), not re-read live on every keystroke --
+  // otherwise typing a new number digit-by-digit (e.g. "25" -> "0" -> "0." ->
+  // "0.1") passes through an intermediate 0, which would both scale
+  // everything to 0g AND (since scaleIngredientsInPart multiplies each
+  // ingredient's *current* weight) permanently lose the original ratio for
+  // every later keystroke to scale from.
   let scaleBaseWeight = null;
+  let scaleSnapshot = null;
+  // With no known ratio to scale from (empty, or everything inside is still
+  // 0g), split the typed target evenly across this Part's items instead --
+  // otherwise typing a weight into a freshly-added Part with blank
+  // ingredients would silently do nothing.
+  function seedEmptyPart(part, targetWeight){
+    const items = part.items || [];
+    if(items.length === 0) return;
+    const share = targetWeight / items.length;
+    items.forEach(item => {
+      if(item.kind === 'part') seedEmptyPart(item, share);
+      else item.weight = round4(share);
+    });
+  }
   function scalePartTo(targetWeight){
     const currentWeight = scaleBaseWeight !== null ? scaleBaseWeight : partTotalWeight(part);
-    if(targetWeight < 0 || currentWeight <= 0) return;
+    if(targetWeight < 0) return;
+    if(currentWeight <= 0){ seedEmptyPart(part, targetWeight); return; }
     const factor = targetWeight / currentWeight;
-    scaleIngredientsInPart(part, factor);
+    applyScaleFromSnapshot(part.items, scaleSnapshot || snapshotWeights(part.items), factor);
   }
 
   partWtInput.addEventListener('input', e => {
@@ -1884,13 +1931,18 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   });
   partWtInput.addEventListener('blur', () => {
     scaleBaseWeight = null;
+    scaleSnapshot = null;
     refreshDisplays(r);
     setPrecisionField(partWtInput, partTotalWeight(part));
   });
   commitOnEnter(partWtInput, '.ing-wt, .part-wt-display');
   let partWtJustFocused = false;
   partWtInput.addEventListener('mousedown', () => { partWtJustFocused = document.activeElement !== partWtInput; });
-  partWtInput.addEventListener('focus', () => { scaleBaseWeight = partTotalWeight(part); partWtInput.select(); });
+  partWtInput.addEventListener('focus', () => {
+    scaleBaseWeight = partTotalWeight(part);
+    scaleSnapshot = snapshotWeights(part.items);
+    partWtInput.select();
+  });
   partWtInput.addEventListener('mouseup', e => { if(partWtJustFocused){ e.preventDefault(); partWtJustFocused = false; } });
 
   // Same back-solve as an ingredient's own % field (see ing-edit-row
@@ -1909,13 +1961,18 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   });
   partPctInput.addEventListener('blur', () => {
     scaleBaseWeight = null;
+    scaleSnapshot = null;
     refreshDisplays(r);
     setPrecisionField(partPctInput, part.percent);
   });
   commitOnEnter(partPctInput, '.ing-pct-display, .part-pct-display');
   let partPctJustFocused = false;
   partPctInput.addEventListener('mousedown', () => { partPctJustFocused = document.activeElement !== partPctInput; });
-  partPctInput.addEventListener('focus', () => { scaleBaseWeight = partTotalWeight(part); partPctInput.select(); });
+  partPctInput.addEventListener('focus', () => {
+    scaleBaseWeight = partTotalWeight(part);
+    scaleSnapshot = snapshotWeights(part.items);
+    partPctInput.select();
+  });
   partPctInput.addEventListener('mouseup', e => { if(partPctJustFocused){ e.preventDefault(); partPctJustFocused = false; } });
 
   // This Part's own Yield -- an independent prep loss/gain for everything
