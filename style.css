@@ -1496,6 +1496,18 @@
     font-size:12px;
     white-space:nowrap;
   }
+  .tree-formula-clipboard-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-dim);
+    padding:4px;
+    border-radius:6px;
+    line-height:1;
+    display:inline-flex;
+  }
+  .tree-formula-clipboard-btn:hover:not(:disabled){background:var(--primary-light);color:var(--primary);}
+  .tree-formula-clipboard-btn:disabled{opacity:.35;cursor:default;}
   .tree-ing-node .tree-node-pct{
     font-weight:600;
     color:var(--text-dim);
@@ -4755,7 +4767,7 @@
        printout meant for someone outside the system to mark by hand.
        Force full opacity so they print clearly either way. */
     .trial-testresult-radios input[type=radio]:disabled{opacity:1 !important;-webkit-appearance:radio !important;appearance:radio !important;}
-    .icon-btn, .part-toggle-btn, .material-search, .mu-translate-btn, .compare-section-eye-btn{display:none !important;}
+    .icon-btn, .part-toggle-btn, .material-search, .mu-translate-btn, .compare-section-eye-btn, .tree-formula-clipboard-btn{display:none !important;}
     .part-block.collapsed .part-body{display:block !important;}
     .part-block{background:#fff !important;}
 

@@ -763,6 +763,8 @@ export function renderRecipeEditor(r){
       <div class="ingredient-tree">
         <div class="tree-node tree-root-node">
           <span class="tree-node-label">Formula Total</span>
+          <button type="button" class="tree-formula-clipboard-btn" id="btnCopyFormula" title="Copy this recipe's whole formula (every Part)">${icon('copy', 14)}</button>
+          <button type="button" class="tree-formula-clipboard-btn" id="btnPasteFormula" title="Paste a copied formula here — replaces every Part in this recipe">${icon('clipboard-check', 14)}</button>
           <span class="tree-node-wt tree-root-wt-wrap">
             <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
             <span class="ing-unit">g</span>
@@ -1029,6 +1031,51 @@ export function renderRecipeEditor(r){
     document.getElementById('portionCompPanel').classList.remove('open');
     renderPortionComponents(r);
     scheduleSave();
+  });
+
+  // Copy/Paste the whole formula (every top-level Part, including
+  // everything nested inside them) between different recipes -- e.g. start
+  // a new recipe from an existing one's ingredient tree without pulling in
+  // its name/description/process steps/etc. the way "Duplicate as New
+  // Recipe" does. Kept in localStorage (not a module-level variable) so a
+  // formula copied here is still there to paste after a refresh or in a
+  // totally different recipe/tab. Paste always REPLACES every Part already
+  // in this recipe -- never merges/appends -- so it asks for confirmation
+  // first, same as restoring a Version.
+  const FORMULA_CLIPBOARD_KEY = 'forge-copied-formula';
+  document.getElementById('btnCopyFormula').addEventListener('click', () => {
+    try {
+      localStorage.setItem(FORMULA_CLIPBOARD_KEY, JSON.stringify({
+        parts: r.parts,
+        sourceName: r.name || 'Untitled recipe',
+        copiedAt: Date.now()
+      }));
+    } catch(err) {
+      alert('Could not copy the formula.');
+      return;
+    }
+    updatePasteFormulaBtnState();
+  });
+  function updatePasteFormulaBtnState(){
+    const btn = document.getElementById('btnPasteFormula');
+    if(!btn) return;
+    let copied = null;
+    try { copied = JSON.parse(localStorage.getItem(FORMULA_CLIPBOARD_KEY) || 'null'); } catch(err) {}
+    btn.disabled = !copied;
+    btn.title = copied
+      ? `Paste the formula copied from "${copied.sourceName || 'another recipe'}" here — replaces every Part in this recipe`
+      : 'Copy a formula first (from this recipe or another one)';
+  }
+  updatePasteFormulaBtnState();
+  document.getElementById('btnPasteFormula').addEventListener('click', () => {
+    let copied;
+    try { copied = JSON.parse(localStorage.getItem(FORMULA_CLIPBOARD_KEY) || 'null'); } catch(err) { copied = null; }
+    if(!copied || !copied.parts) return;
+    if(!confirm(`Replace every Part in this recipe with the formula copied from "${copied.sourceName || 'another recipe'}"? This can't be undone.`)) return;
+    r.parts = JSON.parse(JSON.stringify(copied.parts));
+    migrateRecipe(r);
+    renderMain();
+    performSave(r);
   });
 
   // The tree root's own weight (g) — always 100% of the recipe by
