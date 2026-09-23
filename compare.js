@@ -460,6 +460,16 @@ function renderCompareContent(){
         ? `<td class="col-pct${boundaryClass(idx)}">${pct.toFixed(2)}%</td><td class="col-wt">${formatWeight(wt)}</td>`
         : `<td class="${boundaryClass(idx)}">${pct.toFixed(2)}%</td>`;
     }).join('');
+    // A "leaf" section (no Sub-parts nested inside it) keeps its Subtotal
+    // as this table's own tfoot, right under its own rows -- there's
+    // nothing else underneath it, so that's already the bottom. A section
+    // WITH Sub-parts nested inside it instead moves the (now recursive)
+    // Subtotal out of this table and down below every one of those nested
+    // sections, so it reads as the running total for everything just shown
+    // above it, not as a partial total sitting above content it doesn't
+    // include.
+    const hasChildren = section.subSections.length > 0;
+    const subtotalRowHtml = `<tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr>`;
     // Only this Part's own direct ingredients get a table (a Sub-part with
     // no direct ingredients of its own, just further Sub-parts, skips
     // straight to its children instead of showing an empty table).
@@ -469,11 +479,19 @@ function renderCompareContent(){
           ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
           <thead>${ingHeaderRowsHtml}</thead>
           <tbody>${collapsed ? '' : bodyRows}</tbody>
-          <tfoot><tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr></tfoot>
+          ${hasChildren ? '' : `<tfoot>${subtotalRowHtml}</tfoot>`}
         </table>
       </div>
     `;
     const childrenHtml = collapsed ? '' : section.subSections.map(renderPartSection).join('');
+    const bottomSubtotalHtml = hasChildren ? `
+      <div style="overflow-x:auto;">
+        <table class="compare-table">
+          ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+          <tfoot>${subtotalRowHtml}</tfoot>
+        </table>
+      </div>
+    ` : '';
     return `
       <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth*20}px;">
         <button type="button" class="compare-section-eye-btn compare-part-collapse-btn" data-section="${escapeHtml(section.path)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
@@ -482,6 +500,7 @@ function renderCompareContent(){
       <div style="padding-left:${section.depth*20}px;">
         ${tableHtml}
         ${childrenHtml}
+        ${bottomSubtotalHtml}
       </div>
     `;
   }
