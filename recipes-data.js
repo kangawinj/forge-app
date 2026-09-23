@@ -11,8 +11,31 @@ import {
 
 export const PART_COUNT = 4;
 
+// A Part's own children -- ingredients AND Sub-parts -- live together in
+// one ordered `items` array (each tagged `kind`), instead of two separate
+// arrays, so a Sub-part can be dragged to sit between specific ingredients
+// instead of always trailing after every one of them. `partIngredients`/
+// `partSubParts` below are the read-only "give me just this kind" views
+// used everywhere that doesn't care about relative order (weight/cost
+// math, lookups) -- code that DOES care about order (the live editor,
+// Print, Excel) walks `part.items` directly instead.
+export function blankIngredient(){
+  return { kind: 'ingredient', id: uid(), name:"", percent:0, weight:0, note:"" };
+}
 export function blankPart(name){
-  return { name, ingredients: [ { id: uid(), name:"", percent:0, weight:0, note:"" } ], parts: [] };
+  return { kind: 'part', name, items: [ blankIngredient() ], prepYieldPct: null, percent: 0 };
+}
+export function partIngredients(part){
+  return (part.items || []).filter(i => i.kind === 'ingredient');
+}
+export function partSubParts(part){
+  return (part.items || []).filter(i => i.kind === 'part');
+}
+// An ingredient item's own weight, or a Sub-part item's recursive total
+// (see partTotalWeight below) -- lets code that sums a Part's children
+// treat every item the same regardless of kind.
+export function itemWeight(item){
+  return item.kind === 'part' ? partTotalWeight(item) : (parseFloat(item.weight) || 0);
 }
 
 export function blankRecipe(){
@@ -71,41 +94,54 @@ export function blankRecipe(){
 
 export function migrateRecipe(r){
   if(!Array.isArray(r.parts)){
-    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [{ id: uid(), name:"", percent:0, weight:0, note:"" }];
-    r.parts = [ { name:"Part 1", ingredients: oldIngredients } ];
+    const oldIngredients = Array.isArray(r.ingredients) && r.ingredients.length ? r.ingredients : [blankIngredient()];
+    r.parts = [ { name:"Part 1", items: oldIngredients } ];
     for(let i = r.parts.length; i < PART_COUNT; i++){
       r.parts.push(blankPart(`Part ${i+1}`));
     }
     delete r.ingredients;
   }
   // Recursive so it also normalizes Sub-parts nested arbitrarily deep
-  // inside a Part — older saved recipes never had Sub-parts at all, so
-  // `p.parts` simply won't exist on them yet; this backfills it as empty.
+  // inside a Part. Mutates `p` IN PLACE rather than replacing it --
+  // recipes.js's manualPartCollapseState WeakMap is keyed by Part object
+  // reference and needs that reference to survive migration unchanged.
+  // Idempotent: a Part already on the current items-based shape (p.items
+  // already an array, e.g. anything created via blankPart) just gets its
+  // own children recursed into, nothing rebuilt.
   function migratePart(p){
-    // Same "never sits completely empty" safety net the drag-drop/delete
-    // handlers already use elsewhere in this file -- but only when this
-    // Part has no Sub-parts of its own to fall back on instead. Without
-    // the p.parts check, a Part that legitimately holds only Sub-parts
-    // (no direct ingredients of its own, e.g. a root Part that's just an
-    // organizer for a couple of Sub-parts) got a phantom blank ingredient
-    // row forced onto it on every single load.
-    if((!Array.isArray(p.ingredients) || p.ingredients.length === 0) && !(Array.isArray(p.parts) && p.parts.length > 0)){
-      p.ingredients = [{ id: uid(), name:"", percent:0, weight:0, note:"" }];
-    } else if(!Array.isArray(p.ingredients)){
-      p.ingredients = [];
+    if(!Array.isArray(p.items)){
+      // Older saved Part -- was two separate arrays (ingredients, parts),
+      // or (further back still) just ingredients with no parts key at
+      // all. Combine into one ordered list, ingredients first, exactly
+      // matching what was already on screen before this feature existed,
+      // so migrating existing data never visibly reorders anything.
+      const oldIngredients = Array.isArray(p.ingredients) ? p.ingredients : [];
+      const oldSubParts = Array.isArray(p.parts) ? p.parts : [];
+      oldIngredients.forEach(ing => { ing.kind = 'ingredient'; });
+      oldSubParts.forEach(sp => { sp.kind = 'part'; });
+      p.items = [...oldIngredients, ...oldSubParts];
+      delete p.ingredients;
+      delete p.parts;
     }
-    p.ingredients.forEach(ing => {
-      // Backfilled the same way Processes already get one above -- older
-      // saved ingredients never had a stable id, which quietly broke the
-      // Sub Ingredients panel's per-row expand/collapse state (it keys off
-      // ing.id) and is now also needed to know whether a row's Yield came
-      // from a picked library variant (see subIngredientId below).
-      if(!ing.id) ing.id = uid();
+    p.kind = 'part';
+    // Same "never sits completely empty" safety net the drag-drop/delete
+    // handlers already use elsewhere in this file.
+    if(p.items.length === 0) p.items.push(blankIngredient());
+    p.items.forEach(item => {
+      if(item.kind === 'part'){
+        migratePart(item);
+      } else {
+        item.kind = 'ingredient';
+        // Backfilled the same way Processes already get one above -- older
+        // saved ingredients never had a stable id, which quietly broke the
+        // Sub Ingredients panel's per-row expand/collapse state (it keys off
+        // ing.id) and is now also needed to know whether a row's Yield came
+        // from a picked library variant (see subIngredientId below).
+        if(!item.id) item.id = uid();
+      }
     });
     const oldPartName = /^ส่วนที่ (\d+)$/.exec(p.name || '');
     if(oldPartName) p.name = `Part ${oldPartName[1]}`;
-    if(!Array.isArray(p.parts)) p.parts = [];
-    p.parts.forEach(migratePart);
   }
   r.parts.forEach(migratePart);
 
@@ -292,30 +328,24 @@ export function recomputeFromWeights(r){
   return totalWeight;
 }
 
-// Recursively totals one Part (its own ingredients' weights + every
-// Sub-part's own recursive total), then assigns each direct child (each
-// ingredient's .percent, each Sub-part's own .percent) its share of that
-// total — then recurses so every Sub-part does the same for its own
-// children. Returns the Part's own total weight.
+// Recursively totals one Part (its own children's weights, ingredient or
+// Sub-part alike), then assigns each direct child item its own .percent
+// share of that total — then recurses into any Sub-part child so it does
+// the same for its own children. Returns the Part's own total weight.
 export function recomputePartPercents(part){
-  const ingWeights = (part.ingredients || []).map(i => parseFloat(i.weight) || 0);
-  const subTotals = (part.parts || []).map(sub => recomputePartPercents(sub));
-  const total = ingWeights.reduce((s,w)=>s+w,0) + subTotals.reduce((s,w)=>s+w,0);
-  (part.ingredients || []).forEach((ing, idx) => {
-    ing.percent = total > 0 ? round2(ingWeights[idx] / total * 100) : 0;
-  });
-  (part.parts || []).forEach((sub, idx) => {
-    sub.percent = total > 0 ? round2(subTotals[idx] / total * 100) : 0;
+  const weights = (part.items || []).map(itemWeight);
+  const total = weights.reduce((s,w)=>s+w,0);
+  (part.items || []).forEach((item, idx) => {
+    item.percent = total > 0 ? round2(weights[idx] / total * 100) : 0;
+    if(item.kind === 'part') recomputePartPercents(item);
   });
   return round2(total);
 }
 
-// A Part's own weight, recursively summing its direct ingredients plus
-// every Sub-part's own recursive total.
+// A Part's own weight, recursively summing every child item's own weight
+// (an ingredient's own weight, or a Sub-part's own recursive total).
 export function partTotalWeight(part){
-  const direct = (part.ingredients || []).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-  const nested = (part.parts || []).reduce((s,sub)=>s+partTotalWeight(sub),0);
-  return direct + nested;
+  return (part.items || []).reduce((s,item)=>s+itemWeight(item),0);
 }
 
 // Every ingredient under a Part, including ones nested inside its
@@ -323,7 +353,7 @@ export function partTotalWeight(part){
 // (Compare Recipes, Print, Recipe Overview, Ingredient Library usage,
 // Trial totals) without needing to also show the nesting itself.
 export function allIngredientsInPart(part){
-  return [...(part.ingredients || []), ...(part.parts || []).flatMap(allIngredientsInPart)];
+  return [...partIngredients(part), ...partSubParts(part).flatMap(allIngredientsInPart)];
 }
 export function allIngredientsInRecipe(r){
   return (r.parts || []).flatMap(allIngredientsInPart);
@@ -342,11 +372,11 @@ export function allIngredientsInRecipe(r){
 // recursion (app.js), so the two always agree.
 export function collectIngredientsWithPrepareWeight(part, ancestorMultiplier = 1){
   const ownMultiplier = computePrepareWeight(ancestorMultiplier, part.prepYieldPct);
-  const direct = (part.ingredients || []).map(ing => ({
+  const direct = partIngredients(part).map(ing => ({
     ing,
     prepareWt: computePrepareWeight(ing.weight, ing.prepYieldPct) * ownMultiplier
   }));
-  const nested = (part.parts || []).flatMap(sub => collectIngredientsWithPrepareWeight(sub, ownMultiplier));
+  const nested = partSubParts(part).flatMap(sub => collectIngredientsWithPrepareWeight(sub, ownMultiplier));
   return [...direct, ...nested];
 }
 
@@ -360,7 +390,7 @@ export function collectIngredientsWithPrepareWeight(part, ancestorMultiplier = 1
 export function findPartByName(parts, name){
   for(const part of (parts || [])){
     if((part.name || '').trim() === name) return part;
-    const found = findPartByName(part.parts, name);
+    const found = findPartByName(partSubParts(part), name);
     if(found) return found;
   }
   return null;
@@ -370,21 +400,16 @@ export function findPartByName(parts, name){
 // Sub-parts) by the same factor, so weights change but every ratio between
 // them — and so every %-of-parent at every level — doesn't.
 export function scaleIngredientsInPart(part, factor){
-  (part.ingredients || []).forEach(ing => { ing.weight = round2((parseFloat(ing.weight)||0) * factor); });
-  (part.parts || []).forEach(sub => scaleIngredientsInPart(sub, factor));
+  partIngredients(part).forEach(ing => { ing.weight = round2((parseFloat(ing.weight)||0) * factor); });
+  partSubParts(part).forEach(sub => scaleIngredientsInPart(sub, factor));
 }
 
-// "Everything else at this Part's own level" — siblingsCtx.ingredients is
-// the sibling ingredients array (null for a top-level Part, since the
-// recipe root holds no ingredients directly), siblingsCtx.parts is the
-// sibling Parts array `part` itself lives in (r.parts for top-level,
-// or parentPart.parts when nested). Used to back-solve a Part's weight
-// from a typed %, the same way an ingredient's own % field already does
-// one level down.
-export function siblingsWeightExcluding(siblingsCtx, part){
-  const ingWeight = (siblingsCtx.ingredients || []).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-  const partsWeight = (siblingsCtx.parts || []).filter(p => p !== part).reduce((s,p)=>s+partTotalWeight(p),0);
-  return ingWeight + partsWeight;
+// "Everything else at this Part's own level" — `siblingsArray` is the
+// array `part` itself lives in (r.parts for top-level, or parentPart.items
+// when nested). Used to back-solve a Part's weight from a typed %, the
+// same way an ingredient's own % field already does one level down.
+export function siblingsWeightExcluding(siblingsArray, part){
+  return (siblingsArray || []).filter(p => p !== part).reduce((s,p)=>s+itemWeight(p),0);
 }
 
 // Dragging a Part onto itself, or onto one of its own Sub-parts, would
@@ -392,7 +417,7 @@ export function siblingsWeightExcluding(siblingsCtx, part){
 // drop before it happens (see renderPartNode's drag-handle wiring).
 export function isPartOrDescendant(candidate, part){
   if(candidate === part) return true;
-  return (part.parts || []).some(sub => isPartOrDescendant(candidate, sub));
+  return partSubParts(part).some(sub => isPartOrDescendant(candidate, sub));
 }
 
 // Every Part, at any depth, as one flat list — used by Process Steps'
@@ -405,7 +430,7 @@ export function collectPartsFlat(parts, prefix){
   (parts || []).forEach((part, idx) => {
     const label = prefix + (part.name || `Part ${idx+1}`);
     out.push({ part, label });
-    out = out.concat(collectPartsFlat(part.parts, label + ' › '));
+    out = out.concat(collectPartsFlat(partSubParts(part), label + ' › '));
   });
   return out;
 }
@@ -413,10 +438,10 @@ export function collectIngredientsFlat(parts, prefix){
   let out = [];
   (parts || []).forEach((part, idx) => {
     const label = prefix + (part.name || `Part ${idx+1}`);
-    (part.ingredients || []).filter(i => (i.name||'').trim() !== '').forEach(ing => {
+    partIngredients(part).filter(i => (i.name||'').trim() !== '').forEach(ing => {
       out.push({ ing, label: `${label} › ${ing.name}` });
     });
-    out = out.concat(collectIngredientsFlat(part.parts, label + ' › '));
+    out = out.concat(collectIngredientsFlat(partSubParts(part), label + ' › '));
   });
   return out;
 }

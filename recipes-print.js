@@ -123,8 +123,9 @@ export function printIngredientTableHtml(parts, totalWeight){
   const fmtWt = n => (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 
   function rowsForPart(part, depth, ancestorMultiplier){
-    const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
-    const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+    const namedItems = (part.items||[]).filter(item =>
+      item.kind === 'part' ? allIngredientsInPart(item).some(i => (i.name||'').trim() !== '') : (item.name||'').trim() !== ''
+    );
     const label = (part.name||'').trim() || 'Unnamed part';
     const partWeight = partTotalWeight(part);
     const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
@@ -148,7 +149,9 @@ export function printIngredientTableHtml(parts, totalWeight){
       </tr>
     `;
     const childMultiplier = ancestorMultiplier * ownMultiplier;
-    const ingRows = namedIngredients.map(ing => {
+    const childRows = namedItems.map(item => {
+      if(item.kind === 'part') return rowsForPart(item, depth+1, childMultiplier);
+      const ing = item;
       const formulaWt = parseFloat(ing.weight) || 0;
       // Fully compounded -- own Yield AND every ancestor Part's own Yield --
       // since this is the actionable "how much to actually pull" figure the
@@ -170,8 +173,7 @@ export function printIngredientTableHtml(parts, totalWeight){
       </tr>
     `;
     }).join('');
-    const subRows = namedSubParts.map(sub => rowsForPart(sub, depth+1, childMultiplier)).join('');
-    return groupRow + ingRows + subRows;
+    return groupRow + childRows;
   }
 
   // Preparation total -- the same shared partPrepareWeight rollup used by

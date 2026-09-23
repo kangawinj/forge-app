@@ -3,7 +3,7 @@
 // live editor both depend on. Split out of app.js -- see app.js's own
 // top-of-file comment for the overall file split.
 import { escapeHtml } from './app.js';
-import { formatWeight, allIngredientsInPart, partTotalWeight } from './recipes-data.js';
+import { formatWeight, allIngredientsInPart, partTotalWeight, partSubParts } from './recipes-data.js';
 
 // Finds a Part anywhere in the recipe's tree (including nested Sub-parts)
 // by name -- a local copy of recipes.js's own findPartByName (not shared
@@ -15,7 +15,7 @@ import { formatWeight, allIngredientsInPart, partTotalWeight } from './recipes-d
 function findPartByNameForProcessView(parts, name){
   for(const part of (parts || [])){
     if((part.name || '').trim() === name) return part;
-    const found = findPartByNameForProcessView(part.parts, name);
+    const found = findPartByNameForProcessView(partSubParts(part), name);
     if(found) return found;
   }
   return null;
@@ -170,8 +170,8 @@ export function isValidYieldPct(v){
 // Shared by the live editor (recipes.js), Print (recipes.js), and this
 // file's own read-only tree -- one place so all three always agree.
 export function partPrepareWeight(part){
-  const childrenSum = (part.ingredients || []).reduce((s,i) => s + computePrepareWeight(i.weight, i.prepYieldPct), 0)
-    + (part.parts || []).reduce((s,sub) => s + partPrepareWeight(sub), 0);
+  const childrenSum = (part.items || []).reduce((s,item) =>
+    s + (item.kind === 'part' ? partPrepareWeight(item) : computePrepareWeight(item.weight, item.prepYieldPct)), 0);
   return computePrepareWeight(childrenSum, part.prepYieldPct);
 }
 
@@ -228,12 +228,12 @@ export function treeGuideHtml(ancestorContinues, isLast){
 }
 
 // One Part's row (name/%/weight) plus, recursively, a row for every named
-// ingredient AND every Sub-part nested inside it, all as siblings in the
-// same table, ingredients first then Sub-parts (matching the on-screen
-// order) so "last child at this level" — and therefore whether this
-// branch's own connector lines keep running down past it — is computed
-// against that combined, correctly-ordered list. `ancestorContinues` is
-// one boolean per ancestor level, carried down and extended by each level
+// child item (ingredient OR Sub-part) nested inside it, all as siblings in
+// the same table, in `part.items`' own order (matching the on-screen order
+// -- interleaved, not "ingredients first") so "last child at this level"
+// — and therefore whether this branch's own connector lines keep running
+// down past it — is computed against that same real order. `ancestorContinues`
+// is one boolean per ancestor level, carried down and extended by each level
 // as it recurses; `isLast` says whether THIS node is the last among its
 // own siblings. `parentTotal` is the immediate parent's own total weight
 // (the recipe root's total for a top-level Part, or the containing Part's
@@ -242,8 +242,9 @@ export function treeGuideHtml(ancestorContinues, isLast){
 // versions saved before Sub-parts existed never had one on their Part
 // objects.
 export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, ancestorContinues, isLast, ancestorMultiplier){
-  const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
-  const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+  const namedItems = (part.items||[]).filter(item =>
+    item.kind === 'part' ? allIngredientsInPart(item).some(i => (i.name||'').trim() !== '') : (item.name||'').trim() !== ''
+  );
   const label = (part.name||'').trim() || 'Unnamed part';
   const partWeight = partTotalWeight(part);
   const partPct = parentTotal > 0 ? (partWeight / parentTotal * 100) : 0;
@@ -269,10 +270,14 @@ export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, 
     </tr>
   `;
   const childAncestorContinues = [...ancestorContinues, !isLast];
-  const childCount = namedIngredients.length + namedSubParts.length;
+  const childCount = namedItems.length;
   const childMultiplier = ancestorMultiplier * ownMultiplier;
-  const ingRows = namedIngredients.map((ing, idx) => {
+  const childRows = namedItems.map((item, idx) => {
     const childIsLast = idx === childCount - 1;
+    if(item.kind === 'part'){
+      return readOnlyPartBranchRows(item, true, partWeight, grandTotal, childAncestorContinues, childIsLast, childMultiplier);
+    }
+    const ing = item;
     const formulaWt = parseFloat(ing.weight) || 0;
     const y = parseFloat(ing.prepYieldPct);
     const yieldDisplay = (isFinite(y) && y > 0) ? y : 100;
@@ -289,9 +294,5 @@ export function readOnlyPartBranchRows(part, isNested, parentTotal, grandTotal, 
       </tr>
     `;
   }).join('');
-  const subRows = namedSubParts.map((sub, idx) => {
-    const childIsLast = namedIngredients.length + idx === childCount - 1;
-    return readOnlyPartBranchRows(sub, true, partWeight, grandTotal, childAncestorContinues, childIsLast, childMultiplier);
-  }).join('');
-  return partRow + ingRows + subRows;
+  return partRow + childRows;
 }

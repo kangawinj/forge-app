@@ -382,8 +382,9 @@ function buildIngredientsSheet(wb, r){
   const namedParts = (r.parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
 
   function addPartRows(part, depth, ancestorMultiplier){
-    const namedIngredients = (part.ingredients||[]).filter(i => (i.name||'').trim() !== '');
-    const namedSubParts = (part.parts||[]).filter(sub => allIngredientsInPart(sub).some(i => (i.name||'').trim() !== ''));
+    const namedItems = (part.items||[]).filter(item =>
+      item.kind === 'part' ? allIngredientsInPart(item).some(i => (i.name||'').trim() !== '') : (item.name||'').trim() !== ''
+    );
     const label = (part.name||'').trim() || 'Unnamed part';
     const partWeight = partTotalWeight(part);
     const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
@@ -405,7 +406,9 @@ function buildIngredientsSheet(wb, r){
     groupRow.getCell(7).numFmt = '0.00"%"';
 
     const childMultiplier = ancestorMultiplier * ownMultiplier;
-    namedIngredients.forEach(ing => {
+    namedItems.forEach(item => {
+      if(item.kind === 'part'){ addPartRows(item, depth+1, childMultiplier); return; }
+      const ing = item;
       const formulaWt = parseFloat(ing.weight) || 0;
       const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
       const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
@@ -423,8 +426,6 @@ function buildIngredientsSheet(wb, r){
       ingRow.getCell(6).numFmt = '0.00"%"';
       ingRow.getCell(7).numFmt = '0.00"%"';
     });
-
-    namedSubParts.forEach(sub => addPartRows(sub, depth+1, childMultiplier));
   }
 
   if(namedParts.length === 0){

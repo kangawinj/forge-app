@@ -34,10 +34,10 @@ import {
   onSnapshot, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  blankPart, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
+  blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, recipeDisplayLabel, descriptionListHtml,
-  recomputeFromWeights, partTotalWeight,
+  recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
   round2, formatWeight
@@ -441,8 +441,8 @@ let dragPayload = null;
 
 // Which Formula-tree ingredient rows currently have their Sub Ingredients
 // panel expanded -- keyed by ingredient id, not part of the recipe data
-// itself (purely a UI toggle), so it survives renderRows() re-creating the
-// row's DOM (on every add/delete/weight change) the same way
+// itself (purely a UI toggle), so it survives renderChildren() re-creating
+// the row's DOM (on every add/delete/weight change) the same way
 // projectExpandedIds/trialExpandedIds survive their own list re-renders.
 let ingSubsExpandedIds = new Set();
 // Picker over the matched Ingredient Library entry's own Sub Ingredients
@@ -1375,7 +1375,7 @@ export function renderParts(r){
     container.innerHTML = '<div class="overview-empty">No parts yet — click "+ Add Part" below to add the first one</div>';
   }
   r.parts.forEach(part => {
-    renderPartNode(r, part, container, { ingredients: null, parts: r.parts });
+    renderPartNode(r, part, container, r.parts, false);
   });
 
   updateGrandTotal(r);
@@ -1426,11 +1426,11 @@ function flattenPartsWithDepth(parts, depth = 0){
   let out = [];
   (parts || []).forEach(part => {
     out.push({ kind: 'part', part, depth });
-    (part.ingredients || []).forEach(ing => {
+    partIngredients(part).forEach(ing => {
       if((ing.name || '').trim() === '') return;
       out.push({ kind: 'ingredient', part, ing, depth: depth + 1 });
     });
-    out = out.concat(flattenPartsWithDepth(part.parts, depth + 1));
+    out = out.concat(flattenPartsWithDepth(partSubParts(part), depth + 1));
   });
   return out;
 }
@@ -1614,12 +1614,14 @@ function updatePortionToggleLabel(){
 
 // Renders one Part — and, recursively, every Sub-part nested inside it — as
 // a branch of the tree. The exact same function handles a top-level Part
-// (siblingsCtx = { ingredients: null, parts: r.parts }, since the recipe
-// root holds no ingredients of its own) and a Sub-part nested inside
-// another Part (siblingsCtx = { ingredients: parentPart.ingredients, parts:
-// parentPart.parts }) — the %/weight math only cares about "everything
-// else at my own level", not whether that level happens to be the recipe
-// root or another Part.
+// (siblingsArray = r.parts, isNested = false, since the recipe root holds
+// no ingredients of its own, only Parts) and a Sub-part nested inside
+// another Part (siblingsArray = parentPart.items, isNested = true) — the
+// %/weight math only cares about "everything else at my own level", not
+// whether that level happens to be the recipe root or another Part.
+// A Part's own children (ingredients AND Sub-parts, interleaved in any
+// order) live in `part.items`, one array instead of two -- see
+// recipes-data.js's blankIngredient/blankPart/partIngredients/partSubParts.
 // `getAncestorMultiplier` is a 0-arg function, not a plain number -- every
 // ancestor Part's own Yield can change independently AFTER this row is
 // first rendered (any edit anywhere just re-runs partDisplayUpdaters, see
@@ -1631,8 +1633,7 @@ function updatePortionToggleLabel(){
 // for a top-level Part) -- used only to build this Part's own persisted
 // collapse-state key (see savePersistedPartCollapse/manualPartCollapseState
 // above), since Parts have no stable id of their own.
-function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier = () => 1, parentPath = ''){
-  const isNested = siblingsCtx.ingredients !== null;
+function renderPartNode(r, part, container, siblingsArray, isNested, getAncestorMultiplier = () => 1, parentPath = ''){
   const partPath = parentPath + '/' + (part.name || 'Untitled');
   // This Part's OWN multiplier -- its ancestors' combined Yield effect
   // AND its own Yield -- is what a ROW belonging to THIS Part (its direct
@@ -1715,8 +1716,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   block.innerHTML = `
     <div class="part-header">${headerInnerHtml}</div>
     <div class="part-body">
-      <div class="ing-rows tree-children"></div>
-      <div class="sub-parts tree-children"></div>
+      <div class="part-children tree-children"></div>
       <div class="part-body-actions">
         <button class="btn btn-sm add-row-btn" data-role="add-ing"></button>
         <button class="btn btn-sm add-row-btn" data-role="add-subpart"></button>
@@ -1734,8 +1734,12 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   // some browsers (Firefox) to allow the drop at all, even though the
   // actual payload travels via the module-level `dragPayload` — a real
   // DataTransfer can't hold live object references, only serializable data.
+  // `dragPayload` is the SAME shape (`{ item, sourceArray }`) for a Part or
+  // an ingredient -- which one it is reads off `item.kind`, so every drop
+  // target below handles both with one code path instead of branching on a
+  // separate `type` field.
   dragHandle.addEventListener('dragstart', e => {
-    dragPayload = { type: 'part', item: part, sourceArray: siblingsCtx.parts };
+    dragPayload = { item: part, sourceArray: siblingsArray };
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('text/plain', 'part');
     block.classList.add('dragging');
@@ -1745,14 +1749,18 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     dragPayload = null;
   });
 
-  // Drop TARGET: this Part's title bar. Dragging an ingredient here always
-  // just adds it to this Part's own list (no "before/after" — an
-  // ingredient can't be positioned relative to a Part, they're different
-  // lists). Dragging a Part is split into three vertical zones so both
-  // "move up/down" and "nest inside" are reachable from the same target:
-  // the top slice inserts the dragged Part as a sibling BEFORE this one,
-  // the bottom slice AFTER, and the middle nests it inside as a Sub-part
-  // (the original behavior).
+  // Drop TARGET: this Part's title bar, split into three vertical zones so
+  // "move up/down as a sibling" and "nest inside" are reachable from the
+  // same target: the top slice inserts the dragged item as a sibling
+  // BEFORE this Part (in `siblingsArray`), the bottom slice AFTER, and the
+  // middle nests it inside this Part's own `items` (at the end). Dropping
+  // an ingredient on a TOP-LEVEL Part's header (siblingsArray is r.parts,
+  // which only ever holds Parts) always nests it "into" regardless of
+  // which third it lands in -- there's no such thing as an ingredient
+  // sibling of a top-level Part. A dragged ingredient onto a NESTED Part's
+  // header can use all three zones, same as a Part payload, since a nested
+  // Part's own siblingsArray (its parent's `items`) legitimately mixes
+  // ingredients and Sub-parts.
   function partDropZone(e){
     const rect = headerEl.getBoundingClientRect();
     const relY = (e.clientY - rect.top) / rect.height;
@@ -1760,66 +1768,59 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     if(relY > 0.7) return 'after';
     return 'into';
   }
+  function effectiveDropZone(e, draggedItem){
+    if(draggedItem.kind === 'ingredient' && !isNested) return 'into';
+    return partDropZone(e);
+  }
 
   headerEl.addEventListener('dragover', e => {
     if(!dragPayload) return;
+    const draggedItem = dragPayload.item;
+    if(draggedItem === part) return;
     // Dropping a Part onto ITSELF or onto one of ITS OWN descendants would
     // nest it inside itself — check whether the drop TARGET (this `part`)
     // is the dragged Part or reachable by descending from it, not the
     // other way around. Applies to all three zones alike: inserting
     // draggedPart as a sibling of one of its own descendants is exactly as
     // cyclic as nesting it inside one directly.
-    if(dragPayload.type === 'part' && isPartOrDescendant(part, dragPayload.item)) return;
-    if(dragPayload.type === 'ingredient' && dragPayload.sourcePart === part) return; // already here
+    if(draggedItem.kind === 'part' && isPartOrDescendant(part, draggedItem)) return;
     e.preventDefault();
     e.dataTransfer.dropEffect = 'move';
     headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
-    if(dragPayload.type === 'part'){
-      const zone = partDropZone(e);
-      headerEl.classList.add(zone === 'before' ? 'drop-before' : zone === 'after' ? 'drop-after' : 'drop-target');
-    } else {
-      headerEl.classList.add('drop-target');
-    }
+    const zone = effectiveDropZone(e, draggedItem);
+    headerEl.classList.add(zone === 'before' ? 'drop-before' : zone === 'after' ? 'drop-after' : 'drop-target');
   });
   headerEl.addEventListener('dragleave', () => {
     headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
   });
   headerEl.addEventListener('drop', e => {
     e.preventDefault();
-    const zone = (dragPayload && dragPayload.type === 'part') ? partDropZone(e) : 'into';
     headerEl.classList.remove('drop-target', 'drop-before', 'drop-after');
     if(!dragPayload) return;
-    if(dragPayload.type === 'part'){
-      const draggedPart = dragPayload.item;
-      if(isPartOrDescendant(part, draggedPart)){ dragPayload = null; return; }
-      const idx = dragPayload.sourceArray.indexOf(draggedPart);
-      if(idx === -1){ dragPayload = null; return; }
-      dragPayload.sourceArray.splice(idx, 1);
-      if(zone === 'into'){
-        part.parts.push(draggedPart);
-      } else {
-        // Insert as a sibling of `part` within its own containing array —
-        // re-found by reference AFTER the removal above, since if
-        // draggedPart came from this very array, `part`'s own index may
-        // have shifted down by one.
-        let targetIdx = siblingsCtx.parts.indexOf(part);
-        if(zone === 'after') targetIdx += 1;
-        siblingsCtx.parts.splice(targetIdx, 0, draggedPart);
-      }
-    } else if(dragPayload.type === 'ingredient'){
-      const draggedIng = dragPayload.item;
-      const sourcePart = dragPayload.sourcePart;
-      if(sourcePart === part){ dragPayload = null; return; }
-      const idx = sourcePart.ingredients.indexOf(draggedIng);
-      if(idx === -1){ dragPayload = null; return; }
-      sourcePart.ingredients.splice(idx, 1);
-      // Same safety net as deleting the last ingredient by hand — a Part
-      // never sits completely empty, always at least one blank row to type
-      // into, unless it still has Sub-parts of its own.
-      if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
-        sourcePart.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
-      }
-      part.ingredients.push(draggedIng);
+    const draggedItem = dragPayload.item;
+    if(draggedItem === part){ dragPayload = null; return; }
+    if(draggedItem.kind === 'part' && isPartOrDescendant(part, draggedItem)){ dragPayload = null; return; }
+    const zone = effectiveDropZone(e, draggedItem);
+    const sourceArray = dragPayload.sourceArray;
+    const idx = sourceArray.indexOf(draggedItem);
+    if(idx === -1){ dragPayload = null; return; }
+    sourceArray.splice(idx, 1);
+    // Same safety net as deleting the last ingredient by hand — a Part
+    // never sits completely empty, always at least one blank row to type
+    // into. Only meaningful for an ingredient leaving a Part's own `items`
+    // -- never applies to r.parts (a Part leaving the recipe root), which
+    // has its own separate "can't delete the last top-level Part" floor.
+    if(draggedItem.kind === 'ingredient' && sourceArray.length === 0) sourceArray.push(blankIngredient());
+    if(zone === 'into'){
+      part.items.push(draggedItem);
+    } else {
+      // Insert as a sibling of `part` within its own containing array —
+      // re-found by reference AFTER the removal above, since if
+      // draggedItem came from this very array, `part`'s own index may
+      // have shifted down by one.
+      let targetIdx = siblingsArray.indexOf(part);
+      if(zone === 'after') targetIdx += 1;
+      siblingsArray.splice(targetIdx, 0, draggedItem);
     }
     dragPayload = null;
     renderParts(r);
@@ -1839,8 +1840,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   nameField.value = part.name || '';
   nameField.addEventListener('input', e => { part.name = e.target.value; updatePartLabels(); renderProcesses(r); scheduleSave(); });
 
-  const body = block.querySelector('.ing-rows');
-  const subPartsContainer = block.querySelector('.sub-parts');
+  const childrenContainer = block.querySelector('.part-children');
   const countEl = block.querySelector('.part-ing-count');
   const partPctInput = block.querySelector('.part-pct-display');
   const partWtInput = block.querySelector('.part-wt-display');
@@ -1883,7 +1883,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   partPctInput.addEventListener('input', e => {
     const targetPct = parseFloat(e.target.value);
     if(isNaN(targetPct) || targetPct < 0) return;
-    const othersWeight = siblingsWeightExcluding(siblingsCtx, part);
+    const othersWeight = siblingsWeightExcluding(siblingsArray, part);
     const f = targetPct / 100;
     if(othersWeight > 0 && f < 1){
       scalePartTo(f * othersWeight / (1 - f));
@@ -1927,7 +1927,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     savePersistedPartCollapse(r.id, partPath, next);
   });
 
-  const hasContent = part.ingredients.some(i => (i.name || '').trim() !== '') || part.parts.length > 0;
+  const hasContent = partIngredients(part).some(i => (i.name || '').trim() !== '') || partSubParts(part).length > 0;
   // manualPartCollapseState (this page load, object-ref keyed) wins when
   // it knows about this exact Part; otherwise fall back to whatever was
   // persisted last time this recipe was open (path-keyed, survives a
@@ -1939,9 +1939,23 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     : (persisted !== undefined ? persisted : !hasContent);
   setCollapsed(initialCollapsed);
 
-  function renderRows(){
-    body.innerHTML = '';
-    part.ingredients.forEach((ing, idx) => {
+  // One item at a time, in `part.items`' own order -- an ingredient
+  // (`buildIngredientRow`) or a nested Sub-part (a recursive
+  // `renderPartNode` call, same as before) can now sit in any position
+  // relative to each other, not "every ingredient, then every Sub-part".
+  function renderChildren(){
+    childrenContainer.innerHTML = '';
+    part.items.forEach((item, idx) => {
+      if(item.kind === 'part'){
+        renderPartNode(r, item, childrenContainer, part.items, true, getOwnMultiplier, partPath);
+      } else {
+        buildIngredientRow(item, idx);
+      }
+    });
+    updatePartSubtotal();
+  }
+
+  function buildIngredientRow(ing, idx){
       const branch = document.createElement('div');
       branch.className = 'tree-branch';
       branch.innerHTML = `
@@ -1982,7 +1996,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       const prepareDisplay = branch.querySelector('.ing-prepare-display');
 
       ingDragHandle.addEventListener('dragstart', e => {
-        dragPayload = { type: 'ingredient', item: ing, sourcePart: part };
+        dragPayload = { item: ing, sourceArray: part.items };
         e.dataTransfer.effectAllowed = 'move';
         e.dataTransfer.setData('text/plain', 'ingredient');
         branch.classList.add('dragging');
@@ -1992,16 +2006,21 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         dragPayload = null;
       });
 
-      // Drop TARGET: an ingredient row only ever means "reorder relative
-      // to this one" — top half of the row inserts the dragged ingredient
-      // just before it, bottom half just after. Works the same whether the
-      // dragged ingredient started in this same Part (a plain reorder) or
-      // a different one (moves it here, landing at this exact position,
-      // rather than always at the end the way dropping on a Part's title
-      // does).
+      // Drop TARGET: reorder relative to this row — top half inserts the
+      // dragged item just before it, bottom half just after, into THIS
+      // Part's own `items` (removing it from wherever it came from first,
+      // same reference-based re-find as the Part header's own drop
+      // handler). Accepts either an ingredient OR a Sub-part being dragged
+      // here -- a Sub-part landing between two ingredient rows is exactly
+      // the interleaving this whole items-array design exists for.
       const rowEl = branch.querySelector('.ing-edit-row');
       rowEl.addEventListener('dragover', e => {
-        if(!dragPayload || dragPayload.type !== 'ingredient' || dragPayload.item === ing) return;
+        if(!dragPayload || dragPayload.item === ing) return;
+        // A Part being dropped where `part` (this row's own container) is
+        // that Part or one of its own descendants would nest it inside
+        // itself -- same cyclic-tree guard the Part header's own drop
+        // target uses.
+        if(dragPayload.item.kind === 'part' && isPartOrDescendant(part, dragPayload.item)) return;
         e.preventDefault();
         e.dataTransfer.dropEffect = 'move';
         const rect = rowEl.getBoundingClientRect();
@@ -2017,22 +2036,23 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
         const rect = rowEl.getBoundingClientRect();
         const before = e.clientY < rect.top + rect.height / 2;
         rowEl.classList.remove('drop-before', 'drop-after');
-        if(!dragPayload || dragPayload.type !== 'ingredient') return;
-        const draggedIng = dragPayload.item;
-        if(draggedIng === ing){ dragPayload = null; return; }
-        const sourcePart = dragPayload.sourcePart;
-        const sourceIdx = sourcePart.ingredients.indexOf(draggedIng);
+        if(!dragPayload) return;
+        const draggedItem = dragPayload.item;
+        if(draggedItem === ing){ dragPayload = null; return; }
+        if(draggedItem.kind === 'part' && isPartOrDescendant(part, draggedItem)){ dragPayload = null; return; }
+        const sourceArray = dragPayload.sourceArray;
+        const sourceIdx = sourceArray.indexOf(draggedItem);
         if(sourceIdx === -1){ dragPayload = null; return; }
-        sourcePart.ingredients.splice(sourceIdx, 1);
-        if(sourcePart.ingredients.length === 0 && sourcePart.parts.length === 0){
-          sourcePart.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
+        sourceArray.splice(sourceIdx, 1);
+        if(draggedItem.kind === 'ingredient' && sourceArray.length === 0){
+          sourceArray.push(blankIngredient());
         }
         // Re-found by reference AFTER the removal above, since if the
-        // dragged ingredient came from this same Part, this row's own
+        // dragged item came from this same Part, this row's own
         // index may have shifted down by one.
-        let targetIdx = part.ingredients.indexOf(ing);
+        let targetIdx = part.items.indexOf(ing);
         if(!before) targetIdx += 1;
-        part.ingredients.splice(targetIdx, 0, draggedIng);
+        part.items.splice(targetIdx, 0, draggedItem);
         dragPayload = null;
         renderParts(r);
         renderProcesses(r);
@@ -2180,9 +2200,7 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       pctDisplay.addEventListener('input', e => {
         const targetPct = parseFloat(e.target.value);
         if(isNaN(targetPct) || targetPct < 0) return;
-        const othersIngWeight = part.ingredients.reduce((s,i,i2) => i2 === idx ? s : s+(parseFloat(i.weight)||0), 0);
-        const othersSubPartsWeight = (part.parts||[]).reduce((s,sub)=>s+partTotalWeight(sub),0);
-        const othersWeight = othersIngWeight + othersSubPartsWeight;
+        const othersWeight = part.items.reduce((s,item) => item === ing ? s : s+itemWeight(item), 0);
         const f = targetPct / 100;
         if(othersWeight > 0 && f < 1){
           ing.weight = round2(f * othersWeight / (1 - f));
@@ -2203,22 +2221,21 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
       });
 
       delBtn.addEventListener('click', () => {
-        part.ingredients.splice(idx, 1);
-        if(part.ingredients.length === 0 && part.parts.length === 0) part.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
-        renderRows();
+        const delIdx = part.items.indexOf(ing);
+        if(delIdx !== -1) part.items.splice(delIdx, 1);
+        if(part.items.length === 0) part.items.push(blankIngredient());
+        renderChildren();
         refreshDisplays(r);
         renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
         scheduleSave();
       });
 
-      body.appendChild(branch);
-    });
-    updatePartSubtotal();
+      childrenContainer.appendChild(branch);
   }
 
   function updatePartSubtotal(){
-    const namedCount = part.ingredients.filter(i => (i.name||'').trim() !== '').length;
-    const subCount = part.parts.length;
+    const namedCount = partIngredients(part).filter(i => (i.name||'').trim() !== '').length;
+    const subCount = partSubParts(part).length;
     const label = [];
     if(namedCount) label.push(`${namedCount} ingredient${namedCount === 1 ? '' : 's'}`);
     if(subCount) label.push(`${subCount} sub-part${subCount === 1 ? '' : 's'}`);
@@ -2239,34 +2256,28 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
     partYieldInput.title = valid ? '' : 'Yield must be between 0.01% and 999.99%';
   }
 
-  renderRows();
-
-  function renderSubParts(){
-    subPartsContainer.innerHTML = '';
-    part.parts.forEach(sub => renderPartNode(r, sub, subPartsContainer, { ingredients: part.ingredients, parts: part.parts }, getOwnMultiplier, partPath));
-  }
-  renderSubParts();
+  renderChildren();
 
   addIngBtn.addEventListener('click', () => {
     if(hasUnresolvedIngredient(part)){
       alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
       return;
     }
-    part.ingredients.push({ id: uid(), name:'', percent:0, weight:0, note:'' });
-    renderRows();
+    part.items.push(blankIngredient());
+    renderChildren();
     refreshDisplays(r);
     scheduleSave();
   });
 
   addSubpartBtn.addEventListener('click', () => {
-    part.parts.push(blankPart(''));
+    part.items.push(blankPart(''));
     renderParts(r);
     renderProcesses(r); // add the new sub-part's ingredients to the "Add Component" picker
     scheduleSave();
   });
 
   const deletePartBtn = block.querySelector('.part-header .icon-btn');
-  if(!isNested && siblingsCtx.parts.length <= 1){
+  if(!isNested && siblingsArray.length <= 1){
     // A recipe always needs at least one top-level Part to hold anything —
     // Sub-parts nested inside a Part have no such floor, since that Part
     // can always fall back to its own direct ingredients instead.
@@ -2274,8 +2285,8 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
   } else {
     deletePartBtn.addEventListener('click', () => {
       if(!confirm(`Delete "${part.name || 'this part'}" and everything inside it?`)) return;
-      const idx = siblingsCtx.parts.indexOf(part);
-      if(idx !== -1) siblingsCtx.parts.splice(idx, 1);
+      const idx = siblingsArray.indexOf(part);
+      if(idx !== -1) siblingsArray.splice(idx, 1);
       renderParts(r);
       renderProcesses(r); // drop the deleted part's ingredients from the "Add Component" picker
       scheduleSave();
@@ -2284,27 +2295,34 @@ function renderPartNode(r, part, container, siblingsCtx, getAncestorMultiplier =
 
   partDisplayUpdaters.push(() => {
     updatePartSubtotal();
-    const pctEls = body.querySelectorAll('.ing-pct-display');
-    const wtEls = body.querySelectorAll('.ing-wt');
-    const prepareEls = body.querySelectorAll('.ing-prepare-display');
-    part.ingredients.forEach((ing, idx) => {
+    // Direct children of childrenContainer are appended in the exact same
+    // order as part.items (see renderChildren above), so childEls[idx]
+    // always corresponds to part.items[idx] -- reading DOM elements this
+    // way (instead of a flat childrenContainer.querySelectorAll(...), which
+    // would also match ingredient rows belonging to a nested Sub-part
+    // rendered inside this same container) keeps this update scoped to
+    // this Part's own direct ingredient rows, never a descendant Sub-part's
+    // -- that Sub-part already refreshes itself via its own
+    // partDisplayUpdaters entry.
+    const childEls = childrenContainer.children;
+    part.items.forEach((item, idx) => {
+      if(item.kind === 'part') return;
+      const rowEl = childEls[idx];
+      if(!rowEl) return;
+      const ing = item;
       // Skip the field the user is actively typing into — reformatting it
       // mid-keystroke (e.g. "30" -> "30.00" before they can type "30.5")
       // would fight with their typing. It gets its own precise value on
       // blur instead (see the pctDisplay/wtInput 'blur' handlers above).
       // Weight also needs refreshing here (not just %): scaling this Part
       // from its own header field, or a sibling ingredient's own % field,
-      // changes every ingredient's weight without ever touching its own
-      // <input> directly, so nothing else would ever push that new value in.
-      const pctEl = pctEls[idx];
-      if(pctEl && document.activeElement !== pctEl) pctEl.value = (ing.percent||0).toFixed(2);
-      const wtEl = wtEls[idx];
-      if(wtEl && document.activeElement !== wtEl) wtEl.value = (parseFloat(ing.weight)||0).toFixed(2);
-      // Prepare weight only ever depends on THIS ingredient's own weight/
-      // yield, never on siblings — but Scale Recipe (partWtInput above)
       // changes every ingredient's .weight without touching its <input>
       // directly, same reason wtEl needs refreshing here too.
-      const prepareEl = prepareEls[idx];
+      const pctEl = rowEl.querySelector('.ing-pct-display');
+      if(pctEl && document.activeElement !== pctEl) pctEl.value = (ing.percent||0).toFixed(2);
+      const wtEl = rowEl.querySelector('.ing-wt');
+      if(wtEl && document.activeElement !== wtEl) wtEl.value = (parseFloat(ing.weight)||0).toFixed(2);
+      const prepareEl = rowEl.querySelector('.ing-prepare-display');
       if(prepareEl) prepareEl.textContent = formatWeight(computePrepareWeight(ing.weight, ing.prepYieldPct) * getOwnMultiplier());
     });
   });
@@ -2350,7 +2368,7 @@ function materialTooltip(m){
 }
 
 function hasUnresolvedIngredient(part){
-  return part.ingredients.some(i => (i.name || '').trim() !== '' && !i.materialId);
+  return partIngredients(part).some(i => (i.name || '').trim() !== '' && !i.materialId);
 }
 
 function isSubsequence(query, text){
