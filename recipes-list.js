@@ -6,7 +6,7 @@ import {
   escapeHtml, icon, mainFeatureView, setMainFeatureView, logActivityEvent,
   playContentTransition, renderSidebar, renderMain, guardNavigation, setCompareSeriesPrefilter
 } from './app.js';
-import { blankRecipe, saveRecipeToCloud, fullCode, recipeDisplayLabel, allIngredientsInRecipe } from './recipes-data.js';
+import { blankRecipe, saveRecipeToCloud, fullCode, recipeDisplayLabel, allIngredientsInRecipe, seriesKeyDisplay } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
 // own comment on this same pattern.
 import { recipes, currentId, openRecipe, registerNewRecipe } from './recipes.js';
@@ -161,7 +161,7 @@ export function renderSidebarRecipeCards(container, query){
         seriesHeader.innerHTML = `
           ${icon(seriesExpanded ? 'chevron-down' : 'chevron-right', 13)}
           <span class="recipe-series-header-name">${escapeHtml(entry.trials[0]?.name || 'Untitled recipe')}</span>
-          <span class="recipe-series-header-meta">${escapeHtml(entry.seriesKey || '')} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
+          <span class="recipe-series-header-meta">${escapeHtml(seriesKeyDisplay(entry.seriesKey, entry.trials[0]))} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
         `;
         seriesHeader.addEventListener('click', () => {
           if(sidebarExpandedSeries.has(entry.seriesId)) sidebarExpandedSeries.delete(entry.seriesId); else sidebarExpandedSeries.add(entry.seriesId);
@@ -237,7 +237,7 @@ function renderCategoryRecipeList(container, category){
     seriesHeader.innerHTML = `
       ${icon(seriesExpanded ? 'chevron-down' : 'chevron-right', 13)}
       <span class="recipe-series-header-name">${escapeHtml(entry.trials[0]?.name || 'Untitled recipe')}</span>
-      <span class="recipe-series-header-meta">${escapeHtml(entry.seriesKey || '')} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
+      <span class="recipe-series-header-meta">${escapeHtml(seriesKeyDisplay(entry.seriesKey, entry.trials[0]))} · ${entry.trials.length} Trial${entry.trials.length === 1 ? '' : 's'}</span>
     `;
     seriesHeader.addEventListener('click', () => {
       if(recipesListExpandedSeries.has(entry.seriesId)) recipesListExpandedSeries.delete(entry.seriesId); else recipesListExpandedSeries.add(entry.seriesId);

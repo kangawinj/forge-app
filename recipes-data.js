@@ -300,6 +300,23 @@ export function fullCode(r){
   return (iso || '') + yy + '-' + (typeCode || 'XXX') + (seq || 'XX') + '-T' + (trial || 'XX');
 }
 
+// The sidebar/list's Series group header shows the Series' own stored
+// seriesKey (e.g. "TH26-BRE05"), not any one Trial's fullCode() -- so it
+// didn't get fullCode()'s same blank-countryCode fallback above, and kept
+// showing a Series minted before its Destination was set with no country
+// prefix even after every Trial underneath it started showing one. Rebuilds
+// the key the same way it was originally assembled (see
+// startTrialSeriesForRecipe/duplicateAsNewRecipe) whenever countryCode is
+// still blank; a Series with any real countryCode already set (or a
+// seriesKey an admin customized through Series Migration) is returned
+// untouched.
+export function seriesKeyDisplay(seriesKey, sampleTrial){
+  if(!sampleTrial || sampleTrial.countryCode) return seriesKey || '';
+  const countryCode = recipeDestinationIso2(sampleTrial) || '';
+  if(!countryCode) return seriesKey || '';
+  return `${countryCode}${sampleTrial.year || 'YY'}-${sampleTrial.productTypeCode || 'XXX'}${sampleTrial.recipeSeq || 'XX'}`;
+}
+
 /* Product name with the last 2 characters of the recipe code suffix appended,
    e.g. "Vegan Tartar Sauce - 19" — used anywhere recipes are picked/labeled
    so near-duplicate names stay distinguishable at a glance. */

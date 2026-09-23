@@ -4,7 +4,7 @@ import {
   playContentTransition, compareSetsCol, currentUser
 } from './app.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { partIngredients, partSubParts } from './recipes-data.js';
+import { partIngredients, partSubParts, seriesKeyDisplay } from './recipes-data.js';
 
 let compareShowCodes = true;
 let compareShowWeights = false;
@@ -89,7 +89,7 @@ export function mountCompareView(){
 
   main.innerHTML = `
     <div class="main-header">
-      <div class="section-title-display">${icon('scale', 24)} ${compareSeriesPrefilter ? 'Compare Trials' : 'Compare Recipes'}${compareSeriesPrefilter ? ` — ${escapeHtml(compareSeriesPrefilter.seriesKey || '')}` : ''}</div>
+      <div class="section-title-display">${icon('scale', 24)} ${compareSeriesPrefilter ? 'Compare Trials' : 'Compare Recipes'}${compareSeriesPrefilter ? ` — ${escapeHtml(seriesKeyDisplay(compareSeriesPrefilter.seriesKey, candidates[0]))}` : ''}</div>
       <div class="toolbar">
         ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnCompareShowAll">Show All Recipes</button>` : ''}
         ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnSaveCompareSet">${icon('save', 14)} Save Compare Trials</button>` : ''}
@@ -113,7 +113,7 @@ export function mountCompareView(){
     const pad = n => String(n).padStart(2, '0');
     const dateTimeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
     const pageLabel = compareSeriesPrefilter
-      ? `Compare Trials — ${compareSeriesPrefilter.seriesKey || ''}`
+      ? `Compare Trials — ${seriesKeyDisplay(compareSeriesPrefilter.seriesKey, candidates[0])}`
       : 'Compare Recipes';
     document.title = `${dateTimeStr} ${pageLabel} Forge ${currentUser?.email || ''}`.replace(/[\\/:*?"<>|]/g, '-');
     const restoreTitle = () => {

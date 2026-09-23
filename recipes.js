@@ -36,7 +36,7 @@ import {
 import {
   blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
-  trialNoDisplay, fullCode, recipeDisplayLabel, descriptionListHtml,
+  trialNoDisplay, fullCode, seriesKeyDisplay, recipeDisplayLabel, descriptionListHtml,
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
@@ -391,7 +391,7 @@ export function updateRecipeTitleDisplay(r){
   // one combined string, since the Trial number is the part that changes
   // Trial-to-Trial and is worth calling out on its own.
   const trialBadge = r.seriesId ? `<span class="rt-trial-badge">Trial T${trialNoDisplay(r.trialNo)}</span>` : '';
-  const code = r.seriesId ? (r.seriesKey || '') : fullCode(r);
+  const code = r.seriesId ? seriesKeyDisplay(r.seriesKey, r) : fullCode(r);
   el.innerHTML = `${escapeHtml(r.name || 'Untitled recipe')}${code ? `<span class="rt-code">${escapeHtml(code)}</span>` : ''}${trialBadge}`;
 
   const activityEl = document.getElementById('recipeActivityDisplay');
@@ -553,7 +553,7 @@ export function renderRecipeEditor(r){
 
     ${r.seriesId ? `
     <div class="card" id="trialHistoryCard">
-      <div class="card-title">Trial History — ${escapeHtml(r.seriesKey || '')}</div>
+      <div class="card-title">Trial History — ${escapeHtml(seriesKeyDisplay(r.seriesKey, r))}</div>
       <div class="trial-history-row">
         <div class="trial-history-track" id="trialHistoryTrack"></div>
         <div class="trial-history-actions">
