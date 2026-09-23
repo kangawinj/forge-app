@@ -221,8 +221,8 @@ export function renderOverview(allIngredients, prepareWeightByIng){
           </div>
         </div>
       </td>
-      <td class="col-pct">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
-      <td class="col-wt">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
+      <td class="col-pct" title="${g.pct.toFixed(4)}%">${numCellHtml(g.pct.toFixed(2) + '%', pctBarPct)}</td>
+      <td class="col-wt" title="${g.wt.toFixed(4)} g">${numCellHtml(formatWeight(g.wt), wtBarPct)}</td>
       <td class="col-wt${isLossy ? ' col-prepare-highlight' : ''}" title="${isLossy ? `Prep Yield: ${y.toFixed(2)}%` : ''}">${formatWeight(g.prepareWt)}</td>
       <td class="col-cost">${numCellHtml((money(g.cost) ?? '—') + (g.material?.priceIsIdea ? ' <span class="mu-badge" title="Estimated price, not yet confirmed with the vendor">IDEA</span>' : ''), costBarPct)}</td>
     `;
