@@ -2516,6 +2516,17 @@
     color:var(--text-dim);
     border-bottom:2px solid var(--border);
   }
+  /* Product name above the recipe's own code, inside the same <th> --
+     visible further down the page (Compare Ingredients/Costing) without
+     scrolling back up to the info cards to check which column is which
+     recipe. */
+  .compare-th-name{
+    font-weight:600;
+    color:var(--text);
+    white-space:normal;
+    margin-bottom:2px;
+  }
+  .compare-th-code{color:var(--text-dim);}
   /* Small caption under a header's own label (see improvementHeaderCells /
      the Note <th> in trials.js's Improvement Guidelines table) -- normal
      case since the parent th's text-transform:uppercase above would

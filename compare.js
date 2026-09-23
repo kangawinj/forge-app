@@ -312,17 +312,21 @@ function renderCompareContent(){
     return `<colgroup><col style="width:220px;">${'<col>'.repeat(numDataCols)}</colgroup>`;
   }
 
-  // The ingredient/costing tables identify each recipe by just its code
-  // (already shown in full above in the info cards) rather than repeating
-  // the full product name — keeps these columns narrow and lined up with
-  // the equal-width info cards instead of stretching wide per recipe name.
+  // The ingredient/costing tables identify each recipe by its code, same as
+  // the info cards above already show in full — plus, since a scroll down
+  // the page leaves those cards out of view, a smaller product-name line
+  // above the code too, so which column is which recipe doesn't require
+  // scrolling back up to check.
   function recipeColLabel(r){
     return fullCode(r) || recipeDisplayLabel(r);
+  }
+  function recipeColHeaderHtml(r){
+    return `<div class="compare-th-name">${escapeHtml(r.name || 'Untitled recipe')}</div><div class="compare-th-code">${escapeHtml(recipeColLabel(r))}</div>`;
   }
 
   const ingHeaderCells = ids.map((id, idx) => {
     const r = recipes.find(x => x.id === id);
-    return `<th class="${boundaryClass(idx)}">${r ? escapeHtml(recipeColLabel(r)) : '-'}</th>`;
+    return `<th class="${boundaryClass(idx)}">${r ? recipeColHeaderHtml(r) : '-'}</th>`;
   }).join('');
 
   // With weights on, % and g get their own aligned columns per recipe
@@ -332,7 +336,7 @@ function renderCompareContent(){
     ? `
       <tr><th rowspan="2">Ingredient</th>${ids.map((id, idx) => {
         const r = recipes.find(x => x.id === id);
-        return `<th colspan="2" class="${boundaryClass(idx)}">${r ? escapeHtml(recipeColLabel(r)) : '-'}</th>`;
+        return `<th colspan="2" class="${boundaryClass(idx)}">${r ? recipeColHeaderHtml(r) : '-'}</th>`;
       }).join('')}</tr>
       <tr>${ids.map((id, idx) => `<th class="col-pct${boundaryClass(idx)}">%</th><th class="col-wt">g</th>`).join('')}</tr>
     `
