@@ -375,7 +375,9 @@ export function refreshCodeCountryBadge(r){
   const row = document.getElementById('codeYearDisplay')?.closest('.code-row');
   const badge = document.getElementById('codeCountryDisplay');
   if(!row || !badge) return;
-  const iso = r.seriesId ? (r.countryCode || '') : recipeDestinationIso2(r);
+  // Same "blank falls back to a live lookup, a real value stays frozen"
+  // rule as fullCode() (recipes-data.js) -- see its comment.
+  const iso = r.seriesId ? (r.countryCode || recipeDestinationIso2(r) || '') : recipeDestinationIso2(r);
   row.classList.toggle('has-country-badge', !!iso);
   badge.style.display = iso ? '' : 'none';
   badge.textContent = iso;

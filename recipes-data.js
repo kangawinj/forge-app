@@ -278,8 +278,16 @@ export function fullCode(r){
   // tool) rather than live-derived — required so every Trial in a Series
   // keeps showing the identical country/year/product-type/Recipe No. even
   // if, say, the linked Project's destination country is edited later.
+  // countryCode specifically falls back to a live lookup ONLY while it's
+  // still genuinely blank (e.g. the Project's Destination Country hadn't
+  // been set yet the moment the Series was minted) -- once it holds any
+  // real value, that value wins and stays frozen exactly as before. This
+  // is a display-time fallback only (nothing gets written back), so a
+  // Series born blank starts showing its country the moment Destination is
+  // filled in, without needing an admin trip to Series Migration.
   if(r.seriesId){
-    return `${r.countryCode || ''}${r.year || 'YY'}-${r.productTypeCode || 'XXX'}${r.recipeSeq || 'XX'}-T${trialNoDisplay(r.trialNo)}`;
+    const countryCode = r.countryCode || recipeDestinationIso2(r) || '';
+    return `${countryCode}${r.year || 'YY'}-${r.productTypeCode || 'XXX'}${r.recipeSeq || 'XX'}-T${trialNoDisplay(r.trialNo)}`;
   }
   // Legacy path — unchanged, byte-for-byte identical to before this
   // feature: every segment live-derived every time this is called.
