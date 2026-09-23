@@ -2459,6 +2459,18 @@
     color:var(--primary-dark);
     margin:20px 0 10px;
   }
+  .compare-section-title-toggle{display:flex;align-items:center;gap:8px;min-height:24px;}
+  .compare-section-eye-btn{
+    background:none;
+    border:none;
+    cursor:pointer;
+    color:var(--text-dim);
+    padding:4px;
+    border-radius:6px;
+    line-height:1;
+    display:inline-flex;
+  }
+  .compare-section-eye-btn:hover{background:var(--primary-light);color:var(--primary);}
   .compare-table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;}
   .compare-table th, .compare-table td{
     padding:6px 8px;
@@ -4733,7 +4745,7 @@
        printout meant for someone outside the system to mark by hand.
        Force full opacity so they print clearly either way. */
     .trial-testresult-radios input[type=radio]:disabled{opacity:1 !important;-webkit-appearance:radio !important;appearance:radio !important;}
-    .icon-btn, .part-toggle-btn, .material-search, .mu-translate-btn{display:none !important;}
+    .icon-btn, .part-toggle-btn, .material-search, .mu-translate-btn, .compare-section-eye-btn{display:none !important;}
     .part-block.collapsed .part-body{display:block !important;}
     .part-block{background:#fff !important;}
 

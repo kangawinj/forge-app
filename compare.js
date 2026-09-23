@@ -7,6 +7,12 @@ import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/
 
 let compareShowCodes = true;
 let compareShowWeights = false;
+// Whole-section visibility -- an eye toggle next to each section's own
+// title, kept visible even while the section is hidden (see
+// sectionTitleWithEye below) so there's always a way to turn it back on.
+// Hiding a section hides its title too, not just its body.
+let compareShowCosting = true;
+let compareShowSteps = true;
 // Free-text note per recipe slot (keyed by recipe id) -- typed here, not
 // auto-saved on every keystroke (renderCompareContent() fully rebuilds this
 // area on most other changes, e.g. toggling a checkbox, which would lose an
@@ -147,6 +153,8 @@ export function mountCompareView(){
     // no need to separately touch the (about to be replaced) checkbox DOM.
     compareShowCodes = saved.showCodes !== false;
     compareShowWeights = !!saved.showWeights;
+    compareShowCosting = saved.showCosting !== false;
+    compareShowSteps = saved.showSteps !== false;
     compareNotes = { ...(saved.notes || {}) };
     renderCompareContent();
   }
@@ -160,6 +168,8 @@ export function mountCompareView(){
         recipeIds: ids,
         showCodes: compareShowCodes,
         showWeights: compareShowWeights,
+        showCosting: compareShowCosting,
+        showSteps: compareShowSteps,
         notes: compareNotes,
         savedAt: Date.now(),
         savedBy: currentUser?.email || '',
@@ -178,6 +188,19 @@ export function mountCompareView(){
 
 function stripIngredientCode(label){
   return label.replace(/\s*\([^)]*\)\s*$/, '');
+}
+
+// A section title with an eye toggle beside it (Compare Costing / Compare
+// Process Steps) -- when hidden, the label text disappears too, but this
+// row itself (and its button) stays, so there's still something to click
+// to bring the section back.
+function sectionTitleWithEye(toggleId, label, visible){
+  return `
+    <div class="compare-section-title compare-section-title-toggle">
+      ${visible ? label : ''}
+      <button type="button" class="compare-section-eye-btn" id="${toggleId}" title="${visible ? 'Hide this section' : 'Show this section'}">${icon(visible ? 'eye' : 'eye-off', 14)}</button>
+    </div>
+  `;
 }
 
 function renderCompareContent(){
@@ -476,22 +499,24 @@ function renderCompareContent(){
     </div>
     <div class="compare-legend"><span class="swatch"></span>Light orange rows = ingredients not used identically across all selected recipes</div>
 
-    <div class="compare-section-title">Compare Costing (weight × library price/kg)</div>
-    <div style="overflow-x:auto;">
-      <table class="compare-table">
-        ${colgroupHtml(ids.length)}
-        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
-        <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
-        <tfoot>
-          <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
-          <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
-        </tfoot>
-      </table>
-    </div>
-    <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
+    ${sectionTitleWithEye('toggleCostingSection', 'Compare Costing (weight × library price/kg)', compareShowCosting)}
+    ${compareShowCosting ? `
+      <div style="overflow-x:auto;">
+        <table class="compare-table">
+          ${colgroupHtml(ids.length)}
+          <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+          <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+          <tfoot>
+            <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
+            <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
+          </tfoot>
+        </table>
+      </div>
+      <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
+    ` : ''}
 
-    <div class="compare-section-title">Compare Process Steps</div>
-    <div class="compare-steps-grid" style="${gridColsStyle(ids.length)}"><div class="compare-info-spacer"></div>${stepsHtml}</div>
+    ${sectionTitleWithEye('toggleStepsSection', 'Compare Process Steps', compareShowSteps)}
+    ${compareShowSteps ? `<div class="compare-steps-grid" style="${gridColsStyle(ids.length)}"><div class="compare-info-spacer"></div>${stepsHtml}</div>` : ''}
   `;
 
   document.getElementById('compareShowCodes').addEventListener('change', e => {
@@ -500,6 +525,14 @@ function renderCompareContent(){
   });
   document.getElementById('compareShowWeights').addEventListener('change', e => {
     compareShowWeights = e.target.checked;
+    renderCompareContent();
+  });
+  document.getElementById('toggleCostingSection').addEventListener('click', () => {
+    compareShowCosting = !compareShowCosting;
+    renderCompareContent();
+  });
+  document.getElementById('toggleStepsSection').addEventListener('click', () => {
+    compareShowSteps = !compareShowSteps;
     renderCompareContent();
   });
   // Just updates the module-level object, not a re-render (see compareNotes
