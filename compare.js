@@ -7,6 +7,13 @@ import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/
 
 let compareShowCodes = true;
 let compareShowWeights = false;
+// Free-text note per recipe slot (keyed by recipe id) -- typed here, not
+// auto-saved on every keystroke (renderCompareContent() fully rebuilds this
+// area on most other changes, e.g. toggling a checkbox, which would lose an
+// in-progress edit if it round-tripped through the DOM instead of this
+// module-level object). Only persisted, alongside the picked recipes and
+// toggles, when "Save Compare Trials" is clicked -- see compareSetsCol.
+let compareNotes = {};
 
 // Set by Recipe Detail's "Compare Trials" button just before switching to
 // this view (via app.js's shared re-export hub, same pattern
@@ -140,6 +147,7 @@ export function mountCompareView(){
     // no need to separately touch the (about to be replaced) checkbox DOM.
     compareShowCodes = saved.showCodes !== false;
     compareShowWeights = !!saved.showWeights;
+    compareNotes = { ...(saved.notes || {}) };
     renderCompareContent();
   }
   document.getElementById('btnSaveCompareSet')?.addEventListener('click', async e => {
@@ -152,6 +160,7 @@ export function mountCompareView(){
         recipeIds: ids,
         showCodes: compareShowCodes,
         showWeights: compareShowWeights,
+        notes: compareNotes,
         savedAt: Date.now(),
         savedBy: currentUser?.email || '',
       });
@@ -198,6 +207,12 @@ function renderCompareContent(){
         ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
         ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
         ${descriptionListHtml(r)}
+        ${compareSeriesPrefilter ? `
+          <div class="ci-row" style="margin-top:8px;">
+            <label style="display:block;font-weight:600;margin-bottom:4px;">Note:</label>
+            <textarea class="compare-note-input" data-recipe-id="${escapeHtml(r.id)}" rows="2" placeholder="Add a note about this trial…">${escapeHtml(compareNotes[r.id] || '')}</textarea>
+          </div>
+        ` : ''}
       </div>
     `;
   }).join('');
@@ -486,5 +501,13 @@ function renderCompareContent(){
   document.getElementById('compareShowWeights').addEventListener('change', e => {
     compareShowWeights = e.target.checked;
     renderCompareContent();
+  });
+  // Just updates the module-level object, not a re-render (see compareNotes
+  // above) -- re-rendering on every keystroke would blow away the cursor/
+  // focus mid-sentence.
+  document.querySelectorAll('.compare-note-input').forEach(el => {
+    el.addEventListener('input', e => {
+      compareNotes[e.target.dataset.recipeId] = e.target.value;
+    });
   });
 }
