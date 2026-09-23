@@ -103,7 +103,26 @@ export function mountCompareView(){
     </div>
   `;
 
-  document.getElementById('btnPrintCompare').addEventListener('click', () => window.print());
+  document.getElementById('btnPrintCompare').addEventListener('click', () => {
+    // Browsers default the "Save as PDF" filename to document.title -- set
+    // it to "<loaded date/time> <page name> Forge <account>" just for the
+    // print, then restore the real page title afterwards (same pattern as
+    // recipes.js's own Print and projects.js's per-project Print).
+    const originalTitle = document.title;
+    const now = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    const dateTimeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
+    const pageLabel = compareSeriesPrefilter
+      ? `Compare Trials — ${compareSeriesPrefilter.seriesKey || ''}`
+      : 'Compare Recipes';
+    document.title = `${dateTimeStr} ${pageLabel} Forge ${currentUser?.email || ''}`.replace(/[\\/:*?"<>|]/g, '-');
+    const restoreTitle = () => {
+      document.title = originalTitle;
+      window.removeEventListener('afterprint', restoreTitle);
+    };
+    window.addEventListener('afterprint', restoreTitle);
+    window.print();
+  });
   document.getElementById('btnCompareShowAll')?.addEventListener('click', () => {
     compareSeriesPrefilter = null;
     mountCompareView();
