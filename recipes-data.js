@@ -322,7 +322,7 @@ export function recomputeFromWeights(r){
   const partTotals = (r.parts || []).map(part => recomputePartPercents(part));
   const totalWeight = partTotals.reduce((s,w)=>s+w,0);
   (r.parts || []).forEach((part, idx) => {
-    part.percent = totalWeight > 0 ? round2(partTotals[idx] / totalWeight * 100) : 0;
+    part.percent = totalWeight > 0 ? round4(partTotals[idx] / totalWeight * 100) : 0;
   });
   r.batchWeight = round2(totalWeight);
   return totalWeight;
@@ -336,10 +336,10 @@ export function recomputePartPercents(part){
   const weights = (part.items || []).map(itemWeight);
   const total = weights.reduce((s,w)=>s+w,0);
   (part.items || []).forEach((item, idx) => {
-    item.percent = total > 0 ? round2(weights[idx] / total * 100) : 0;
+    item.percent = total > 0 ? round4(weights[idx] / total * 100) : 0;
     if(item.kind === 'part') recomputePartPercents(item);
   });
-  return round2(total);
+  return round4(total);
 }
 
 // A Part's own weight, recursively summing every child item's own weight
@@ -400,7 +400,7 @@ export function findPartByName(parts, name){
 // Sub-parts) by the same factor, so weights change but every ratio between
 // them — and so every %-of-parent at every level — doesn't.
 export function scaleIngredientsInPart(part, factor){
-  partIngredients(part).forEach(ing => { ing.weight = round2((parseFloat(ing.weight)||0) * factor); });
+  partIngredients(part).forEach(ing => { ing.weight = round4((parseFloat(ing.weight)||0) * factor); });
   partSubParts(part).forEach(sub => scaleIngredientsInPart(sub, factor));
 }
 
@@ -447,6 +447,16 @@ export function collectIngredientsFlat(parts, prefix){
 }
 
 export function round2(n){ return Math.round(n * 100) / 100; }
+// Weight/% are stored at 4-decimal precision (screens still only ever
+// SHOW 2 -- see setPrecisionField in recipes.js, which puts the fuller
+// figure in the field's own hover tooltip) so rounding a value derived
+// from many small ingredients doesn't lose real precision, and so
+// rounding error doesn't compound across deeply nested Sub-parts the way
+// it would rounding to 2 decimals at every level of the recursion.
+// Math.round rounds half up, same as round2 -- both always deal in
+// non-negative weights/percentages here, so there's no negative-number
+// half-rounds-toward-zero edge case to account for.
+export function round4(n){ return Math.round(n * 10000) / 10000; }
 
 /* Read-only weight displays (totals/subtotals) get a thousands separator for
    readability at larger batch sizes — editable Weight (g) <input> fields

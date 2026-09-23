@@ -40,7 +40,7 @@ import {
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
-  round2, formatWeight
+  round2, round4, formatWeight
 } from './recipes-data.js';
 import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
@@ -1414,6 +1414,16 @@ function commitOnEnter(el, nextSelector){
   });
 }
 
+// Formula WT./% of Recipe are stored at 4-decimal precision (see round4,
+// recipes-data.js) but the screen only ever SHOWS 2 -- this puts the
+// fuller 4-decimal figure in the field's own `title`, so it's there on
+// hover (a plain native tooltip) without cluttering the visible number.
+function setPrecisionField(el, n){
+  const v = parseFloat(n) || 0;
+  el.value = v.toFixed(2);
+  el.title = v.toFixed(4);
+}
+
 // Every Part (picking one aggregates everything nested inside it -- see
 // partTotalWeight below) AND every individual ingredient, at any nesting
 // depth, as one flat pre-order list with its depth -- used by the picker
@@ -1868,7 +1878,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   });
   partWtInput.addEventListener('blur', () => {
     refreshDisplays(r);
-    partWtInput.value = partTotalWeight(part).toFixed(2);
+    setPrecisionField(partWtInput, partTotalWeight(part));
   });
   commitOnEnter(partWtInput, '.ing-wt, .part-wt-display');
   let partWtJustFocused = false;
@@ -1892,7 +1902,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
   });
   partPctInput.addEventListener('blur', () => {
     refreshDisplays(r);
-    partPctInput.value = (part.percent || 0).toFixed(2);
+    setPrecisionField(partPctInput, part.percent);
   });
   commitOnEnter(partPctInput, '.ing-pct-display, .part-pct-display');
   let partPctJustFocused = false;
@@ -2060,8 +2070,8 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       });
 
       nameInput.value = ing.name || '';
-      pctDisplay.value = (ing.percent||0).toFixed(2);
-      wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+      setPrecisionField(pctDisplay, ing.percent);
+      setPrecisionField(wtInput, ing.weight);
       noteInput.value = ing.note || '';
 
       // Prepare (gross) weight = Formula weight ÷ (this ingredient's own
@@ -2179,7 +2189,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       });
       wtInput.addEventListener('blur', () => {
         refreshDisplays(r);
-        wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+        setPrecisionField(wtInput, ing.weight);
       });
       commitOnEnter(wtInput, '.ing-wt, .part-wt-display');
       // Select the whole number on focus so a click lets you type a new
@@ -2203,14 +2213,14 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
         const othersWeight = part.items.reduce((s,item) => item === ing ? s : s+itemWeight(item), 0);
         const f = targetPct / 100;
         if(othersWeight > 0 && f < 1){
-          ing.weight = round2(f * othersWeight / (1 - f));
-          wtInput.value = (parseFloat(ing.weight) || 0).toFixed(2);
+          ing.weight = round4(f * othersWeight / (1 - f));
+          setPrecisionField(wtInput, ing.weight);
         }
         scheduleSave();
       });
       pctDisplay.addEventListener('blur', () => {
         refreshDisplays(r);
-        pctDisplay.value = (ing.percent || 0).toFixed(2);
+        setPrecisionField(pctDisplay, ing.percent);
       });
       commitOnEnter(pctDisplay, '.ing-pct-display, .part-pct-display');
       let pctJustFocused = false;
@@ -2240,8 +2250,8 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
     if(namedCount) label.push(`${namedCount} ingredient${namedCount === 1 ? '' : 's'}`);
     if(subCount) label.push(`${subCount} sub-part${subCount === 1 ? '' : 's'}`);
     countEl.textContent = label.length ? label.join(' · ') : 'Empty';
-    if(document.activeElement !== partPctInput) partPctInput.value = (part.percent || 0).toFixed(2);
-    if(document.activeElement !== partWtInput) partWtInput.value = partTotalWeight(part).toFixed(2);
+    if(document.activeElement !== partPctInput) setPrecisionField(partPctInput, part.percent);
+    if(document.activeElement !== partWtInput) setPrecisionField(partWtInput, partTotalWeight(part));
     if(document.activeElement !== partYieldInput) partYieldInput.value = part.prepYieldPct != null ? part.prepYieldPct : '';
     const py = parseFloat(part.prepYieldPct);
     const isLossy = isFinite(py) && py > 0 && py < 100;
@@ -2319,9 +2329,9 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       // changes every ingredient's .weight without touching its <input>
       // directly, same reason wtEl needs refreshing here too.
       const pctEl = rowEl.querySelector('.ing-pct-display');
-      if(pctEl && document.activeElement !== pctEl) pctEl.value = (ing.percent||0).toFixed(2);
+      if(pctEl && document.activeElement !== pctEl) setPrecisionField(pctEl, ing.percent);
       const wtEl = rowEl.querySelector('.ing-wt');
-      if(wtEl && document.activeElement !== wtEl) wtEl.value = (parseFloat(ing.weight)||0).toFixed(2);
+      if(wtEl && document.activeElement !== wtEl) setPrecisionField(wtEl, ing.weight);
       const prepareEl = rowEl.querySelector('.ing-prepare-display');
       if(prepareEl) prepareEl.textContent = formatWeight(computePrepareWeight(ing.weight, ing.prepYieldPct) * getOwnMultiplier());
     });
