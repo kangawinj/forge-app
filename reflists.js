@@ -365,7 +365,7 @@ export function renderRefListItems(){
       ${isProductTypes ? `<span class="reflist-code-badge" data-code-badge>${escapeHtml(item.code || productTypeCode(item.name))}</span>` : ''}
       ${isEditing
         ? `<button class="icon-btn" title="Save" data-role="save">${icon('save')}</button><button class="icon-btn" title="Cancel" data-role="cancel">${icon('undo-2')}</button>`
-        : `<button class="icon-btn" title="Edit" data-role="edit">${icon('pencil')}</button><button class="icon-btn" title="Delete" data-role="delete">${icon('x')}</button>`}
+        : `<button class="icon-btn" title="Edit" data-role="edit">${icon('pencil')}</button><button class="icon-btn" title="Duplicate" data-role="duplicate">${icon('copy')}</button><button class="icon-btn" title="Delete" data-role="delete">${icon('x')}</button>`}
     </div>
   `;
   }).join('');
@@ -581,6 +581,13 @@ export function renderRefListItems(){
       else if(e.key === 'Escape'){ refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; refListEditingSubs = []; refListEditingNote = ''; refListEditingNoteAdded = false; renderRefListItems(); }
     });
   });
+  container.querySelectorAll('[data-role="duplicate"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.closest('.reflist-item').dataset.id;
+      duplicateMetaListItem(refListActiveTab, id);
+      renderRefListItems();
+    });
+  });
   container.querySelectorAll('[data-role="delete"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.closest('.reflist-item').dataset.id;
@@ -712,6 +719,28 @@ function removeMetaListItem(key, id){
   metaLists = { ...metaLists, [key]: updated };
   setDoc(metaListsDoc, { [key]: updated }, { merge: true });
   logActivityEvent('deleted', META_LIST_LABELS[key] || key, removed ? metaItemName(removed) : 'Untitled');
+}
+// Clones every field on the source entry (steps/note/locations/contact
+// fields/etc. -- whatever that list's own shape carries), not just its
+// name, since a duplicate is meant to be a starting point that's already
+// most of the way there, not a blank row with the old name pre-filled.
+// Its own name always gets a fresh "(Copy)"/"(Copy 2)"/... suffix, since
+// every entry in a list must have a unique name (see addMetaListValue).
+function duplicateMetaListItem(key, id){
+  const source = metaLists[key].find(item => item.id === id);
+  if(!source) return;
+  const baseName = metaItemName(source);
+  let name = `${baseName} (Copy)`;
+  for(let n = 2; metaLists[key].some(item => metaItemName(item) === name); n++){
+    name = `${baseName} (Copy ${n})`;
+  }
+  const now = Date.now();
+  const who = currentUser?.email || '';
+  const clone = { ...source, id: uid(), name, createdBy: who, createdAt: now, updatedBy: who, updatedAt: now };
+  const updated = [...metaLists[key], clone].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b)));
+  metaLists = { ...metaLists, [key]: updated };
+  setDoc(metaListsDoc, { [key]: updated }, { merge: true });
+  logActivityEvent('created', META_LIST_LABELS[key] || key, name);
 }
 function renderMetaDatalists(){
   const map = { customers: 'customerDatalist', destinationCountries: 'destinationDatalist', salesReps: 'salesRepDatalist', productTypes: 'productTypeDatalist', units: 'unitsDatalist', cookingMethods: 'cookingMethodDatalist', storageConditions: 'storageConditionDatalist', evaluationCriteria: 'evaluationCriteriaDatalist' };
