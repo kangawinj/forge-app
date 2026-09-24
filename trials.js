@@ -631,7 +631,7 @@ export function renderTrialsList(){
           <div class="trial-header-row">
             <div class="field" style="margin-bottom:0;">
               <label>Sample Prepared By</label>
-              <input type="text" class="trial-sample-prepared-by" list="salesRepDatalist" value="${escapeHtml(mt.samplePreparedBy)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
+              <input type="text" class="trial-sample-prepared-by" list="customerDatalist" value="${escapeHtml(mt.samplePreparedBy)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
             </div>
             <div class="field" style="margin-bottom:0;">
               <label>Test Date</label>
