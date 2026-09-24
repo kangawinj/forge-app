@@ -312,8 +312,16 @@ export function trialEvalTargets(t){
   const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
   const manualProducts = t.manualProducts || [];
   return [
-    ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
-    ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
+    // `name`/`code` are additive (the Perform Evaluation wizard's own
+    // product-name heading is the only consumer of either) -- `label` keeps
+    // its existing code-only/name+code shape exactly as every other
+    // consumer (product cards/table headers/Summary Test/Share External
+    // Evaluation) already expects it.
+    ...linkedRecipes.map(r => {
+      const code = fullCode(r) || recipeDisplayLabel(r);
+      return { id: r.id, name: r.name || 'Untitled recipe', code, label: code };
+    }),
+    ...manualProducts.map(mp => ({ id: mp.id, name: mp.name || 'Untitled', code: mp.code || '', label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
   ];
 }
 // Anyone who actually weighs in on a product should show up in Test

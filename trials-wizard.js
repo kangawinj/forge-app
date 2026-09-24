@@ -95,7 +95,8 @@ function renderEvalWizardStep(t, products, criteria, step){
         <button type="button" class="eval-wizard-close" data-role="eval-wizard-close" title="Close">${icon('x')}</button>
       </div>
       <div class="eval-wizard-progress">Sample ${step + 1} of ${products.length}</div>
-      <div class="eval-wizard-product-name">${escapeHtml(p.label)}</div>
+      <div class="eval-wizard-product-name">${escapeHtml(p.name || p.label)}</div>
+      ${p.code ? `<div class="eval-wizard-product-code">${escapeHtml(p.code)}</div>` : ''}
       ${wizardPhotosHtml ? `<div class="eval-wizard-photos"><div class="proj-ref-images-grid">${wizardPhotosHtml}</div></div>` : ''}
       <div class="eval-wizard-jar-legend">
         ${JAR_SCALE.map(s => `<div class="eval-wizard-jar-legend-item"><b>${s.value}</b><span>${escapeHtml(s.label)}</span></div>`).join('')}

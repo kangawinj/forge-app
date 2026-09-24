@@ -5161,7 +5161,8 @@
   }
   .eval-wizard-close:hover{background:var(--primary-light);border-color:var(--primary);}
   .eval-wizard-progress{font-size:12px;color:var(--text-dim);margin-top:10px;letter-spacing:.02em;}
-  .eval-wizard-product-name{font-size:20px;font-weight:700;color:var(--primary-dark);margin:4px 0 12px;}
+  .eval-wizard-product-name{font-size:20px;font-weight:700;color:var(--primary-dark);margin:4px 0 4px;}
+  .eval-wizard-product-code{font-size:13px;color:var(--text-dim);margin:0 0 12px;}
   /* Read-only mirror of Part 1's own product-photo gallery (pd.photos) --
      no upload control here, just whatever's already there, so an evaluator
      can see the sample without leaving the wizard. Renders nothing when
