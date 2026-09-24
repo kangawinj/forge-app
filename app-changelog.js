@@ -600,7 +600,8 @@ export const CHANGELOG = [
   { version: "3.0.558", date: "2026-09-23", note: "Compare Recipes/Trials: \"Not used\" cells now show a gray background with red text, instead of just inheriting the row's light-orange diff highlight" },
   { version: "3.0.559", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's Subtotal now includes everything nested inside its Sub-parts too, matching the live editor's own Formula WT./% of Recipe, instead of only summing that Part's own directly-listed ingredients" },
   { version: "3.0.560", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's (now recursive) Subtotal moved to below all of its nested Sub-parts instead of sitting above them, so it reads as the running total for everything just shown above it" },
-  { version: "3.0.561", date: "2026-09-23", note: "Compare Recipes/Trials: each column header (Ingredients/Costing/Recipe Total) now shows the product name above its code, so telling columns apart further down the page doesn't require scrolling back up to the info cards" }
+  { version: "3.0.561", date: "2026-09-23", note: "Compare Recipes/Trials: each column header (Ingredients/Costing/Recipe Total) now shows the product name above its code, so telling columns apart further down the page doesn't require scrolling back up to the info cards" },
+  { version: "3.0.562", date: "2026-09-24", note: "Test Results: Sample Prepared By now suggests from the Company Directory instead of the Contact Directory" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
