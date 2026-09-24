@@ -602,7 +602,8 @@ export const CHANGELOG = [
   { version: "3.0.560", date: "2026-09-23", note: "Compare Ingredients' Group by Part view: a Part's (now recursive) Subtotal moved to below all of its nested Sub-parts instead of sitting above them, so it reads as the running total for everything just shown above it" },
   { version: "3.0.561", date: "2026-09-23", note: "Compare Recipes/Trials: each column header (Ingredients/Costing/Recipe Total) now shows the product name above its code, so telling columns apart further down the page doesn't require scrolling back up to the info cards" },
   { version: "3.0.562", date: "2026-09-24", note: "Test Results: Sample Prepared By now suggests from the Company Directory instead of the Contact Directory" },
-  { version: "3.0.563", date: "2026-09-24", note: "Reference Lists: added a Duplicate button per entry (between Edit and Delete), cloning every field, not just the name, with a fresh (Copy) suffix" }
+  { version: "3.0.563", date: "2026-09-24", note: "Reference Lists: added a Duplicate button per entry (between Edit and Delete), cloning every field, not just the name, with a fresh (Copy) suffix" },
+  { version: "3.0.564", date: "2026-09-24", note: "Perform Evaluation's big product heading now shows the real product name, with its Recipe Code as a smaller line underneath, instead of only ever showing the code" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
