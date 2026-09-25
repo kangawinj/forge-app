@@ -604,7 +604,8 @@ export const CHANGELOG = [
   { version: "3.0.562", date: "2026-09-24", note: "Test Results: Sample Prepared By now suggests from the Company Directory instead of the Contact Directory" },
   { version: "3.0.563", date: "2026-09-24", note: "Reference Lists: added a Duplicate button per entry (between Edit and Delete), cloning every field, not just the name, with a fresh (Copy) suffix" },
   { version: "3.0.564", date: "2026-09-24", note: "Perform Evaluation's big product heading now shows the real product name, with its Recipe Code as a smaller line underneath, instead of only ever showing the code" },
-  { version: "3.0.565", date: "2026-09-25", note: "Raised Perform Evaluation's Reference Photo cap from 2 to 5 per product" }
+  { version: "3.0.565", date: "2026-09-25", note: "Raised Perform Evaluation's Reference Photo cap from 2 to 5 per product" },
+  { version: "3.0.566", date: "2026-09-25", note: "Housekeeping: every JS file now gets the same never-cache-without-revalidating treatment (was only an enumerated list that every module split since had silently fallen through, so a fix landing in one of those files could sit invisible in a browser's cache well after deploy)" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
