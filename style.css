@@ -4957,6 +4957,20 @@
       margin-bottom:2px !important;
       padding-bottom:2px !important;
     }
+    /* Sensory Evaluation's Note column is plain divs (teval-overall-entry
+       above), so the td-level font-size/line-height/padding just above
+       reaches it directly -- Improvement Guidelines' own Note is a
+       <textarea> (teval-criteria-note, free text the person typed, kept
+       as-is), and a textarea's own font-size (the base 14px input/
+       textarea rule) doesn't inherit the parent td's, so it printed
+       visibly larger/looser than Sensory Evaluation's Note despite both
+       being the same td-level styling otherwise. Matches it explicitly
+       here instead. */
+    .teval-print-hide-scores textarea{
+      font-size:11px !important;
+      line-height:1.35 !important;
+      padding:0 !important;
+    }
   }
 
   @media (max-width:1024px){
