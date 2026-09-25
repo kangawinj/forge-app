@@ -3838,14 +3838,17 @@
   }
   .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
-  /* Test Participants specifically -- short names read better as a
-     wrapping row of chips than one full-width line per person (Cooking
-     Method's own steps, the only other trialStringListHtml consumer,
-     keeps the default vertical layout above since a step is often a
-     full sentence). Overrides the row's own width:100% input (sized for
-     the vertical, full-width case) down to just what the name needs. */
-  .trial-participants-list{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;}
-  .trial-participants-list .trial-string-list-row{margin-bottom:0;width:auto;}
+  /* Test Participants specifically -- short names read better as a single
+     row of chips than one full-width line per person (Cooking Method's
+     own steps, the only other trialStringListHtml consumer, keeps the
+     default vertical layout above since a step is often a full sentence).
+     Per follow-up feedback, a genuine single line -- wrap wasn't wanted
+     even when it meant an early item breaking to a second line -- so this
+     scrolls horizontally instead of wrapping once there are more names
+     than fit. Overrides the row's own width:100% input (sized for the
+     vertical, full-width case) down to just what the name needs. */
+  .trial-participants-list{display:flex;flex-wrap:nowrap;align-items:center;gap:6px 16px;overflow-x:auto;padding-bottom:4px;}
+  .trial-participants-list .trial-string-list-row{margin-bottom:0;width:auto;flex-shrink:0;}
   .trial-participants-list .trial-string-list-row input{width:auto;min-width:90px;}
   /* Sample Submission's Acknowledgement section -- Prepared by / Received
      by side by side, each its own Name+Date pair, same idea as
@@ -4914,6 +4917,12 @@
     .card:has(.printing-project), .card:has(.printing-only){
       break-inside:auto;
     }
+    /* Test Participants scrolls horizontally on screen to stay on one line
+       (see .trial-participants-list above) -- a printed page can't
+       scroll, so anything past the visible width would just get cut off
+       on paper. Wraps instead when printed, same as it did before that
+       change, so every name still shows up somewhere on the page. */
+    .trial-participants-list{flex-wrap:wrap !important;overflow:visible !important;}
     /* Part 2 (.trial-part2-box, trials.js) used to be forced onto its own
        fresh printed page unconditionally -- per request, Part 1 + Part 2
        together should fit on one page whenever the content is actually
