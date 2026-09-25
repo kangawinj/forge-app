@@ -187,9 +187,10 @@ function renderEvalWizardReview(t, products, criteria){
         ${getMyEvaluatorPhotos(t).length ? `<div class="proj-ref-images-grid">${getMyEvaluatorPhotos(t).map(ph => `
           <div class="proj-ref-image-item">
             <div class="proj-ref-image-thumb-wrap">
-              <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb" alt="Reference photo">
+              <img src="${escapeHtml(ph.dataUrl)}" class="proj-ref-image-thumb" alt="${escapeHtml(ph.caption || 'Reference photo')}">
               <button type="button" class="proj-ref-image-remove" data-role="remove-eval-photo" data-photo-id="${escapeHtml(ph.id)}" title="Remove">${icon('x', 12)}</button>
             </div>
+            <input type="text" class="proj-ref-image-caption-input eval-photo-caption-input" data-photo-id="${escapeHtml(ph.id)}" value="${escapeHtml(ph.caption || '')}" placeholder="Caption">
           </div>
         `).join('')}</div>` : ''}
         ${getMyEvaluatorPhotos(t).length < EVAL_COMMENT_PHOTO_MAX ? `<input type="file" class="eval-review-photo-input" accept="image/*" style="margin-top:8px;">` : ''}
@@ -250,10 +251,17 @@ function wireEvaluationWizard(overlay, t, products){
     if(!file) return;
     const photos = getMyEvaluatorPhotos(t);
     if(photos.length >= EVAL_COMMENT_PHOTO_MAX) return;
-    photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500) });
+    photos.push({ id: uid(), dataUrl: await resizeImageFile(file, 500), caption: file.name });
     scheduleTrialSave(t);
     renderTrialsList();
     renderEvaluationWizard();
+  });
+  overlay.querySelectorAll('.eval-photo-caption-input').forEach(input => {
+    input.addEventListener('change', () => {
+      const photo = getMyEvaluatorPhotos(t).find(ph => ph.id === input.dataset.photoId);
+      if(photo) photo.caption = input.value.trim();
+      scheduleTrialSave(t);
+    });
   });
   overlay.querySelectorAll('[data-role="remove-eval-photo"]').forEach(btn => {
     btn.addEventListener('click', () => {
