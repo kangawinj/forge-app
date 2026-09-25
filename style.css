@@ -4915,6 +4915,20 @@
        actually caused the blank-page bug described above. Needs
        !important and to come after the blanket reset to win the cascade. */
     .trial-part2-box{break-before:page !important;}
+    /* Printed Test Results: Sensory Evaluation's per-product score columns
+       (JAR value/label) are the same detail already captured in the
+       on-screen Overall view and each product's own Improvement
+       Guidelines row -- on paper, only Criteria + Note is wanted.
+       Scoped to this one table (not Improvement Guidelines just below
+       it, which keeps its own columns). table-layout switches to auto so
+       Note expands into the freed space instead of table-layout:fixed's
+       colgroup leaving a blank gap where the hidden columns used to be. */
+    .sensory-eval-table{table-layout:auto !important;}
+    .sensory-eval-table th:not(:first-child):not(:last-child),
+    .sensory-eval-table td:not(:first-child):not(:last-child),
+    .sensory-eval-table col:not(:first-child):not(:last-child){
+      display:none !important;
+    }
   }
 
   @media (max-width:1024px){

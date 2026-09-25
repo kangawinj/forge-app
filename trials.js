@@ -691,7 +691,7 @@ export function renderTrialsList(){
               <label>Sensory Evaluation</label>
               ${evalTargets.length ? `
               <div style="overflow-x:auto;">
-                <table class="compare-table">
+                <table class="compare-table sensory-eval-table">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
