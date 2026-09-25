@@ -4938,6 +4938,25 @@
       text-align:left !important;
       white-space:normal !important;
     }
+    /* Compact print formatting -- tighter padding/font/line-height than
+       the on-screen sizing (tuned for a mouse-driven UI, not a printed
+       page), vertical-align:top so a short Criteria label (e.g. "Odor")
+       sits flush at the top of its row instead of floating centered in
+       whatever height a much longer Note cell next to it needs, and
+       tighter spacing between a Note cell's own multiple entries
+       (teval-overall-entry, e.g. one per product). */
+    .teval-print-hide-scores th, .teval-print-hide-scores td{
+      padding:3px 6px !important;
+      font-size:11px !important;
+      line-height:1.35 !important;
+      vertical-align:top !important;
+    }
+    .teval-print-hide-scores .teval-header-hint{display:none !important;}
+    .teval-print-hide-scores .teval-overall-entry{padding:1px 0 !important;}
+    .teval-print-hide-scores .teval-overall-entry:not(:last-child){
+      margin-bottom:2px !important;
+      padding-bottom:2px !important;
+    }
   }
 
   @media (max-width:1024px){
