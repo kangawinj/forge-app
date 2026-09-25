@@ -617,7 +617,8 @@ export const CHANGELOG = [
   { version: "3.0.575", date: "2026-09-25", note: "Test Results: balanced the Project Name / Customer row to equal halves instead of a lopsided 2:1 split that left Project Name's box mostly empty around short text" },
   { version: "3.0.576", date: "2026-09-25", note: "Printed Test Results: removed the forced page break before Part 2, so Part 1 + Part 2 share one page whenever the content is short enough to fit, instead of Part 2 always paying for a fresh page" },
   { version: "3.0.577", date: "2026-09-25", note: "Test Results: Test Participants now shows as a wrapping horizontal row of names instead of one per line" },
-  { version: "3.0.578", date: "2026-09-25", note: "Test Results: Sample Prepared By, Test Date, and Test Location now share one line instead of Test Location sitting on its own row below" }
+  { version: "3.0.578", date: "2026-09-25", note: "Test Results: Sample Prepared By, Test Date, and Test Location now share one line instead of Test Location sitting on its own row below" },
+  { version: "3.0.579", date: "2026-09-25", note: "Test Results: Test Participants now stays on one genuine line on screen (scrolls horizontally instead of wrapping); printed output still wraps so nothing gets cut off on paper" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
