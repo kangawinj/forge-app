@@ -612,7 +612,8 @@ export const CHANGELOG = [
   { version: "3.0.570", date: "2026-09-25", note: "Fixed the printed Sensory Evaluation Note column leaving a blank gap and staying right-aligned -- it now fills the freed space and is left-aligned" },
   { version: "3.0.571", date: "2026-09-25", note: "Printed Test Results: Improvement Guidelines now also shows only Criteria + Note, same treatment as Sensory Evaluation" },
   { version: "3.0.572", date: "2026-09-25", note: "Tightened printed Sensory Evaluation/Improvement Guidelines formatting -- smaller padding/font/line-height, top-aligned rows, tighter note spacing" },
-  { version: "3.0.573", date: "2026-09-25", note: "Matched Improvement Guidelines' printed Note font size to Sensory Evaluation's own Note (text content unchanged, formatting only)" }
+  { version: "3.0.573", date: "2026-09-25", note: "Matched Improvement Guidelines' printed Note font size to Sensory Evaluation's own Note (text content unchanged, formatting only)" },
+  { version: "3.0.574", date: "2026-09-25", note: "Fixed the printed Improvement Guidelines Note still not matching Sensory Evaluation's Note formatting -- it's now a plain-text mirror instead of a <textarea>, since some print engines don't fully respect font-size on textareas" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
