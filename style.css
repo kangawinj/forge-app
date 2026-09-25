@@ -4941,6 +4941,18 @@
        on paper. Wraps instead when printed, same as it did before that
        change, so every name still shows up somewhere on the page. */
     .trial-participants-list{flex-wrap:wrap !important;overflow:visible !important;}
+    /* Comments -- one evaluator's own comment text + reference photos
+       (.teval-overall-entry inside .teval-overall-comments) -- used to
+       split mid-sentence/between the text and its photos whenever a page
+       ran out of room partway through one. Un-resets break-inside back to
+       avoid for just this element (the blanket reset above sets auto on
+       everything inside .printing-only), same targeted-exception pattern
+       already used for other elements in this file -- a typical comment +
+       a handful of small thumbnails comfortably fits on one page, so this
+       won't hit the "impossible to satisfy" case that reset existed to
+       rule out; the whole entry now moves to the next page as one piece
+       instead of splitting. */
+    .teval-overall-comments .teval-overall-entry{break-inside:avoid;}
     /* Part 2 (.trial-part2-box, trials.js) used to be forced onto its own
        fresh printed page unconditionally -- per request, Part 1 + Part 2
        together should fit on one page whenever the content is actually
