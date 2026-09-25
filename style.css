@@ -4903,19 +4903,15 @@
     .card:has(.printing-project), .card:has(.printing-only){
       break-inside:auto;
     }
-    /* Test Results specifically wants Part 2 (see .trial-part2-box in
-       trials.js) to start on its own printed page -- but the blanket
-       reset just above wipes out break-before on every element inside
-       .printing-only, this box included, since it's a descendant.
-       Un-reset only break-before here, and only on this one element (not
-       break-inside/break-after, and not the blanket's own *) -- a forced
-       break-before is always trivially satisfiable (the browser just
-       starts a new page there), unlike the break-inside/after:avoid
-       constraints the blanket rule exists to rule out, which could
-       become impossible to satisfy on oversized content and were what
-       actually caused the blank-page bug described above. Needs
-       !important and to come after the blanket reset to win the cascade. */
-    .trial-part2-box{break-before:page !important;}
+    /* Part 2 (.trial-part2-box, trials.js) used to be forced onto its own
+       fresh printed page unconditionally -- per request, Part 1 + Part 2
+       together should fit on one page whenever the content is actually
+       short enough to (helped a lot by the Sensory Evaluation/Improvement
+       Guidelines compacting just below), so that forced break is gone;
+       Part 2 now just flows naturally after Part 1, same as everything
+       else in .printing-only (break-inside:auto from the blanket reset
+       above lets the browser break wherever content actually runs out of
+       room, instead of always paying for a fresh page it might not need). */
     /* Printed Test Results: Sensory Evaluation's AND Improvement
        Guidelines' per-product columns (JAR score/label, automatic
        suggestion) are the same detail already captured in the on-screen
