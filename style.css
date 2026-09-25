@@ -3836,6 +3836,13 @@
   @media (max-width:700px){
     .trial-header-row{grid-template-columns:1fr;}
   }
+  /* The linked project's thumbnail sits beside Project Name's own field on
+     print (a print-only <img>, trials.js) instead of in the row header
+     next to the row summary that's now hidden on print (see
+     .trial-header-thumb below) -- this wrapper is a no-op on screen
+     (its <img> is print-only and hidden there), so Project Name's own
+     layout is unaffected outside of print. */
+  .trial-project-name-row{display:flex;align-items:center;gap:8px;}
   .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
   /* Test Participants specifically -- short names read better as a single
@@ -4655,8 +4662,11 @@
        "Part 1"/"Part 2" section labels, and each product card's
        Date/Total weight/Customer/Destination/Project Owner/Stage lines
        (trial-print-hide-detail, trials.js -- Code and the product's own
-       name/photo stay). */
-    .trial-row-title-block, .trial-part-title, .trial-print-hide-detail{display:none !important;}
+       name/photo stay). The linked project's own thumbnail moves down to
+       sit beside Project Name instead (see .trial-project-name-row's own
+       print-only <img> above) now that the row summary it used to sit
+       next to is gone. */
+    .trial-row-title-block, .trial-part-title, .trial-print-hide-detail, .trial-header-thumb{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .view-mode-toggle{display:none !important;}

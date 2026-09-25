@@ -594,7 +594,7 @@ export function renderTrialsList(){
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
         <div class="part-header" style="margin-bottom:12px;">
           <button type="button" class="part-toggle-btn${isExpanded ? ' open' : ''}" title="Expand / collapse this test">${icon('chevron-right')}</button>
-          ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
+          ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb trial-header-thumb" alt="${escapeHtml(linkedProject.name || 'Linked project')}" title="From linked project: ${escapeHtml(linkedProject.name || 'Untitled project')}">` : ''}
           <div class="trial-row-title-block">
             <span class="trial-row-date">${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}${combinedCount ? ` · ${combinedCount} product${combinedCount === 1 ? '' : 's'}` : ''}</span>
             <div class="trial-row-products">${productNames.length ? productNames.map(n => `<div>${escapeHtml(n)}</div>`).join('') : 'No products added yet'}</div>
@@ -613,12 +613,15 @@ export function renderTrialsList(){
           <div class="trial-header-row">
             <div class="field" style="margin-bottom:0;">
               <label>Project Name</label>
-              ${isEditing
-                ? `<select class="proj-select trial-linked-project">
-                    <option value="">- Select a project -</option>
-                    ${[...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'})).map(p => `<option value="${escapeHtml(p.id)}" ${p.id === mt.linkedProjectId ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('')}
-                  </select>`
-                : `<input type="text" value="${escapeHtml(linkedProject?.name || '')}" placeholder="-" readonly>`}
+              <div class="trial-project-name-row">
+                ${linkedProjectImage ? `<img src="${escapeHtml(linkedProjectImage)}" class="material-thumb print-only" alt="${escapeHtml(linkedProject.name || 'Linked project')}">` : ''}
+                ${isEditing
+                  ? `<select class="proj-select trial-linked-project">
+                      <option value="">- Select a project -</option>
+                      ${[...projects].sort((a,b) => (a.name||'').localeCompare(b.name||'', undefined, {sensitivity:'base'})).map(p => `<option value="${escapeHtml(p.id)}" ${p.id === mt.linkedProjectId ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>`).join('')}
+                    </select>`
+                  : `<input type="text" value="${escapeHtml(linkedProject?.name || '')}" placeholder="-" readonly>`}
+              </div>
             </div>
             <div class="field" style="margin-bottom:0;">
               <label>Customer</label>
