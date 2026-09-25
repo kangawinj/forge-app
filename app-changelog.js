@@ -618,7 +618,8 @@ export const CHANGELOG = [
   { version: "3.0.576", date: "2026-09-25", note: "Printed Test Results: removed the forced page break before Part 2, so Part 1 + Part 2 share one page whenever the content is short enough to fit, instead of Part 2 always paying for a fresh page" },
   { version: "3.0.577", date: "2026-09-25", note: "Test Results: Test Participants now shows as a wrapping horizontal row of names instead of one per line" },
   { version: "3.0.578", date: "2026-09-25", note: "Test Results: Sample Prepared By, Test Date, and Test Location now share one line instead of Test Location sitting on its own row below" },
-  { version: "3.0.579", date: "2026-09-25", note: "Test Results: Test Participants now stays on one genuine line on screen (scrolls horizontally instead of wrapping); printed output still wraps so nothing gets cut off on paper" }
+  { version: "3.0.579", date: "2026-09-25", note: "Test Results: Test Participants now stays on one genuine line on screen (scrolls horizontally instead of wrapping); printed output still wraps so nothing gets cut off on paper" },
+  { version: "3.0.580", date: "2026-09-25", note: "Printed Test Results: hid the action buttons (Perform Evaluation/Share External Evaluation/Summary Test/Print/Delete), same as Recipes' own header actions already were" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
