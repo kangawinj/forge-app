@@ -620,7 +620,8 @@ export const CHANGELOG = [
   { version: "3.0.578", date: "2026-09-25", note: "Test Results: Sample Prepared By, Test Date, and Test Location now share one line instead of Test Location sitting on its own row below" },
   { version: "3.0.579", date: "2026-09-25", note: "Test Results: Test Participants now stays on one genuine line on screen (scrolls horizontally instead of wrapping); printed output still wraps so nothing gets cut off on paper" },
   { version: "3.0.580", date: "2026-09-25", note: "Printed Test Results: hid the action buttons (Perform Evaluation/Share External Evaluation/Summary Test/Print/Delete), same as Recipes' own header actions already were" },
-  { version: "3.0.581", date: "2026-09-25", note: "Printed Test Results: hid the redundant row-header summary, the \"Part 1\"/\"Part 2\" labels, and each product card's Date/Total weight/Customer/Destination/Project Owner/Stage lines (Code and the product's own name/photo stay)" }
+  { version: "3.0.581", date: "2026-09-25", note: "Printed Test Results: hid the redundant row-header summary, the \"Part 1\"/\"Part 2\" labels, and each product card's Date/Total weight/Customer/Destination/Project Owner/Stage lines (Code and the product's own name/photo stay)" },
+  { version: "3.0.582", date: "2026-09-25", note: "Printed Test Results: moved the linked project's thumbnail to sit beside Project Name instead of floating alone where the now-hidden row summary used to be" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
