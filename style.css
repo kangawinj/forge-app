@@ -3824,12 +3824,14 @@
   /* Trial Results report fields — header info grid, Test Participants /
      Cooking Method numbered lists, and each product card's Before/After
      frying photo pair + the Accepted/Not accepted result coloring. */
-  /* Project Name + Customer get their own full-width row (equal halves —
-     both are short single-line values/pickers, an earlier 2fr:1fr split
-     just left Project Name's box mostly empty padding around short text),
-     Sample Prepared By + Test Date share a second row below — replaces the
-     old 4-up auto-fit grid that squeezed all four together. */
-  .trial-header-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+  /* Project Name + Customer share one row (equal halves — both are short
+     single-line values/pickers, an earlier 2fr:1fr split just left
+     Project Name's box mostly empty padding around short text); Sample
+     Prepared By + Test Date + Test Location share a second row below —
+     auto-fit so this same class works for either row's own field count
+     (2 or 3) without a separate modifier class, and still degrades to one
+     column per field on narrow/mobile widths via its own minmax. */
+  .trial-header-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px;}
   .trial-header-row + .trial-header-row{margin-top:12px;}
   @media (max-width:700px){
     .trial-header-row{grid-template-columns:1fr;}

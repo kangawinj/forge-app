@@ -662,10 +662,10 @@ export function renderTrialsList(){
               <label>Test Date</label>
               <input type="date" class="trial-test-date" value="${escapeHtml(mt.testDate)}" ${isEditing ? '' : 'readonly'}>
             </div>
-          </div>
-          <div class="field" style="margin-bottom:0;margin-top:12px;">
-            <label>Test Location</label>
-            <input type="text" class="trial-test-location" list="customerDatalist" value="${escapeHtml(mt.testLocation)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
+            <div class="field" style="margin-bottom:0;">
+              <label>Test Location</label>
+              <input type="text" class="trial-test-location" list="customerDatalist" value="${escapeHtml(mt.testLocation)}" placeholder="-" ${isEditing ? '' : 'readonly'}>
+            </div>
           </div>
           <div class="field" style="margin-bottom:0;margin-top:12px;">
             <label>Test Participants</label>
