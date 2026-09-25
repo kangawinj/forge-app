@@ -4648,7 +4648,7 @@
        from the actual printed page/PDF while borders and text still show
        up fine. */
     *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
-    .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions{display:none !important;}
+    .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions, .trial-row-actions{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .view-mode-toggle{display:none !important;}
