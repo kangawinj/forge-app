@@ -4649,6 +4649,14 @@
        up fine. */
     *{ -webkit-print-color-adjust:exact; print-color-adjust:exact; }
     .sidebar, .toolbar, .add-row-btn, .step-controls, .col-del, .save-status, .app-footer, .lock-banner, .recipe-header-actions, .trial-row-actions{display:none !important;}
+    /* Printed Test Results: the row header's own summary (date/count +
+       product name list, redundant once Part 1's own Product Name/
+       products-being-compared cards are right there on the page), the
+       "Part 1"/"Part 2" section labels, and each product card's
+       Date/Total weight/Customer/Destination/Project Owner/Stage lines
+       (trial-print-hide-detail, trials.js -- Code and the product's own
+       name/photo stay). */
+    .trial-row-title-block, .trial-part-title, .trial-print-hide-detail{display:none !important;}
     .top-navbar, .mobile-sidebar-toggle, .sidebar-backdrop, .sidebar-close-btn, .danger-zone{display:none !important;}
     .recipe-fields-edit, .processes-list, .ingredients-edit-view{display:none !important;}
     .view-mode-toggle{display:none !important;}

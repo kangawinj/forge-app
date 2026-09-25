@@ -262,12 +262,12 @@ export function renderTrialsList(){
         <div class="compare-info-col">
           <div class="ci-name">${escapeHtml(recipeDisplayLabel(r))}</div>
           <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
-          <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
-          <div class="ci-row"><b>Total weight:</b> ${escapeHtml(formatWeight(totalWt))}</div>
-          ${link?.project.customerName ? `<div class="ci-row"><b>Customer:</b> ${escapeHtml(link.project.customerName)}</div>` : ''}
-          ${link?.project.destinationCountry ? `<div class="ci-row"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
-          ${link?.project.ownerSalesRep ? `<div class="ci-row"><b>Project Owner:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
-          ${link ? `<div class="ci-row"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
+          <div class="ci-row trial-print-hide-detail"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
+          <div class="ci-row trial-print-hide-detail"><b>Total weight:</b> ${escapeHtml(formatWeight(totalWt))}</div>
+          ${link?.project.customerName ? `<div class="ci-row trial-print-hide-detail"><b>Customer:</b> ${escapeHtml(link.project.customerName)}</div>` : ''}
+          ${link?.project.destinationCountry ? `<div class="ci-row trial-print-hide-detail"><b>Destination:</b> ${escapeHtml(link.project.destinationCountry)}</div>` : ''}
+          ${link?.project.ownerSalesRep ? `<div class="ci-row trial-print-hide-detail"><b>Project Owner:</b> ${escapeHtml(link.project.ownerSalesRep)}</div>` : ''}
+          ${link ? `<div class="ci-row trial-print-hide-detail"><b>Stage:</b> ${escapeHtml(link.product.stage || '-')}</div>` : ''}
           ${trialPhotosHtml(r.id)}
           ${removeBtn}
         </div>
