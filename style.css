@@ -4959,18 +4959,18 @@
     }
     /* Sensory Evaluation's Note column is plain divs (teval-overall-entry
        above), so the td-level font-size/line-height/padding just above
-       reaches it directly -- Improvement Guidelines' own Note is a
-       <textarea> (teval-criteria-note, free text the person typed, kept
-       as-is), and a textarea's own font-size (the base 14px input/
-       textarea rule) doesn't inherit the parent td's, so it printed
-       visibly larger/looser than Sensory Evaluation's Note despite both
-       being the same td-level styling otherwise. Matches it explicitly
-       here instead. */
-    .teval-print-hide-scores textarea{
-      font-size:11px !important;
-      line-height:1.35 !important;
-      padding:0 !important;
-    }
+       reaches it directly and prints consistently -- Improvement
+       Guidelines' own Note is a <textarea> (teval-criteria-note), and
+       matching its font-size via CSS wasn't enough: some print engines
+       fall back toward native form-control rendering for textareas
+       regardless of CSS, so it kept printing visibly different from
+       Sensory Evaluation's Note even with identical font-size/line-height
+       rules applied to both. teval-criteria-note-print (trials.js) is a
+       plain-div mirror of the same text with real <br> line breaks,
+       already sized correctly by the td-level rule above like every
+       other div in these tables -- swapped in for the textarea here. */
+    .teval-print-hide-scores textarea{display:none !important;}
+    .teval-print-hide-scores .teval-criteria-note-print{white-space:normal !important;}
   }
 
   @media (max-width:1024px){

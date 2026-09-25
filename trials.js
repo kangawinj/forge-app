@@ -526,6 +526,17 @@ export function renderTrialsList(){
     // everyone is already a final call, nothing left to improve toward.
     // Locked (readonly, muted) otherwise, including not-yet-evaluated.
     const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
+    // A <textarea>'s own font-size doesn't reliably match a plain div's
+    // during print in every browser (some print engines fall back toward
+    // native form-control rendering for textareas regardless of CSS), even
+    // with the exact same font-size rule applied to both -- this
+    // plain-text mirror (real <br> line breaks, not a textarea) is what
+    // actually prints, hidden on screen and swapped in for the textarea
+    // only in print (see .teval-print-hide-scores/.print-only in
+    // style.css), so this Note reads with pixel-identical formatting to
+    // Sensory Evaluation's own Note (plain divs there too, never a
+    // textarea).
+    const printOnlyCriteriaNoteHtml = note => `<div class="teval-criteria-note-print print-only">${escapeHtml(note || '-').replace(/\n/g, '<br>')}</div>`;
     const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
@@ -544,6 +555,7 @@ export function renderTrialsList(){
             <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>
+          ${printOnlyCriteriaNoteHtml(improvementCriteriaNotes[c.id])}
         </td>
       </tr>
     `).join('');
