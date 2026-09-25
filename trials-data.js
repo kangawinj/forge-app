@@ -89,7 +89,7 @@ export function getMyEvaluatorComment(t){
 // Optional reference photos to go with the comment above -- e.g. a
 // competitor sample or something else worth pointing at -- same one-set-
 // per-evaluator-per-trial shape, capped at EVAL_COMMENT_PHOTO_MAX.
-export const EVAL_COMMENT_PHOTO_MAX = 2;
+export const EVAL_COMMENT_PHOTO_MAX = 5;
 export function getMyEvaluatorPhotos(t){
   if(!currentUser?.email) return [];
   if(!t.evaluatorPhotos || typeof t.evaluatorPhotos !== 'object') t.evaluatorPhotos = {};
