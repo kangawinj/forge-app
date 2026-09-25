@@ -614,7 +614,8 @@ export const CHANGELOG = [
   { version: "3.0.572", date: "2026-09-25", note: "Tightened printed Sensory Evaluation/Improvement Guidelines formatting -- smaller padding/font/line-height, top-aligned rows, tighter note spacing" },
   { version: "3.0.573", date: "2026-09-25", note: "Matched Improvement Guidelines' printed Note font size to Sensory Evaluation's own Note (text content unchanged, formatting only)" },
   { version: "3.0.574", date: "2026-09-25", note: "Fixed the printed Improvement Guidelines Note still not matching Sensory Evaluation's Note formatting -- it's now a plain-text mirror instead of a <textarea>, since some print engines don't fully respect font-size on textareas" },
-  { version: "3.0.575", date: "2026-09-25", note: "Test Results: balanced the Project Name / Customer row to equal halves instead of a lopsided 2:1 split that left Project Name's box mostly empty around short text" }
+  { version: "3.0.575", date: "2026-09-25", note: "Test Results: balanced the Project Name / Customer row to equal halves instead of a lopsided 2:1 split that left Project Name's box mostly empty around short text" },
+  { version: "3.0.576", date: "2026-09-25", note: "Printed Test Results: removed the forced page break before Part 2, so Part 1 + Part 2 share one page whenever the content is short enough to fit, instead of Part 2 always paying for a fresh page" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
