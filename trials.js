@@ -339,14 +339,27 @@ export function renderTrialsList(){
     // table and Improvement Guidelines' rows follow, since both read from
     // the same list.
     const evalTargets = [
-      ...linkedRecipes.map(r => ({ id: r.id, label: fullCode(r) || recipeDisplayLabel(r) })),
+      // `name`/`code` are additive -- Sensory Evaluation's own header
+      // below is the only consumer of either; `label` keeps its existing
+      // code-only/name+code shape exactly as Improvement Guidelines'
+      // header and every other consumer of evalTargets already expects.
+      ...linkedRecipes.map(r => {
+        const code = fullCode(r) || recipeDisplayLabel(r);
+        return { id: r.id, name: r.name || 'Untitled recipe', code, label: code };
+      }),
       // Two manual products can share the same name (e.g. duplicated as a
       // starting point for a variant, or just two samples of "Alfrado" at
       // different Codes) -- appending the Code keeps their evaluation
       // table columns distinguishable instead of both reading "ALFRADO".
-      ...manualProducts.map(mp => ({ id: mp.id, label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
+      ...manualProducts.map(mp => ({ id: mp.id, name: mp.name || 'Untitled', code: mp.code || '', label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
     ];
-    const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
+    // Sensory Evaluation's own header shows the product name above its
+    // code (same convention as Compare Recipes/Trials' own column
+    // headers, reusing its compare-th-name/compare-th-code classes) --
+    // per request, scoped to this one table; Improvement Guidelines'
+    // header just below keeps showing `label` (code-only/name+code) as
+    // before.
+    const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}"><div class="compare-th-name">${escapeHtml(p.name)}</div>${p.code ? `<div class="compare-th-code">${escapeHtml(p.code)}</div>` : ''}</th>`).join('');
     // Improvement Guidelines' own header row (NOT shared with Sensory
     // Evaluation's identical-looking one above, even though both tables
     // otherwise reuse evalTargets/evaluationCriteria). Both the per-sample
