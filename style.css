@@ -3836,6 +3836,15 @@
   }
   .trial-string-list-row{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
   .trial-string-list-num{font-size:12px;color:var(--text-dim);flex-shrink:0;width:16px;text-align:right;}
+  /* Test Participants specifically -- short names read better as a
+     wrapping row of chips than one full-width line per person (Cooking
+     Method's own steps, the only other trialStringListHtml consumer,
+     keeps the default vertical layout above since a step is often a
+     full sentence). Overrides the row's own width:100% input (sized for
+     the vertical, full-width case) down to just what the name needs. */
+  .trial-participants-list{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;}
+  .trial-participants-list .trial-string-list-row{margin-bottom:0;width:auto;}
+  .trial-participants-list .trial-string-list-row input{width:auto;min-width:90px;}
   /* Sample Submission's Acknowledgement section -- Prepared by / Received
      by side by side, each its own Name+Date pair, same idea as
      .trial-header-row above just with a labeled title over each side. */

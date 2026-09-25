@@ -669,7 +669,7 @@ export function renderTrialsList(){
           </div>
           <div class="field" style="margin-bottom:0;margin-top:12px;">
             <label>Test Participants</label>
-            ${trialStringListHtml(mt.testParticipants, isEditing, 'trial-participant-input', 'test-participant', 'e.g. Yano-san', 'salesRepDatalist')}
+            <div class="trial-participants-list">${trialStringListHtml(mt.testParticipants, isEditing, 'trial-participant-input', 'test-participant', 'e.g. Yano-san', 'salesRepDatalist')}</div>
           </div>
           <div class="trial-part2-box">
             <div class="trial-part-title">Part 2</div>
