@@ -609,7 +609,8 @@ export const CHANGELOG = [
   { version: "3.0.567", date: "2026-09-25", note: "Perform Evaluation's Reference Photos now have an editable caption underneath each one, same as Product Details' own photo gallery" },
   { version: "3.0.568", date: "2026-09-25", note: "Test Results' Sensory Evaluation table header now shows the product name above its code, scoped to that one table -- Improvement Guidelines keeps showing code only" },
   { version: "3.0.569", date: "2026-09-25", note: "Printed Test Results: Sensory Evaluation now shows only Criteria + Note, hiding the per-product score columns (screen view unaffected)" },
-  { version: "3.0.570", date: "2026-09-25", note: "Fixed the printed Sensory Evaluation Note column leaving a blank gap and staying right-aligned -- it now fills the freed space and is left-aligned" }
+  { version: "3.0.570", date: "2026-09-25", note: "Fixed the printed Sensory Evaluation Note column leaving a blank gap and staying right-aligned -- it now fills the freed space and is left-aligned" },
+  { version: "3.0.571", date: "2026-09-25", note: "Printed Test Results: Improvement Guidelines now also shows only Criteria + Note, same treatment as Sensory Evaluation" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
