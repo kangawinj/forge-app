@@ -691,7 +691,7 @@ export function renderTrialsList(){
               <label>Sensory Evaluation</label>
               ${evalTargets.length ? `
               <div style="overflow-x:auto;">
-                <table class="compare-table sensory-eval-table">
+                <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
@@ -706,7 +706,7 @@ export function renderTrialsList(){
               <label>Improvement Guidelines</label>
               ${evalTargets.length ? `
               <div style="overflow-x:auto;">
-                <table class="compare-table">
+                <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${improvementHeaderCells}<th class="recipe-boundary">Note<span class="teval-header-hint">Enter your own info (ระบุข้อมูลด้วยตัวเอง)</span></th></tr></thead>
                   <tbody>${improvementRowsHtml}${continueDevRowHtml}</tbody>
