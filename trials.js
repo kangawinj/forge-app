@@ -29,8 +29,8 @@ import {
 import {
   trialLabel, migrateTrial, getTrialProductData, normalizeTrialPhotos, TRIAL_PHOTO_MAX,
   TRIAL_MAX_PRODUCTS, getEvaluationCriteria, getCriteriaNotes, combinedEvaluationEntries,
-  jarScoreLabel, jarScoreDisplay, shortEvaluatorName, productNeedsRevision,
-  improvementFieldValue, autoImprovementSuggestion, TRIAL_TEST_RESULT_CLASSES,
+  jarScoreLabel, jarScoreDisplay, shortEvaluatorName,
+  improvementFieldValue, TRIAL_TEST_RESULT_CLASSES,
   TRIAL_TEST_RESULT_OPTIONS, groupTrialsByProject, blankManualTrialProduct,
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
 } from './trials-data.js';
@@ -401,13 +401,8 @@ export function renderTrialsList(){
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}"><div class="compare-th-name">${escapeHtml(p.name)}</div>${p.code ? `<div class="compare-th-code">${escapeHtml(p.code)}</div>` : ''}</th>`).join('');
     // Improvement Guidelines' own header row (NOT shared with Sensory
     // Evaluation's identical-looking one above, even though both tables
-    // otherwise reuse evalTargets/evaluationCriteria). Both the per-sample
-    // columns and the trailing Note column are plain free-text fields either
-    // way -- but per-sample is meant for the app's own suggested fix for
-    // that criteria/sample, while Note is a person's own separate remark,
-    // and that distinction wasn't obvious from the column labels alone, so
-    // each gets a small caption explaining which is which.
-    const improvementHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}<span class="teval-header-hint">Automatic suggestion (คำแนะนำอัตโนมัติ)</span></th>`).join('');
+    // otherwise reuse evalTargets/evaluationCriteria).
+    const improvementHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
     const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => {
@@ -581,13 +576,8 @@ export function renderTrialsList(){
         <td><b>${escapeHtml(c.label)}</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          const needsRevision = productNeedsRevision(pd);
           const stored = improvementFieldValue(pd, c.id);
-          const auto = (stored || !needsRevision) ? '' : autoImprovementSuggestion(c, pd);
-          const displayValue = stored || auto;
-          const isAuto = !stored && !!auto;
-          const autoTitle = 'Automatically suggested from this criteria\'s JAR score above — edit to write your own instead';
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}${needsRevision ? '' : ' trial-improve-na'}"><textarea class="teval-improve${isAuto ? ' teval-improve-auto' : ''}" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${(isEditing && needsRevision) ? '' : 'readonly'} placeholder="-" title="${needsRevision ? (isAuto ? autoTitle : '') : 'Only needed when Test Result is Needs Revision'}">${escapeHtml(displayValue)}</textarea></td>`;
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(stored)}</textarea></td>`;
         }).join('')}
         <td class="recipe-boundary">
           <div class="mu-field-with-translate" style="width:auto;">
