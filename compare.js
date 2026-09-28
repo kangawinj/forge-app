@@ -105,17 +105,20 @@ export function mountCompareView(){
 
   document.getElementById('btnPrintCompare').addEventListener('click', () => {
     // Browsers default the "Save as PDF" filename to document.title -- set
-    // it to "<loaded date/time> <page name> Forge <account>" just for the
-    // print, then restore the real page title afterwards (same pattern as
-    // recipes.js's own Print and projects.js's per-project Print).
+    // it to "<date> <page name> Forge <account>" just for the print, then
+    // restore the real page title afterwards (same pattern as recipes.js's
+    // own Print and projects.js's per-project Print). Date only, no time
+    // -- and just the account's local-part, no @domain -- per explicit
+    // request; both used to be included.
     const originalTitle = document.title;
     const now = new Date();
     const pad = n => String(n).padStart(2, '0');
-    const dateTimeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
+    const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
     const pageLabel = compareSeriesPrefilter
       ? `Compare Trials — ${seriesKeyDisplay(compareSeriesPrefilter.seriesKey, candidates[0])}`
       : 'Compare Recipes';
-    document.title = `${dateTimeStr} ${pageLabel} Forge ${currentUser?.email || ''}`.replace(/[\\/:*?"<>|]/g, '-');
+    const accountName = (currentUser?.email || '').split('@')[0];
+    document.title = `${dateStr} ${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-');
     const restoreTitle = () => {
       document.title = originalTitle;
       window.removeEventListener('afterprint', restoreTitle);

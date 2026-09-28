@@ -63,15 +63,18 @@ let bulkPrintOpen = false;
 let bulkPrintSelectedIds = new Set();
 
 // Browsers default the "Save as PDF" filename to document.title -- same
-// "<date/time> <page name> Forge <account>" convention already used by
-// Compare/Recipes/Projects' own Print buttons (see compare.js). Returns a
-// restore function to call once printing is done (afterprint).
+// "<date> <page name> Forge <account>" convention already used by
+// Compare/Recipes/Projects' own Print buttons (see compare.js). Date only,
+// no time -- and just the account's local-part, no @domain -- per
+// explicit request. Returns a restore function to call once printing is
+// done (afterprint).
 function setPrintDocumentTitle(pageLabel){
   const originalTitle = document.title;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const dateTimeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
-  document.title = `${dateTimeStr} ${pageLabel} Forge ${currentUser?.email || ''}`.replace(/[\\/:*?"<>|]/g, '-');
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+  const accountName = (currentUser?.email || '').split('@')[0];
+  document.title = `${dateStr} ${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-');
   return () => { document.title = originalTitle; };
 }
 
