@@ -4719,25 +4719,22 @@
        100% -- someone who wants it more compact can still type a Scale
        value into the print dialog themselves. */
     body{background:#fff;}
-    /* A first attempt at this fix swapped in a Thai-only webfont (Noto
-       Sans Thai) here, theorizing only Windows' Thai system fonts weren't
-       embeddable. That didn't fix it, and reading an actual saved PDF
-       confirmed why: its text layer was garbled garbage for BOTH Thai AND
-       plain English -- every OS UI font in :root's own font-family stack
-       (Segoe UI, SF Pro Display, Leelawadee UI, Tahoma) is non-embeddable,
-       not just the Thai ones. Noto Sans (Latin) + Noto Sans Thai (loaded
-       in index.html, print use only) are real, freely-embeddable fonts
-       covering both scripts actually used in this app's printed content,
-       so nothing here still falls back to a non-embeddable system font.
-       Set on body (inherited from there, same as :root's own rule
-       normally cascades), not forced with !important onto every element
-       -- Recipe/Trial Code's own deliberate monospace font-family
-       (.rt-code, Consolas/Courier New) needs to keep winning over this.
-       No line-height change this time (a previous attempt at one broke
-       text selection outright) -- isolating this to just the font swap
-       until it's confirmed against a real saved PDF, since nothing here
-       can be verified without one. */
-    body{font-family:"Noto Sans","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
+    /* Two attempts at fixing "can't select/copy printed PDF text" by
+       swapping the print font (first Thai-only, then Thai+Latin both
+       covered by real embeddable webfonts) BOTH left an actual saved PDF's
+       extracted text equally garbled -- byte-for-byte close to identical
+       garbage regardless of which font backed it. That rules font choice
+       out entirely: this isn't a font-embedding problem. The remaining
+       likely cause is Chrome's PDF generator failing to build a correct
+       text-to-Unicode mapping for the whole run once Thai's own complex
+       text shaping (reordering/combining vowel signs and tone marks
+       around a base consonant) appears anywhere in it -- every note field
+       in this app mixes English and Thai in the same run, which would
+       explain why the English portions come out corrupted too. That's a
+       Chromium engine limitation (see e.g. issues.chromium.org/issues/
+       40114095), not something fixable from here -- reverted back to the
+       plain system font stack rather than keep an unhelpful Google Fonts
+       dependency around. */
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room
