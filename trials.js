@@ -896,6 +896,11 @@ export function renderTrialsList(){
         input.addEventListener('change', e => {
           mp[e.target.dataset.field] = e.target.value.trim();
           scheduleTrialSave(t);
+          // Sensory Evaluation's own header (evalHeaderCells) shows this
+          // product's name/code -- re-render so editing it up here is
+          // reflected there right away instead of only after some other
+          // action happens to re-render the list.
+          if(e.target.dataset.field === 'name' || e.target.dataset.field === 'code') renderTrialsList();
         });
       });
     });
