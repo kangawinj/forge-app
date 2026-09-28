@@ -19,7 +19,7 @@
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
   logActivityEvent, diffMainFields, showCloudError, playContentTransition,
-  renderSidebar, formatActivityDateTime, recipesCol, projects, metaLists,
+  renderSidebar, formatActivityDateTime, formatDateLong, recipesCol, projects, metaLists,
   metaItemName, productTypeCode, ingredientMaster, migrateTrialsFromRecipes,
   countryToIso2, guardNavigation,
   readOnlyIngredientTreeHtml, readOnlyProcessesHtml,
@@ -48,6 +48,13 @@ import {
 } from './recipes-versions.js';
 import { renderDescPoints, renderDescPhotos, wireRecipeTranslateButton, renderPrintView } from './recipes-print.js';
 import { exportRecipeToExcel } from './recipes-excel.js';
+// Circular import back to trials.js -- safe, same pattern already proven by
+// trials-summary.js/trials-wizard.js importing `trials` back from here in
+// the other direction: `trials`/`trialExpandedIds` are live ES-module
+// bindings, and every use below happens inside a render/event-handler call,
+// never at module-evaluation time.
+import { trials, trialExpandedIds } from './trials.js';
+import { migrateTrial } from './trials-data.js';
 // Circular imports back to the four files split out below -- safe, same
 // pattern proven throughout this session's other splits: every cross-call
 // happens inside an event handler, never at module-evaluation time.
@@ -439,6 +446,52 @@ function renderTrialHistoryTrack(r){
   document.getElementById('trialHistoryAddBtn')?.addEventListener('click', () => confirmAndCreateNewTrial(r));
 }
 
+// Reverse lookup for Test Results (trials.js) that reference this exact
+// recipe via t.recipeIds -- a Test Result links TO one or more Recipes,
+// but until now there was no way to see that link from the Recipe's own
+// side. Hidden entirely (empty section, no card chrome) when nothing
+// links here, same as Trial History being absent for a non-Series recipe.
+function renderLinkedTestResults(r){
+  const section = document.getElementById('linkedTestResultsSection');
+  if(!section) return;
+  const matches = trials.filter(t => (t.recipeIds || []).includes(r.id));
+  if(!matches.length){ section.innerHTML = ''; return; }
+  const sorted = [...matches].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
+  section.innerHTML = `
+    <div class="card">
+      <div class="card-title">Linked Test Results</div>
+      <div class="linked-trial-list">
+        ${sorted.map(t => {
+          const mt = migrateTrial(t);
+          return `
+            <button type="button" class="linked-trial-row" data-trial-id="${escapeHtml(t.id)}">
+              <span>${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}</span>
+              ${icon('chevron-right', 14)}
+            </button>
+          `;
+        }).join('')}
+      </div>
+    </div>
+  `;
+  section.querySelectorAll('.linked-trial-row').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const id = btn.dataset.trialId;
+      // Same "leaving an unsaved recipe edit" guard every other
+      // navigate-away action in this editor already uses (see
+      // renderTrialHistoryTrack above).
+      guardNavigation(() => {
+        trialExpandedIds.add(id);
+        setMainFeatureView('trials');
+        renderMain();
+        renderSidebar();
+        setTimeout(() => {
+          document.querySelector(`.part-block[data-trial-id="${id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }, 0);
+      });
+    });
+  });
+}
+
 let dragPayload = null;
 
 // Which Formula-tree ingredient rows currently have their Sub Ingredients
@@ -564,6 +617,8 @@ export function renderRecipeEditor(r){
       </div>
     </div>
     ` : ''}
+
+    <div id="linkedTestResultsSection"></div>
 
     <!-- Fixed, always in the DOM (not print-only) so it's available the
          instant preview-print-mode is toggled on -- see btnPreview's
@@ -1287,6 +1342,7 @@ export function renderRecipeEditor(r){
     });
   });
   if(r.seriesId) renderTrialHistoryTrack(r);
+  renderLinkedTestResults(r);
   document.getElementById('btnDelete').addEventListener('click', () => {
     const deletingId = r.id;
     if(!confirm(`Delete "${r.name || 'Untitled recipe'}"? This cannot be undone.`)) return;

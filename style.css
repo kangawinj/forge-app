@@ -2731,6 +2731,24 @@
     height:1px;
     background:var(--border);
   }
+  .linked-trial-list{display:flex;flex-direction:column;gap:8px;}
+  .linked-trial-row{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:8px;
+    padding:10px 14px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+    background:var(--panel);
+    font-weight:600;
+    font-size:13px;
+    color:var(--text);
+    cursor:pointer;
+    width:100%;
+    text-align:left;
+  }
+  .linked-trial-row:hover{background:var(--primary-light);border-color:var(--primary);}
 
   .danger-zone{
     margin-top:24px;
