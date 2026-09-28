@@ -237,7 +237,6 @@ export function renderTrialsList(){
         <div class="trial-photo-slot">
           ${photosHtml ? `<div class="proj-ref-images-grid">${photosHtml}</div>` : ''}
           ${isEditing && photos.length < TRIAL_PHOTO_MAX ? `<input type="file" class="trial-product-photo-input" data-product-id="${escapeHtml(productId)}" accept="image/*">` : ''}
-          ${!isEditing && !photos.length ? '<div class="trial-photo-empty">No photo</div>' : ''}
         </div>
       `;
     };
