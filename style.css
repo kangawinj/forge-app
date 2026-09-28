@@ -4709,17 +4709,17 @@
        tbody-not-tfoot fix that stopped the total row from also printing a
        page early). Scoped to this one section only -- not every section. */
     #recipeCards .card:nth-of-type(4){break-before:page;}
-    /* Browsers give no way for a page to set the print dialog's own
-       Scale field, so this reaches the same end result a different way
-       -- shrinking everything to 75% before it ever reaches that dialog,
-       so Scale can stay at its default 100% and the printed output still
-       comes out fitting more per page, matching what typing "75" into
-       Scale by hand used to produce. `zoom` (not `transform:scale`)
-       because it actually reflows the box model at the smaller size
-       instead of just visually shrinking a full-size layout, which is
-       what lets more content fit per page instead of leaving blank
-       space around a shrunk block. */
-    body{background:#fff;zoom:0.75;}
+    /* Used to shrink everything to 75% here via CSS `zoom` so more content
+       would fit per printed page without the user having to type "75"
+       into the print dialog's own Scale field by hand. Removed -- `zoom`
+       (unlike a real layout change) makes Chrome's print/PDF engine fall
+       back to drawing text as vector outlines instead of embedded,
+       selectable text, so every "Save as PDF" output app-wide came out
+       with text that couldn't be selected or copied. Selectable/copyable
+       text matters more than saving a page, so this is back to the
+       browser's own default 100% -- someone who wants it more compact can
+       still type a Scale value into the print dialog themselves. */
+    body{background:#fff;}
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room
