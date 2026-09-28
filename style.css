@@ -4719,16 +4719,25 @@
        100% -- someone who wants it more compact can still type a Scale
        value into the print dialog themselves. */
     body{background:#fff;}
-    /* Tried swapping in a Google Fonts Thai webfont (Noto Sans Thai) here,
-       theorizing Windows' Thai system fonts weren't embeddable in the
-       printed PDF. Reverted -- confirmed with the user this didn't
-       actually fix text selection (still broken, and even non-Thai
-       English-only text in the same PDF had the same problem, which a
-       Thai-specific font-embedding issue wouldn't explain), and adding a
-       line-height on top of it made text selection stop working
-       altogether. Whatever is actually causing this needs testing against
-       a real saved PDF, which isn't possible from this environment -- see
-       the plan/conversation for where this was left off. */
+    /* A first attempt at this fix swapped in a Thai-only webfont (Noto
+       Sans Thai) here, theorizing only Windows' Thai system fonts weren't
+       embeddable. That didn't fix it, and reading an actual saved PDF
+       confirmed why: its text layer was garbled garbage for BOTH Thai AND
+       plain English -- every OS UI font in :root's own font-family stack
+       (Segoe UI, SF Pro Display, Leelawadee UI, Tahoma) is non-embeddable,
+       not just the Thai ones. Noto Sans (Latin) + Noto Sans Thai (loaded
+       in index.html, print use only) are real, freely-embeddable fonts
+       covering both scripts actually used in this app's printed content,
+       so nothing here still falls back to a non-embeddable system font.
+       Set on body (inherited from there, same as :root's own rule
+       normally cascades), not forced with !important onto every element
+       -- Recipe/Trial Code's own deliberate monospace font-family
+       (.rt-code, Consolas/Courier New) needs to keep winning over this.
+       No line-height change this time (a previous attempt at one broke
+       text selection outright) -- isolating this to just the font swap
+       until it's confirmed against a real saved PDF, since nothing here
+       can be verified without one. */
+    body{font-family:"Noto Sans","Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room
