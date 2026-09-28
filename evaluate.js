@@ -37,21 +37,10 @@ const firebaseConfig = {
 const firebaseApp = initializeApp(firebaseConfig);
 const db = getFirestore(firebaseApp);
 
-// Kept in sync manually with JAR_SCALE / TRIAL_TEST_RESULT_OPTIONS /
-// EVAL_WIZARD_RESULT_CLASSES in trials.js -- this page can't import that
-// module directly, same "public page avoids pulling in the whole
+// Kept in sync manually with TRIAL_TEST_RESULT_OPTIONS /
+// EVAL_WIZARD_RESULT_CLASSES in trials-data.js -- this page can't import
+// that module directly, same "public page avoids pulling in the whole
 // authenticated app" reasoning as submit.js not importing projects.js.
-const JAR_SCALE = [
-  { value: '1', label: 'Extremely less than ideal (น้อยเกินไปที่สุด)' },
-  { value: '2', label: 'Much less than ideal (น้อยเกินไปมาก)' },
-  { value: '3', label: 'Moderately less than ideal (น้อยเกินไปปานกลาง)' },
-  { value: '4', label: 'Slightly less than ideal (น้อยเกินไปเล็กน้อย)' },
-  { value: '5', label: 'Just right (พอดี)' },
-  { value: '6', label: 'Slightly more than ideal (มากเกินไปเล็กน้อย)' },
-  { value: '7', label: 'Moderately more than ideal (มากเกินไปปานกลาง)' },
-  { value: '8', label: 'Much more than ideal (มากเกินไปมาก)' },
-  { value: '9', label: 'Extremely more than ideal (มากเกินไปที่สุด)' }
-];
 const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 const EVAL_WIZARD_RESULT_CLASSES = {
   'Accepted': 'eval-wizard-tr-accepted',
@@ -61,25 +50,6 @@ const EVAL_WIZARD_RESULT_CLASSES = {
 
 function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-}
-function jarScoreLabel(value){
-  const found = JAR_SCALE.find(s => s.value === value);
-  return found ? found.label : '';
-}
-function jarScoreDisplay(value){
-  return /^[1-9]$/.test(value || '') ? `${value}/9` : '-';
-}
-// Same "Idea Guideline" math as jarAdjustmentPercent in trials.js -- how
-// far off-ideal a JAR answer is, as a -100%/+100% figure toward the
-// midpoint ("Just right"). Kept in sync manually, same reasoning as every
-// other duplicated constant/helper in this file.
-function jarAdjustmentPercent(value){
-  const n = parseInt(value, 10);
-  if(!(n >= 1 && n <= JAR_SCALE.length)) return null;
-  const midpoint = Math.ceil(JAR_SCALE.length / 2);
-  const maxDeviation = midpoint - 1;
-  if(maxDeviation <= 0) return 0;
-  return Math.round(-((n - midpoint) / maxDeviation) * 100);
 }
 
 const token = new URLSearchParams(location.search).get('token') || '';
@@ -102,9 +72,12 @@ function showBanner(html, kind){
 // every step change untouched).
 let linkData = null;
 let step = 0;
-// Per-product answers, same shape as a real evaluator's own
-// pd.evaluations[someKey] in trials.js: { [criteriaId]: '1'-'9',
-// [criteriaId+'_note']: string, testResult: string }.
+// Per-product answers -- Comment/Improvement Guidelines use the exact
+// same key names as the real app's own shared pd fields (['sensory_'+id],
+// ['improve_'+id], see sensoryFieldValue/improvementFieldValue in
+// trials-data.js) so importing a submission is a plain copy, no key
+// remapping needed; testResult stays its own key, genuinely per-evaluator
+// on import (see importShareResponse in trials-share.js).
 let answers = {};
 // One shared Comments + up to EVAL_COMMENT_PHOTO_MAX reference photos for
 // the whole submission (per request), asked once on the Review page --
@@ -199,38 +172,13 @@ function productSectionHtml(product, criteria){
     <div class="card" style="margin-bottom:16px;" data-product-id="${escapeHtml(product.id)}">
       <div class="eval-wizard-product-name">${escapeHtml(product.label)}</div>
       ${photosHtml(product.photos)}
-      <div class="eval-wizard-jar-legend">
-        ${JAR_SCALE.map(s => `<div class="eval-wizard-jar-legend-item"><b>${s.value}</b><span>${escapeHtml(s.label)}</span></div>`).join('')}
-      </div>
       ${criteria.map(c => `
         <div class="eval-wizard-question">
-          <div class="eval-wizard-question-label">${escapeHtml(c.label)} <span class="eval-wizard-jar-caption" data-jar-caption="${escapeHtml(c.id)}">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</span></div>
-          <div class="eval-wizard-jar-row">
-            ${JAR_SCALE.map(s => `
-              <button type="button" class="eval-wizard-jar-btn${mine[c.id] === s.value ? ' selected' : ''}" data-role="eval-jar" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" title="${escapeHtml(s.label)}">${s.value}</button>
-            `).join('')}
-          </div>
-          <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
-          ${(() => {
-            const pct = jarAdjustmentPercent(mine[c.id]);
-            if(pct === null || pct === 0) return '';
-            const markerPos = 50 + pct / 2;
-            return `
-              <div class="eval-wizard-idea-guideline">
-                <div class="eval-wizard-idea-label">Idea Guideline — toward Just Right (พอดี)</div>
-                <div class="eval-wizard-idea-track">
-                  <div class="eval-wizard-idea-center"></div>
-                  <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
-                </div>
-                <div class="eval-wizard-idea-scale-labels">
-                  <span${pct <= -100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>-100%</span>
-                  <span>Just right</span>
-                  <span${pct >= 100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>+100%</span>
-                  <span class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</span>
-                </div>
-              </div>
-            `;
-          })()}
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>
+          <div class="teval-stack-label">Comment</div>
+          <textarea class="eval-wizard-sensory" data-role="eval-sensory" data-criteria-id="${escapeHtml(c.id)}" placeholder="Comment for ${escapeHtml(c.label)}">${escapeHtml(mine[`sensory_${c.id}`] || '')}</textarea>
+          <div class="teval-stack-label">Improvement Guidelines</div>
+          <textarea class="eval-wizard-improve" data-role="eval-improve" data-criteria-id="${escapeHtml(c.id)}" placeholder="Improvement Guidelines for ${escapeHtml(c.label)}">${escapeHtml(mine[`improve_${c.id}`] || '')}</textarea>
         </div>
       `).join('')}
       <div class="eval-wizard-question">
@@ -279,13 +227,13 @@ function reviewHtml(products, criteria){
           <div class="eval-wizard-review-product">
             <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
             ${criteria.map(c => {
-              const pct = jarAdjustmentPercent(ans[c.id]);
-              const pctBadge = (pct !== null && pct !== 0) ? `<span class="eval-wizard-review-idea-badge">${pct > 0 ? '+' : ''}${pct}%</span>` : '';
+              const comment = ans[`sensory_${c.id}`] || '';
+              const improve = ans[`improve_${c.id}`] || '';
               return `
               <div class="eval-wizard-review-row eval-wizard-review-row-3col">
                 <span>${escapeHtml(c.label)}</span>
-                <b>${jarScoreDisplay(ans[c.id])}${ans[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(ans[c.id]))}</span>` : ''}${pctBadge}</b>
-                <span class="eval-wizard-review-note-col">${escapeHtml(ans[`${c.id}_note`] || '')}</span>
+                <b>${escapeHtml(comment || '-')}</b>
+                <span class="eval-wizard-review-note-col">${escapeHtml(improve)}</span>
               </div>
             `;
             }).join('')}
@@ -352,110 +300,15 @@ function renderWizardStep(){
   wireWizardStep();
 }
 
-// Press-and-drag across the 1-9 row to scrub through scores, like a slider
-// -- per request, holding a finger down and sliding it across the buttons
-// should pick whichever one it's currently over, not require lifting and
-// re-tapping each one. Only ever active for an actual drag: a touch that
-// starts and ends on the same button never marks itself as "moved", so it
-// falls through to the ordinary click handler above untouched (same
-// toggle-off-if-already-selected behavior as a plain tap always had) --
-// this only takes over once the finger has crossed onto a different
-// button. touchmove's own preventDefault (while a button is under the
-// finger) is what stops the browser from treating the drag as a page
-// scroll instead, and per spec that also suppresses the synthetic click
-// event a touch normally fires afterward, so a real drag's own commit
-// below is the only thing that runs for it -- nothing double-fires.
-//
-// Per follow-up: an ordinary page-scroll gesture that merely *passes over*
-// this row (finger travelling mostly vertically, e.g. starting on or near
-// a button while scrolling down the page) was being misread as a
-// horizontal drag -- it hijacked the scroll and silently changed whatever
-// score happened to be under the finger at that instant. Fixed by not
-// deciding what the gesture even IS until it's moved far enough to have a
-// clear direction: the first ~8px of movement are only used to compare
-// |dx| vs |dy| once, which locks the whole touch into either 'drag'
-// (proceeds as before) or 'scroll' (never touched again -- no
-// preventDefault, no value change, the browser scrolls exactly as if this
-// code didn't exist). A tap that never moves that far never resolves
-// either way, so it still falls through to the plain click handler
-// untouched, same as always.
-function wireJarDragSelect(row, mine){
-  const DIRECTION_THRESHOLD = 8;
-  let startX = 0, startY = 0;
-  let mode = null; // null (undecided) | 'drag' | 'scroll'
-  let dragValue = null;
-  let dragMoved = false;
-  function buttonAtPoint(x, y){
-    const el = document.elementFromPoint(x, y);
-    const btn = el && el.closest ? el.closest('[data-role="eval-jar"]') : null;
-    return (btn && row.contains(btn)) ? btn : null;
-  }
-  function preview(btn){
-    row.querySelectorAll('[data-role="eval-jar"]').forEach(b => {
-      b.classList.toggle('selected', b === btn);
-    });
-    const question = row.closest('.eval-wizard-question');
-    const caption = question?.querySelector(`[data-jar-caption="${btn.dataset.criteriaId}"]`);
-    if(caption) caption.textContent = jarScoreLabel(btn.dataset.value);
-  }
-  row.addEventListener('touchstart', e => {
-    const t = e.touches[0];
-    startX = t.clientX;
-    startY = t.clientY;
-    mode = null;
-    dragValue = null;
-    dragMoved = false;
-  }, { passive: true });
-  row.addEventListener('touchmove', e => {
-    const t = e.touches[0];
-    if(mode === null){
-      const dx = t.clientX - startX;
-      const dy = t.clientY - startY;
-      if(Math.abs(dx) < DIRECTION_THRESHOLD && Math.abs(dy) < DIRECTION_THRESHOLD) return;
-      mode = Math.abs(dx) > Math.abs(dy) ? 'drag' : 'scroll';
-    }
-    if(mode === 'scroll') return;
-    const btn = buttonAtPoint(t.clientX, t.clientY);
-    if(btn){
-      e.preventDefault();
-      if(btn.dataset.value !== dragValue){
-        dragValue = btn.dataset.value;
-        dragMoved = true;
-        preview(btn);
-      }
-    }
-  }, { passive: false });
-  row.addEventListener('touchend', () => {
-    if(mode === 'drag' && dragMoved && dragValue){
-      const criteriaId = row.querySelector('[data-role="eval-jar"]').dataset.criteriaId;
-      mine[criteriaId] = dragValue;
-      renderWizardStep();
-    }
-    mode = null;
-    dragValue = null;
-    dragMoved = false;
-  });
-  row.addEventListener('touchcancel', () => { mode = null; dragValue = null; dragMoved = false; });
-}
-
 function wireWizardStep(){
   document.querySelectorAll('#wizardRoot [data-product-id]').forEach(section => {
     const productId = section.dataset.productId;
     const mine = answers[productId] || (answers[productId] = {});
-    section.querySelectorAll('[data-role="eval-jar"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const criteriaId = btn.dataset.criteriaId;
-        mine[criteriaId] = mine[criteriaId] === btn.dataset.value ? '' : btn.dataset.value;
-        // Full re-render (not a DOM patch) -- same as the real Perform
-        // Evaluation wizard's own JAR click handler -- since the Idea
-        // Guideline block below each question only exists/updates by being
-        // recomputed from the answer that just changed.
-        renderWizardStep();
-      });
+    section.querySelectorAll('[data-role="eval-sensory"]').forEach(el => {
+      el.addEventListener('change', () => { mine[`sensory_${el.dataset.criteriaId}`] = el.value.trim(); });
     });
-    section.querySelectorAll('.eval-wizard-jar-row').forEach(row => wireJarDragSelect(row, mine));
-    section.querySelectorAll('[data-role="eval-criteria-note"]').forEach(el => {
-      el.addEventListener('change', () => { mine[`${el.dataset.criteriaId}_note`] = el.value.trim(); });
+    section.querySelectorAll('[data-role="eval-improve"]').forEach(el => {
+      el.addEventListener('change', () => { mine[`improve_${el.dataset.criteriaId}`] = el.value.trim(); });
     });
     section.querySelectorAll('[data-role="eval-testresult"]').forEach(btn => {
       btn.addEventListener('click', () => {

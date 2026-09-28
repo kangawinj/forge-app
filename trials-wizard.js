@@ -1,11 +1,19 @@
 // The "Perform Evaluation" wizard -- a dedicated full-screen overlay
 // (body-appended, independent of the part-block markup) walking one
-// product at a time: a JAR score per Sensory Evaluation criteria, a
-// Comments field, then Test Result as the last field on that product's
-// page, finishing with a Review page listing every product's answers
-// together before Done closes the overlay. Split out of trials.js (which
-// grew past 2,600 lines) -- see trials.js's own top-of-file comment for
-// the overall file split.
+// product at a time: a Comment + Improvement Guidelines per Sensory
+// Evaluation criteria, then Test Result as the last field on that
+// product's page, finishing with a Review page listing every product's
+// answers together before Done closes the overlay. Comment/Improvement
+// Guidelines write straight to the same pd['sensory_'+id]/pd['improve_'+id]
+// fields the list page's own Sensory Evaluation table reads/writes (see
+// sensoryFieldValue/improvementFieldValue, trials-data.js) -- this wizard
+// is just a guided, one-product-at-a-time alternate UI onto that same
+// data, not a separate per-evaluator JAR scoring system any more (that
+// system -- JAR_SCALE/jarScoreLabel/jarScoreDisplay/jarAdjustmentPercent
+// -- was removed per request). Test Result stays its own, genuinely
+// per-evaluator answer (see getMyEvaluation), untouched by that removal.
+// Split out of trials.js (which grew past 2,600 lines) -- see trials.js's
+// own top-of-file comment for the overall file split.
 import {
   icon, escapeHtml, currentUser, resizeImageFile, uid
 } from './app.js';
@@ -13,7 +21,7 @@ import {
   getTrialProductData, getMyEvaluation, getMyEvaluatorComment, getMyEvaluatorPhotos,
   EVAL_COMMENT_PHOTO_MAX, normalizeTrialPhotos, getEvaluationCriteria, trialEvalTargets,
   registerEvaluationParticipant, scheduleTrialSave, wireTrialTranslateButton,
-  JAR_SCALE, jarScoreLabel, jarScoreDisplay, jarAdjustmentPercent,
+  sensoryFieldValue, improvementFieldValue,
   TRIAL_TEST_RESULT_OPTIONS, EVAL_WIZARD_RESULT_CLASSES
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe because `trials` and
@@ -98,48 +106,25 @@ function renderEvalWizardStep(t, products, criteria, step){
       <div class="eval-wizard-product-name">${escapeHtml(p.name || p.label)}</div>
       ${p.code ? `<div class="eval-wizard-product-code">${escapeHtml(p.code)}</div>` : ''}
       ${wizardPhotosHtml ? `<div class="eval-wizard-photos"><div class="proj-ref-images-grid">${wizardPhotosHtml}</div></div>` : ''}
-      <div class="eval-wizard-jar-legend">
-        ${JAR_SCALE.map(s => `<div class="eval-wizard-jar-legend-item"><b>${s.value}</b><span>${escapeHtml(s.label)}</span></div>`).join('')}
-      </div>
-      ${criteria.map(c => `
+      ${criteria.map(c => {
+        const comment = sensoryFieldValue(pd, c.id);
+        const improve = improvementFieldValue(pd, c.id);
+        return `
         <div class="eval-wizard-question">
-          <div class="eval-wizard-question-label">${escapeHtml(c.label)} <span class="eval-wizard-jar-caption">${escapeHtml(mine[c.id] ? jarScoreLabel(mine[c.id]) : 'Not answered yet')}</span></div>
-          <div class="eval-wizard-jar-row">
-            ${JAR_SCALE.map(s => `
-              <button type="button" class="eval-wizard-jar-btn${mine[c.id] === s.value ? ' selected' : ''}" data-role="eval-jar" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" title="${escapeHtml(s.label)}">${s.value}</button>
-            `).join('')}
-          </div>
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>
+          <div class="teval-stack-label">Comment</div>
           <div class="mu-field-with-translate" style="width:auto;">
-            <textarea class="eval-wizard-criteria-note" data-role="eval-criteria-note" data-criteria-id="${escapeHtml(c.id)}" placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(mine[`${c.id}_note`] || '')}</textarea>
+            <textarea class="eval-wizard-sensory" data-role="eval-sensory" data-criteria-id="${escapeHtml(c.id)}" placeholder="Comment for ${escapeHtml(c.label)}">${escapeHtml(comment)}</textarea>
             <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
           </div>
-          ${(() => {
-            const pct = jarAdjustmentPercent(mine[c.id]);
-            if(pct === null || pct === 0) return '';
-            const markerPos = 50 + pct / 2;
-            // The percentage sits ON the -100%/Just right/+100% axis-label
-            // row itself now (absolutely positioned inside it, same line),
-            // rather than on its own line above or below it -- per
-            // follow-up feedback, two separate lines still read as
-            // disconnected even once they stopped visually overlapping.
-            return `
-              <div class="eval-wizard-idea-guideline">
-                <div class="eval-wizard-idea-label">Idea Guideline — toward Just Right (พอดี)</div>
-                <div class="eval-wizard-idea-track">
-                  <div class="eval-wizard-idea-center"></div>
-                  <div class="eval-wizard-idea-marker" style="left:${markerPos}%;"></div>
-                </div>
-                <div class="eval-wizard-idea-scale-labels">
-                  <span${pct <= -100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>-100%</span>
-                  <span>Just right</span>
-                  <span${pct >= 100 ? ' class="eval-wizard-idea-scale-hidden"' : ''}>+100%</span>
-                  <span class="eval-wizard-idea-marker-value" style="left:${markerPos}%;">${pct > 0 ? '+' : ''}${pct}%</span>
-                </div>
-              </div>
-            `;
-          })()}
+          <div class="teval-stack-label">Improvement Guidelines</div>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea class="eval-wizard-improve" data-role="eval-improve" data-criteria-id="${escapeHtml(c.id)}" placeholder="Improvement Guidelines for ${escapeHtml(c.label)}">${escapeHtml(improve)}</textarea>
+            <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+          </div>
         </div>
-      `).join('')}
+      `;
+      }).join('')}
       <div class="eval-wizard-question">
         <div class="eval-wizard-question-label">Test Result</div>
         <div class="eval-wizard-testresult-row">
@@ -169,17 +154,14 @@ function renderEvalWizardReview(t, products, criteria){
         <div class="eval-wizard-review-product">
           <div class="eval-wizard-review-product-name">${escapeHtml(p.label)}</div>
           ${criteria.map(c => {
-            const note = mine[`${c.id}_note`];
-            const pct = jarAdjustmentPercent(mine[c.id]);
-            const pctBadge = (pct !== null && pct !== 0) ? `<span class="eval-wizard-review-idea-badge">${pct > 0 ? '+' : ''}${pct}%</span>` : '';
-            const meaning = mine[c.id] ? `<span class="eval-wizard-review-jar-meaning">${escapeHtml(jarScoreLabel(mine[c.id]))}</span>` : '';
-            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(mine[c.id] ? jarScoreDisplay(mine[c.id]) : '-')}${meaning}${pctBadge}</b><span class="eval-wizard-review-note-col">${escapeHtml(note || '')}</span></div>`;
+            const comment = sensoryFieldValue(pd, c.id);
+            const improve = improvementFieldValue(pd, c.id);
+            return `<div class="eval-wizard-review-row eval-wizard-review-row-3col"><span>${escapeHtml(c.label)}</span><b>${escapeHtml(comment || '-')}</b><span class="eval-wizard-review-note-col">${improve ? escapeHtml(improve) : ''}</span></div>`;
           }).join('')}
           <div class="eval-wizard-review-row"><span>Test Result</span><b class="${EVAL_WIZARD_RESULT_CLASSES[mine.testResult] || ''}">${escapeHtml(mine.testResult || '-')}</b></div>
         </div>
         `;
       }).join('')}
-      <div class="eval-wizard-review-disclaimer">Note: This Idea Guideline reflects only your own scores — the final improvement direction may change based on the overall average and other evaluators' opinions (คำแนะนำนี้อ้างอิงจากคะแนนของคุณเท่านั้น ผลสุดท้ายอาจเปลี่ยนแปลงตามค่าเฉลี่ยโดยรวมและความเห็นจากผู้เข้าร่วมทดสอบคนอื่นๆ)</div>
       <div class="eval-wizard-question" style="margin-top:14px;margin-bottom:0;">
         <div class="eval-wizard-question-label">Comments</div>
         <textarea class="eval-wizard-comment" data-role="eval-overall-comment" placeholder="Anything else worth noting — covers every sample above, not just one">${escapeHtml(getMyEvaluatorComment(t))}</textarea>
@@ -207,31 +189,26 @@ function wireEvaluationWizard(overlay, t, products){
     evalWizard = null;
     renderEvaluationWizard();
   });
-  overlay.querySelectorAll('[data-role="eval-jar"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const p = products[evalWizard.step];
-      const pd = getTrialProductData(t, p.id);
-      const mine = getMyEvaluation(pd);
-      const criteriaId = btn.dataset.criteriaId;
-      const value = btn.dataset.value;
-      mine[criteriaId] = mine[criteriaId] === value ? '' : value;
-      registerEvaluationParticipant(t);
-      scheduleTrialSave(t);
-      renderTrialsList();
-      renderEvaluationWizard();
-    });
-  });
-  overlay.querySelectorAll('.eval-wizard-criteria-note').forEach(el => {
+  overlay.querySelectorAll('.eval-wizard-sensory').forEach(el => {
     el.addEventListener('change', () => {
       const p = products[evalWizard.step];
       const pd = getTrialProductData(t, p.id);
-      const mine = getMyEvaluation(pd);
-      mine[`${el.dataset.criteriaId}_note`] = el.value.trim();
+      pd['sensory_' + el.dataset.criteriaId] = el.value.trim();
+      registerEvaluationParticipant(t);
       scheduleTrialSave(t);
-      // The Overall table's Note column reads straight from this (see
-      // fixedCriteriaRowsHtml) -- refresh it now instead of waiting for
-      // some other action to happen to trigger a render, same as every
-      // JAR/Test Result answer already does.
+      // The list page's own Sensory Evaluation table reads this same
+      // field directly -- refresh it now instead of waiting for some
+      // other action to happen to trigger a render.
+      renderTrialsList();
+    });
+  });
+  overlay.querySelectorAll('.eval-wizard-improve').forEach(el => {
+    el.addEventListener('change', () => {
+      const p = products[evalWizard.step];
+      const pd = getTrialProductData(t, p.id);
+      pd['improve_' + el.dataset.criteriaId] = el.value.trim();
+      registerEvaluationParticipant(t);
+      scheduleTrialSave(t);
       renderTrialsList();
     });
   });
@@ -241,8 +218,8 @@ function wireEvaluationWizard(overlay, t, products){
     if(currentUser?.email) t.evaluatorComments[currentUser.email] = e.target.value.trim();
     scheduleTrialSave(t);
     // The Overall table's Comments section reads straight from this (see
-    // evaluatorCommentsHtml) -- refresh it now, same as the criteria Note
-    // field and every JAR/Test Result answer already do.
+    // evaluatorCommentsHtml) -- refresh it now, same as every
+    // Comment/Improvement Guidelines/Test Result answer already do.
     renderTrialsList();
   });
   overlay.querySelector('.eval-review-photo-input')?.addEventListener('change', async e => {
@@ -292,9 +269,9 @@ function wireEvaluationWizard(overlay, t, products){
   // where its first question is, instead of wherever the previous page
   // happened to be scrolled to (typically the bottom, right where the
   // button just clicked was). Every other renderEvaluationWizard() call in
-  // this file is a same-page update (a JAR answer, a note) and must NOT
-  // reset scroll, or answering a question mid-scroll would keep yanking
-  // the page back to the top.
+  // this file is a same-page update and must NOT reset scroll, or
+  // answering a question mid-scroll would keep yanking the page back to
+  // the top.
   overlay.querySelector('[data-role="eval-back"]')?.addEventListener('click', () => {
     evalWizard.step = Math.max(0, evalWizard.step - 1);
     renderEvaluationWizard();

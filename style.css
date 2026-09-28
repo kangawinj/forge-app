@@ -3987,10 +3987,6 @@
      outside the <table> now that there's no product column to key by. */
   .teval-overall-comments{margin-top:10px;padding-top:10px;border-top:1px solid var(--border);}
   .teval-overall-comments-title{font-size:12px;font-weight:700;color:var(--primary-dark);text-transform:uppercase;letter-spacing:.03em;margin-bottom:6px;}
-  /* The bare "3/5" doesn't say what 3 actually means -- show the JAR
-     scale's own wording (already bilingual, see JAR_SCALE) right next to
-     it instead of only on hover via the div's own title tooltip. */
-  .teval-jar-meaning{font-size:11px;font-weight:400;color:var(--text-dim);}
   .teval-overall-entry:not(:last-child){margin-bottom:4px;padding-bottom:4px;border-bottom:1px dashed var(--border);}
   .teval-overall-entry b{font-weight:600;color:var(--text-dim);}
 
@@ -5339,67 +5335,8 @@
      Part 1 has no photo yet. */
   .eval-wizard-photos{margin-bottom:16px;}
   .eval-wizard-photos .proj-ref-images-grid{margin-bottom:0;}
-  /* One legend for the whole page rather than repeating it per criteria --
-     the 1-5 wording is the same generic scale for every row (see
-     JAR_SCALE), so a single reference up top is enough context to answer
-     every question below it. */
-  .eval-wizard-jar-legend{
-    display:flex;
-    flex-wrap:wrap;
-    gap:4px 16px;
-    background:var(--bg);
-    border:1px solid var(--border);
-    border-radius:10px;
-    padding:10px 14px;
-    margin-bottom:22px;
-  }
-  .eval-wizard-jar-legend-item{display:flex;align-items:baseline;gap:6px;font-size:12px;color:var(--text-dim);}
-  .eval-wizard-jar-legend-item b{color:var(--primary-dark);}
   .eval-wizard-question{margin-bottom:22px;}
   .eval-wizard-question-label{font-size:13px;font-weight:600;color:var(--text);margin-bottom:10px;}
-  /* Widened from a 5- to a 9-point JAR scale (see JAR_SCALE in trials.js)
-     -- gap/font-size trimmed slightly from the original 5-button sizing so
-     9 buttons in a row still read comfortably instead of feeling cramped. */
-  /* touch-action:pan-y -- lets a vertical drag starting on this row still
-     scroll the page normally, while leaving horizontal drags (press-and-
-     slide across the 1-9 buttons, see wireJarDragSelect in evaluate.js)
-     free for that JS to handle itself instead of the browser trying to
-     pan/zoom on them. */
-  .eval-wizard-jar-row{display:flex;gap:6px;touch-action:pan-y;}
-  .eval-wizard-jar-btn{
-    flex:1;
-    height:44px;
-    border-radius:10px;
-    border:1px solid var(--border);
-    background:#fff;
-    color:var(--text);
-    font-size:13px;
-    font-weight:600;
-    cursor:pointer;
-    padding:0;
-    transition:background .15s ease, border-color .15s ease;
-  }
-  /* (hover: hover) -- a touch release near/on a button makes mobile
-     WebKit/Blink apply :hover to it and leave it "stuck" that way until
-     something else is tapped, which read as a stray light-colored band
-     left behind right where a press-and-drag score selection (see
-     wireJarDragSelect in evaluate.js) had just been. Real pointer devices
-     (mouse/trackpad) still get the hover feedback; a touchscreen, which
-     has no real "hover" gesture to genuinely trigger this from, never
-     does. */
-  @media (hover: hover){
-    .eval-wizard-jar-btn:hover{background:var(--primary-light);border-color:var(--primary);}
-  }
-  .eval-wizard-jar-btn.selected{
-    background:var(--primary);
-    border-color:var(--primary);
-    color:#fff;
-  }
-  /* Now sits inline right after the question title (see
-     renderEvalWizardStep) instead of below the JAR buttons -- the
-     answer's meaning is visible right where you're reading the question,
-     not below the row you already clicked. */
-  .eval-wizard-jar-caption{font-size:12px;font-weight:400;color:var(--text-dim);}
   .eval-wizard-comment{
     width:100%;
     min-height:70px;
@@ -5413,86 +5350,26 @@
   }
   .eval-wizard-comment::placeholder{color:var(--text-dim);}
   .eval-wizard-comment:focus{border-color:var(--primary);}
-  /* One optional Note per criteria question, separate from the single
-     overall Comments field below all the criteria -- smaller/single-line
-     height by default since most won't need more than a short remark. */
-  .eval-wizard-criteria-note{
+  /* Comment/Improvement Guidelines per criteria -- same fields the real
+     app's own Sensory Evaluation table reads/writes (see
+     sensoryFieldValue/improvementFieldValue, trials-data.js), just this
+     wizard's own guided one-product-at-a-time UI onto them. Replaced the
+     JAR score row + Idea Guideline widget that used to live here. */
+  .eval-wizard-sensory, .eval-wizard-improve{
     width:100%;
-    min-height:36px;
+    min-height:60px;
     background:#fff;
     border:1px solid var(--border);
     border-radius:8px;
     color:var(--text);
-    padding:6px 10px;
-    font-size:12px;
+    padding:8px 10px;
+    font-size:13px;
     font-family:inherit;
-    margin-top:8px;
     resize:vertical;
   }
-  .eval-wizard-criteria-note::placeholder{color:var(--text-dim);}
-  .eval-wizard-criteria-note:focus{border-color:var(--primary);}
-  /* "Idea Guideline" -- a -100%/+100% line with a dot marking how far off
-     Just Right this criteria's own JAR answer is (see jarAdjustmentPercent
-     in trials.js). Only rendered once there's an actual answer AND it's
-     off the midpoint -- nothing to adjust toward once it reads 0%. */
-  .eval-wizard-idea-guideline{margin-top:12px;}
-  .eval-wizard-idea-label{font-size:11px;color:var(--text-dim);margin-bottom:8px;}
-  .eval-wizard-idea-track{
-    position:relative;
-    height:4px;
-    border-radius:2px;
-    background:var(--border);
-    margin:0 10px;
-  }
-  .eval-wizard-idea-center{
-    position:absolute;
-    left:50%;
-    top:50%;
-    width:2px;
-    height:12px;
-    background:var(--text-dim);
-    transform:translate(-50%,-50%);
-  }
-  .eval-wizard-idea-marker{
-    position:absolute;
-    top:50%;
-    width:16px;
-    height:16px;
-    border-radius:50%;
-    background:var(--accent);
-    border:2px solid #fff;
-    box-shadow:0 1px 4px rgba(0,0,0,.25);
-    transform:translate(-50%,-50%);
-  }
-  /* The -100%/Just right/+100% axis labels and the live "+50%" reading
-     now share this one row/line -- the reading is absolutely positioned
-     at its own left:X% (position:relative on this container makes that
-     coordinate space match the track's above it exactly), overlaid on
-     top of the fixed axis labels instead of getting its own separate
-     line, per follow-up feedback that two lines still read as
-     disconnected even once they stopped overlapping outright. */
-  .eval-wizard-idea-scale-labels{
-    position:relative;
-    display:flex;
-    justify-content:space-between;
-    font-size:10px;
-    color:var(--text-dim);
-    margin:6px 10px 0;
-  }
-  .eval-wizard-idea-marker-value{
-    position:absolute;
-    top:0;
-    transform:translateX(-50%);
-    font-size:11px;
-    font-weight:700;
-    color:var(--accent);
-    white-space:nowrap;
-  }
-  /* At the extreme ends (score of 1 or 9, ±100%) the live reading lands
-     exactly on top of the fixed "-100%"/"+100%" axis label -- visibility
-     (not display:none) so the flex row's own space-between spacing/width
-     doesn't shift and "Just right" stays centered either way. */
-  .eval-wizard-idea-scale-hidden{visibility:hidden;}
+  .eval-wizard-sensory::placeholder, .eval-wizard-improve::placeholder{color:var(--text-dim);}
+  .eval-wizard-sensory:focus, .eval-wizard-improve:focus{border-color:var(--primary);}
+  .eval-wizard-improve{margin-bottom:8px;}
   .eval-wizard-testresult-row{display:flex;gap:8px;flex-wrap:wrap;}
   .eval-wizard-testresult-btn{
     flex:1;
@@ -5553,11 +5430,6 @@
      bulleted list and the table's compact one. */
   .trial-summary-item-note{font-style:italic;color:var(--text-dim);}
   .trial-summary-ok{font-size:13px;color:var(--ok);margin-top:10px;}
-  /* Criteria already at the midpoint -- plain list, no bold/action wording
-     since there's nothing to act on, just dimmer than the improvements
-     list so it reads as the secondary, "already fine" half of the page. */
-  .trial-summary-justright-list{margin:0;padding-left:18px;font-size:13px;color:var(--ok);}
-  .trial-summary-justright-list li{margin-bottom:4px;}
   /* Test-level Note (t.note, same field as Part 2's own "Note" textarea)
      -- shown once for the whole test below every product card, not
      repeated per product, since it isn't scoped to any one of them. */
@@ -5620,7 +5492,6 @@
   .trial-table-summary-line-title{font-size:11px;font-weight:700;color:var(--primary-dark);margin-top:4px;}
   .trial-table-summary-list{margin:2px 0 0;padding-left:16px;font-size:12px;color:var(--text);}
   .trial-table-summary-list li{margin-bottom:2px;}
-  .trial-table-summary-list.trial-table-summary-ok{color:var(--ok);}
   /* Its own column now (see renderTrialsSummaryTable) rather than a label
      line inside the Summary Test cell -- distinguishes which test's own
      results follow, since the Project/PD columns are no longer repeated on
@@ -5692,50 +5563,7 @@
      meaning/% text should start at the same left edge. */
   .eval-wizard-review-row-3col b{text-align:left;}
   .eval-wizard-review-note-col{text-align:left;font-style:italic;color:var(--text-dim);white-space:normal;word-break:break-word;}
-  /* The JAR score's own meaning (jarScoreLabel), same idea as the wizard
-     step's own .eval-wizard-jar-caption / Sensory Evaluation's
-     .teval-jar-meaning -- font-weight:400 here deliberately overrides the
-     bold inherited from the parent <b> (score + meaning + % badge all
-     share that one cell), so only the bare score itself reads as bold. */
-  .eval-wizard-review-jar-meaning{
-    font-weight:400;
-    font-size:11px;
-    color:var(--text-dim);
-    margin-left:4px;
-  }
-  /* Idea Guideline summary next to the JAR score (see jarAdjustmentPercent
-     in trials.js) -- same figure as each step's own Idea Guideline line,
-     just compacted into a small pill here since the review page is a
-     dense summary table, not the interactive step. */
-  .eval-wizard-review-idea-badge{
-    display:inline-block;
-    margin-left:6px;
-    padding:1px 6px;
-    border-radius:999px;
-    background:var(--accent-light);
-    color:var(--accent);
-    font-size:10px;
-    font-weight:700;
-  }
-  .eval-wizard-review-disclaimer{
-    font-size:11px;
-    color:var(--text-dim);
-    font-style:italic;
-    margin:4px 2px 14px;
-  }
   @media (max-width:600px){
-    /* Per follow-up feedback, a 3x3 grid read as "3 boxes, 3 lines" --
-       all 9 still belong on one row, same as desktop, just narrower per
-       button. .eval-wizard-jar-row's own base rule (display:flex, no
-       wrap) already does exactly that once nothing here forces a wrap or
-       a minimum width wider than a single digit needs -- gap/font-size
-       trimmed a little so 9 buttons in one row still read comfortably
-       around ~36px each on a ~360px-wide card. Matters most on the guest-
-       facing evaluate.html (opened on a phone via the Share External
-       Evaluation QR code), but applies to the real Perform Evaluation
-       wizard too since they share this exact markup/class. */
-    .eval-wizard-jar-row{gap:4px;}
-    .eval-wizard-jar-btn{min-width:0;height:40px;font-size:12px;}
     /* Same reasoning, 3 items instead of 9 -- Accepted/Not accepted wrap
        onto one line with Needs Revision stretched alone below it, an
        inconsistent-looking pair. One full-width button per row instead. */
@@ -5749,12 +5577,12 @@
        12-13px) and "Your Name" (14px, the app-wide input default). 16px
        is the one threshold that stops it from triggering at all. Scoped
        to evaluate.html's own fields specifically (#fGuestName, plus
-       .eval-wizard-comment/.eval-wizard-criteria-note which the real
-       Perform Evaluation wizard shares and benefits from the same fix on
-       a phone) rather than every input/textarea app-wide, since the rest
-       of the app's narrow-table layouts at this width haven't been
-       audited for a jump from their own tuned font-sizes to 16px. The
-       field's visual box size (padding/min-height) is untouched, only
-       the text/placeholder size. */
-    #fGuestName, .eval-wizard-comment, .eval-wizard-criteria-note{font-size:16px;}
+       .eval-wizard-comment/.eval-wizard-sensory/.eval-wizard-improve
+       which the real Perform Evaluation wizard shares and benefits from
+       the same fix on a phone) rather than every input/textarea
+       app-wide, since the rest of the app's narrow-table layouts at this
+       width haven't been audited for a jump from their own tuned
+       font-sizes to 16px. The field's visual box size (padding/
+       min-height) is untouched, only the text/placeholder size. */
+    #fGuestName, .eval-wizard-comment, .eval-wizard-sensory, .eval-wizard-improve{font-size:16px;}
   }

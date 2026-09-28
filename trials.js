@@ -437,12 +437,11 @@ export function renderTrialsList(){
             </div>`
           : `<b>${escapeHtml(c.label)}</b>`}</td>
       `;
-      // Comment was the combined view of every evaluator's own JAR answer
-      // from the "Perform Evaluation" wizard (see combinedEvaluationEntries;
-      // the wizard/JAR scoring itself is untouched, still what feeds Test
-      // Result/Summary Test elsewhere) -- now a plain manually-typed field.
-      // Per request, this per-product content now actually prints (it's
-      // the real data now, not a duplicate of Note) -- same print-only
+      // Comment -- a plain manually-typed field, also editable via the
+      // "Perform Evaluation" wizard's own guided per-product page (see
+      // sensoryFieldValue, trials-data.js; the old per-evaluator JAR
+      // scoring system this replaced is gone entirely, see trials-data.js's
+      // own top-of-file-area comment). Prints in full -- same print-only
       // plain-text mirror as Note already uses, needed for the same
       // textarea-vs-div print font-size inconsistency reason.
       const commentCellsHtml = evalTargets.map((p, i) => {

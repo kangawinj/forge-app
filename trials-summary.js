@@ -61,7 +61,7 @@ function renderTrialSummaryModal(){
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products marked "Continue Development" yet — mark one in Improvement Guidelines to see it here</div>' : evalTargets.map(p => {
-        const { label, verdict, improvements, justRight } = summarizeTrialProduct(t, criteria, p);
+        const { label, verdict, improvements } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
             <div class="trial-summary-product-head">
@@ -73,11 +73,7 @@ function renderTrialSummaryModal(){
             ${improvements.length ? `
               <div class="trial-summary-improve-title">Suggested Improvements</div>
               <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
-            ` : (verdict ? '<div class="trial-summary-ok">✓ All criteria are Just Right — no changes suggested</div>' : '')}
-            ${justRight.length ? `
-              <div class="trial-summary-improve-title">Just Right (พอดี)</div>
-              <ul class="trial-summary-justright-list">${justRight.map(c => `<li>${escapeHtml(c.label)}${c.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(c.note)}</span>` : ''}</li>`).join('')}</ul>
-            ` : ''}
+            ` : (verdict ? '<div class="trial-summary-ok">✓ No Improvement Guidelines suggested</div>' : '')}
           </div>
         `;
       }).join('')}
@@ -180,14 +176,6 @@ function buildTrialsSummarySheet(wb, groups){
               runs.push({ text: '\n' });
             });
           }
-          if(pr.justRight.length){
-            runs.push({ text: 'Just Right:\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.primaryDark } } });
-            pr.justRight.forEach(c => {
-              runs.push({ text: `• ${c.label}`, font: { size: 11, color: { argb: XL_COLORS.ok } } });
-              if(c.note) runs.push({ text: `  — ${c.note}`, font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
-              runs.push({ text: '\n' });
-            });
-          }
         });
       }
 
@@ -272,10 +260,6 @@ export function renderTrialsSummaryTable(container, sortedTrials){
                       ${pr.improvements.length ? `
                         <div class="trial-table-summary-line-title">Improve:</div>
                         <ul class="trial-table-summary-list">${pr.improvements.map(x => `<li>${escapeHtml(x.suggestion)}${x.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
-                      ` : ''}
-                      ${pr.justRight.length ? `
-                        <div class="trial-table-summary-line-title">Just Right:</div>
-                        <ul class="trial-table-summary-list trial-table-summary-ok">${pr.justRight.map(c => `<li>${escapeHtml(c.label)}${c.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(c.note)}</span>` : ''}</li>`).join('')}</ul>
                       ` : ''}
                     </div>
                   `).join('')}

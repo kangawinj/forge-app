@@ -15,7 +15,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   trialLabel, getEvaluationCriteria, trialEvalTargets, getTrialProductData,
-  normalizeTrialPhotos, scheduleTrialSave, JAR_SCALE, jarScoreLabel,
+  normalizeTrialPhotos, scheduleTrialSave, sensoryFieldValue, improvementFieldValue,
   EVAL_WIZARD_RESULT_CLASSES, TRIAL_TEST_RESULT_OPTIONS, EVAL_COMMENT_PHOTO_MAX
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, see trials-wizard.js's
@@ -126,23 +126,32 @@ async function loadShareResponses(trialId){
     showCloudError('Failed to load guest responses from Firebase: ' + err.message);
   }
 }
-// Folds one guest response into the trial's own data the exact same shape
-// a real evaluator's answers take (pd.evaluations[someKey]) -- so every
-// existing reader (combinedEvaluationEntries, criteriaAverageJarScore,
-// combinedVerdict, the Summary Test/Table) picks it up automatically with
-// no changes of its own, the same way it already handles any number of
-// real evaluators. Keyed "guest:<name>:<responseId>" rather than an email
-// so it reads clearly as an outside opinion wherever evaluator names show
-// up. Marks the response imported (both locally and in Firestore) so
-// re-opening this panel doesn't offer to import the same answers twice.
+// Folds one guest response into the trial's own data. Comment/Improvement
+// Guidelines (resp.answers[productId]['sensory_'+id]/['improve_'+id]) are
+// shared fields now, not per-evaluator (see sensoryFieldValue/
+// improvementFieldValue, trials-data.js) -- copied straight onto pd, same
+// as the real Perform Evaluation wizard's own change handlers do, so
+// importing simply overwrites whatever was there (matching Import being a
+// deliberate, occasional action, not a live merge). Test Result stays a
+// genuinely per-evaluator answer, so it's still filed under
+// pd.evaluations[guestKey] the same shape a real evaluator's answer takes
+// -- combinedEvaluationEntries/combinedVerdict pick it up automatically,
+// same as any number of real evaluators. Keyed "guest:<name>:<responseId>"
+// rather than an email so it reads clearly as an outside opinion wherever
+// evaluator names show up. Marks the response imported (both locally and
+// in Firestore) so re-opening this panel doesn't offer to import the same
+// answers twice.
 async function importShareResponse(t, resp){
   const guestKey = `guest:${resp.guestName || 'Guest'}:${resp.id}`;
   Object.entries(resp.answers || {}).forEach(([productId, answers]) => {
     const target = trialEvalTargets(t).find(p => p.id === productId);
     if(!target) return;
     const pd = getTrialProductData(t, productId);
+    Object.keys(answers).forEach(key => {
+      if((key.startsWith('sensory_') || key.startsWith('improve_')) && answers[key]) pd[key] = answers[key];
+    });
     if(!pd.evaluations || typeof pd.evaluations !== 'object') pd.evaluations = {};
-    pd.evaluations[guestKey] = answers;
+    pd.evaluations[guestKey] = { testResult: answers.testResult || '' };
   });
   // Comments + reference photo are the guest's own overall remark about
   // the whole test (see evaluate.js's Review page), same one-per-
@@ -169,19 +178,24 @@ async function importShareResponse(t, resp){
   loadSharePendingCounts();
   renderTrialsList();
 }
-// Undoes an Import -- the exact reverse of importShareResponse above,
-// deleting the same guestKey entries it wrote (per-product
-// pd.evaluations, plus the trial-level evaluatorComments/evaluatorPhotos)
-// so this response's scores/comment/photo stop counting toward the test's
-// real results. The response itself and everything it holds is untouched
-// (imported flips back to false in Firestore, so it reappears as pending
-// -- offering Import again or Dismiss instead). Gated behind the same
+// Undoes an Import -- the exact reverse of importShareResponse above, for
+// the per-product data it wrote (Comment/Improvement Guidelines blanked
+// back out, since those are shared fields now with no separate per-guest
+// copy to simply delete; pd.evaluations[guestKey] deleted for Test
+// Result), plus the trial-level evaluatorComments/evaluatorPhotos, so
+// this response's answers stop counting toward the test's real results.
+// The response itself and everything it holds is untouched (imported
+// flips back to false in Firestore, so it reappears as pending --
+// offering Import again or Dismiss instead). Gated behind the same
 // password re-entry as Undismiss, since this removes data that may
 // already be reflected in Improvement Guidelines/Summary elsewhere.
 async function removeImportedResponse(t, resp){
   const guestKey = `guest:${resp.guestName || 'Guest'}:${resp.id}`;
-  Object.keys(resp.answers || {}).forEach(productId => {
+  Object.entries(resp.answers || {}).forEach(([productId, answers]) => {
     const pd = getTrialProductData(t, productId);
+    Object.keys(answers).forEach(key => {
+      if(key.startsWith('sensory_') || key.startsWith('improve_')) pd[key] = '';
+    });
     if(pd.evaluations && typeof pd.evaluations === 'object') delete pd.evaluations[guestKey];
   });
   if(t.evaluatorComments && typeof t.evaluatorComments === 'object') delete t.evaluatorComments[guestKey];
@@ -409,13 +423,14 @@ function renderTrialShareModal(){
 }
 export { renderTrialShareModal };
 
-// Read-only by default, an Edit button switches every JAR/note/Comments/
-// Test Result field to the exact same interactive markup the real Perform
-// Evaluation wizard uses (see renderEvalWizardStep) -- Save writes the
-// edited answers back onto this one evaluationResponses doc, so a typo or
-// a stray tap a guest made on their phone can be fixed before Import folds
-// it into the test's real Sensory Evaluation. Edits the response in place;
-// doesn't touch pd.evaluations at all until Import is actually clicked.
+// Read-only by default, an Edit button switches every Comment/Improvement
+// Guidelines/Comments/Test Result field to the exact same interactive
+// markup the real Perform Evaluation wizard uses (see renderEvalWizardStep)
+// -- Save writes the edited answers back onto this one evaluationResponses
+// doc, so a typo or a stray tap a guest made on their phone can be fixed
+// before Import folds it into the test's real Sensory Evaluation. Edits
+// the response in place; doesn't touch pd/pd.evaluations at all until
+// Import is actually clicked.
 let trialSharePreviewId = null;
 let trialSharePreviewEditing = false;
 function renderShareResponsePreviewModal(){
@@ -447,11 +462,11 @@ function renderShareResponsePreviewModal(){
       <div class="eval-wizard-product-name">${escapeHtml(label)}</div>
       ${criteria.map(c => `
         <div class="eval-wizard-question">
-          <div class="eval-wizard-question-label">${escapeHtml(c.label)} <span class="eval-wizard-jar-caption">${ans[c.id] ? escapeHtml(jarScoreLabel(ans[c.id])) : 'Not answered'}</span></div>
-          <div class="eval-wizard-jar-row">
-            ${JAR_SCALE.map(s => `<button type="button" class="eval-wizard-jar-btn${ans[c.id] === s.value ? ' selected' : ''}" data-role="preview-jar" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" data-value="${s.value}" ${isEditing ? '' : 'disabled'}>${s.value}</button>`).join('')}
-          </div>
-          <textarea class="eval-wizard-criteria-note" data-role="preview-note" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="Note for ${escapeHtml(c.label)} (optional)">${escapeHtml(ans[`${c.id}_note`] || '')}</textarea>
+          <div class="eval-wizard-question-label">${escapeHtml(c.label)}</div>
+          <div class="teval-stack-label">Comment</div>
+          <textarea class="eval-wizard-sensory" data-role="preview-sensory" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="Comment for ${escapeHtml(c.label)}">${escapeHtml(ans[`sensory_${c.id}`] || '')}</textarea>
+          <div class="teval-stack-label">Improvement Guidelines</div>
+          <textarea class="eval-wizard-improve" data-role="preview-improve" data-product-id="${escapeHtml(productId)}" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="Improvement Guidelines for ${escapeHtml(c.label)}">${escapeHtml(ans[`improve_${c.id}`] || '')}</textarea>
         </div>
       `).join('')}
       <div class="eval-wizard-question">
@@ -514,16 +529,14 @@ function renderShareResponsePreviewModal(){
     trialSharePreviewEditing = true;
     renderShareResponsePreviewModal();
   });
-  overlay.querySelectorAll('[data-role="preview-jar"]').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const ans = resp.answers[btn.dataset.productId];
-      ans[btn.dataset.criteriaId] = ans[btn.dataset.criteriaId] === btn.dataset.value ? '' : btn.dataset.value;
-      renderShareResponsePreviewModal();
+  overlay.querySelectorAll('[data-role="preview-sensory"]').forEach(el => {
+    el.addEventListener('change', () => {
+      resp.answers[el.dataset.productId][`sensory_${el.dataset.criteriaId}`] = el.value.trim();
     });
   });
-  overlay.querySelectorAll('[data-role="preview-note"]').forEach(el => {
+  overlay.querySelectorAll('[data-role="preview-improve"]').forEach(el => {
     el.addEventListener('change', () => {
-      resp.answers[el.dataset.productId][`${el.dataset.criteriaId}_note`] = el.value.trim();
+      resp.answers[el.dataset.productId][`improve_${el.dataset.criteriaId}`] = el.value.trim();
     });
   });
   overlay.querySelector('[data-role="preview-overall-comment"]')?.addEventListener('change', e => {

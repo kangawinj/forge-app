@@ -205,42 +205,10 @@ export function improvementFieldValue(pd, criteriaId){
   const legacyKey = LEGACY_IMPROVEMENT_KEYS[criteriaId];
   return (legacyKey ? pd[legacyKey] : '') || '';
 }
-// The "Automatic suggestion" column's actual auto part -- averages this
-// criteria's own JAR score(s) from Sensory Evaluation above (same
-// combinedEvaluationEntries the JAR table itself reads, so it's always
-// exactly what's shown there, across however many evaluators scored it),
-// rounds to the nearest JAR step, and says just the direction to adjust in
-// -- Increase/Decrease + the criteria name, no restating of the JAR
-// wording itself (already shown right above in Sensory Evaluation, so
-// repeating it here read as redundant/confusing rather than helpful, per
-// user feedback). The midpoint ("Just right") or no numeric score yet
-// needs no suggestion -- returns ''. Reads JAR_SCALE's own length/midpoint
-// rather than a hardcoded 3/5 so this keeps working if the scale is ever
-// resized again. Only ever a smart DEFAULT shown when nobody's typed
-// their own note yet (see improvementRowsHtml below); never overwrites a
-// saved one, and only actually persists if a person edits the field (its
-// change handler is what writes pd[improve_...], this function itself
-// never touches saved data).
-// Shared by autoImprovementSuggestion below and the Summary Test modal
-// (which needs to tell "no suggestion because it's already Just Right"
-// apart from "no suggestion because nobody's scored it yet").
-export function criteriaAverageJarScore(c, pd){
-  const entries = combinedEvaluationEntries(pd, c.id, null);
-  const nums = entries.map(e => parseInt(e.value, 10)).filter(n => n >= 1 && n <= JAR_SCALE.length);
-  if(!nums.length) return null;
-  return Math.round(nums.reduce((s,n)=>s+n,0) / nums.length);
-}
-export function autoImprovementSuggestion(c, pd){
-  const midpoint = Math.ceil(JAR_SCALE.length / 2);
-  const avg = criteriaAverageJarScore(c, pd);
-  if(avg === null || avg === midpoint) return '';
-  const action = avg < midpoint ? 'Increase' : 'Decrease';
-  const actionTh = avg < midpoint ? 'เพิ่ม' : 'ลด';
-  // Same -100%/+100% figure as the wizard's own Idea Guideline
-  // (jarAdjustmentPercent), computed from this same averaged/rounded
-  // score so the two always agree.
-  const pct = jarAdjustmentPercent(String(avg));
-  return `${action} (${actionTh}) ${c.label} ${pct > 0 ? '+' : ''}${pct}%`;
+// Same idea as improvementFieldValue above, for the Comment field --
+// no legacy key to bridge (this field never existed under another name).
+export function sensoryFieldValue(pd, criteriaId){
+  return pd['sensory_' + criteriaId] || '';
 }
 export const TRIAL_TEST_RESULT_OPTIONS = ['Accepted', 'Not accepted', 'Needs Revision'];
 export const TRIAL_TEST_RESULT_CLASSES = {
@@ -256,55 +224,6 @@ export const EVAL_WIZARD_RESULT_CLASSES = {
   'Needs Revision': 'eval-wizard-tr-needs-revision',
   'Not accepted': 'eval-wizard-tr-not-accepted'
 };
-// The "Perform Evaluation" wizard scores each criteria on a 1-9
-// Just-About-Right (JAR) scale -- same generic wording for every
-// criteria (per request) rather than custom per-criteria phrasing, so
-// it works automatically for any criteria, including ones added later
-// via "+ Add Criteria", with no extra setup needed per row. Widened from
-// 1-5 to 1-9 per request -- 5 stays the midpoint ("Just right"), so an
-// existing saved "3" (the old midpoint) no longer reads as Just Right;
-// every other old 1/2/4/5 answer likewise now lands on a different,
-// finer-grained step than it meant under the old 5-point scale. This is
-// an inherent tradeoff of widening the scale's resolution, not a bug --
-// nothing rewrites old answers, they just now read against new anchors.
-export const JAR_SCALE = [
-  { value: '1', label: 'Extremely less than ideal (น้อยเกินไปที่สุด)' },
-  { value: '2', label: 'Much less than ideal (น้อยเกินไปมาก)' },
-  { value: '3', label: 'Moderately less than ideal (น้อยเกินไปปานกลาง)' },
-  { value: '4', label: 'Slightly less than ideal (น้อยเกินไปเล็กน้อย)' },
-  { value: '5', label: 'Just right (พอดี)' },
-  { value: '6', label: 'Slightly more than ideal (มากเกินไปเล็กน้อย)' },
-  { value: '7', label: 'Moderately more than ideal (มากเกินไปปานกลาง)' },
-  { value: '8', label: 'Much more than ideal (มากเกินไปมาก)' },
-  { value: '9', label: 'Extremely more than ideal (มากเกินไปที่สุด)' }
-];
-export function jarScoreLabel(value){
-  const found = JAR_SCALE.find(s => s.value === value);
-  return found ? found.label : (value || '');
-}
-// A legacy free-text answer (from before this JAR redesign) shows as-is
-// rather than crashing on the "N/9" format.
-export function jarScoreDisplay(value){
-  return /^[1-9]$/.test(value || '') ? `${value}/9` : (value || '');
-}
-// "Idea Guideline" -- how far off-ideal a JAR answer is, as a percentage
-// toward the midpoint ("Just right"), assuming the distance from the
-// midpoint to either end of the scale is a full 100% change in whatever's
-// being judged (e.g. 4 steps from 5 to 1 on a 9-point scale == 100%, so
-// each step off is 25%). Positive means "increase", negative "decrease" --
-// a score of 4 (one step below the midpoint 5, on a 9-point scale) comes
-// out to +25%, matching the worked example this was built from. Reads
-// JAR_SCALE's own length/midpoint (not hardcoded) so it keeps working if
-// the scale is ever resized again, same reasoning as autoImprovementSuggestion.
-// Returns null for no/invalid answer yet, 0 exactly at the midpoint.
-export function jarAdjustmentPercent(value){
-  const n = parseInt(value, 10);
-  if(!(n >= 1 && n <= JAR_SCALE.length)) return null;
-  const midpoint = Math.ceil(JAR_SCALE.length / 2);
-  const maxDeviation = midpoint - 1;
-  if(maxDeviation <= 0) return 0;
-  return Math.round(-((n - midpoint) / maxDeviation) * 100);
-}
 // Shared by the main render pass and the evaluation wizard so both list
 // products being compared the same way (linked recipes first, then manual
 // products, each labeled the same way the product cards/table headers are).
@@ -359,28 +278,28 @@ export const TRIAL_SUMMARY_VERDICT_CLASSES = {
   'Not accepted': 'trial-summary-verdict-not-accepted'
 };
 // Shared by the Summary Test modal (detailed cards) and the Summary Table
-// view (compact inline) -- one product's verdict plus which of its
-// scored criteria still need adjusting vs are already Just Right, each
-// carrying its own Improvement Guidelines Note (t.criteriaImproveNotes --
-// the SAME per-criteria note typed into that table's own Note column,
-// not Sensory Evaluation's separate criteriaNotes bucket) when there is
-// one. Read directly off t rather than through getCriteriaNotes, since
-// that helper lazily writes an empty {} onto t if the bucket is missing
-// -- fine for the editable table it's normally used from, but this is a
-// read-only summary with nothing to ever save, so there's no reason to
-// mutate the live trial object just to read from it.
+// view (compact inline) -- one product's verdict plus whichever criteria
+// actually have Improvement Guidelines text typed in (Comment/Improvement
+// Guidelines are plain manually-typed fields now, not derived from a JAR
+// score -- see sensoryFieldValue/improvementFieldValue -- so there's no
+// numeric score left for a "Just Right" bucket to mean anything against;
+// dropped rather than approximated). Each carries its own Improvement
+// Guidelines Note (t.criteriaImproveNotes -- the SAME per-criteria note
+// typed into that table's own Note column, not Sensory Evaluation's
+// separate criteriaNotes bucket) when there is one. Read directly off t
+// rather than through getCriteriaNotes, since that helper lazily writes
+// an empty {} onto t if the bucket is missing -- fine for the editable
+// table it's normally used from, but this is a read-only summary with
+// nothing to ever save, so there's no reason to mutate the live trial
+// object just to read from it.
 export function summarizeTrialProduct(t, criteria, p){
   const pd = getTrialProductData(t, p.id);
   const verdict = combinedVerdict(pd);
   const improveNotes = (t.criteriaImproveNotes && typeof t.criteriaImproveNotes === 'object') ? t.criteriaImproveNotes : {};
-  const scoredCriteria = criteria.filter(c => criteriaAverageJarScore(c, pd) !== null);
-  const improvements = scoredCriteria
-    .map(c => ({ label: c.label, suggestion: autoImprovementSuggestion(c, pd), note: (improveNotes[c.id] || '').trim() }))
+  const improvements = criteria
+    .map(c => ({ label: c.label, suggestion: improvementFieldValue(pd, c.id), note: (improveNotes[c.id] || '').trim() }))
     .filter(x => x.suggestion);
-  const justRight = scoredCriteria
-    .filter(c => !autoImprovementSuggestion(c, pd))
-    .map(c => ({ label: c.label, note: (improveNotes[c.id] || '').trim() }));
-  return { label: p.label, verdict, improvements, justRight };
+  return { label: p.label, verdict, improvements };
 }
 // Read-only overview -- one row per test (already sorted most-recently-
 // updated first by the caller), grouped by linked Project -- Project/PD
@@ -452,9 +371,8 @@ export async function translateTrialText(text, targetLang){
 }
 // Puts the translated text first with the original following in
 // parentheses, replacing the field's own content. Dispatches a real
-// 'change' event (not 'input') after setting the value, since the criteria
-// note textarea this wraps only saves on 'change' (see
-// .eval-wizard-criteria-note's own listener above), not on every keystroke.
+// 'change' event (not 'input') after setting the value, since every field
+// this wraps only saves on 'change', not on every keystroke.
 export function wireTrialTranslateButton(wrapEl){
   const textarea = wrapEl.querySelector('textarea');
   const btn = wrapEl.querySelector('.mu-translate-btn');
