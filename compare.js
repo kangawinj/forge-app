@@ -575,7 +575,7 @@ function renderCompareContent(){
       return `<td class="${boundaryClass(idx)}">฿${((wt / 1000) * price).toFixed(2)}</td>`;
     }).join('');
     const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
-    return `<tr><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+    return `<tr>${ingNameCellHtml(row.label, displayLabel)}${cells}</tr>`;
   }).join('');
 
   const costTotalCells = ids.map((id, idx) => {

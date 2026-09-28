@@ -641,7 +641,8 @@ export const CHANGELOG = [
   { version: "3.0.599", date: "2026-09-28", note: "Reverted the print font swap again -- a second real saved PDF confirmed it made no difference at all, ruling out font embedding as the cause of printed PDF text not being selectable. Likely a Chromium engine limitation with Thai text shaping, not something fixable from here" },
   { version: "3.0.600", date: "2026-09-28", note: "Added a Linked Test Results section to the Recipe page -- shows every Test Result that links to this formula, click one to jump straight to it" },
   { version: "3.0.601", date: "2026-09-28", note: "Recipe Preview/Print now shows Sample Prepared By" },
-  { version: "3.0.602", date: "2026-09-28", note: "Compare Ingredients: click an ingredient's name to open its Ingredient Details popup, same one used elsewhere in the app" }
+  { version: "3.0.602", date: "2026-09-28", note: "Compare Ingredients: click an ingredient's name to open its Ingredient Details popup, same one used elsewhere in the app" },
+  { version: "3.0.603", date: "2026-09-28", note: "Compare Costing: ingredient names are clickable too now, same Ingredient Details popup as Compare Ingredients" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
