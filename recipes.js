@@ -610,15 +610,17 @@ export function renderRecipeEditor(r){
             </div>
           </div>
         </div>
-        <div class="field">
-          <label>Project</label>
-          <select id="f-linkedProject" class="proj-select"></select>
+        <div class="grid-2">
+          <div class="field">
+            <label>Project</label>
+            <select id="f-linkedProject" class="proj-select"></select>
+          </div>
+          <div class="field">
+            <label>Sample Prepared By</label>
+            <input type="text" id="f-samplePreparedBy" list="customerDatalist" placeholder="e.g. ABC Co., Ltd.">
+          </div>
         </div>
         <div id="linkedProjectInfo"></div>
-        <div class="field">
-          <label>Sample Prepared By</label>
-          <input type="text" id="f-samplePreparedBy" list="customerDatalist" placeholder="e.g. ABC Co., Ltd.">
-        </div>
         <div class="field">
           <label>Description / Concept</label>
           <div class="desc-points-list" id="descPointsList"></div>
