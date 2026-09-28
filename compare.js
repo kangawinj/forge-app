@@ -69,6 +69,7 @@ function pickerColHtml(slotIdx, optionsHtml){
 
 export function mountCompareView(){
   const main = document.getElementById('mainArea');
+  main.classList.remove('trials-a4-width');
   main.classList.add('main-wide');
   const candidates = compareSeriesPrefilter
     ? recipes.filter(r => r.seriesId === compareSeriesPrefilter.seriesId)

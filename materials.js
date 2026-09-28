@@ -226,7 +226,7 @@ export function renderMaterialTable(){
 
 export function mountMaterialsView(){
   const main = document.getElementById('mainArea');
-  main.classList.remove('main-wide');
+  main.classList.remove('main-wide', 'trials-a4-width');
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('book-open', 24)} Ingredient Library</div>

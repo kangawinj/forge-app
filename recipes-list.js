@@ -256,7 +256,7 @@ function renderCategoryRecipeList(container, category){
 
 export function mountRecipesListView(){
   const main = document.getElementById('mainArea');
-  main.classList.remove('main-wide');
+  main.classList.remove('main-wide', 'trials-a4-width');
   recipesListCategoryFilter = null;
   recipesListExpandedSeries = new Set();
   main.innerHTML = `

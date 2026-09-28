@@ -28,7 +28,7 @@ let dryRunReport = null;
 
 export function mountSeriesMigrationView(){
   const main = document.getElementById('mainArea');
-  main.classList.remove('main-wide');
+  main.classList.remove('main-wide', 'trials-a4-width');
   dryRunReport = null;
   main.innerHTML = `
     <div class="main-header">

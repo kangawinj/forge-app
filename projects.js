@@ -326,6 +326,7 @@ async function importSubmission(){
 
 export function mountProjectsView(){
   const main = document.getElementById('mainArea');
+  main.classList.remove('trials-a4-width');
   main.classList.add('main-wide');
   main.innerHTML = `
     <div class="main-header">

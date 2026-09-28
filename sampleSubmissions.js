@@ -40,7 +40,7 @@ let submissionEditSnapshotBefore = null;
 
 export function mountSampleSubmissionsView(){
   const main = document.getElementById('mainArea');
-  main.classList.remove('main-wide');
+  main.classList.remove('main-wide', 'trials-a4-width');
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('clipboard-check', 24)} Sample Submissions</div>

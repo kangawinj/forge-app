@@ -131,6 +131,13 @@ export function migrateTrialsFromRecipes(){
 export function mountTrialsView(){
   const main = document.getElementById('mainArea');
   main.classList.remove('main-wide');
+  // Wider than the default .main (960px) -- the row header (date/product
+  // list on the left, Save/Perform Evaluation/Share External Evaluation/
+  // Summary Test/Print/Delete on the right) was cramped into a narrow
+  // sliver at 960px with 5+ products' worth of buttons alongside it. Per
+  // request, matches A4 landscape width specifically, not just reusing
+  // .main-wide's 1300px (tuned for Compare/Projects, not this page).
+  main.classList.add('trials-a4-width');
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('flask-conical', 24)} Test Results</div>

@@ -547,6 +547,13 @@
   /* Compare Recipes and Projects need more room than the 960px default
      (they used wider modals before converting to full-page views). */
   .main.main-wide{max-width:1300px;}
+  /* Test Results -- per request, widened to A4 landscape width specifically
+     (297mm) rather than reusing .main-wide's 1300px; the row header (date/
+     product list on the left, a growing list of action buttons on the
+     right -- Save/Perform Evaluation/Share External Evaluation/Summary
+     Test/Print/Delete) was cramped into a narrow sliver at the 960px
+     default with several products' worth of buttons alongside it. */
+  .main.trials-a4-width{max-width:297mm;}
   .main:has(.home-dashboard){max-width:1200px;}
   /* The 210mm (A4) cap made the Recipe Overview table's 5 columns of
      numeric data plus long bilingual ingredient names feel cramped on

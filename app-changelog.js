@@ -650,7 +650,8 @@ export const CHANGELOG = [
   { version: "3.0.608", date: "2026-09-28", note: "Merged Improvement Guidelines into the Sensory Evaluation table -- each criteria row's per-product cell now stacks Comment above Improvement Guidelines, instead of two separate tables" },
   { version: "3.0.609", date: "2026-09-28", note: "Moved the Comment/Improvement Guidelines captions to the Criteria column, once per row, instead of repeating above every product's own fields" },
   { version: "3.0.610", date: "2026-09-28", note: "Sensory Evaluation: Comment and Improvement Guidelines are now two real table rows sharing one Criteria cell, instead of stacked inside one row's own cell" },
-  { version: "3.0.611", date: "2026-09-28", note: "Left-aligned Sensory Evaluation's text throughout -- was inheriting Compare Ingredients/Costing's numeric right-alignment, which doesn't suit typed text/radio buttons" }
+  { version: "3.0.611", date: "2026-09-28", note: "Left-aligned Sensory Evaluation's text throughout -- was inheriting Compare Ingredients/Costing's numeric right-alignment, which doesn't suit typed text/radio buttons" },
+  { version: "3.0.612", date: "2026-09-28", note: "Widened Test Results to A4 landscape width -- the row header was cramped at the 960px default with several products' worth of action buttons alongside it" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -1295,7 +1295,7 @@ export function renderMain(){
     return;
   }
   const r = getCurrent();
-  main.classList.remove('main-wide');
+  main.classList.remove('main-wide', 'trials-a4-width');
   if(!r){
     main.innerHTML = renderDashboardHome();
     wireDashboardHome();
