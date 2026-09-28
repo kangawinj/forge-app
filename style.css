@@ -4733,8 +4733,14 @@
        :root's own rule normally cascades), not forced with !important
        onto every element -- Recipe/Trial Code's own deliberate monospace
        font-family (.rt-code, Consolas/Courier New) needs to keep winning
-       over this. */
-    body{font-family:"Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
+       over this. Noto Sans Thai's own vertical metrics (ascent/descent)
+       are much taller than the system fonts it replaces here -- with no
+       explicit line-height, "normal" resolves from THOSE oversized
+       metrics, so every text selection highlight (and text-box copied
+       via a PDF viewer's OCR/Live-Text-style fallback) came out much
+       taller than the actual glyph size. Pinning a fixed line-height
+       keeps it sized to the text again. */
+    body{font-family:"Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;line-height:1.4;}
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room
