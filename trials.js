@@ -150,7 +150,7 @@ export function mountTrialsView(){
   `;
 
   document.getElementById('btnPrintTrials').addEventListener('click', () => {
-    bulkPrintSelectedIds = new Set(trials.map(t => t.id));
+    bulkPrintSelectedIds = new Set();
     bulkPrintOpen = true;
     renderTrialsList();
   });
@@ -1120,9 +1120,9 @@ export function renderTrialsList(){
 
 // Body-appended overlay (same pattern as trials-summary.js's own Summary
 // Test modal) for picking which Test Results to print together, instead
-// of one at a time via each row's own Print button. Defaults to every
-// test selected -- most of the time someone wants "everything", and
-// unchecking a few is less friction than checking dozens.
+// of one at a time via each row's own Print button. Starts with nothing
+// selected -- per explicit request, this is a deliberate pick, not a
+// "print everything, uncheck a few" default.
 function renderBulkPrintModal(){
   const existing = document.getElementById('trialsBulkPrintOverlay');
   if(!bulkPrintOpen){ existing?.remove(); return; }

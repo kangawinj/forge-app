@@ -631,7 +631,8 @@ export const CHANGELOG = [
   { version: "3.0.589", date: "2026-09-28", note: "Test Results: added a Print button to print several tests at once -- pick which ones from a checklist and they print together, newest to oldest by test date" },
   { version: "3.0.590", date: "2026-09-28", note: "Product Details: moved Sample Prepared By up beside Project" },
   { version: "3.0.591", date: "2026-09-28", note: "Test Results Print: the Save as PDF filename now starts with the date, then the test's name, program name and account, same convention Compare/Recipes/Projects already use" },
-  { version: "3.0.592", date: "2026-09-28", note: "Print filenames (Test Results, Compare): dropped the time and the @domain part of the account, keeping just the date and account name" }
+  { version: "3.0.592", date: "2026-09-28", note: "Print filenames (Test Results, Compare): dropped the time and the @domain part of the account, keeping just the date and account name" },
+  { version: "3.0.593", date: "2026-09-28", note: "Print Test Results checklist no longer pre-checks every test -- starts empty so picking which ones to print is a deliberate choice" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
