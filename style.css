@@ -3964,6 +3964,15 @@
      Continue Development don't need it and span both columns instead
      (colspan="2" on their own leading cell, see trials.js). */
   .teval-row-type-label{font-size:11px;color:var(--text-dim);vertical-align:top;}
+  /* .compare-table's own default (text-align:right, only the first column
+     left) suits Compare Ingredients/Costing's numeric values -- text-align
+     inherits into this table's own textareas too (unlike a form control's
+     actual box position, its typed/placeholder text respects an inherited
+     text-align), pushing "-"/typed text toward the right edge of each
+     narrow field instead of reading flush left. Scoped to
+     teval-print-hide-scores specifically (not .compare-table generally)
+     so Compare's own numeric tables keep their right-alignment. */
+  .teval-print-hide-scores th, .teval-print-hide-scores td{text-align:left;}
   /* Comments + reference photo moved out of the Sensory Evaluation table
      (they're one shared thing per evaluator now, not per-product, so they
      no longer fit as a table column) into this standalone block right
