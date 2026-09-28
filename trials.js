@@ -411,9 +411,15 @@ export function renderTrialsList(){
     // and Improvement Guidelines' own Note column below).
     const printOnlyCriteriaNoteHtml = note => `<div class="teval-criteria-note-print print-only">${escapeHtml(note || '-').replace(/\n/g, '<br>')}</div>`;
     const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => {
-      return `
-      <tr>
-        <td>${isEditing
+      // Two real table rows per criteria now (Comment, then Improvement
+      // Guidelines underneath) -- per request, replacing the earlier
+      // attempt at stacking both inside one row's own cell, which could
+      // only ever approximately line up given textarea heights are
+      // dynamic (see the auto-grow script). A genuine rowspan + two real
+      // <tr>s means the browser's own table layout keeps everything
+      // correctly aligned regardless of how tall any one field grows.
+      const criteriaNameCell = `
+        <td rowspan="2">${isEditing
           ? `<div style="display:flex;align-items:center;gap:6px;">
               <div style="display:flex;flex-direction:column;">
                 <button type="button" class="icon-btn" data-role="move-trial-criteria-up" data-criteria-id="${escapeHtml(c.id)}" title="Move up" ${ci === 0 ? 'disabled' : ''}>${icon('chevron-up', 12)}</button>
@@ -422,35 +428,42 @@ export function renderTrialsList(){
               <input type="text" class="trial-criteria-label-input" data-criteria-id="${escapeHtml(c.id)}" value="${escapeHtml(c.label)}" placeholder="Criteria name">
               <button type="button" class="icon-btn" data-role="remove-trial-criteria" data-criteria-id="${escapeHtml(c.id)}" title="Remove this criteria">${icon('x')}</button>
             </div>`
-          : `<b>${escapeHtml(c.label)}</b>`}
-          <div class="teval-stack-label">Comment</div>
-          <div class="teval-stack-label">Improvement Guidelines</div>
-        </td>
-        ${evalTargets.map((p, i) => {
-          const pd = getTrialProductData(mt, p.id);
-          // Per request, one cell stacking two plain manually-typed
-          // fields -- Comment (was the combined view of every evaluator's
-          // own JAR answer from the "Perform Evaluation" wizard, see
-          // combinedEvaluationEntries; the wizard/JAR scoring itself is
-          // untouched, still what feeds Test Result/Summary Test
-          // elsewhere) on top, Improvement Guidelines (merged in from
-          // what used to be a separate table below) underneath. Labels
-          // live once in the leading Criteria column instead of repeating
-          // per product (see above).
-          const comment = pd['sensory_' + c.id] || '';
-          const improve = improvementFieldValue(pd, c.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
-            <textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea>
-            <textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea>
-          </td>`;
-        }).join('')}
+          : `<b>${escapeHtml(c.label)}</b>`}</td>
+      `;
+      // Comment was the combined view of every evaluator's own JAR answer
+      // from the "Perform Evaluation" wizard (see combinedEvaluationEntries;
+      // the wizard/JAR scoring itself is untouched, still what feeds Test
+      // Result/Summary Test elsewhere) -- now a plain manually-typed field.
+      const commentCellsHtml = evalTargets.map((p, i) => {
+        const pd = getTrialProductData(mt, p.id);
+        const comment = pd['sensory_' + c.id] || '';
+        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea></td>`;
+      }).join('');
+      // Improvement Guidelines, merged in from what used to be a separate
+      // table below.
+      const improveCellsHtml = evalTargets.map((p, i) => {
+        const pd = getTrialProductData(mt, p.id);
+        const improve = improvementFieldValue(pd, c.id);
+        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea></td>`;
+      }).join('');
+      return `
+      <tr>
+        ${criteriaNameCell}
+        <td class="teval-row-type-label"><b>Comment</b></td>
+        ${commentCellsHtml}
         <td class="recipe-boundary">
           <div class="mu-field-with-translate" style="width:auto;">
             <textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>
           ${printOnlyCriteriaNoteHtml(sensoryCriteriaNotes[c.id])}
-          <div class="mu-field-with-translate" style="width:auto;margin-top:6px;">
+        </td>
+      </tr>
+      <tr>
+        <td class="teval-row-type-label"><b>Improvement Guidelines</b></td>
+        ${improveCellsHtml}
+        <td class="recipe-boundary">
+          <div class="mu-field-with-translate" style="width:auto;">
             <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>
@@ -500,7 +513,7 @@ export function renderTrialsList(){
     // not-accepted classes.
     const testResultRowHtml = `
       <tr>
-        <td><b>Test Result</b></td>
+        <td colspan="2"><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const entries = combinedEvaluationEntries(pd, null, t.updatedBy);
@@ -565,7 +578,7 @@ export function renderTrialsList(){
     // pursuing any more.
     const continueDevRowHtml = `
       <tr>
-        <td><b>Continue Development?</b></td>
+        <td colspan="2"><b>Continue Development?</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const val = pd.continueDevelopment || '';
@@ -580,11 +593,12 @@ export function renderTrialsList(){
       </tr>
     `;
 
-    // 220px leading column mirrors the product-card spacer above so the two
-    // grids share the same column ruler — rows are fixed now, so no
-    // trailing comment/delete columns are needed any more.
-    // +1 trailing col for the Note column both tables now share.
-    const trialColgroup = `<colgroup><col style="width:220px;">${'<col>'.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
+    // 180px leading column mirrors the product-card spacer above so the two
+    // grids share the same column ruler. +1 narrow column right after it
+    // for the Comment/Improvement Guidelines row label (Test Result/
+    // Continue Development span both with colspan="2", having no need for
+    // that second column themselves). +1 trailing col for Note.
+    const trialColgroup = `<colgroup><col style="width:180px;"><col style="width:130px;">${'<col>'.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
@@ -704,7 +718,7 @@ export function renderTrialsList(){
               <div style="overflow-x:auto;">
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
-                  <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
+                  <thead><tr><th>Criteria</th><th></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${continueDevRowHtml}</tbody>
                 </table>
               </div>
