@@ -646,7 +646,8 @@ export const CHANGELOG = [
   { version: "3.0.604", date: "2026-09-28", note: "Improvement Guidelines' per-product columns are now always manually typed -- removed the automatic JAR-score suggestion and the \"only editable when Needs Revision\" restriction" },
   { version: "3.0.605", date: "2026-09-28", note: "Test Results: raised Products Being Compared from 4 to 6" },
   { version: "3.0.606", date: "2026-09-28", note: "Sensory Evaluation's per-product cells are now plain manually-typed fields instead of the combined JAR-score view from Perform Evaluation" },
-  { version: "3.0.607", date: "2026-09-28", note: "Sensory Evaluation's Note column is now editable too -- was a read-only combined view of evaluators' own wizard notes" }
+  { version: "3.0.607", date: "2026-09-28", note: "Sensory Evaluation's Note column is now editable too -- was a read-only combined view of evaluators' own wizard notes" },
+  { version: "3.0.608", date: "2026-09-28", note: "Merged Improvement Guidelines into the Sensory Evaluation table -- each criteria row's per-product cell now stacks Comment above Improvement Guidelines, instead of two separate tables" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

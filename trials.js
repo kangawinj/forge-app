@@ -392,19 +392,13 @@ export function renderTrialsList(){
       // table columns distinguishable instead of both reading "ALFRADO".
       ...manualProducts.map(mp => ({ id: mp.id, name: mp.name || 'Untitled', code: mp.code || '', label: [mp.name || 'Untitled', mp.code].filter(Boolean).join(' ') }))
     ];
-    // Sensory Evaluation's own header shows the product name above its
-    // code (same convention as Compare Recipes/Trials' own column
-    // headers, reusing its compare-th-name/compare-th-code classes) --
-    // per request, scoped to this one table; Improvement Guidelines'
-    // header just below keeps showing `label` (code-only/name+code) as
-    // before.
+    // Shows the product name above its code (same convention as Compare
+    // Recipes/Trials' own column headers, reusing its compare-th-name/
+    // compare-th-code classes).
     const evalHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}"><div class="compare-th-name">${escapeHtml(p.name)}</div>${p.code ? `<div class="compare-th-code">${escapeHtml(p.code)}</div>` : ''}</th>`).join('');
-    // Improvement Guidelines' own header row (NOT shared with Sensory
-    // Evaluation's identical-looking one above, even though both tables
-    // otherwise reuse evalTargets/evaluationCriteria).
-    const improvementHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
+    const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
     // A <textarea>'s own font-size doesn't reliably match a plain div's
     // during print in every browser (some print engines fall back toward
     // native form-control rendering for textareas regardless of CSS), even
@@ -431,21 +425,35 @@ export function renderTrialsList(){
           : `<b>${escapeHtml(c.label)}</b>`}</td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          // Per request, a plain manually-typed field now -- was the
-          // combined view of every evaluator's own JAR answer from the
-          // "Perform Evaluation" wizard (see combinedEvaluationEntries);
-          // the wizard/JAR scoring itself is untouched (still what feeds
-          // Test Result/Summary Test elsewhere), this table's own cell
-          // just no longer displays or is limited to that.
-          const stored = pd['sensory_' + c.id] || '';
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(stored)}</textarea></td>`;
+          // Per request, one cell stacking two plain manually-typed
+          // fields -- Comment (was the combined view of every evaluator's
+          // own JAR answer from the "Perform Evaluation" wizard, see
+          // combinedEvaluationEntries; the wizard/JAR scoring itself is
+          // untouched, still what feeds Test Result/Summary Test
+          // elsewhere) on top, Improvement Guidelines (merged in from
+          // what used to be a separate table below) underneath.
+          const comment = pd['sensory_' + c.id] || '';
+          const improve = improvementFieldValue(pd, c.id);
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
+            <div class="teval-stack-label">Comment</div>
+            <textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea>
+            <div class="teval-stack-label">Improvement Guidelines</div>
+            <textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea>
+          </td>`;
         }).join('')}
         <td class="recipe-boundary">
+          <div class="teval-stack-label">Comment</div>
           <div class="mu-field-with-translate" style="width:auto;">
             <textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>
           ${printOnlyCriteriaNoteHtml(sensoryCriteriaNotes[c.id])}
+          <div class="teval-stack-label">Improvement Guidelines</div>
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
+            ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
+          </div>
+          ${printOnlyCriteriaNoteHtml(improvementCriteriaNotes[c.id])}
         </td>
       </tr>
     `;
@@ -546,28 +554,6 @@ export function renderTrialsList(){
         </div>
       `;
     })();
-    // Improvement notes only make sense for a product at least one
-    // evaluator flagged Needs Revision -- Accepted/Not accepted from
-    // everyone is already a final call, nothing left to improve toward.
-    // Locked (readonly, muted) otherwise, including not-yet-evaluated.
-    const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
-    const improvementRowsHtml = evaluationCriteria.map(c => `
-      <tr>
-        <td><b>${escapeHtml(c.label)}</b></td>
-        ${evalTargets.map((p, i) => {
-          const pd = getTrialProductData(mt, p.id);
-          const stored = improvementFieldValue(pd, c.id);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(stored)}</textarea></td>`;
-        }).join('')}
-        <td class="recipe-boundary">
-          <div class="mu-field-with-translate" style="width:auto;">
-            <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
-            ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
-          </div>
-          ${printOnlyCriteriaNoteHtml(improvementCriteriaNotes[c.id])}
-        </td>
-      </tr>
-    `).join('');
     // One decision per product -- separate from Test Result (which is a
     // per-evaluator sensory verdict) -- for whoever reviews the
     // Improvement Guidelines above to say whether this specific sample is
@@ -718,24 +704,11 @@ export function renderTrialsList(){
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
-                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${continueDevRowHtml}</tbody>
                 </table>
               </div>
               ${evaluatorCommentsHtml}
               ${addCriteriaBtnHtml}
-              ` : '<div class="overview-empty">Add a product above first</div>'}
-            </div>
-
-            <div class="field">
-              <label>Improvement Guidelines</label>
-              ${evalTargets.length ? `
-              <div style="overflow-x:auto;">
-                <table class="compare-table teval-print-hide-scores">
-                  ${trialColgroup}
-                  <thead><tr><th>Criteria</th>${improvementHeaderCells}<th class="recipe-boundary">Note<span class="teval-header-hint">Enter your own info (ระบุข้อมูลด้วยตัวเอง)</span></th></tr></thead>
-                  <tbody>${improvementRowsHtml}${continueDevRowHtml}</tbody>
-                </table>
-              </div>
               ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>
 

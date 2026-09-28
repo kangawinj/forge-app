@@ -2529,20 +2529,6 @@
     margin-bottom:2px;
   }
   .compare-th-code{color:var(--text-dim);}
-  /* Small caption under a header's own label (see improvementHeaderCells /
-     the Note <th> in trials.js's Improvement Guidelines table) -- normal
-     case since the parent th's text-transform:uppercase above would
-     otherwise shout the Thai/English hint text too. */
-  .teval-header-hint{
-    display:block;
-    font-size:9.5px;
-    font-weight:400;
-    text-transform:none;
-    letter-spacing:normal;
-    color:var(--text-dim);
-    margin-top:2px;
-    white-space:normal;
-  }
   .compare-table tr.diff-row{background:var(--accent-light);}
   .compare-table tr.total-row td{
     border-top:2px solid var(--border);
@@ -3966,6 +3952,11 @@
      overwrite. Padding matches .teval-fixed's old textarea so the column
      doesn't visibly shift between the two views. */
   .teval-overall-entry{font-size:13px;padding:2px 0;}
+  /* Sensory Evaluation and its merged-in Improvement Guidelines fields --
+     Comment on top, Improvement Guidelines underneath, in the same table
+     cell (per request, replacing what used to be two separate tables). */
+  .teval-stack-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);margin:6px 0 2px;}
+  .teval-stack-label:first-child{margin-top:0;}
   /* Comments + reference photo moved out of the Sensory Evaluation table
      (they're one shared thing per evaluator now, not per-product, so they
      no longer fit as a table column) into this standalone block right
@@ -5058,7 +5049,6 @@
       line-height:1.35 !important;
       vertical-align:top !important;
     }
-    .teval-print-hide-scores .teval-header-hint{display:none !important;}
     .teval-print-hide-scores .teval-overall-entry{padding:1px 0 !important;}
     .teval-print-hide-scores .teval-overall-entry:not(:last-child){
       margin-bottom:2px !important;
