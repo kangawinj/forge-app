@@ -2490,6 +2490,8 @@
     text-align:right;
   }
   .compare-table th:first-child, .compare-table td:first-child{text-align:left;}
+  .compare-ing-name-clickable{cursor:pointer;}
+  .compare-ing-name-clickable:hover{color:var(--primary);text-decoration:underline;}
   /* readOnlyProcessesHtml's Process Step Component table (the read-only
      "Cutting"/"Weighing"/... breakdown on the Process Steps page and in
      Version Preview) -- its 2nd column is the Component's name, not a

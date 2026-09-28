@@ -1,6 +1,6 @@
 import {
   recipes, escapeHtml, icon, recipeDisplayLabel, fullCode, allIngredientsInRecipe,
-  formatWeight, descriptionListHtml, findMaterialByLabel,
+  formatWeight, descriptionListHtml, findMaterialByLabel, openMaterialDetail,
   playContentTransition, compareSetsCol, currentUser
 } from './app.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -223,6 +223,18 @@ export function mountCompareView(){
 
 function stripIngredientCode(label){
   return label.replace(/\s*\([^)]*\)\s*$/, '');
+}
+
+// Ingredient name cell for a Compare Ingredients row -- clickable (opens
+// the same "Ingredient Details" popup as the Overview table's own thumbnail,
+// see openMaterialDetail/materials.js) only when `label` actually matches
+// something in the Ingredient Library; a freehand-typed ingredient with no
+// Library match stays plain, unstyled text, same as the Overview table's
+// own thumbnail silently not being clickable for those.
+function ingNameCellHtml(label, displayLabel){
+  const matched = findMaterialByLabel(label);
+  if(!matched) return `<td>${escapeHtml(displayLabel)}</td>`;
+  return `<td class="compare-ing-name-clickable" data-ing-label="${escapeHtml(label)}" title="Click for ingredient details">${escapeHtml(displayLabel)}</td>`;
 }
 
 // A section title with an eye toggle beside it (Compare Costing / Compare
@@ -457,7 +469,7 @@ function renderCompareContent(){
       const isDiff = presentCount > 0 && presentCount < selected.length;
       const cells = ids.map((id, idx) => ingCell(row, id, idx)).join('');
       const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
-      return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+      return `<tr class="${isDiff ? 'diff-row' : ''}">${ingNameCellHtml(row.label, displayLabel)}${cells}</tr>`;
     }).join('');
     const recursiveTotals = sectionRecursiveTotals(section);
     const subtotalCells = ids.map((id, idx) => {
@@ -521,7 +533,7 @@ function renderCompareContent(){
     const isDiff = presentCount > 0 && presentCount < selected.length;
     const cells = ids.map((id, idx) => ingCell(row, id, idx)).join('');
     const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
-    return `<tr class="${isDiff ? 'diff-row' : ''}"><td>${escapeHtml(displayLabel)}</td>${cells}</tr>`;
+    return `<tr class="${isDiff ? 'diff-row' : ''}">${ingNameCellHtml(row.label, displayLabel)}${cells}</tr>`;
   }).join('');
   const combinedTableHtml = `
     <div style="overflow-x:auto;">
@@ -688,6 +700,12 @@ function renderCompareContent(){
       const label = btn.dataset.section;
       comparePartCollapsed[label] = !comparePartCollapsed[label];
       renderCompareContent();
+    });
+  });
+  document.querySelectorAll('.compare-ing-name-clickable').forEach(td => {
+    td.addEventListener('click', () => {
+      const matched = findMaterialByLabel(td.dataset.ingLabel);
+      if(matched) openMaterialDetail(matched);
     });
   });
   document.getElementById('toggleCostingSection').addEventListener('click', () => {
