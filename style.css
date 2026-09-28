@@ -4719,28 +4719,16 @@
        100% -- someone who wants it more compact can still type a Scale
        value into the print dialog themselves. */
     body{background:#fff;}
-    /* The actual root cause of that same "can't select/copy printed
-       text" bug turned out to be Thai text specifically, not zoom --
-       Windows' Thai-capable system fonts (Leelawadee UI, Tahoma, see
-       :root's own font-family) carry a "no embedding" flag, so Chrome's
-       print/PDF engine can't embed the real font program for them and
-       falls back to drawing those glyphs as unselectable/uncopyable
-       vector outlines. Noto Sans Thai (loaded in index.html, print use
-       only) is a real, freely-embeddable font file Chrome can actually
-       embed, so Thai text in a printed PDF stays real, selectable text.
-       Screen rendering is untouched -- this only takes effect here,
-       inside @media print. Set on body (inherited from there, same as
-       :root's own rule normally cascades), not forced with !important
-       onto every element -- Recipe/Trial Code's own deliberate monospace
-       font-family (.rt-code, Consolas/Courier New) needs to keep winning
-       over this. Noto Sans Thai's own vertical metrics (ascent/descent)
-       are much taller than the system fonts it replaces here -- with no
-       explicit line-height, "normal" resolves from THOSE oversized
-       metrics, so every text selection highlight (and text-box copied
-       via a PDF viewer's OCR/Live-Text-style fallback) came out much
-       taller than the actual glyph size. Pinning a fixed line-height
-       keeps it sized to the text again. */
-    body{font-family:"Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;line-height:1.4;}
+    /* Tried swapping in a Google Fonts Thai webfont (Noto Sans Thai) here,
+       theorizing Windows' Thai system fonts weren't embeddable in the
+       printed PDF. Reverted -- confirmed with the user this didn't
+       actually fix text selection (still broken, and even non-Thai
+       English-only text in the same PDF had the same problem, which a
+       Thai-specific font-embedding issue wouldn't explain), and adding a
+       line-height on top of it made text selection stop working
+       altogether. Whatever is actually causing this needs testing against
+       a real saved PDF, which isn't possible from this environment -- see
+       the plan/conversation for where this was left off. */
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room

@@ -635,7 +635,8 @@ export const CHANGELOG = [
   { version: "3.0.593", date: "2026-09-28", note: "Print Test Results checklist no longer pre-checks every test -- starts empty so picking which ones to print is a deliberate choice" },
   { version: "3.0.594", date: "2026-09-28", note: "Fixed text not being selectable/copyable in any printed PDF app-wide -- the CSS trick used to shrink printed pages to fit more per page was making Chrome draw text as unselectable outlines instead of real text, so it's removed" },
   { version: "3.0.595", date: "2026-09-28", note: "Fixed Thai text specifically still not being selectable/copyable in printed PDFs -- Windows' Thai system fonts can't be embedded in a PDF, so printing now uses a real embeddable Thai font (Noto Sans Thai) instead" },
-  { version: "3.0.596", date: "2026-09-28", note: "Printed text: pinned a fixed line-height for the new Thai print font -- its own line spacing is taller than the system font it replaced, which was making selection highlights taller than the actual text" }
+  { version: "3.0.596", date: "2026-09-28", note: "Printed text: pinned a fixed line-height for the new Thai print font -- its own line spacing is taller than the system font it replaced, which was making selection highlights taller than the actual text" },
+  { version: "3.0.597", date: "2026-09-28", note: "Reverted the print font swap (3.0.595/3.0.596) -- confirmed it didn't fix printed-PDF text selection (non-Thai text had the same problem) and the added line-height made it stop working altogether" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
