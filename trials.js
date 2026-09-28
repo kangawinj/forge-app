@@ -422,7 +422,10 @@ export function renderTrialsList(){
               <input type="text" class="trial-criteria-label-input" data-criteria-id="${escapeHtml(c.id)}" value="${escapeHtml(c.label)}" placeholder="Criteria name">
               <button type="button" class="icon-btn" data-role="remove-trial-criteria" data-criteria-id="${escapeHtml(c.id)}" title="Remove this criteria">${icon('x')}</button>
             </div>`
-          : `<b>${escapeHtml(c.label)}</b>`}</td>
+          : `<b>${escapeHtml(c.label)}</b>`}
+          <div class="teval-stack-label">Comment</div>
+          <div class="teval-stack-label">Improvement Guidelines</div>
+        </td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           // Per request, one cell stacking two plain manually-typed
@@ -431,25 +434,23 @@ export function renderTrialsList(){
           // combinedEvaluationEntries; the wizard/JAR scoring itself is
           // untouched, still what feeds Test Result/Summary Test
           // elsewhere) on top, Improvement Guidelines (merged in from
-          // what used to be a separate table below) underneath.
+          // what used to be a separate table below) underneath. Labels
+          // live once in the leading Criteria column instead of repeating
+          // per product (see above).
           const comment = pd['sensory_' + c.id] || '';
           const improve = improvementFieldValue(pd, c.id);
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
-            <div class="teval-stack-label">Comment</div>
             <textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea>
-            <div class="teval-stack-label">Improvement Guidelines</div>
             <textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea>
           </td>`;
         }).join('')}
         <td class="recipe-boundary">
-          <div class="teval-stack-label">Comment</div>
           <div class="mu-field-with-translate" style="width:auto;">
             <textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>
           ${printOnlyCriteriaNoteHtml(sensoryCriteriaNotes[c.id])}
-          <div class="teval-stack-label">Improvement Guidelines</div>
-          <div class="mu-field-with-translate" style="width:auto;">
+          <div class="mu-field-with-translate" style="width:auto;margin-top:6px;">
             <textarea class="teval-criteria-note" data-bucket="criteriaImproveNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improvementCriteriaNotes[c.id] || '')}</textarea>
             ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
           </div>

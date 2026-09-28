@@ -3954,9 +3954,16 @@
   .teval-overall-entry{font-size:13px;padding:2px 0;}
   /* Sensory Evaluation and its merged-in Improvement Guidelines fields --
      Comment on top, Improvement Guidelines underneath, in the same table
-     cell (per request, replacing what used to be two separate tables). */
+     cell (per request, replacing what used to be two separate tables).
+     The Comment/Improvement Guidelines captions live once in the leading
+     Criteria column (per request, not repeated above every product's own
+     pair of fields) -- textarea heights are dynamic (see the auto-grow
+     script), so these don't try to pixel-align with the fields in other
+     columns, just read top-to-bottom as "this row is Comment, then
+     Improvement Guidelines". */
   .teval-stack-label{font-size:10px;font-weight:600;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);margin:6px 0 2px;}
   .teval-stack-label:first-child{margin-top:0;}
+  .teval-improve{margin-top:6px;}
   /* Comments + reference photo moved out of the Sensory Evaluation table
      (they're one shared thing per evaluator now, not per-product, so they
      no longer fit as a table column) into this standalone block right
