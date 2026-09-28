@@ -3580,6 +3580,17 @@
     cursor:pointer;
   }
   .col-toggle-item:hover{background:var(--bg);}
+  .trial-bulk-print-row{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 4px;
+    border-bottom:1px solid var(--border);
+    cursor:pointer;
+  }
+  .trial-bulk-print-row input[type="checkbox"]{margin-top:3px;}
+  .trial-bulk-print-date{font-size:13px;font-weight:600;color:var(--text);}
+  .trial-bulk-print-products{font-size:12px;color:var(--text-dim);}
   .project-add-row{display:flex;gap:8px;margin-bottom:12px;}
   .project-add-row select{flex:1;}
   .project-log-entry{padding:10px 0;border-bottom:1px solid var(--border);}
@@ -4818,6 +4829,11 @@
        that trial, not the whole list of trials sharing the modal. */
     #btnAddTrial{display:none !important;}
     #trialsList > .part-block:not(.printing-only){display:none !important;}
+    /* Printing several Test Results together (see printSelectedTrials,
+       trials.js) -- each one after the first starts on a fresh page
+       instead of running straight on from wherever the previous one
+       happened to end. */
+    #trialsList > .part-block.printing-only ~ .part-block.printing-only{break-before:page !important;}
     /* The List view's project grouping headers (see groupTrialsByProject /
        .trial-project-group-header) are plain siblings of .part-block, not
        :not(.printing-only) itself, so the rule above alone leaves every

@@ -56,6 +56,11 @@ let trialsLoaded = false;
 let trialsMigrated = false;
 const TRIAL_DIFF_FIELDS = { label: 'Recipes / Products Compared' };
 let trialEditSnapshotBefore = null;
+// Bulk "Print" toolbar button -- lets someone print more than one Test
+// Result in one go instead of one at a time via each row's own Print
+// button (see printSelectedTrials/renderBulkPrintModal below).
+let bulkPrintOpen = false;
+let bulkPrintSelectedIds = new Set();
 
 function deleteTrialFromCloud(id){
   deleteTrialShareArtifacts(id);
@@ -106,6 +111,7 @@ export function mountTrialsView(){
     <div class="card">
       <div style="display:flex;align-items:center;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm" id="btnAddTrial">+ New Test</button>
+        <button type="button" class="btn btn-sm" id="btnPrintTrials" style="margin-left:auto;">${icon('printer', 14)} Print</button>
         <div class="view-mode-toggle" id="trialsViewToggle">
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'table' ? ' active' : ''}" data-mode="table">${icon('file-text', 14)} Summary Table</button>
@@ -115,6 +121,12 @@ export function mountTrialsView(){
       <div id="trialsList"></div>
     </div>
   `;
+
+  document.getElementById('btnPrintTrials').addEventListener('click', () => {
+    bulkPrintSelectedIds = new Set(trials.map(t => t.id));
+    bulkPrintOpen = true;
+    renderTrialsList();
+  });
 
   document.getElementById('trialsViewToggle').querySelectorAll('.view-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -167,6 +179,7 @@ export function renderTrialsList(){
     renderTrialSummaryModal();
     renderTrialShareModal();
     renderShareResponsePreviewModal();
+    renderBulkPrintModal();
     return;
   }
   // Grouped by linked Project (see groupTrialsByProject, shared with the
@@ -1072,6 +1085,146 @@ export function renderTrialsList(){
   renderTrialSummaryModal();
   renderTrialShareModal();
   renderShareResponsePreviewModal();
+  renderBulkPrintModal();
+}
+
+// Body-appended overlay (same pattern as trials-summary.js's own Summary
+// Test modal) for picking which Test Results to print together, instead
+// of one at a time via each row's own Print button. Defaults to every
+// test selected -- most of the time someone wants "everything", and
+// unchecking a few is less friction than checking dozens.
+function renderBulkPrintModal(){
+  const existing = document.getElementById('trialsBulkPrintOverlay');
+  if(!bulkPrintOpen){ existing?.remove(); return; }
+  // Newest test date first, same order the List view itself uses --
+  // confirmed with the user rather than assumed, since a printed report
+  // could just as easily read better oldest-first.
+  const sorted = [...trials].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
+  const groups = groupTrialsByProject(sorted);
+
+  const overlay = existing || document.createElement('div');
+  overlay.id = 'trialsBulkPrintOverlay';
+  overlay.className = 'eval-wizard-overlay';
+  if(!existing){
+    document.body.appendChild(overlay);
+    // Read-only picker, nothing typed here to accidentally lose -- same
+    // click-outside-closes behavior as the Summary Test modal.
+    let mousedownOnOverlay = false;
+    overlay.addEventListener('mousedown', e => { mousedownOnOverlay = e.target === overlay; });
+    overlay.addEventListener('click', e => {
+      if(mousedownOnOverlay && e.target === overlay){ bulkPrintOpen = false; renderBulkPrintModal(); }
+      mousedownOnOverlay = false;
+    });
+  }
+
+  const rowHtml = t => {
+    const mt = migrateTrial(t);
+    const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+    const manualProducts = t.manualProducts || [];
+    const names = [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')];
+    return `
+      <label class="trial-bulk-print-row">
+        <input type="checkbox" class="trial-bulk-print-cb" data-trial-id="${escapeHtml(t.id)}" ${bulkPrintSelectedIds.has(t.id) ? 'checked' : ''}>
+        <div>
+          <div class="trial-bulk-print-date">${mt.testDate ? 'Tested ' + escapeHtml(formatDateLong(mt.testDate)) : 'Untitled test'}</div>
+          <div class="trial-bulk-print-products">${names.length ? escapeHtml(names.join(', ')) : 'No products added yet'}</div>
+        </div>
+      </label>
+    `;
+  };
+
+  overlay.innerHTML = `
+    <div class="eval-wizard-card">
+      <div class="eval-wizard-header">
+        <div class="eval-wizard-title">Forge · Print Test Results</div>
+        <button type="button" class="eval-wizard-close" data-role="bulk-print-close" title="Close">${icon('x')}</button>
+      </div>
+      <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">Choose which tests to print — newest to oldest by test date.</div>
+      <div style="margin-bottom:10px;display:flex;gap:8px;">
+        <button type="button" class="btn btn-sm" data-role="bulk-print-select-all">Select All</button>
+        <button type="button" class="btn btn-sm" data-role="bulk-print-select-none">Select None</button>
+      </div>
+      ${trials.length === 0 ? '<div class="overview-empty">No test results yet</div>' : groups.map(g => {
+        const groupProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
+        return `
+          ${groupProject ? `<div class="trial-project-group-header">${icon('folder', 14)} ${escapeHtml(groupProject.name || 'Untitled project')}</div>` : ''}
+          ${g.trials.map(rowHtml).join('')}
+        `;
+      }).join('')}
+      <div style="display:flex;justify-content:flex-end;gap:8px;margin-top:16px;">
+        <button type="button" class="btn btn-sm" data-role="bulk-print-cancel">Cancel</button>
+        <button type="button" class="btn btn-primary btn-sm" data-role="bulk-print-go" ${bulkPrintSelectedIds.size ? '' : 'disabled'}>${icon('printer', 14)} Print (${bulkPrintSelectedIds.size})</button>
+      </div>
+    </div>
+  `;
+
+  overlay.querySelector('[data-role="bulk-print-close"]')?.addEventListener('click', () => { bulkPrintOpen = false; renderBulkPrintModal(); });
+  overlay.querySelector('[data-role="bulk-print-cancel"]')?.addEventListener('click', () => { bulkPrintOpen = false; renderBulkPrintModal(); });
+  overlay.querySelector('[data-role="bulk-print-select-all"]')?.addEventListener('click', () => { bulkPrintSelectedIds = new Set(trials.map(t => t.id)); renderBulkPrintModal(); });
+  overlay.querySelector('[data-role="bulk-print-select-none"]')?.addEventListener('click', () => { bulkPrintSelectedIds = new Set(); renderBulkPrintModal(); });
+  overlay.querySelectorAll('.trial-bulk-print-cb').forEach(cb => {
+    cb.addEventListener('change', () => {
+      if(cb.checked) bulkPrintSelectedIds.add(cb.dataset.trialId);
+      else bulkPrintSelectedIds.delete(cb.dataset.trialId);
+      renderBulkPrintModal();
+    });
+  });
+  overlay.querySelector('[data-role="bulk-print-go"]')?.addEventListener('click', () => {
+    const ids = [...bulkPrintSelectedIds];
+    // Close the picker BEFORE printing, not after -- window.print() blocks
+    // script execution until the print dialog is dismissed, so closing it
+    // first is what keeps the checklist itself from still being on screen
+    // (and at risk of showing up in the print preview) while that dialog
+    // is open.
+    bulkPrintOpen = false;
+    renderBulkPrintModal();
+    printSelectedTrials(ids);
+  });
+}
+
+// Prints more than one Test Result at once, reusing the same
+// .printing-only mechanism as each row's own Print button (see
+// [data-role="print-trial"] above and .printing-only in style.css) --
+// tagging more than one block just means more than one stays visible.
+function printSelectedTrials(ids){
+  const idSet = new Set(ids);
+  if(!idSet.size) return;
+  // Only the List view (not Summary Table) renders one .part-block per
+  // test for .printing-only to target -- switch to it first if needed,
+  // same requirement the per-row Print button already has implicitly
+  // (it only ever appears in List view).
+  if(trialsViewMode !== 'list'){
+    trialsViewMode = 'list';
+    document.querySelectorAll('#trialsViewToggle .view-mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === trialsViewMode));
+    const exportBtn = document.getElementById('btnExportTrialsSummary');
+    if(exportBtn) exportBtn.style.display = 'none';
+  }
+  renderTrialsList();
+  const container = document.getElementById('trialsList');
+  if(!container) return;
+  const order = [...trials]
+    .filter(t => idSet.has(t.id))
+    .sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
+  // The CSS only hides untagged blocks -- it doesn't reorder the tagged
+  // ones, so getting them to print in the chosen (test-date) order takes
+  // physically reordering the DOM too. appendChild on an element that's
+  // already inside this container MOVES it rather than cloning it, so
+  // looping in the desired order and re-appending each one lines them up
+  // correctly without losing any of their existing content/listeners.
+  // renderTrialsList() below (afterprint) rebuilds the normal grouped-by-
+  // project order fresh, so nothing needs to be manually put back.
+  order.forEach(t => {
+    const block = container.querySelector(`.part-block[data-trial-id="${t.id}"]`);
+    if(!block) return;
+    block.classList.add('printing-only');
+    container.appendChild(block);
+  });
+  const cleanup = () => {
+    window.removeEventListener('afterprint', cleanup);
+    renderTrialsList();
+  };
+  window.addEventListener('afterprint', cleanup);
+  window.print();
 }
 
 function attachTrialsListener(){
