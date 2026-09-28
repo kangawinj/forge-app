@@ -10,7 +10,7 @@ import {
   setDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-export const TRIAL_MAX_PRODUCTS = 4;
+export const TRIAL_MAX_PRODUCTS = 6;
 
 // A trial has no name of its own — it's a comparison of recipes — so its
 // label is just whichever recipes it's comparing, joined together.

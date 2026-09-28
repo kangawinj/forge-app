@@ -643,7 +643,8 @@ export const CHANGELOG = [
   { version: "3.0.601", date: "2026-09-28", note: "Recipe Preview/Print now shows Sample Prepared By" },
   { version: "3.0.602", date: "2026-09-28", note: "Compare Ingredients: click an ingredient's name to open its Ingredient Details popup, same one used elsewhere in the app" },
   { version: "3.0.603", date: "2026-09-28", note: "Compare Costing: ingredient names are clickable too now, same Ingredient Details popup as Compare Ingredients" },
-  { version: "3.0.604", date: "2026-09-28", note: "Improvement Guidelines' per-product columns are now always manually typed -- removed the automatic JAR-score suggestion and the \"only editable when Needs Revision\" restriction" }
+  { version: "3.0.604", date: "2026-09-28", note: "Improvement Guidelines' per-product columns are now always manually typed -- removed the automatic JAR-score suggestion and the \"only editable when Needs Revision\" restriction" },
+  { version: "3.0.605", date: "2026-09-28", note: "Test Results: raised Products Being Compared from 4 to 6" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
