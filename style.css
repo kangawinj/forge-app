@@ -4957,6 +4957,16 @@
        first attempt at this fix forgot the !important and silently had
        no effect at all. */
     .teval-overall-comments .teval-overall-entry{break-inside:avoid !important;}
+    /* The fix above kept an entry from splitting, but left the "COMMENTS"
+       title itself free to break away from the entry that follows it --
+       stranded alone at the bottom of a page with the actual comment
+       starting fresh on the next one. break-after:avoid (not
+       break-inside:avoid on the whole .teval-overall-comments container,
+       which would force EVERY evaluator's entry to stay together as one
+       block and risk the "impossible to satisfy" case on a trial with
+       several long comments) keeps just the title glued to whatever
+       comes right after it. */
+    .teval-overall-comments-title{break-after:avoid !important;}
     /* Part 2 (.trial-part2-box, trials.js) used to be forced onto its own
        fresh printed page unconditionally -- per request, Part 1 + Part 2
        together should fit on one page whenever the content is actually
