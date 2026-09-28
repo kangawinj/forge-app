@@ -62,6 +62,30 @@ let trialEditSnapshotBefore = null;
 let bulkPrintOpen = false;
 let bulkPrintSelectedIds = new Set();
 
+// Browsers default the "Save as PDF" filename to document.title -- same
+// "<date/time> <page name> Forge <account>" convention already used by
+// Compare/Recipes/Projects' own Print buttons (see compare.js). Returns a
+// restore function to call once printing is done (afterprint).
+function setPrintDocumentTitle(pageLabel){
+  const originalTitle = document.title;
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateTimeStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())} ${pad(now.getHours())}-${pad(now.getMinutes())}`;
+  document.title = `${dateTimeStr} ${pageLabel} Forge ${currentUser?.email || ''}`.replace(/[\\/:*?"<>|]/g, '-');
+  return () => { document.title = originalTitle; };
+}
+
+// A trial has no name of its own (see trialLabel, trials-data.js) -- this
+// is the same "which recipes/manual products" join, just also covering
+// manual products (trialLabel only covers linked recipes), for use as a
+// human-readable page label in the print filename above.
+function trialProductNames(t){
+  const linkedRecipes = (t.recipeIds || []).map(id => recipes.find(r => r.id === id)).filter(Boolean);
+  const manualProducts = t.manualProducts || [];
+  const names = [...linkedRecipes.map(r => recipeDisplayLabel(r)), ...manualProducts.map(mp => mp.name || 'Untitled')];
+  return names.length ? names.join(', ') : 'Untitled test';
+}
+
 function deleteTrialFromCloud(id){
   deleteTrialShareArtifacts(id);
   return deleteDoc(doc(trialsCol, id));
@@ -804,9 +828,12 @@ export function renderTrialsList(){
     });
 
     block.querySelector('[data-role="print-trial"]')?.addEventListener('click', () => {
+      const pageLabel = `Test Result — ${trialProductNames(t)}`;
+      const restoreTitle = setPrintDocumentTitle(pageLabel);
       block.classList.add('printing-only');
       const cleanup = () => {
         block.classList.remove('printing-only');
+        restoreTitle();
         window.removeEventListener('afterprint', cleanup);
       };
       window.addEventListener('afterprint', cleanup);
@@ -1219,8 +1246,11 @@ function printSelectedTrials(ids){
     block.classList.add('printing-only');
     container.appendChild(block);
   });
+  const pageLabel = order.length === 1 ? `Test Result — ${trialProductNames(order[0])}` : `Test Results (${order.length} tests)`;
+  const restoreTitle = setPrintDocumentTitle(pageLabel);
   const cleanup = () => {
     window.removeEventListener('afterprint', cleanup);
+    restoreTitle();
     renderTrialsList();
   };
   window.addEventListener('afterprint', cleanup);
