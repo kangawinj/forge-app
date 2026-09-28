@@ -625,7 +625,8 @@ export const CHANGELOG = [
   { version: "3.0.583", date: "2026-09-25", note: "Printed Test Results: an evaluator's own Comment + reference photos now moves to the next page as one block instead of splitting mid-sentence or between the text and its photos" },
   { version: "3.0.584", date: "2026-09-25", note: "Fixed the previous Comments break-inside fix silently having no effect -- it was missing !important, so it always lost to the blanket print reset regardless of its own higher specificity" },
   { version: "3.0.585", date: "2026-09-28", note: "Printed Test Results: the \"COMMENTS\" section title now stays glued to its own content instead of getting stranded alone at the bottom of a page while the comment starts fresh on the next one" },
-  { version: "3.0.586", date: "2026-09-28", note: "Added a Sample Prepared By dropdown (Company Directory) to Product Details" }
+  { version: "3.0.586", date: "2026-09-28", note: "Added a Sample Prepared By dropdown (Company Directory) to Product Details" },
+  { version: "3.0.587", date: "2026-09-28", note: "Printed Test Results: fixed a comment with several reference photos leaving a big blank gap at the bottom of the page -- only the comment text now has to stay together, so the photos can flow onto the next page on their own instead of dragging the whole thing along" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

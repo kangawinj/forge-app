@@ -504,7 +504,7 @@ export function renderTrialsList(){
           <div class="teval-overall-comments-title">Comments</div>
           ${emails.map(email => `
             <div class="teval-overall-entry">
-              <b>${escapeHtml(shortEvaluatorName(email))}:</b> ${escapeHtml((comments[email] || '').trim() || '-')}
+              <div class="teval-overall-entry-text"><b>${escapeHtml(shortEvaluatorName(email))}:</b> ${escapeHtml((comments[email] || '').trim() || '-')}</div>
               ${(photosByEmail[email] || []).length ? `
                 <div class="proj-ref-images-grid" style="margin-top:6px;">
                   ${(photosByEmail[email] || []).map(ph => `
