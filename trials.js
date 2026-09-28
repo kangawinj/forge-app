@@ -405,29 +405,18 @@ export function renderTrialsList(){
     const improvementHeaderCells = evalTargets.map((p, i) => `<th class="${i > 0 ? 'recipe-boundary' : ''}">${escapeHtml(p.label)}</th>`).join('');
     const evaluationCriteria = getEvaluationCriteria(mt);
     const sensoryCriteriaNotes = getCriteriaNotes(mt, 'criteriaNotes');
+    // A <textarea>'s own font-size doesn't reliably match a plain div's
+    // during print in every browser (some print engines fall back toward
+    // native form-control rendering for textareas regardless of CSS), even
+    // with the exact same font-size rule applied to both -- this
+    // plain-text mirror (real <br> line breaks, not a textarea) is what
+    // actually prints, hidden on screen and swapped in for the textarea
+    // only in print (see .teval-print-hide-scores/.print-only in
+    // style.css), so this Note reads with pixel-identical formatting
+    // whichever table it's used in (shared by both Sensory Evaluation's
+    // and Improvement Guidelines' own Note column below).
+    const printOnlyCriteriaNoteHtml = note => `<div class="teval-criteria-note-print print-only">${escapeHtml(note || '-').replace(/\n/g, '<br>')}</div>`;
     const fixedCriteriaRowsHtml = evaluationCriteria.map((c, ci) => {
-      // Combined per-evaluator notes for this criteria, across every
-      // product -- links this column to what's actually typed per-sample
-      // in the Perform Evaluation wizard (mine[`${criteriaId}_note`])
-      // instead of one hand-typed note only reachable via Edit mode. A
-      // note typed the old way (before the wizard had its own per-
-      // criteria Note field) is folded in too, attributed to whoever
-      // last edited the test, so it's never silently dropped -- same
-      // "never destroy data" approach as combinedEvaluationEntries.
-      const noteEntries = [];
-      evalTargets.forEach(p => {
-        const pd = getTrialProductData(mt, p.id);
-        if(pd.evaluations && typeof pd.evaluations === 'object'){
-          Object.entries(pd.evaluations).forEach(([email, ans]) => {
-            const noteVal = ans?.[`${c.id}_note`];
-            if(noteVal) noteEntries.push({ who: email, product: p.label, note: noteVal });
-          });
-        }
-      });
-      const legacyNote = sensoryCriteriaNotes[c.id];
-      if(legacyNote && !noteEntries.some(e => e.note === legacyNote)){
-        noteEntries.push({ who: t.updatedBy || 'Unspecified', product: null, note: legacyNote });
-      }
       return `
       <tr>
         <td>${isEditing
@@ -451,9 +440,13 @@ export function renderTrialsList(){
           const stored = pd['sensory_' + c.id] || '';
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(stored)}</textarea></td>`;
         }).join('')}
-        <td class="recipe-boundary">${noteEntries.length
-          ? noteEntries.map(e => `<div class="teval-overall-entry">${e.product && evalTargets.length > 1 ? `<b>(${escapeHtml(e.product)}):</b> ` : ''}${escapeHtml(e.note)}</div>`).join('')
-          : '<span class="overview-empty">-</span>'}</td>
+        <td class="recipe-boundary">
+          <div class="mu-field-with-translate" style="width:auto;">
+            <textarea class="teval-criteria-note" data-bucket="criteriaNotes" data-criteria-id="${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(sensoryCriteriaNotes[c.id] || '')}</textarea>
+            ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
+          </div>
+          ${printOnlyCriteriaNoteHtml(sensoryCriteriaNotes[c.id])}
+        </td>
       </tr>
     `;
     }).join('');
@@ -558,17 +551,6 @@ export function renderTrialsList(){
     // everyone is already a final call, nothing left to improve toward.
     // Locked (readonly, muted) otherwise, including not-yet-evaluated.
     const improvementCriteriaNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
-    // A <textarea>'s own font-size doesn't reliably match a plain div's
-    // during print in every browser (some print engines fall back toward
-    // native form-control rendering for textareas regardless of CSS), even
-    // with the exact same font-size rule applied to both -- this
-    // plain-text mirror (real <br> line breaks, not a textarea) is what
-    // actually prints, hidden on screen and swapped in for the textarea
-    // only in print (see .teval-print-hide-scores/.print-only in
-    // style.css), so this Note reads with pixel-identical formatting to
-    // Sensory Evaluation's own Note (plain divs there too, never a
-    // textarea).
-    const printOnlyCriteriaNoteHtml = note => `<div class="teval-criteria-note-print print-only">${escapeHtml(note || '-').replace(/\n/g, '<br>')}</div>`;
     const improvementRowsHtml = evaluationCriteria.map(c => `
       <tr>
         <td><b>${escapeHtml(c.label)}</b></td>
