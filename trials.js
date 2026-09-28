@@ -721,8 +721,6 @@ export function renderTrialsList(){
                 </div>
               ` : ''}
             </div>
-            ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
-
             <div class="field">
               <label>Sensory Evaluation</label>
               ${evalTargets.length ? `
@@ -745,6 +743,7 @@ export function renderTrialsList(){
                 ${isEditing ? `<button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>` : ''}
               </div>
             </div>
+            ${activity.length ? `<div class="reflist-item-meta" style="margin-top:10px;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
           </div>
         </div>
       </div>
