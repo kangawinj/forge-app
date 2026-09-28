@@ -624,7 +624,8 @@ export const CHANGELOG = [
   { version: "3.0.582", date: "2026-09-25", note: "Printed Test Results: moved the linked project's thumbnail to sit beside Project Name instead of floating alone where the now-hidden row summary used to be" },
   { version: "3.0.583", date: "2026-09-25", note: "Printed Test Results: an evaluator's own Comment + reference photos now moves to the next page as one block instead of splitting mid-sentence or between the text and its photos" },
   { version: "3.0.584", date: "2026-09-25", note: "Fixed the previous Comments break-inside fix silently having no effect -- it was missing !important, so it always lost to the blanket print reset regardless of its own higher specificity" },
-  { version: "3.0.585", date: "2026-09-28", note: "Printed Test Results: the \"COMMENTS\" section title now stays glued to its own content instead of getting stranded alone at the bottom of a page while the comment starts fresh on the next one" }
+  { version: "3.0.585", date: "2026-09-28", note: "Printed Test Results: the \"COMMENTS\" section title now stays glued to its own content instead of getting stranded alone at the bottom of a page while the comment starts fresh on the next one" },
+  { version: "3.0.586", date: "2026-09-28", note: "Added a Sample Prepared By dropdown (Company Directory) to Product Details" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

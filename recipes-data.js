@@ -51,6 +51,7 @@ export function blankRecipe(){
     salesRep: "",
     description: [],
     descPhotos: [],
+    samplePreparedBy: "",
     note: "",
     devStatus: "In Development",
     batchWeight: 1000,

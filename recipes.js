@@ -616,6 +616,10 @@ export function renderRecipeEditor(r){
         </div>
         <div id="linkedProjectInfo"></div>
         <div class="field">
+          <label>Sample Prepared By</label>
+          <input type="text" id="f-samplePreparedBy" list="customerDatalist" placeholder="e.g. ABC Co., Ltd.">
+        </div>
+        <div class="field">
           <label>Description / Concept</label>
           <div class="desc-points-list" id="descPointsList"></div>
           <button class="btn btn-sm add-row-btn" type="button" id="btnAddDescPoint">+ Add Point</button>
@@ -920,6 +924,11 @@ export function renderRecipeEditor(r){
   });
   renderDescPoints(r);
   renderDescPhotos(r);
+  document.getElementById('f-samplePreparedBy').value = r.samplePreparedBy || '';
+  document.getElementById('f-samplePreparedBy').addEventListener('input', e => {
+    r.samplePreparedBy = e.target.value;
+    scheduleSave();
+  });
   document.getElementById('f-note').value = r.note || '';
   document.getElementById('f-note').addEventListener('input', e => {
     r.note = e.target.value;
