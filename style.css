@@ -4712,14 +4712,29 @@
     /* Used to shrink everything to 75% here via CSS `zoom` so more content
        would fit per printed page without the user having to type "75"
        into the print dialog's own Scale field by hand. Removed -- `zoom`
-       (unlike a real layout change) makes Chrome's print/PDF engine fall
-       back to drawing text as vector outlines instead of embedded,
-       selectable text, so every "Save as PDF" output app-wide came out
-       with text that couldn't be selected or copied. Selectable/copyable
-       text matters more than saving a page, so this is back to the
-       browser's own default 100% -- someone who wants it more compact can
-       still type a Scale value into the print dialog themselves. */
+       is non-standard and a plausible contributor to Chrome's print/PDF
+       engine falling back to drawing text as vector outlines instead of
+       embedded, selectable text. Selectable/copyable text matters more
+       than saving a page, so this is back to the browser's own default
+       100% -- someone who wants it more compact can still type a Scale
+       value into the print dialog themselves. */
     body{background:#fff;}
+    /* The actual root cause of that same "can't select/copy printed
+       text" bug turned out to be Thai text specifically, not zoom --
+       Windows' Thai-capable system fonts (Leelawadee UI, Tahoma, see
+       :root's own font-family) carry a "no embedding" flag, so Chrome's
+       print/PDF engine can't embed the real font program for them and
+       falls back to drawing those glyphs as unselectable/uncopyable
+       vector outlines. Noto Sans Thai (loaded in index.html, print use
+       only) is a real, freely-embeddable font file Chrome can actually
+       embed, so Thai text in a printed PDF stays real, selectable text.
+       Screen rendering is untouched -- this only takes effect here,
+       inside @media print. Set on body (inherited from there, same as
+       :root's own rule normally cascades), not forced with !important
+       onto every element -- Recipe/Trial Code's own deliberate monospace
+       font-family (.rt-code, Consolas/Courier New) needs to keep winning
+       over this. */
+    body{font-family:"Noto Sans Thai",-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;}
 
     /* Product Details' reference/description photos print 1.5x larger
        (150px vs. the on-screen 100px thumbnail) since paper has the room
