@@ -29,7 +29,7 @@ import {
 import {
   trialLabel, migrateTrial, getTrialProductData, normalizeTrialPhotos, TRIAL_PHOTO_MAX,
   TRIAL_MAX_PRODUCTS, getEvaluationCriteria, getCriteriaNotes, combinedEvaluationEntries,
-  jarScoreLabel, jarScoreDisplay, shortEvaluatorName,
+  shortEvaluatorName,
   improvementFieldValue, TRIAL_TEST_RESULT_CLASSES,
   TRIAL_TEST_RESULT_OPTIONS, groupTrialsByProject, blankManualTrialProduct,
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
@@ -442,16 +442,14 @@ export function renderTrialsList(){
           : `<b>${escapeHtml(c.label)}</b>`}</td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          // Sensory Evaluation is filled in through the "Perform
-          // Evaluation" wizard now (see renderEvaluationWizard), not
-          // inline here -- this table always shows the combined view:
-          // every evaluator's own JAR answer, listed together (see
-          // combinedEvaluationEntries), not a single shared value anyone
-          // could silently overwrite.
-          const entries = combinedEvaluationEntries(pd, c.id, t.updatedBy);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="teval-overall-entry" title="${escapeHtml(jarScoreLabel(e.value))}">${escapeHtml(jarScoreDisplay(e.value))} <span class="teval-jar-meaning">${escapeHtml(jarScoreLabel(e.value))}</span></div>`).join('')
-            : '<span class="overview-empty">-</span>'}</td>`;
+          // Per request, a plain manually-typed field now -- was the
+          // combined view of every evaluator's own JAR answer from the
+          // "Perform Evaluation" wizard (see combinedEvaluationEntries);
+          // the wizard/JAR scoring itself is untouched (still what feeds
+          // Test Result/Summary Test elsewhere), this table's own cell
+          // just no longer displays or is limited to that.
+          const stored = pd['sensory_' + c.id] || '';
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(stored)}</textarea></td>`;
         }).join('')}
         <td class="recipe-boundary">${noteEntries.length
           ? noteEntries.map(e => `<div class="teval-overall-entry">${e.product && evalTargets.length > 1 ? `<b>(${escapeHtml(e.product)}):</b> ` : ''}${escapeHtml(e.note)}</div>`).join('')
@@ -1019,6 +1017,13 @@ export function renderTrialsList(){
       });
     });
 
+    block.querySelectorAll('.teval-sensory').forEach(el => {
+      el.addEventListener('change', () => {
+        const pd = getTrialProductData(t, el.dataset.productId);
+        pd[el.dataset.field] = el.value.trim();
+        scheduleTrialSave(t);
+      });
+    });
     block.querySelectorAll('.teval-improve').forEach(el => {
       el.addEventListener('change', () => {
         const pd = getTrialProductData(t, el.dataset.productId);
