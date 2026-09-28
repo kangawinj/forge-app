@@ -218,6 +218,7 @@ export function renderPrintView(r){
       <div class="ci-row"><b>Code:</b> ${escapeHtml(fullCode(r) || '-')}</div>
       <div class="ci-row"><b>Date:</b> ${escapeHtml(r.date || '-')}</div>
       <div class="ci-row"><b>Product Type:</b> ${escapeHtml(productTypeLabel)}</div>
+      ${(r.samplePreparedBy||'').trim() ? `<div class="ci-row"><b>Sample Prepared By:</b> ${escapeHtml(r.samplePreparedBy)}</div>` : ''}
       ${link ? `<div class="ci-row"><b>Project:</b> ${escapeHtml(link.project.name || 'Untitled project')}</div>${linkedProjectInfoHtml(link)}` : ''}
       ${descriptionListHtml(r)}
       ${photosHtml}

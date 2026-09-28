@@ -639,7 +639,8 @@ export const CHANGELOG = [
   { version: "3.0.597", date: "2026-09-28", note: "Reverted the print font swap (3.0.595/3.0.596) -- confirmed it didn't fix printed-PDF text selection (non-Thai text had the same problem) and the added line-height made it stop working altogether" },
   { version: "3.0.598", date: "2026-09-28", note: "Printed PDF text: reading an actual saved PDF showed its text layer was garbled for English too, not just Thai -- every OS system font used for printing turned out to be non-embeddable, not just the Thai ones. Now uses Noto Sans + Noto Sans Thai, real embeddable fonts covering both scripts" },
   { version: "3.0.599", date: "2026-09-28", note: "Reverted the print font swap again -- a second real saved PDF confirmed it made no difference at all, ruling out font embedding as the cause of printed PDF text not being selectable. Likely a Chromium engine limitation with Thai text shaping, not something fixable from here" },
-  { version: "3.0.600", date: "2026-09-28", note: "Added a Linked Test Results section to the Recipe page -- shows every Test Result that links to this formula, click one to jump straight to it" }
+  { version: "3.0.600", date: "2026-09-28", note: "Added a Linked Test Results section to the Recipe page -- shows every Test Result that links to this formula, click one to jump straight to it" },
+  { version: "3.0.601", date: "2026-09-28", note: "Recipe Preview/Print now shows Sample Prepared By" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
