@@ -5059,6 +5059,19 @@
       text-align:left !important;
       white-space:normal !important;
     }
+    /* Per request, the product's own Name/Code (see evalHeaderCells,
+       trials.js) don't print here at all any more -- the "Products Being
+       Compared" cards right above this table already show that same
+       Name/Code (plus a photo), so printing it a second time in the
+       header was pure duplication. The rule above already hides these
+       header <th>s entirely (they're per-product columns), but singling
+       out the exact elements that hold the duplicated text is a more
+       direct, unambiguous guarantee than relying on that :not() chain
+       alone for content specifically called out as not wanted twice. */
+    .teval-print-hide-scores .compare-th-name,
+    .teval-print-hide-scores .compare-th-code{
+      display:none !important;
+    }
     /* Compact print formatting -- tighter padding/font/line-height than
        the on-screen sizing (tuned for a mouse-driven UI, not a printed
        page), vertical-align:top so a short Criteria label (e.g. "Odor")
