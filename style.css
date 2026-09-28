@@ -5036,38 +5036,20 @@
        else in .printing-only (break-inside:auto from the blanket reset
        above lets the browser break wherever content actually runs out of
        room, instead of always paying for a fresh page it might not need). */
-    /* Printed Test Results: Sensory Evaluation's AND Improvement
-       Guidelines' per-product columns (JAR score/label, automatic
-       suggestion) are the same detail already captured in the on-screen
-       Overall view -- on paper, only Criteria + Note is wanted from
-       either table (teval-print-hide-scores, trials.js). table-layout
-       switches to auto so Note expands into the freed space instead of
-       table-layout:fixed's colgroup leaving a blank gap where the hidden
-       columns used to be -- and the trailing <col>'s own inline
-       width:180px (trialColgroup, trials.js) has to be overridden too,
-       with !important, since an inline style otherwise wins over
-       table-layout:auto and keeps that column pinned narrow no matter
-       what. */
+    /* Printed Test Results: per request, Sensory Evaluation's AND
+       Improvement Guidelines' per-product columns now print in full --
+       they're each product's own real, manually-typed data now (not an
+       auto-derived duplicate of Note, which is what the previous
+       hide-every-per-product-column behavior here was originally for).
+       table-layout:auto lets a table with this many columns (Criteria +
+       row label + up to 6 products + Note) size each one to its actual
+       content instead of table-layout:fixed's colgroup splitting the page
+       evenly regardless of what's in each column. */
     .teval-print-hide-scores{table-layout:auto !important;}
-    .teval-print-hide-scores th:not(:first-child):not(:nth-child(2)):not(:last-child),
-    .teval-print-hide-scores td:not(:first-child):not(:nth-child(2)):not(:last-child),
-    .teval-print-hide-scores col:not(:first-child):not(:nth-child(2)):not(:last-child){
-      display:none !important;
-    }
-    .teval-print-hide-scores col:last-child{width:auto !important;}
-    .teval-print-hide-scores th:last-child, .teval-print-hide-scores td:last-child{
-      text-align:left !important;
-      white-space:normal !important;
-    }
-    /* Per request, the product's own Name/Code (see evalHeaderCells,
-       trials.js) don't print here at all any more -- the "Products Being
-       Compared" cards right above this table already show that same
-       Name/Code (plus a photo), so printing it a second time in the
-       header was pure duplication. The rule above already hides these
-       header <th>s entirely (they're per-product columns), but singling
-       out the exact elements that hold the duplicated text is a more
-       direct, unambiguous guarantee than relying on that :not() chain
-       alone for content specifically called out as not wanted twice. */
+    /* The product's own Name/Code (see evalHeaderCells, trials.js) still
+       don't print in the header -- the "Products Being Compared" cards
+       right above this table already show that same Name/Code (plus a
+       photo), so printing it a second time here would be duplication. */
     .teval-print-hide-scores .compare-th-name,
     .teval-print-hide-scores .compare-th-code{
       display:none !important;
@@ -5090,15 +5072,14 @@
       margin-bottom:2px !important;
       padding-bottom:2px !important;
     }
-    /* Sensory Evaluation's Note column is plain divs (teval-overall-entry
-       above), so the td-level font-size/line-height/padding just above
-       reaches it directly and prints consistently -- Improvement
-       Guidelines' own Note is a <textarea> (teval-criteria-note), and
-       matching its font-size via CSS wasn't enough: some print engines
-       fall back toward native form-control rendering for textareas
-       regardless of CSS, so it kept printing visibly different from
-       Sensory Evaluation's Note even with identical font-size/line-height
-       rules applied to both. teval-criteria-note-print (trials.js) is a
+    /* Every free-typed field in this table (Comment, Improvement
+       Guidelines, both Note columns) is a <textarea> now, and matching
+       its font-size via CSS alone wasn't enough: some print engines fall
+       back toward native form-control rendering for textareas regardless
+       of CSS, so it printed visibly different from Sensory Evaluation's
+       old plain-div Overall view even with identical font-size/line-height
+       rules applied to both. teval-criteria-note-print (trials.js,
+       reused via printOnlyCriteriaNoteHtml for all four fields) is a
        plain-div mirror of the same text with real <br> line breaks,
        already sized correctly by the td-level rule above like every
        other div in these tables -- swapped in for the textarea here. */

@@ -441,17 +441,21 @@ export function renderTrialsList(){
       // from the "Perform Evaluation" wizard (see combinedEvaluationEntries;
       // the wizard/JAR scoring itself is untouched, still what feeds Test
       // Result/Summary Test elsewhere) -- now a plain manually-typed field.
+      // Per request, this per-product content now actually prints (it's
+      // the real data now, not a duplicate of Note) -- same print-only
+      // plain-text mirror as Note already uses, needed for the same
+      // textarea-vs-div print font-size inconsistency reason.
       const commentCellsHtml = evalTargets.map((p, i) => {
         const pd = getTrialProductData(mt, p.id);
         const comment = pd['sensory_' + c.id] || '';
-        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea></td>`;
+        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-sensory" data-product-id="${escapeHtml(p.id)}" data-field="sensory_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(comment)}</textarea>${printOnlyCriteriaNoteHtml(comment)}</td>`;
       }).join('');
       // Improvement Guidelines, merged in from what used to be a separate
       // table below.
       const improveCellsHtml = evalTargets.map((p, i) => {
         const pd = getTrialProductData(mt, p.id);
         const improve = improvementFieldValue(pd, c.id);
-        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea></td>`;
+        return `<td class="${i > 0 ? 'recipe-boundary' : ''}"><textarea class="teval-improve" data-product-id="${escapeHtml(p.id)}" data-field="improve_${escapeHtml(c.id)}" ${isEditing ? '' : 'readonly'} placeholder="-">${escapeHtml(improve)}</textarea>${printOnlyCriteriaNoteHtml(improve)}</td>`;
       }).join('');
       return `
       <tr>
