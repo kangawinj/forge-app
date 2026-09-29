@@ -1,17 +1,19 @@
 // The "Perform Evaluation" wizard -- a dedicated full-screen overlay
-// (body-appended, independent of the part-block markup) walking one
-// product at a time: a Comment + Improvement Guidelines per Sensory
-// Evaluation criteria, then Test Result as the last field on that
-// product's page, finishing with a Review page listing every product's
-// answers together before Done closes the overlay. Comment/Improvement
-// Guidelines write straight to the same pd['sensory_'+id]/pd['improve_'+id]
-// fields the list page's own Sensory Evaluation table reads/writes (see
-// sensoryFieldValue/improvementFieldValue, trials-data.js) -- this wizard
-// is just a guided, one-product-at-a-time alternate UI onto that same
-// data, not a separate per-evaluator JAR scoring system any more (that
-// system -- JAR_SCALE/jarScoreLabel/jarScoreDisplay/jarAdjustmentPercent
-// -- was removed per request). Test Result stays its own, genuinely
-// per-evaluator answer (see getMyEvaluation), untouched by that removal.
+// (body-appended, independent of the part-block markup) showing every
+// product on one page (per request -- used to walk one product per step
+// with Back/Next Sample navigation; that stepping is gone): a Comment +
+// Improvement Guidelines per Sensory Evaluation criteria, then Test
+// Result, repeated per product, followed by one shared Comments +
+// Reference Photo section covering the whole test, then a single Done.
+// Comment/Improvement Guidelines write straight to the same
+// pd['sensory_'+id]/pd['improve_'+id] fields the list page's own Sensory
+// Evaluation table reads/writes (see sensoryFieldValue/
+// improvementFieldValue, trials-data.js) -- this wizard is just a guided
+// alternate UI onto that same data, not a separate per-evaluator JAR
+// scoring system any more (that system -- JAR_SCALE/jarScoreLabel/
+// jarScoreDisplay/jarAdjustmentPercent -- was removed per request). Test
+// Result stays its own, genuinely per-evaluator answer (see
+// getMyEvaluation), untouched by that removal.
 // Split out of trials.js (which grew past 2,600 lines) -- see trials.js's
 // own top-of-file comment for the overall file split.
 import {

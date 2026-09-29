@@ -29,7 +29,7 @@ import {
 import {
   trialLabel, migrateTrial, getTrialProductData, normalizeTrialPhotos, TRIAL_PHOTO_MAX,
   TRIAL_MAX_PRODUCTS, getEvaluationCriteria, getCriteriaNotes, combinedEvaluationEntries,
-  shortEvaluatorName,
+  shortEvaluatorName, getMyEvaluation, registerEvaluationParticipant,
   improvementFieldValue, TRIAL_TEST_RESULT_CLASSES,
   TRIAL_TEST_RESULT_OPTIONS, groupTrialsByProject, blankManualTrialProduct,
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
@@ -532,20 +532,25 @@ export function renderTrialsList(){
         <td colspan="2"><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
-          const entries = combinedEvaluationEntries(pd, null, t.updatedBy);
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">${entries.length
-            ? entries.map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(e.value)}</b></div>`).join('')
-            // Print (see printing-only) still gets an empty tick list on a
-            // product nobody has evaluated yet, so a paper printout has
-            // all 3 options for someone outside the system to mark by
-            // hand -- disabled (not readonly -- readonly has no effect on
-            // radio inputs) since this isn't the editable copy.
-            : `<div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
+          const mine = currentUser?.email ? getMyEvaluation(pd) : null;
+          // Own pick is now a live radio right in this table (per request
+          // -- used to require opening "Perform Evaluation" to set it),
+          // same TRIAL_TEST_RESULT_OPTIONS/CLASSES the old read-only view
+          // and the wizard both already use. Everyone else's picks still
+          // show underneath so the combined view isn't lost.
+          const othersHtml = combinedEvaluationEntries(pd, null, t.updatedBy)
+            .filter(e => e.who !== currentUser?.email)
+            .map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(shortEvaluatorName(e.who))}: ${escapeHtml(e.value)}</b></div>`)
+            .join('');
+          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
+            <div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
                 <label class="trial-testresult-radio-label">
-                  <input type="radio" disabled>
+                  <input type="radio" name="teval-testresult-${escapeHtml(t.id)}-${escapeHtml(p.id)}" data-role="teval-testresult" data-product-id="${escapeHtml(p.id)}" value="${escapeHtml(o)}" ${mine?.testResult === o ? 'checked' : ''} ${mine ? '' : 'disabled'}>
                   ${o}
                 </label>
-              `).join('')}</div>`}</td>`;
+              `).join('')}</div>
+            ${othersHtml}
+          </td>`;
         }).join('')}
         <td class="recipe-boundary"></td>
       </tr>
@@ -1031,6 +1036,16 @@ export function renderTrialsList(){
         const notes = getCriteriaNotes(t, el.dataset.bucket);
         notes[el.dataset.criteriaId] = el.value.trim();
         scheduleTrialSave(t);
+      });
+    });
+    block.querySelectorAll('[data-role="teval-testresult"]').forEach(el => {
+      el.addEventListener('change', () => {
+        const pd = getTrialProductData(t, el.dataset.productId);
+        const mine = getMyEvaluation(pd);
+        mine.testResult = el.value;
+        registerEvaluationParticipant(t);
+        scheduleTrialSave(t);
+        renderTrialsList();
       });
     });
     block.querySelectorAll('.mu-field-with-translate').forEach(wireTrialTranslateButton);
