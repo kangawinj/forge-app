@@ -3979,7 +3979,7 @@
      narrow field instead of reading flush left. Scoped to
      teval-print-hide-scores specifically (not .compare-table generally)
      so Compare's own numeric tables keep their right-alignment. */
-  .teval-print-hide-scores th, .teval-print-hide-scores td{text-align:left;}
+  .teval-print-hide-scores th, .teval-print-hide-scores td{text-align:left;vertical-align:top;}
   /* Comments + reference photo moved out of the Sensory Evaluation table
      (they're one shared thing per evaluator now, not per-product, so they
      no longer fit as a table column) into this standalone block right
