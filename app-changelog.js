@@ -659,7 +659,8 @@ export const CHANGELOG = [
   { version: "3.0.617", date: "2026-09-28", note: "Removed the JAR (Just-About-Right) scoring system entirely, replaced by Comment/Improvement Guidelines throughout -- Perform Evaluation and Share External Evaluation (guest) now walk through the same manually-typed fields as the main table instead of a 1-9 score; Summary Test/Table/Excel export updated to match (the JAR-only \"Just Right\" bucket has no equivalent and was dropped)" },
   { version: "3.0.618", date: "2026-09-28", note: "Fixed Products Being Compared cards not lining up with the Sensory Evaluation table's own columns underneath -- both now reserve the identical leading/trailing widths so each product's card sits directly above its own column" },
   { version: "3.0.619", date: "2026-09-29", note: "Test Result in the Sensory Evaluation table is now directly clickable -- previously read-only there, only settable via Perform Evaluation. Other evaluators' picks still show underneath your own" },
-  { version: "3.0.620", date: "2026-09-29", note: "Sensory Evaluation's Comment/Improvement Guidelines cells now align text to the top -- shorter answers used to center vertically within the row, misaligning with taller cells alongside them" }
+  { version: "3.0.620", date: "2026-09-29", note: "Sensory Evaluation's Comment/Improvement Guidelines cells now align text to the top -- shorter answers used to center vertically within the row, misaligning with taller cells alongside them" },
+  { version: "3.0.621", date: "2026-09-29", note: "Compare Costing now has its own Group by Part option too, same as Compare Ingredients -- shows each Part's cost subtotal, independent toggle so one can be grouped while the other stays combined" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

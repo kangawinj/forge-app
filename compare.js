@@ -18,6 +18,11 @@ let compareShowSteps = true;
 // recipe editor's own breakdown, current rows collapsible per section) vs
 // one combined table across the whole recipe, ignoring Part boundaries.
 let compareGroupByPart = true;
+// Same idea, independent toggle, for Compare Costing -- grouping by Part is
+// useful there too (e.g. "how much does the Sauce cost"), but a user may
+// want one grouped while the other stays combined, so this doesn't share
+// compareGroupByPart's state.
+let compareCostGroupByPart = true;
 // Per-section collapse state while grouped by Part (keyed by the section's
 // own label, since Part has no stable id) -- collapsing hides that
 // section's ingredient rows but keeps its title/column headers/subtotal
@@ -190,6 +195,7 @@ export function mountCompareView(){
     compareShowCosting = saved.showCosting !== false;
     compareShowSteps = saved.showSteps !== false;
     compareGroupByPart = saved.groupByPart !== false;
+    compareCostGroupByPart = saved.costGroupByPart !== false;
     compareNotes = { ...(saved.notes || {}) };
     renderCompareContent();
   }
@@ -206,6 +212,7 @@ export function mountCompareView(){
         showCosting: compareShowCosting,
         showSteps: compareShowSteps,
         groupByPart: compareGroupByPart,
+        costGroupByPart: compareCostGroupByPart,
         notes: compareNotes,
         savedAt: Date.now(),
         savedBy: currentUser?.email || '',
@@ -610,6 +617,112 @@ function renderCompareContent(){
     return `<td class="${boundaryClass(idx)}">฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
   }).join('');
 
+  // Group by Part for Costing, same idea as Compare Ingredients' own
+  // grouping above -- reuses the same partSections tree (it already carries
+  // each row's weight per recipe, which is all a cost figure needs) rather
+  // than rebuilding the Part breakdown a second time.
+  function costCell(row, id, idx){
+    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+    const wt = row.weights[id];
+    if(wt === undefined) return `<td class="compare-missing${boundaryClass(idx)}">— Not used —</td>`;
+    const price = priceOf(row.label);
+    if(price === null) return `<td class="compare-missing${boundaryClass(idx)}">No price set</td>`;
+    return `<td class="${boundaryClass(idx)}">฿${((wt / 1000) * price).toFixed(2)}</td>`;
+  }
+  // Same recursive-subtree idea as sectionRecursiveTotals above, tallying
+  // cost instead of %/weight.
+  function sectionRecursiveCostTotals(section){
+    const totals = {};
+    ids.forEach(id => { totals[id] = { cost: 0, hasUnpriced: false }; });
+    section.rows.forEach(row => {
+      const price = priceOf(row.label);
+      ids.forEach(id => {
+        const wt = row.weights[id];
+        if(wt === undefined) return;
+        if(price === null){ totals[id].hasUnpriced = true; return; }
+        totals[id].cost += (wt / 1000) * price;
+      });
+    });
+    section.subSections.forEach(sub => {
+      const subTotals = sectionRecursiveCostTotals(sub);
+      ids.forEach(id => {
+        totals[id].cost += subTotals[id].cost;
+        totals[id].hasUnpriced = totals[id].hasUnpriced || subTotals[id].hasUnpriced;
+      });
+    });
+    return totals;
+  }
+  // Own collapse-state keys (prefixed "cost:") so expanding/collapsing a
+  // Part here doesn't also affect Compare Ingredients' identically-named
+  // section, even though both reuse the same comparePartCollapsed object.
+  function renderCostPartSection(section){
+    const collapsed = !!comparePartCollapsed['cost:' + section.path];
+    const bodyRows = section.rows.map(row => {
+      const cells = ids.map((id, idx) => costCell(row, id, idx)).join('');
+      const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
+      return `<tr>${ingNameCellHtml(row.label, displayLabel)}${cells}</tr>`;
+    }).join('');
+    const recursiveTotals = sectionRecursiveCostTotals(section);
+    const subtotalCells = ids.map((id, idx) => {
+      if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+      const { cost, hasUnpriced } = recursiveTotals[id];
+      return `<td class="${boundaryClass(idx)}">฿${cost.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    }).join('');
+    const hasChildren = section.subSections.length > 0;
+    const subtotalRowHtml = `<tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr>`;
+    const tableHtml = section.rows.length === 0 ? '' : `
+      <div style="overflow-x:auto;">
+        <table class="compare-table">
+          ${colgroupHtml(ids.length)}
+          <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+          <tbody>${collapsed ? '' : bodyRows}</tbody>
+          ${hasChildren ? '' : `<tfoot>${subtotalRowHtml}</tfoot>`}
+        </table>
+      </div>
+    `;
+    const childrenHtml = collapsed ? '' : section.subSections.map(renderCostPartSection).join('');
+    const bottomSubtotalHtml = hasChildren ? `
+      <div style="overflow-x:auto;">
+        <table class="compare-table">
+          ${colgroupHtml(ids.length)}
+          <tfoot>${subtotalRowHtml}</tfoot>
+        </table>
+      </div>
+    ` : '';
+    return `
+      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth*20}px;">
+        <button type="button" class="compare-section-eye-btn compare-cost-part-collapse-btn" data-section="${escapeHtml(section.path)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
+        ${escapeHtml(section.label)}
+      </div>
+      <div style="padding-left:${section.depth*20}px;">
+        ${tableHtml}
+        ${childrenHtml}
+        ${bottomSubtotalHtml}
+      </div>
+    `;
+  }
+  const costPartSectionsHtml = partSections.map(renderCostPartSection).join('');
+  const combinedCostTableHtml = `
+    <div style="overflow-x:auto;">
+      <table class="compare-table">
+        ${colgroupHtml(ids.length)}
+        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+        <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+      </table>
+    </div>
+  `;
+  const costGrandTotalTableHtml = `
+    <div style="overflow-x:auto;margin-top:8px;">
+      <table class="compare-table">
+        ${colgroupHtml(ids.length)}
+        <tfoot>
+          <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
+          <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
+        </tfoot>
+      </table>
+    </div>
+  `;
+
   // --- steps comparison ---
   const stepsHtml = ids.map(id => {
     const r = recipes.find(x => x.id === id);
@@ -662,17 +775,16 @@ function renderCompareContent(){
 
     ${sectionTitleWithEye('toggleCostingSection', 'Compare Costing (weight × library price/kg)', compareShowCosting)}
     ${compareShowCosting ? `
-      <div style="overflow-x:auto;">
-        <table class="compare-table">
-          ${colgroupHtml(ids.length)}
-          <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
-          <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
-          <tfoot>
-            <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
-            <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
-          </tfoot>
-        </table>
-      </div>
+      <label class="compare-toggle-label">
+        <input type="radio" name="compareCostGroupMode" id="compareCostGroupByPartRadio" value="byPart" ${compareCostGroupByPart ? 'checked' : ''}>
+        Group by Part
+      </label>
+      <label class="compare-toggle-label">
+        <input type="radio" name="compareCostGroupMode" id="compareCostGroupCombinedRadio" value="combined" ${compareCostGroupByPart ? '' : 'checked'}>
+        Combined (one table)
+      </label>
+      ${compareCostGroupByPart ? (costPartSectionsHtml || '<div class="compare-empty">No ingredients yet</div>') : combinedCostTableHtml}
+      ${costGrandTotalTableHtml}
       <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
     ` : ''}
 
@@ -700,6 +812,21 @@ function renderCompareContent(){
     btn.addEventListener('click', () => {
       const label = btn.dataset.section;
       comparePartCollapsed[label] = !comparePartCollapsed[label];
+      renderCompareContent();
+    });
+  });
+  document.getElementById('compareCostGroupByPartRadio')?.addEventListener('change', () => {
+    compareCostGroupByPart = true;
+    renderCompareContent();
+  });
+  document.getElementById('compareCostGroupCombinedRadio')?.addEventListener('change', () => {
+    compareCostGroupByPart = false;
+    renderCompareContent();
+  });
+  document.querySelectorAll('.compare-cost-part-collapse-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const key = 'cost:' + btn.dataset.section;
+      comparePartCollapsed[key] = !comparePartCollapsed[key];
       renderCompareContent();
     });
   });
