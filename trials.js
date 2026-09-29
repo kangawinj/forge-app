@@ -372,12 +372,18 @@ export function renderTrialsList(){
     // row label, see trialColgroup), and the trailing 180px placeholder
     // (left empty -- CSS Grid auto-placement just stops after the last
     // real product card, leaving this final column blank) matches that
-    // same table's own trailing Note column -- with both ends pinned
-    // identically and the same N product columns splitting whatever's
-    // left in between, each product's card lines up with its own column
-    // in the table below, same technique used on the Compare Recipes page.
+    // same table's own trailing Note column. Each product column is now a
+    // fixed width (see TRIAL_PRODUCT_COL_WIDTH, shared with trialColgroup
+    // below) instead of splitting whatever's left evenly -- an even split
+    // squeezed Comment/Improvement Guidelines into a sliver once there were
+    // several products, wrapping every sentence to one word per line (per
+    // request). A fixed width can outgrow the page, so this now scrolls
+    // horizontally on its own -- still lines up with the table below since
+    // both use the exact same leading/column/trailing widths, same
+    // technique used on the Compare Recipes page.
+    const TRIAL_PRODUCT_COL_WIDTH = 220;
     const productCardsGrid = productCardsHtml
-      ? `<div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},minmax(0,1fr)) 180px;"><div class="compare-info-spacer"></div>${productCardsHtml}</div>`
+      ? `<div style="overflow-x:auto;"><div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
       : '<div class="overview-empty">No products added yet</div>';
 
     // Each row's score is per-product (columns matching the product cards
@@ -618,13 +624,13 @@ export function renderTrialsList(){
     // spacer (see productCardsGrid above), and the trailing 180px matches
     // that same grid's own trailing 180px placeholder column -- with both
     // ends pinned to the identical widths on both, and the same N product
-    // columns in between splitting whatever's left over identically, the
-    // product columns land at the same X position in both places. (Two
+    // columns in between at the identical fixed TRIAL_PRODUCT_COL_WIDTH,
+    // the product columns land at the same X position in both places. (Two
     // narrow columns instead of one 220px one so there's still room for
     // the Comment/Improvement Guidelines row label -- Test Result/Continue
     // Development span both with colspan="2", having no need for that
     // second column themselves.)
-    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${'<col>'.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
+    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${`<col style="width:${TRIAL_PRODUCT_COL_WIDTH}px;">`.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
