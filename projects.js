@@ -1609,10 +1609,17 @@ export function renderProjectsList(){
           const label = r
             ? `${escapeHtml(recipeDisplayLabel(r))}${fullCode(r) ? ' · ' + escapeHtml(fullCode(r)) : ''}`
             : '<span style="color:var(--danger);">Recipe not found (deleted?)</span>';
+          // Clicking the product name jumps straight to its recipe -- only
+          // when the recipe still exists (a deleted recipe's row has
+          // nothing to link to, same "Recipe not found" case `label` above
+          // already handles as plain unstyled text).
+          const nameCell = r
+            ? `<td class="proj-product-link" data-recipe-id="${escapeHtml(r.id)}" title="Open this recipe">${label}</td>`
+            : `<td>${label}</td>`;
           if(!isEditing){
             return `
               <tr data-product-id="${escapeHtml(prod.id)}">
-                <td>${label}</td>
+                ${nameCell}
                 <td>${escapeHtml(prod.salesRep || '-')}</td>
                 <td>${escapeHtml(prod.stage || PROJECT_STAGES[0])}</td>
                 <td style="font-size:12px;color:var(--text-dim);white-space:nowrap;">${escapeHtml(formatActivityDateTime(prod.updatedAt) || '')}</td>
@@ -1624,7 +1631,7 @@ export function renderProjectsList(){
           }
           return `
             <tr data-product-id="${escapeHtml(prod.id)}">
-              <td>${label}</td>
+              ${nameCell}
               <td><input type="text" class="proj-product-rep" list="salesRepDatalist" value="${escapeHtml(prod.salesRep)}" placeholder="Sales rep"></td>
               <td>
                 <select class="proj-select proj-product-stage">
@@ -2765,6 +2772,7 @@ export function renderProjectsList(){
           });
         }
         row.querySelector('[data-role="open-log"]').addEventListener('click', () => openProductLogModal(p.id, prod.id));
+        row.querySelector('.proj-product-link')?.addEventListener('click', () => openRecipeFromDashboard(prod.recipeId));
       });
 
       if(isEditing){

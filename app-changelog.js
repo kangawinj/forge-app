@@ -660,7 +660,8 @@ export const CHANGELOG = [
   { version: "3.0.618", date: "2026-09-28", note: "Fixed Products Being Compared cards not lining up with the Sensory Evaluation table's own columns underneath -- both now reserve the identical leading/trailing widths so each product's card sits directly above its own column" },
   { version: "3.0.619", date: "2026-09-29", note: "Test Result in the Sensory Evaluation table is now directly clickable -- previously read-only there, only settable via Perform Evaluation. Other evaluators' picks still show underneath your own" },
   { version: "3.0.620", date: "2026-09-29", note: "Sensory Evaluation's Comment/Improvement Guidelines cells now align text to the top -- shorter answers used to center vertically within the row, misaligning with taller cells alongside them" },
-  { version: "3.0.621", date: "2026-09-29", note: "Compare Costing now has its own Group by Part option too, same as Compare Ingredients -- shows each Part's cost subtotal, independent toggle so one can be grouped while the other stays combined" }
+  { version: "3.0.621", date: "2026-09-29", note: "Compare Costing now has its own Group by Part option too, same as Compare Ingredients -- shows each Part's cost subtotal, independent toggle so one can be grouped while the other stays combined" },
+  { version: "3.0.622", date: "2026-09-29", note: "Projects: clicking a product's name in its product list now jumps straight to that recipe, instead of only being reachable another way" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
