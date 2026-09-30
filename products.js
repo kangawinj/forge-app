@@ -9,6 +9,7 @@ import {
 import {
   onSnapshot, setDoc, doc, deleteDoc, writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { exportProductsToExcel } from './products-excel.js';
 
 export let productList = [];
 let unsubscribeProducts = null;
@@ -427,8 +428,9 @@ export function mountProductsView(){
         <span id="productImportStatus" class="ing-hint"></span>
       </div>
       ` : ''}
-      <div class="material-search">
-        <input type="text" id="productSearchInput" placeholder="Search products (name / code / sample code / type / factory)...">
+      <div class="material-search" style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="productSearchInput" placeholder="Search products (name / code / sample code / type / factory)..." style="flex:1;">
+        <button type="button" class="btn btn-sm" id="btnExportProductsExcel">${icon('download', 14)} Export Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="material-table">
@@ -455,6 +457,7 @@ export function mountProductsView(){
   `;
 
   document.getElementById('productSearchInput').addEventListener('input', renderProductTable);
+  document.getElementById('btnExportProductsExcel').addEventListener('click', () => exportProductsToExcel(productList));
   document.getElementById('btnCancelEditProduct').addEventListener('click', cancelEditProduct);
   document.getElementById('btnImportLegacyProducts')?.addEventListener('click', importLegacyProducts);
   document.getElementById('btnAddCompositionRow').addEventListener('click', () => {

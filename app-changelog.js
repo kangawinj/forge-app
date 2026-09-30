@@ -671,7 +671,8 @@ export const CHANGELOG = [
   { version: "3.0.629", date: "2026-09-30", note: "Printed Sensory Evaluation: a Comment/Improvement Guidelines/Test Result/Continue Development row that doesn't fit in the space left on the current page now moves whole onto the next page instead of splitting mid-row" },
   { version: "3.0.630", date: "2026-09-30", note: "Removed the list of other evaluators' Test Result picks that used to show below your own -- just the radio buttons now" },
   { version: "3.0.631", date: "2026-09-30", note: "Test Results' Summary Table, Summary Test modal, and Excel export now also show each product's Comment per criteria, not just Improvement Guidelines" },
-  { version: "3.0.632", date: "2026-09-30", note: "Moved the Print button to the end of Test Results' toolbar, after List/Summary Table and Export Excel" }
+  { version: "3.0.632", date: "2026-09-30", note: "Moved the Print button to the end of Test Results' toolbar, after List/Summary Table and Export Excel" },
+  { version: "3.0.633", date: "2026-09-30", note: "Added Export Excel to Ingredients and Products, same idea as Test Results' own -- one flat row per ingredient/product covering every field on that page" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

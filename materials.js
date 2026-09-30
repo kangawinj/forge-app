@@ -8,6 +8,7 @@ import {
 import {
   onSnapshot, setDoc, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { exportMaterialsToExcel } from './materials-excel.js';
 
 let ingredientMaster = [];
 let unsubscribeMaterials = null;
@@ -321,8 +322,9 @@ export function mountMaterialsView(){
         <span class="ing-hint" id="materialFormError"></span>
       </div>
 
-      <div class="material-search">
-        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor / usage notes)...">
+      <div class="material-search" style="display:flex;gap:8px;align-items:center;">
+        <input type="text" id="materialSearchInput" placeholder="Search existing ingredients (Thai name / English name / code / vendor / usage notes)..." style="flex:1;">
+        <button type="button" class="btn btn-sm" id="btnExportMaterialsExcel">${icon('download', 14)} Export Excel</button>
       </div>
       <div style="overflow-x:auto;">
         <table class="material-table">
@@ -346,6 +348,7 @@ export function mountMaterialsView(){
   `;
 
   document.getElementById('materialSearchInput').addEventListener('input', renderMaterialTable);
+  document.getElementById('btnExportMaterialsExcel').addEventListener('click', () => exportMaterialsToExcel(ingredientMaster));
   document.getElementById('btnCancelEditMaterial').addEventListener('click', cancelEditMaterial);
   document.getElementById('mf-image').addEventListener('change', async e => {
     const file = e.target.files[0];
