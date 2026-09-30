@@ -672,7 +672,8 @@ export const CHANGELOG = [
   { version: "3.0.630", date: "2026-09-30", note: "Removed the list of other evaluators' Test Result picks that used to show below your own -- just the radio buttons now" },
   { version: "3.0.631", date: "2026-09-30", note: "Test Results' Summary Table, Summary Test modal, and Excel export now also show each product's Comment per criteria, not just Improvement Guidelines" },
   { version: "3.0.632", date: "2026-09-30", note: "Moved the Print button to the end of Test Results' toolbar, after List/Summary Table and Export Excel" },
-  { version: "3.0.633", date: "2026-09-30", note: "Added Export Excel to Ingredients and Products, same idea as Test Results' own -- one flat row per ingredient/product covering every field on that page" }
+  { version: "3.0.633", date: "2026-09-30", note: "Added Export Excel to Ingredients and Products, same idea as Test Results' own -- one flat row per ingredient/product covering every field on that page" },
+  { version: "3.0.634", date: "2026-09-30", note: "Fixed \"Could not export the complete Excel preview\" on recipes with an unconfirmed Idea Price ingredient -- a rare measurement rounding overlap between the price and its IDEA badge used to abort the whole export instead of just skipping that one cell's merge" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

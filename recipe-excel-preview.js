@@ -272,7 +272,19 @@ export async function addRecipePreviewSheet(workbook, source) {
     }
     for (const item of texts) {
       const box = cells(item.bounds);
-      if (box.right > box.left || box.bottom > box.top) sheet.mergeCellsWithoutStyle(box.top, box.left, box.bottom, box.right);
+      // Two text boxes occasionally land on overlapping grid cells after
+      // rounding to whole pixels (e.g. a price and its "IDEA" badge, whose
+      // own bounding rects differ by a sub-pixel amount that rounds
+      // differently) -- ExcelJS throws "Cannot merge already merged cells"
+      // for that one box, which used to abort the WHOLE export over one
+      // mis-measured element. Skipping just that box's merge (its value
+      // still goes into its own top-left cell, single-width instead of
+      // spanning) keeps every other cell intact instead of failing the
+      // entire Excel preview over a rare measurement edge case.
+      if (box.right > box.left || box.bottom > box.top) {
+        try { sheet.mergeCellsWithoutStyle(box.top, box.left, box.bottom, box.right); }
+        catch (error) { console.warn('Recipe Excel preview: skipped merging one overlapping cell', item.text, error.message); }
+      }
       const cell = sheet.getCell(box.top, box.left);
       const parsed = item.numeric ? numericValue(item.text) : { value: item.text };
       cell.value = item.richText ? { richText: item.richText } : parsed.value;
