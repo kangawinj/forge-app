@@ -2400,12 +2400,18 @@
      table's Comment + delete-icon columns) so the product columns themselves
      line up with their score columns. A real grid `gap` would consume extra
      width across those dead columns that the (gapless, contiguous) table
-     never spends, throwing columns out of alignment again — so gap is
-     replaced with an equivalent per-card margin, which doesn't affect track
-     sizing at all. */
+     never spends, throwing columns out of alignment again -- so there's no
+     gap here at all, same as the table's own cells, which touch directly
+     and rely on their own padding for breathing room. An earlier version
+     of this rule added a per-card margin-right for visual spacing instead,
+     but that shrank each card's own box short of its full column width, so
+     its right edge (and the photo inside it) no longer reached the same X
+     position as the table column's own right edge/divider underneath it
+     (per request) -- .compare-info-col's own padding:12px 14px already
+     gives each card the same kind of internal spacing a table cell's own
+     padding does, without needing to shrink the box itself. */
   .compare-info-grid.gap-via-margin{gap:0;}
-  .compare-info-grid.gap-via-margin > *{margin-right:14px;min-width:0;}
-  .compare-info-grid.gap-via-margin > *:last-child{margin-right:0;}
+  .compare-info-grid.gap-via-margin > *{min-width:0;}
   .compare-info-col{
     padding:12px 14px;
     border-radius:var(--radius);
