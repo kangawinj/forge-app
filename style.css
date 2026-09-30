@@ -5105,6 +5105,18 @@
        other div in these tables -- swapped in for the textarea here. */
     .teval-print-hide-scores textarea{display:none !important;}
     .teval-print-hide-scores .teval-criteria-note-print{white-space:normal !important;}
+    /* Screen widened each product column to a fixed 220px with horizontal
+       scroll to stay readable (see trial-cards-scroll/trial-eval-scroll) --
+       a printed page can't scroll, so that fixed width just ran off the
+       page and threw Products Being Compared's cards out of alignment with
+       the table underneath (per request). --teval-col-w-print/
+       --teval-grid-print (set inline per trial, see trialColgroup/
+       productCardsGrid in trials.js) hold a page-width-appropriate column
+       size computed from the real product count, used only here. */
+    .teval-print-hide-scores col.teval-col-product{width:var(--teval-col-w-print) !important;}
+    .trial-cards-grid{grid-template-columns:var(--teval-grid-print) !important;width:auto !important;min-width:0 !important;}
+    .trial-cards-scroll{overflow-x:visible !important;}
+    .trial-scrollbar-proxy{display:none !important;}
   }
 
   @media (max-width:1024px){

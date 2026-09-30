@@ -664,7 +664,8 @@ export const CHANGELOG = [
   { version: "3.0.622", date: "2026-09-29", note: "Projects: clicking a product's name in its product list now jumps straight to that recipe, instead of only being reachable another way" },
   { version: "3.0.623", date: "2026-09-29", note: "Widened each product's column in Sensory Evaluation (and the matching Products Being Compared cards above it) to a fixed 220px -- several products used to squeeze Comment/Improvement Guidelines into a sliver, wrapping every sentence to one word per line. Both now scroll horizontally together when they don't fit" },
   { version: "3.0.624", date: "2026-09-30", note: "Products Being Compared and Sensory Evaluation now share one scrollbar instead of two separate ones -- the cards mirror the table's own scroll position instead of scrolling independently" },
-  { version: "3.0.625", date: "2026-09-30", note: "That shared scrollbar now floats near the bottom of the screen while any part of Sensory Evaluation is in view, instead of sitting below the table where it wasn't reachable without scrolling all the way down first" }
+  { version: "3.0.625", date: "2026-09-30", note: "That shared scrollbar now floats near the bottom of the screen while any part of Sensory Evaluation is in view, instead of sitting below the table where it wasn't reachable without scrolling all the way down first" },
+  { version: "3.0.626", date: "2026-09-30", note: "Fixed printed Test Results: Sensory Evaluation's columns (fixed-width with horizontal scroll on screen) now shrink to fit the printed page instead of running off it, and Products Being Compared's cards use the same fit-to-page width so they stay column-aligned with the table on paper too" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

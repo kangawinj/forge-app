@@ -402,8 +402,20 @@ export function renderTrialsList(){
     // "trial-eval-scroll" sync wiring further down -- so the table's
     // scrollbar is the only one you ever interact with, moving both.
     const TRIAL_PRODUCT_COL_WIDTH = 220;
+    // Print needs the OPPOSITE of the screen fix above: a physical page
+    // can't horizontal-scroll, so per-product columns have to shrink to
+    // fit it instead of staying a fixed 220px (which, printed, ran off the
+    // page and threw Products Being Compared's cards out of alignment with
+    // the table underneath -- per request). PRINT_CONTENT_WIDTH_PX is A4
+    // landscape (297mm) minus @page's own 10mm margins on each side,
+    // converted to px at 96dpi -- see @page in this file. Passed to both
+    // the card grid and the table's <col>s below via a CSS custom
+    // property, read only inside @media print (screen keeps the fixed
+    // 220px), so both stay using the identical width and stay aligned.
+    const PRINT_CONTENT_WIDTH_PX = 1047;
+    const printProductColWidth = Math.round((PRINT_CONTENT_WIDTH_PX - 400) / Math.max(1, combinedCount || 1));
     const productCardsGrid = productCardsHtml
-      ? `<div class="trial-cards-scroll" style="overflow-x:hidden;"><div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
+      ? `<div class="trial-cards-scroll" style="overflow-x:hidden;"><div class="compare-info-grid gap-via-margin trial-cards-grid" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;--teval-grid-print:220px repeat(${combinedCount},${printProductColWidth}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
       : '<div class="overview-empty">No products added yet</div>';
 
     // Each row's score is per-product (columns matching the product cards
@@ -644,13 +656,14 @@ export function renderTrialsList(){
     // spacer (see productCardsGrid above), and the trailing 180px matches
     // that same grid's own trailing 180px placeholder column -- with both
     // ends pinned to the identical widths on both, and the same N product
-    // columns in between at the identical fixed TRIAL_PRODUCT_COL_WIDTH,
-    // the product columns land at the same X position in both places. (Two
+    // columns in between at the identical fixed TRIAL_PRODUCT_COL_WIDTH
+    // (--teval-col-w-print in print, see printProductColWidth above), the
+    // product columns land at the same X position in both places. (Two
     // narrow columns instead of one 220px one so there's still room for
     // the Comment/Improvement Guidelines row label -- Test Result/Continue
     // Development span both with colspan="2", having no need for that
     // second column themselves.)
-    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${`<col style="width:${TRIAL_PRODUCT_COL_WIDTH}px;">`.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
+    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${`<col class="teval-col-product" style="width:${TRIAL_PRODUCT_COL_WIDTH}px;--teval-col-w-print:${printProductColWidth}px;">`.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
