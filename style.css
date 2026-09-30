@@ -5085,6 +5085,14 @@
        either way now that --teval-col-w-print/--teval-grid-print size
        every column reasonably in the first place). */
     .teval-print-hide-scores{table-layout:fixed !important;}
+    /* Per request: a Comment/Improvement Guidelines/Test Result/Continue
+       Development row that doesn't fit in the space left on the current
+       page used to split mid-row instead of moving whole onto the next
+       one -- the blanket .printing-only/.printing-only * reset above
+       forces break-inside:auto by default, this un-resets it back to
+       avoid for just this table's own rows (thead repeats on the new page
+       automatically, same as any other HTML table). */
+    .teval-print-hide-scores tr{break-inside:avoid !important;}
     /* The product's own Name/Code (see evalHeaderCells, trials.js) still
        don't print in the header -- the "Products Being Compared" cards
        right above this table already show that same Name/Code (plus a
