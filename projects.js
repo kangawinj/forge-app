@@ -26,6 +26,7 @@ import {
   formatProjectMoq, duplicateProject, saveProjectToCloud, deleteProjectFromCloud,
   scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate
 } from './projects-data.js';
+import { exportProjectsToExcel } from './projects-excel.js';
 import {
   attachPendingSubmissionsListener, toggleSharePanel, renderSharePanel,
   togglePendingSubmissionsPanel, reviewingSubmission, readSubmissionReviewForm,
@@ -360,6 +361,7 @@ export function mountProjectsView(){
             `).join('')}
           </div>
         </div>
+        <button type="button" class="btn btn-sm" id="btnExportProjectsExcel">${icon('download', 14)} Export Excel</button>
       </div>
       <div id="projectsList"></div>
     </div>
@@ -383,6 +385,7 @@ export function mountProjectsView(){
     newProjectFlavors = [];
     renderNewProjectPanel();
   });
+  document.getElementById('btnExportProjectsExcel').addEventListener('click', () => exportProjectsToExcel(projects));
   document.getElementById('btnShareLink').addEventListener('click', toggleSharePanel);
   document.getElementById('btnTogglePendingSubmissions').addEventListener('click', togglePendingSubmissionsPanel);
   renderNewProjectPanel();

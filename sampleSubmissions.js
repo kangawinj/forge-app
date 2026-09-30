@@ -16,6 +16,7 @@ import {
   getSharedProductSuggestBox, closeProductSuggestBox, toNum, computeQuantitySummary,
   computeFollowUpSummary, overallAvg
 } from './sampleSubmissions-data.js';
+import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 
 let submissions = [];
 let submissionExpandedIds = new Set();
@@ -47,9 +48,12 @@ export function mountSampleSubmissionsView(){
     </div>
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddSubmission" style="margin-bottom:16px;">+ New Submission</button>
+      <button type="button" class="btn btn-sm" id="btnExportSubmissionsExcel" style="margin-bottom:16px;margin-left:8px;">${icon('download', 14)} Export Excel</button>
       <div id="submissionsList"></div>
     </div>
   `;
+
+  document.getElementById('btnExportSubmissionsExcel').addEventListener('click', () => exportSampleSubmissionsToExcel(submissions));
 
   const btnAddSubmission = document.getElementById('btnAddSubmission');
   btnAddSubmission.addEventListener('click', async () => {

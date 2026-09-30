@@ -7,6 +7,7 @@ import {
   onSnapshot, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { renderTrialCodeGuide, renderFoodAllergensChart, FOOD_ALLERGEN_COLUMNS } from './reflists-charts.js';
+import { exportRefListsToExcel } from './reflists-excel.js';
 
 /* ---------- Reference Lists modal (Customers / Sales Reps / Destination Countries) ---------- */
 let refListActiveTab = 'customers';
@@ -59,6 +60,9 @@ export function mountRefListsView(){
         <button class="reflist-tab-btn" data-key="evaluationCriteria">Evaluation Criteria</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
         <button class="reflist-tab-btn" data-key="foodAllergens">Food Allergens</button>
+      </div>
+      <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
+        <button type="button" class="btn btn-sm" id="btnExportRefListsExcel">${icon('download', 14)} Export Excel</button>
       </div>
       <div class="reflist-add-row" id="refListAddRow">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
@@ -159,6 +163,7 @@ export function mountRefListsView(){
     renderRefListItems();
   };
   document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
+  document.getElementById('btnExportRefListsExcel').addEventListener('click', () => exportRefListsToExcel(metaLists));
   document.getElementById('refListNewImageInput').addEventListener('change', async e => {
     const file = e.target.files[0];
     if(!file) return;
