@@ -381,9 +381,18 @@ export function renderTrialsList(){
     // horizontally on its own -- still lines up with the table below since
     // both use the exact same leading/column/trailing widths, same
     // technique used on the Compare Recipes page.
+    //
+    // This card grid used to get its own independent overflow-x:auto
+    // scrollbar, right alongside the table's own one below -- two separate
+    // scrollbars for what's really one aligned block (per request, that
+    // read as two disconnected sliders instead of one). Now this box is
+    // overflow-x:hidden (no scrollbar of its own) and just mirrors the
+    // table's own scrollLeft -- see the "trial-cards-scroll"/
+    // "trial-eval-scroll" sync wiring further down -- so the table's
+    // scrollbar is the only one you ever interact with, moving both.
     const TRIAL_PRODUCT_COL_WIDTH = 220;
     const productCardsGrid = productCardsHtml
-      ? `<div style="overflow-x:auto;"><div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
+      ? `<div class="trial-cards-scroll" style="overflow-x:hidden;"><div class="compare-info-grid gap-via-margin" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
       : '<div class="overview-empty">No products added yet</div>';
 
     // Each row's score is per-product (columns matching the product cards
@@ -745,7 +754,7 @@ export function renderTrialsList(){
             <div class="field">
               <label>Sensory Evaluation</label>
               ${evalTargets.length ? `
-              <div style="overflow-x:auto;">
+              <div class="trial-eval-scroll" style="overflow-x:auto;">
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th><th></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
@@ -1022,6 +1031,18 @@ export function renderTrialsList(){
         scheduleTrialSave(t);
       });
     });
+
+    // Products Being Compared's cards have no scrollbar of their own (see
+    // "trial-cards-scroll" above) -- they just mirror the evaluation
+    // table's scrollLeft here, so there's one scrollbar to interact with
+    // instead of two doing the same thing.
+    {
+      const cardsScroll = block.querySelector('.trial-cards-scroll');
+      const evalScroll = block.querySelector('.trial-eval-scroll');
+      if(cardsScroll && evalScroll){
+        evalScroll.addEventListener('scroll', () => { cardsScroll.scrollLeft = evalScroll.scrollLeft; });
+      }
+    }
 
     block.querySelectorAll('.teval-sensory').forEach(el => {
       el.addEventListener('change', () => {
