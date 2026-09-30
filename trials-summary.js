@@ -61,7 +61,7 @@ function renderTrialSummaryModal(){
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products marked "Continue Development" yet — mark one in Improvement Guidelines to see it here</div>' : evalTargets.map(p => {
-        const { label, verdict, improvements } = summarizeTrialProduct(t, criteria, p);
+        const { label, verdict, comments, improvements } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
             <div class="trial-summary-product-head">
@@ -70,6 +70,10 @@ function renderTrialSummaryModal(){
                 ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[verdict] || ''}">${escapeHtml(verdict)}</span>`
                 : '<span class="overview-empty">Not yet evaluated</span>'}
             </div>
+            ${comments.length ? `
+              <div class="trial-summary-improve-title">Comments</div>
+              <ul class="trial-summary-improve-list">${comments.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.text)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
+            ` : ''}
             ${improvements.length ? `
               <div class="trial-summary-improve-title">Suggested Improvements</div>
               <ul class="trial-summary-improve-list">${improvements.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.suggestion)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
@@ -168,6 +172,14 @@ function buildTrialsSummarySheet(wb, groups){
           } else {
             runs.push({ text: '  [Not yet evaluated]\n', font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
           }
+          if(pr.comments.length){
+            runs.push({ text: 'Comment:\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.primaryDark } } });
+            pr.comments.forEach(x => {
+              runs.push({ text: `• ${x.text}`, font: { size: 11, color: { argb: XL_COLORS.text } } });
+              if(x.note) runs.push({ text: `  — ${x.note}`, font: { italic: true, size: 10, color: { argb: XL_COLORS.dim } } });
+              runs.push({ text: '\n' });
+            });
+          }
           if(pr.improvements.length){
             runs.push({ text: 'Improve:\n', font: { bold: true, size: 9, color: { argb: XL_COLORS.primaryDark } } });
             pr.improvements.forEach(x => {
@@ -257,6 +269,10 @@ export function renderTrialsSummaryTable(container, sortedTrials){
                         <b>${escapeHtml(pr.label)}</b>
                         ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
                       </div>
+                      ${pr.comments.length ? `
+                        <div class="trial-table-summary-line-title">Comment:</div>
+                        <ul class="trial-table-summary-list">${pr.comments.map(x => `<li>${escapeHtml(x.text)}${x.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
+                      ` : ''}
                       ${pr.improvements.length ? `
                         <div class="trial-table-summary-line-title">Improve:</div>
                         <ul class="trial-table-summary-list">${pr.improvements.map(x => `<li>${escapeHtml(x.suggestion)}${x.note ? ` <span class="trial-summary-item-note">— ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>

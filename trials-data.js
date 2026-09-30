@@ -295,11 +295,15 @@ export const TRIAL_SUMMARY_VERDICT_CLASSES = {
 export function summarizeTrialProduct(t, criteria, p){
   const pd = getTrialProductData(t, p.id);
   const verdict = combinedVerdict(pd);
+  const notes = (t.criteriaNotes && typeof t.criteriaNotes === 'object') ? t.criteriaNotes : {};
   const improveNotes = (t.criteriaImproveNotes && typeof t.criteriaImproveNotes === 'object') ? t.criteriaImproveNotes : {};
+  const comments = criteria
+    .map(c => ({ label: c.label, text: sensoryFieldValue(pd, c.id), note: (notes[c.id] || '').trim() }))
+    .filter(x => x.text);
   const improvements = criteria
     .map(c => ({ label: c.label, suggestion: improvementFieldValue(pd, c.id), note: (improveNotes[c.id] || '').trim() }))
     .filter(x => x.suggestion);
-  return { label: p.label, verdict, improvements };
+  return { label: p.label, verdict, comments, improvements };
 }
 // Read-only overview -- one row per test (already sorted most-recently-
 // updated first by the caller), grouped by linked Project -- Project/PD
