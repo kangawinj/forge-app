@@ -670,7 +670,8 @@ export const CHANGELOG = [
   { version: "3.0.628", date: "2026-09-30", note: "Fixed printed Sensory Evaluation columns still drifting out of alignment with Products Being Compared's cards whenever a column's content (e.g. a long word in the Comment/Improvement Guidelines label) couldn't wrap within its specified width -- the table's columns are strictly fixed-width in print now, same as the cards above it" },
   { version: "3.0.629", date: "2026-09-30", note: "Printed Sensory Evaluation: a Comment/Improvement Guidelines/Test Result/Continue Development row that doesn't fit in the space left on the current page now moves whole onto the next page instead of splitting mid-row" },
   { version: "3.0.630", date: "2026-09-30", note: "Removed the list of other evaluators' Test Result picks that used to show below your own -- just the radio buttons now" },
-  { version: "3.0.631", date: "2026-09-30", note: "Test Results' Summary Table, Summary Test modal, and Excel export now also show each product's Comment per criteria, not just Improvement Guidelines" }
+  { version: "3.0.631", date: "2026-09-30", note: "Test Results' Summary Table, Summary Test modal, and Excel export now also show each product's Comment per criteria, not just Improvement Guidelines" },
+  { version: "3.0.632", date: "2026-09-30", note: "Moved the Print button to the end of Test Results' toolbar, after List/Summary Table and Export Excel" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

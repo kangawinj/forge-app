@@ -155,12 +155,12 @@ export function mountTrialsView(){
     <div class="card">
       <div style="display:flex;align-items:center;margin-bottom:16px;">
         <button class="btn btn-primary btn-sm" id="btnAddTrial">+ New Test</button>
-        <button type="button" class="btn btn-sm" id="btnPrintTrials" style="margin-left:auto;">${icon('printer', 14)} Print</button>
-        <div class="view-mode-toggle" id="trialsViewToggle">
+        <div class="view-mode-toggle" id="trialsViewToggle" style="margin-left:auto;">
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           <button type="button" class="btn btn-sm view-mode-btn${trialsViewMode === 'table' ? ' active' : ''}" data-mode="table">${icon('file-text', 14)} Summary Table</button>
         </div>
         <button type="button" class="btn btn-sm" id="btnExportTrialsSummary" style="margin-left:8px;${trialsViewMode === 'table' ? '' : 'display:none;'}">${icon('download', 14)} Export Excel</button>
+        <button type="button" class="btn btn-sm" id="btnPrintTrials" style="margin-left:8px;">${icon('printer', 14)} Print</button>
       </div>
       <div id="trialsList"></div>
     </div>
