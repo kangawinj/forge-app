@@ -666,7 +666,8 @@ export const CHANGELOG = [
   { version: "3.0.624", date: "2026-09-30", note: "Products Being Compared and Sensory Evaluation now share one scrollbar instead of two separate ones -- the cards mirror the table's own scroll position instead of scrolling independently" },
   { version: "3.0.625", date: "2026-09-30", note: "That shared scrollbar now floats near the bottom of the screen while any part of Sensory Evaluation is in view, instead of sitting below the table where it wasn't reachable without scrolling all the way down first" },
   { version: "3.0.626", date: "2026-09-30", note: "Fixed printed Test Results: Sensory Evaluation's columns (fixed-width with horizontal scroll on screen) now shrink to fit the printed page instead of running off it, and Products Being Compared's cards use the same fit-to-page width so they stay column-aligned with the table on paper too" },
-  { version: "3.0.627", date: "2026-09-30", note: "Fixed each Products Being Compared card sitting 14px short of its own Sensory Evaluation column, so the photo/card no longer reached the table column's own right edge/divider underneath it" }
+  { version: "3.0.627", date: "2026-09-30", note: "Fixed each Products Being Compared card sitting 14px short of its own Sensory Evaluation column, so the photo/card no longer reached the table column's own right edge/divider underneath it" },
+  { version: "3.0.628", date: "2026-09-30", note: "Fixed printed Sensory Evaluation columns still drifting out of alignment with Products Being Compared's cards whenever a column's content (e.g. a long word in the Comment/Improvement Guidelines label) couldn't wrap within its specified width -- the table's columns are strictly fixed-width in print now, same as the cards above it" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

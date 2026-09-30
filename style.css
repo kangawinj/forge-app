@@ -5067,11 +5067,24 @@
        they're each product's own real, manually-typed data now (not an
        auto-derived duplicate of Note, which is what the previous
        hide-every-per-product-column behavior here was originally for).
-       table-layout:auto lets a table with this many columns (Criteria +
-       row label + up to 6 products + Note) size each one to its actual
-       content instead of table-layout:fixed's colgroup splitting the page
-       evenly regardless of what's in each column. */
-    .teval-print-hide-scores{table-layout:auto !important;}
+       table-layout:auto used to let a table with this many columns
+       (Criteria + row label + up to 6 products + Note) size each one to
+       its actual content instead of colgroup splitting the page evenly
+       regardless of what's in each column -- but auto layout only treats
+       a <col>'s specified width as a hint, not a hard limit, so a long
+       unbreakable word in just one column (e.g. "Improvement Guidelines"
+       in the 80px row-label column) could widen that column past its
+       specified width, which in turn pushed every product column after it
+       out of alignment with Products Being Compared's cards above (per
+       request) -- those use CSS Grid's own explicit, always-honored track
+       sizes, matching --teval-col-w-print (see trialColgroup in
+       trials.js) exactly, but the table itself no longer was until this
+       switch back to fixed (whose specified widths ARE strictly honored,
+       same as before the switch to auto -- text just wraps to a taller
+       row instead of growing the column, which fits the printed page
+       either way now that --teval-col-w-print/--teval-grid-print size
+       every column reasonably in the first place). */
+    .teval-print-hide-scores{table-layout:fixed !important;}
     /* The product's own Name/Code (see evalHeaderCells, trials.js) still
        don't print in the header -- the "Products Being Compared" cards
        right above this table already show that same Name/Code (plus a
