@@ -54,6 +54,16 @@ let trialsViewMode = 'list';
 let unsubscribeTrials = null;
 let trialsLoaded = false;
 let trialsMigrated = false;
+// One sticky scrollbar-proxy sync function per currently-expanded trial's
+// own Sensory Evaluation table (see the "trial-scrollbar-proxy" wiring
+// below) -- rebuilt from scratch on every renderTrialsList() call, since
+// which trials are expanded (and how many products each has) changes on
+// every re-render. A single resize listener (attached once, here at module
+// scope, same pattern as app.js's own activeProjScrollbarProxySync) just
+// replays whichever ones are current.
+let trialScrollbarProxySyncs = [];
+function registerTrialScrollbarProxySync(fn){ trialScrollbarProxySyncs.push(fn); }
+window.addEventListener('resize', () => { trialScrollbarProxySyncs.forEach(fn => fn()); });
 const TRIAL_DIFF_FIELDS = { label: 'Recipes / Products Compared' };
 let trialEditSnapshotBefore = null;
 // Bulk "Print" toolbar button -- lets someone print more than one Test
@@ -194,6 +204,7 @@ export function mountTrialsView(){
 export function renderTrialsList(){
   const container = document.getElementById('trialsList');
   if(!container) return;
+  trialScrollbarProxySyncs = [];
   if(trials.length === 0){
     container.innerHTML = '<div class="overview-empty">No test results yet — click "+ New Test" above to start one</div>';
     return;
@@ -761,6 +772,7 @@ export function renderTrialsList(){
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${continueDevRowHtml}</tbody>
                 </table>
               </div>
+              <div class="trial-scrollbar-proxy"><div class="trial-scrollbar-proxy-inner"></div></div>
               ${evaluatorCommentsHtml}
               ${addCriteriaBtnHtml}
               ` : '<div class="overview-empty">Add a product above first</div>'}
@@ -1034,13 +1046,29 @@ export function renderTrialsList(){
 
     // Products Being Compared's cards have no scrollbar of their own (see
     // "trial-cards-scroll" above) -- they just mirror the evaluation
-    // table's scrollLeft here, so there's one scrollbar to interact with
-    // instead of two doing the same thing.
+    // table's scrollLeft here. The table's own native scrollbar is hidden
+    // too (see .trial-eval-scroll in style.css) in favor of the sticky
+    // "trial-scrollbar-proxy" bar below it, so there's exactly one visible,
+    // reachable scrollbar driving all three instead of one buried below
+    // the fold and two more doing the same job independently.
     {
       const cardsScroll = block.querySelector('.trial-cards-scroll');
       const evalScroll = block.querySelector('.trial-eval-scroll');
-      if(cardsScroll && evalScroll){
-        evalScroll.addEventListener('scroll', () => { cardsScroll.scrollLeft = evalScroll.scrollLeft; });
+      const proxy = block.querySelector('.trial-scrollbar-proxy');
+      const proxyInner = block.querySelector('.trial-scrollbar-proxy-inner');
+      if(evalScroll && proxy && proxyInner){
+        function syncTrialScrollbarProxy(){
+          const needsScroll = evalScroll.scrollWidth > evalScroll.clientWidth + 1;
+          proxy.style.display = needsScroll ? 'block' : 'none';
+          proxyInner.style.width = evalScroll.scrollWidth + 'px';
+        }
+        syncTrialScrollbarProxy();
+        registerTrialScrollbarProxySync(syncTrialScrollbarProxy);
+        evalScroll.addEventListener('scroll', () => {
+          if(cardsScroll) cardsScroll.scrollLeft = evalScroll.scrollLeft;
+          proxy.scrollLeft = evalScroll.scrollLeft;
+        });
+        proxy.addEventListener('scroll', () => { evalScroll.scrollLeft = proxy.scrollLeft; });
       }
     }
 

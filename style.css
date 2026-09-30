@@ -3939,6 +3939,28 @@
      score cell in this table. */
   .trial-testresult-radios{display:flex;flex-direction:column;gap:4px;}
   .trial-testresult-radio-label{display:flex;align-items:center;gap:6px;font-weight:400;}
+  /* Same "sticky proxy scrollbar" trick as .proj-table-scroll/
+     .proj-scrollbar-proxy in projects.js -- a page-height Sensory
+     Evaluation table's own horizontal scrollbar sits below the fold,
+     unreachable without scrolling all the way down first (per request).
+     The real table's native scrollbar is hidden; this thin proxy stays
+     pinned near the bottom of the viewport instead, for as long as any
+     part of that trial's own table is on screen -- see the JS wiring in
+     trials.js for how its scroll position stays mirrored with the real
+     table (and, in turn, with Products Being Compared's cards above it). */
+  .trial-eval-scroll{scrollbar-width:none;-ms-overflow-style:none;}
+  .trial-eval-scroll::-webkit-scrollbar{display:none;}
+  .trial-scrollbar-proxy{
+    display:none;
+    position:sticky;
+    bottom:28px; /* sits just above the fixed 28px app-footer bar, not under it */
+    height:16px;
+    overflow-x:auto;
+    overflow-y:hidden;
+    background:var(--panel);
+    z-index:5;
+  }
+  .trial-scrollbar-proxy-inner{height:1px;}
   /* "Continue Development?" row at the bottom of Improvement Guidelines
      (see continueDevRowHtml in trials.js) -- a per-product decision, one
      of which (Continue) gates whether that product shows up in Summary
