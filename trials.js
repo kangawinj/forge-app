@@ -28,9 +28,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
   trialLabel, migrateTrial, getTrialProductData, normalizeTrialPhotos, TRIAL_PHOTO_MAX,
-  TRIAL_MAX_PRODUCTS, getEvaluationCriteria, getCriteriaNotes, combinedEvaluationEntries,
+  TRIAL_MAX_PRODUCTS, getEvaluationCriteria, getCriteriaNotes,
   shortEvaluatorName, getMyEvaluation, registerEvaluationParticipant,
-  improvementFieldValue, TRIAL_TEST_RESULT_CLASSES,
+  improvementFieldValue,
   TRIAL_TEST_RESULT_OPTIONS, groupTrialsByProject, blankManualTrialProduct,
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
 } from './trials-data.js';
@@ -560,26 +560,20 @@ export function renderTrialsList(){
       </div>
     ` : '';
     // Test Result is a per-evaluator pick now, same as the Sensory
-    // Evaluation criteria above -- filled in as the last step of each
-    // product in the "Perform Evaluation" wizard. This table always
-    // shows everyone's picks together (see combinedEvaluationEntries),
-    // each line colored via the existing accepted/needs-revision/
-    // not-accepted classes.
+    // Evaluation criteria above -- settable directly here (see mine below)
+    // or from the "Perform Evaluation" wizard, both write the same
+    // pd.evaluations[email].testResult.
     const testResultRowHtml = `
       <tr>
         <td colspan="2"><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const mine = currentUser?.email ? getMyEvaluation(pd) : null;
-          // Own pick is now a live radio right in this table (per request
-          // -- used to require opening "Perform Evaluation" to set it),
-          // same TRIAL_TEST_RESULT_OPTIONS/CLASSES the old read-only view
-          // and the wizard both already use. Everyone else's picks still
-          // show underneath so the combined view isn't lost.
-          const othersHtml = combinedEvaluationEntries(pd, null, t.updatedBy)
-            .filter(e => e.who !== currentUser?.email)
-            .map(e => `<div class="${TRIAL_TEST_RESULT_CLASSES[e.value] || ''}"><b>${escapeHtml(shortEvaluatorName(e.who))}: ${escapeHtml(e.value)}</b></div>`)
-            .join('');
+          // Own pick is a live radio right in this table (per request --
+          // used to require opening "Perform Evaluation" to set it), same
+          // TRIAL_TEST_RESULT_OPTIONS/CLASSES the old read-only view and
+          // the wizard both already use. Other evaluators' own picks used
+          // to list underneath this, removed per request.
           return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
             <div class="trial-testresult-radios">${TRIAL_TEST_RESULT_OPTIONS.map(o => `
                 <label class="trial-testresult-radio-label">
@@ -587,7 +581,6 @@ export function renderTrialsList(){
                   ${o}
                 </label>
               `).join('')}</div>
-            ${othersHtml}
           </td>`;
         }).join('')}
         <td class="recipe-boundary"></td>

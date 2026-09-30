@@ -668,7 +668,8 @@ export const CHANGELOG = [
   { version: "3.0.626", date: "2026-09-30", note: "Fixed printed Test Results: Sensory Evaluation's columns (fixed-width with horizontal scroll on screen) now shrink to fit the printed page instead of running off it, and Products Being Compared's cards use the same fit-to-page width so they stay column-aligned with the table on paper too" },
   { version: "3.0.627", date: "2026-09-30", note: "Fixed each Products Being Compared card sitting 14px short of its own Sensory Evaluation column, so the photo/card no longer reached the table column's own right edge/divider underneath it" },
   { version: "3.0.628", date: "2026-09-30", note: "Fixed printed Sensory Evaluation columns still drifting out of alignment with Products Being Compared's cards whenever a column's content (e.g. a long word in the Comment/Improvement Guidelines label) couldn't wrap within its specified width -- the table's columns are strictly fixed-width in print now, same as the cards above it" },
-  { version: "3.0.629", date: "2026-09-30", note: "Printed Sensory Evaluation: a Comment/Improvement Guidelines/Test Result/Continue Development row that doesn't fit in the space left on the current page now moves whole onto the next page instead of splitting mid-row" }
+  { version: "3.0.629", date: "2026-09-30", note: "Printed Sensory Evaluation: a Comment/Improvement Guidelines/Test Result/Continue Development row that doesn't fit in the space left on the current page now moves whole onto the next page instead of splitting mid-row" },
+  { version: "3.0.630", date: "2026-09-30", note: "Removed the list of other evaluators' Test Result picks that used to show below your own -- just the radio buttons now" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
