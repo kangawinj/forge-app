@@ -223,6 +223,16 @@ export function blankProject(){
     moqUnit: "pcs",
     products: [],
     monthlyUpdates: [],
+    // Monthly Updates (per request) -- deliberately its OWN array, not
+    // folded into monthlyUpdates above. It started as a simpler view onto
+    // that same array, but entries created through the rich Activities
+    // Updates editor (Plan/Action Taken/Next Action) were then showing up
+    // inside Monthly Update's own month-comparison columns, which read as
+    // the two features bleeding into each other -- a real complaint, not
+    // just a taste call. Fully separate storage is the only way to
+    // guarantee Monthly Update only ever shows what was actually typed
+    // into Monthly Update. See blankMonthlySummary in this file.
+    monthlySummaries: [],
     quotationAttachment: null,
     specAttachment: null,
     createdBy: currentUser?.email || '',
@@ -241,6 +251,37 @@ export function blankProject(){
 // against each other in the same terms), not tracked separately per price.
 export function blankFlavor(){
   return { id: uid(), name: "", sampleQty: "", sampleQtyUnit: "", sampleRequestDate: "", targetPrice: "", actualPrice: "", priceCurrency: "THB", priceUnit: "kg", formulaRefCode: "", note: "" };
+}
+
+// Monthly Updates (per request) -- one entry is just "what happened this
+// month", keyed directly by month ("YYYY-MM", not a date -- there's no
+// Plan/Action/Next-Action event this is attached to, so pretending it has
+// a specific day the way Activities Updates' own `date` field does would
+// be misleading). Lives in its own p.monthlySummaries array, kept
+// deliberately separate from p.monthlyUpdates -- see blankProject's own
+// comment on why.
+export function blankMonthlySummary(month, text){
+  const now = Date.now();
+  return {
+    id: uid(),
+    month,
+    text: text || '',
+    createdBy: currentUser?.email || '',
+    createdAt: now,
+    updatedBy: '',
+    updatedAt: now
+  };
+}
+// Defensive normalization for a monthlySummaries entry read off Firestore
+// -- same lazy-fill-in-missing-fields idea as migrateMonthlyUpdate above,
+// in case a field is ever added later.
+export function migrateMonthlySummary(ms){
+  return {
+    ...ms,
+    text: ms.text || '',
+    createdBy: ms.createdBy || '',
+    updatedBy: ms.updatedBy || ''
+  };
 }
 
 // A datalist-backed <input> only shows suggestions matching the CURRENT
@@ -308,6 +349,7 @@ export function duplicateProject(p){
     startDate: "",
     targetEndDate: "",
     monthlyUpdates: [],
+    monthlySummaries: [],
     products: (p.products || []).map(prod => ({
       id: uid(),
       recipeId: prod.recipeId,

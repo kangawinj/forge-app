@@ -24,7 +24,8 @@ import {
   projectProgressPct, statusPillHtml, projectNextAction, blankProject, blankFlavor,
   selectTextOnFocus, blankProduct, formatPortionWeight, formatInnerPacking, formatOuterPacking,
   formatProjectMoq, duplicateProject, saveProjectToCloud, deleteProjectFromCloud,
-  scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate
+  scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate,
+  blankMonthlySummary, migrateMonthlySummary
 } from './projects-data.js';
 import { exportProjectsToExcel } from './projects-excel.js';
 import {
@@ -2927,45 +2928,42 @@ export function renderProjectsList(){
             alert('Please pick a month and type an update.');
             return;
           }
-          const mu = {
-            id: uid(),
-            date: `${month}-01`,
-            plan: '', planWho: '', planWhere: '', planWith: '', planOwner: '', time: '',
-            actionTaken: text,
-            nextAction: '', nextActionDue: '', nextActionTime: '', nextActionWho: '', nextActionWhere: '', nextActionWith: '', nextActionOwner: '',
-            autoCreatePlan: false, sourceUpdateId: '', linkedRecipeId: '', attachments: [], completedDate: '',
-            createdBy: currentUser?.email || '',
-            createdAt: Date.now()
-          };
-          if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
-          p.monthlyUpdates.push(mu);
+          const ms = blankMonthlySummary(month, text);
+          if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
+          p.monthlySummaries.push(ms);
           monthlySummaryAddOpen = false;
           monthlySummaryBrowseMonth = month;
           scheduleProjectSave(p);
-          logMuAddedEvent(p, mu);
+          logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
+            field: 'Monthly Updates', before: '(no entry)', after: `Added for ${formatMonthYear(month)}: "${text}"`
+          }]);
           renderProjectsList();
         });
         block.querySelectorAll('[data-role="edit-monthly-summary"]').forEach(btn => {
           btn.addEventListener('click', () => {
             const entryId = btn.closest('[data-summary-id]').dataset.summaryId;
-            const mu = (p.monthlyUpdates || []).find(x => x.id === entryId);
-            if(!mu) return;
+            const ms = (p.monthlySummaries || []).find(x => x.id === entryId);
+            if(!ms) return;
             monthlySummaryEditingId = entryId;
-            monthlySummaryEditDraft = mu.actionTaken || '';
+            monthlySummaryEditDraft = ms.text || '';
             renderProjectsList();
           });
         });
         block.querySelector('[data-role="save-monthly-summary-edit"]')?.addEventListener('click', () => {
           const entry = block.querySelector(`[data-summary-id="${CSS.escape(monthlySummaryEditingId)}"]`);
-          const mu = (p.monthlyUpdates || []).find(x => x.id === monthlySummaryEditingId);
-          if(!entry || !mu) return;
-          const before = snapshotMainFields(mu, MU_DIFF_FIELDS);
-          mu.actionTaken = entry.querySelector('.proj-mu-summary-edit-text').value.trim();
-          const changes = diffMainFields(before, mu, MU_DIFF_FIELDS);
+          const ms = (p.monthlySummaries || []).find(x => x.id === monthlySummaryEditingId);
+          if(!entry || !ms) return;
+          const before = ms.text || '';
+          const after = entry.querySelector('.proj-mu-summary-edit-text').value.trim();
+          ms.text = after;
+          ms.updatedBy = currentUser?.email || '';
+          ms.updatedAt = Date.now();
           monthlySummaryEditingId = null;
           monthlySummaryEditDraft = '';
           scheduleProjectSave(p);
-          logActivityEvent('updated', 'project', p.name || 'Untitled project', changes);
+          if(before !== after){
+            logActivityEvent('updated', 'project', p.name || 'Untitled project', [{ field: `Monthly Update (${formatMonthYear(ms.month)})`, before, after }]);
+          }
           renderProjectsList();
         });
         block.querySelector('[data-role="cancel-monthly-summary-edit"]')?.addEventListener('click', () => {
@@ -2977,7 +2975,7 @@ export function renderProjectsList(){
           btn.addEventListener('click', () => {
             const entryId = btn.closest('[data-summary-id]').dataset.summaryId;
             if(!confirm('Delete this monthly update? This cannot be undone.')) return;
-            p.monthlyUpdates = (p.monthlyUpdates || []).filter(mu => mu.id !== entryId);
+            p.monthlySummaries = (p.monthlySummaries || []).filter(ms => ms.id !== entryId);
             scheduleProjectSave(p);
             renderProjectsList();
           });
@@ -3137,37 +3135,22 @@ export function muRecipeOptionsHtml(selectedId){
     ).join('');
 }
 
-// The most recent Monthly Update's own summary line (same muPlanSummaryLine
-// used by Task Tracking/the Calendar), for the "Projects by Status" List
-// view's Activity Update column -- '-' when there's no update yet rather
-// than leaving the cell blank, matching missingCell's look elsewhere on
-// this page.
-function projectLatestActivityText(p){
-  const updates = (p.monthlyUpdates || []).map(migrateMonthlyUpdate);
-  if(!updates.length) return '-';
-  const latest = [...updates].sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
-  return muPlanSummaryLine(latest) || '-';
-}
-// Monthly Update comparison (List view, per request): a project's own
-// "report month" isn't a separate stored field -- it's just the YYYY-MM
-// slice of that entry's existing `date` field (the "When" this update is
-// ABOUT, already distinct from `createdAt`, the real save timestamp --
-// see MU_DIFF_FIELDS' own "When (Date)" label). An entry with no date at
-// all (pre-dates this field, or was never filled in) never matches any
-// month here, by design -- never guessed into a month it didn't actually
-// claim. Several entries can share a month (e.g. logged twice); the most
-// recently SAVED one wins, per request, not the one with the latest
-// report date within that month.
+// Monthly Update comparison (List view, per request): reads p.monthlySummaries
+// -- its own array, deliberately separate from Activities Updates'
+// p.monthlyUpdates (see blankProject's comment in projects-data.js for
+// why) -- filtered to entries whose own `month` field matches. Several
+// entries can share a month (e.g. logged twice); the most recently SAVED
+// one wins, per request.
 function projectMonthUpdateInfo(p, monthStr){
-  const updates = (p.monthlyUpdates || [])
-    .map(migrateMonthlyUpdate)
-    .filter(mu => (mu.date || '').slice(0, 7) === monthStr);
-  if(!updates.length) return null;
-  const latest = [...updates].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  const entries = (p.monthlySummaries || [])
+    .map(migrateMonthlySummary)
+    .filter(ms => ms.month === monthStr);
+  if(!entries.length) return null;
+  const latest = [...entries].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
   return {
-    text: latest.actionTaken || muPlanSummaryLine(latest) || '-',
-    date: latest.date,
-    createdBy: latest.createdBy || ''
+    text: latest.text || '-',
+    recordedAt: latest.updatedAt || latest.createdAt,
+    createdBy: latest.updatedBy || latest.createdBy || ''
   };
 }
 // One Monthly Update comparison cell -- `variant` is 'selected' (bold
@@ -3184,29 +3167,27 @@ function renderProjMuCell(info, variant){
     <div class="proj-mu-cell proj-mu-cell-${variant}">
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
-      <div class="proj-mu-cell-meta">${info.date ? escapeHtml(formatDateLong(info.date)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
+      <div class="proj-mu-cell-meta">${info.recordedAt ? escapeHtml(formatActivityDateTime(info.recordedAt)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
     </div>
   `;
 }
 
 // "Monthly Updates" section (per request) -- a simpler, month-first editor
-// onto the exact same p.monthlyUpdates array Activities Updates already
-// uses (see the state vars' own comment for why). A entry added or edited
-// here only ever touches `date` (pinned to the 1st of the picked month)
-// and `actionTaken` -- Plan/Next Action stay whatever they already were
-// (blank on a brand new entry), so this never fights with the richer
-// Activities Updates editor over the same entry; both just show/edit
-// different facets of it. "History" here means browsing past months (see
-// requirement 4's "ดูประวัติย้อนหลังตามเดือนได้") -- same caveat as the rest
-// of this app: no separate per-entry version history beyond what the
-// shared activity-event log already captures (see MU_DIFF_FIELDS usage
-// below), consistent with how Activities Updates' own edits are logged.
+// over its own p.monthlySummaries array, kept deliberately separate from
+// Activities Updates' p.monthlyUpdates (see blankProject's own comment in
+// projects-data.js for why: entries from the richer Plan/Action Taken/
+// Next Action editor were showing up inside Monthly Update's own
+// month-comparison, reading as the two features bleeding into each
+// other). "History" here means browsing past months (see requirement 4's
+// "ดูประวัติย้อนหลังตามเดือนได้") -- same caveat as the rest of this app: no
+// separate per-entry version history beyond what the shared activity-
+// event log already captures.
 function monthlyUpdatesSectionHtml(p, isEditing){
   if(!monthlySummaryBrowseMonth) monthlySummaryBrowseMonth = bangkokMonthStr();
   const browseMonth = monthlySummaryBrowseMonth;
-  const entries = (p.monthlyUpdates || [])
-    .map(migrateMonthlyUpdate)
-    .filter(mu => (mu.date || '').slice(0, 7) === browseMonth)
+  const entries = (p.monthlySummaries || [])
+    .map(migrateMonthlySummary)
+    .filter(ms => ms.month === browseMonth)
     .sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
   return `
     <div class="field proj-mu-summary-section" style="margin-bottom:0;margin-top:16px;" id="monthly-updates-${escapeHtml(p.id)}">
@@ -3233,11 +3214,11 @@ function monthlyUpdatesSectionHtml(p, isEditing){
           </div>
         </div>
       ` : ''}
-      ${entries.length ? entries.map(mu => {
-        const isEntryEditing = isEditing && monthlySummaryEditingId === mu.id;
+      ${entries.length ? entries.map(ms => {
+        const isEntryEditing = isEditing && monthlySummaryEditingId === ms.id;
         if(isEntryEditing){
           return `
-            <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(mu.id)}">
+            <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(ms.id)}">
               <textarea class="proj-mu-summary-edit-text">${escapeHtml(monthlySummaryEditDraft)}</textarea>
               <div style="display:flex;gap:8px;margin-top:6px;">
                 <button class="btn btn-sm btn-primary" data-role="save-monthly-summary-edit">${icon('save')} Save</button>
@@ -3246,18 +3227,19 @@ function monthlyUpdatesSectionHtml(p, isEditing){
             </div>
           `;
         }
-        const text = mu.actionTaken || muPlanSummaryLine(mu) || '-';
+        const recordedAt = ms.updatedAt || ms.createdAt;
+        const recordedBy = ms.updatedBy || ms.createdBy;
         return `
-          <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(mu.id)}">
+          <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(ms.id)}">
             <div class="proj-mu-summary-entry-header">
-              <span class="proj-mu-summary-entry-date">${escapeHtml(formatDateLong(mu.date))}</span>
-              ${mu.createdBy ? `<span class="proj-mu-summary-entry-by">${escapeHtml(mu.createdBy)}</span>` : ''}
+              <span class="proj-mu-summary-entry-date">${recordedAt ? escapeHtml(formatActivityDateTime(recordedAt)) : ''}</span>
+              ${recordedBy ? `<span class="proj-mu-summary-entry-by">${escapeHtml(recordedBy)}</span>` : ''}
               ${isEditing ? `
                 <button type="button" class="icon-btn" title="Edit" data-role="edit-monthly-summary">${icon('pencil', 12)}</button>
                 <button type="button" class="icon-btn" title="Delete" data-role="delete-monthly-summary">${icon('x', 12)}</button>
               ` : ''}
             </div>
-            <div class="proj-mu-summary-entry-text">${escapeHtml(text)}</div>
+            <div class="proj-mu-summary-entry-text">${escapeHtml(ms.text || '-')}</div>
           </div>
         `;
       }).join('') : `<div class="overview-empty">No update recorded for ${escapeHtml(formatMonthYear(browseMonth))}</div>`}
