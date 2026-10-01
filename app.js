@@ -1221,6 +1221,47 @@ export function formatTimeOnly(ts){
   return new Date(ts).toLocaleTimeString('en-GB', { hour:'2-digit', minute:'2-digit' });
 }
 
+// Bangkok-anchored "what month/day is it right now" -- the rest of this
+// app computes "today" from the browser's own clock (two different,
+// mutually-inconsistent ways: a UTC-sliced ISO string in most places, the
+// browser's local Date components in a couple of others), which drifts
+// from the real Bangkok date for part of the day on a device set to a
+// different timezone. Projects' Monthly Update month-comparison (see
+// projects.js) is Bangkok-specific by request, so it anchors to this
+// instead of adding a third ad-hoc "today" convention -- existing
+// call sites are deliberately left alone (out of scope, and several
+// other features' date-compare logic already depends on their current,
+// if imperfect, behavior). Intl's 'en-CA' locale formats as YYYY-MM-DD
+// directly, so no manual UTC+7 offset math is needed.
+const BANGKOK_DATE_FORMATTER = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit', day: '2-digit' });
+export function bangkokTodayStr(){
+  return BANGKOK_DATE_FORMATTER.format(new Date());
+}
+export function bangkokMonthStr(){
+  return bangkokTodayStr().slice(0, 7);
+}
+// "October 2026" -- for the Monthly Update month-comparison's own column
+// headers (per request, English to match the rest of this app's UI, which
+// has been English-only since CHANGELOG 2.2.0). `monthStr` is "YYYY-MM";
+// parsed as UTC noon (not midnight) so no timezone on the viewer's own
+// machine can roll it back to the previous month before toLocaleDateString
+// reads it.
+export function formatMonthYear(monthStr){
+  if(!monthStr) return '-';
+  const [y, m] = monthStr.split('-').map(Number);
+  if(!y || !m) return monthStr;
+  return new Date(Date.UTC(y, m - 1, 1, 12)).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'UTC' });
+}
+// "2026-09" -> "2026-08", "2027-01" -> "2026-12" -- plain string month
+// arithmetic (no Date object involved) so it can never be thrown off by
+// a timezone rolling a date to the wrong side of midnight.
+export function previousMonthStr(monthStr){
+  const [y, m] = monthStr.split('-').map(Number);
+  const prevY = m === 1 ? y - 1 : y;
+  const prevM = m === 1 ? 12 : m - 1;
+  return `${prevY}-${String(prevM).padStart(2, '0')}`;
+}
+
 export function escapeHtml(s){
   return String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }

@@ -6,7 +6,7 @@ import {
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
   showCloudError, trialStringListHtml, isCurrentUserAdmin,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
-  moveToTrash
+  moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -449,6 +449,21 @@ let referenceImagesEditing = [];
 let recipeAttachmentsEditing = [];
 let monthlyUpdateEditingId = null;
 let monthlyUpdateAddOpen = false;
+// "Monthly Updates" section (per request) -- a simpler, month-first view
+// onto the exact same p.monthlyUpdates array Activities Updates already
+// uses (same reasoning as everywhere else on this page: one array, two
+// different editors onto it). Only one project's section can be open at a
+// time (same single-global-state convention as monthlyUpdateEditingId/
+// monthlyUpdateAddOpen above, gated by projectEditingId the same way).
+// monthlySummaryBrowseMonth is which month's entries are currently shown
+// ("YYYY-MM"); null means "not yet opened this session" and resolves to
+// the current Bangkok month the first time a project's detail view
+// renders it (see monthlyUpdatesSectionHtml).
+let monthlySummaryBrowseMonth = null;
+let monthlySummaryAddOpen = false;
+let monthlySummaryDraftMonth = null;
+let monthlySummaryEditingId = null;
+let monthlySummaryEditDraft = '';
 // Staged attachments for whichever Activities Updates inline form (add or
 // edit) is currently open — only one can be open at a time (see
 // monthlyUpdateEditingId / monthlyUpdateAddOpen above), so one shared array
@@ -643,6 +658,16 @@ let responsibleStatusFilters = new Set();
 // vertical list -- one row per project, photo + Name + Responsible
 // Person (PD) + latest Activity Update, per request.
 let projectsByStatusViewMode = 'grid';
+// List mode's own Monthly Update comparison (per request): which "YYYY-MM"
+// is the left-hand "selected month" column -- the right-hand column is
+// always whatever comes immediately before it (see previousMonthStr).
+// Starts null (not bangkokMonthStr() called eagerly here -- app.js and
+// projects.js import each other, and this file's top-level code runs as
+// soon as it's evaluated, which can land before app.js's own module body
+// has reached that function's backing state, a temporal-dead-zone crash)
+// and resolves to the current Bangkok month lazily, the first time the
+// dashboard actually renders.
+let projectsByStatusMonth = null;
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -1282,6 +1307,34 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       renderProjectsList();
     });
   });
+  // Monthly Update comparison's own month picker (List view only) --
+  // an empty/invalid value (e.g. clearing the field) is ignored rather
+  // than re-rendering into a broken "Invalid Date" state.
+  dashboardContainer.querySelector('#projectsByStatusMonthInput')?.addEventListener('change', e => {
+    if(/^\d{4}-\d{2}$/.test(e.target.value)){
+      projectsByStatusMonth = e.target.value;
+      renderProjectsList();
+    }
+  });
+  // "See more" -- only shown on a cell whose text is actually clamped
+  // (scrollHeight taller than the clamped box), checked after insertion
+  // since that can't be known from the text alone without measuring the
+  // real rendered box. stopPropagation keeps the click from also
+  // triggering the row's own open-this-project navigation.
+  dashboardContainer.querySelectorAll('.proj-mu-cell-text').forEach(textEl => {
+    const moreBtn = textEl.nextElementSibling;
+    if(moreBtn?.dataset.role === 'proj-mu-toggle' && textEl.scrollHeight > textEl.clientHeight + 1){
+      moreBtn.style.display = '';
+    }
+  });
+  dashboardContainer.querySelectorAll('[data-role="proj-mu-toggle"]').forEach(btn => {
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      const cell = btn.closest('.proj-mu-cell');
+      const expanded = cell.classList.toggle('expanded');
+      btn.textContent = expanded ? 'See less' : 'See more';
+    });
+  });
   dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.galleryProjectId;
@@ -1513,6 +1566,7 @@ export function renderProjectsList(){
       return b.count - a.count || a.label.localeCompare(b.label);
     });
   if(dashboardContainer){
+    if(!projectsByStatusMonth) projectsByStatusMonth = bangkokMonthStr();
     dashboardContainer.innerHTML = `
       <div class="dash-metrics" style="margin-bottom:14px;">
         <div class="dash-metric">
@@ -1532,7 +1586,14 @@ export function renderProjectsList(){
             <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           </div>
         </div>
-        ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode)}
+        ${projectsByStatusViewMode === 'list' ? `
+          <div class="proj-mu-month-picker">
+            <label for="projectsByStatusMonthInput">Monthly Update:</label>
+            <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
+            <span class="proj-mu-month-picker-vs"><b>${escapeHtml(formatMonthYear(projectsByStatusMonth))}</b> vs ${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
+          </div>
+        ` : ''}
+        ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -2186,6 +2247,8 @@ export function renderProjectsList(){
               </div>
               ` : ''}
 
+              ${monthlyUpdatesSectionHtml(p, isEditing)}
+
               <div class="field" style="margin-bottom:0;margin-top:16px;" id="activities-updates-${escapeHtml(p.id)}">
                 <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
                   <label style="margin-bottom:0;">Activities Updates</label>
@@ -2836,6 +2899,91 @@ export function renderProjectsList(){
         });
       }
 
+      // "Monthly Updates" section -- browsing past months works whether or
+      // not the project is in Edit mode (same "view-only still browsable"
+      // idea as Progress Log's modal below); only adding/editing/deleting
+      // an entry requires it.
+      block.querySelector('.proj-mu-summary-browse')?.addEventListener('change', e => {
+        if(/^\d{4}-\d{2}$/.test(e.target.value)){
+          monthlySummaryBrowseMonth = e.target.value;
+          renderProjectsList();
+        }
+      });
+      if(isEditing){
+        block.querySelector('[data-role="open-add-monthly-summary"]')?.addEventListener('click', () => {
+          monthlySummaryAddOpen = true;
+          monthlySummaryDraftMonth = monthlySummaryBrowseMonth;
+          renderProjectsList();
+        });
+        block.querySelector('[data-role="cancel-add-monthly-summary"]')?.addEventListener('click', () => {
+          monthlySummaryAddOpen = false;
+          renderProjectsList();
+        });
+        block.querySelector('[data-role="save-monthly-summary"]')?.addEventListener('click', () => {
+          const section = block.querySelector('.proj-mu-summary-section');
+          const month = section.querySelector('.proj-mu-summary-draft-month').value;
+          const text = section.querySelector('.proj-mu-summary-draft-text').value.trim();
+          if(!/^\d{4}-\d{2}$/.test(month) || !text){
+            alert('Please pick a month and type an update.');
+            return;
+          }
+          const mu = {
+            id: uid(),
+            date: `${month}-01`,
+            plan: '', planWho: '', planWhere: '', planWith: '', planOwner: '', time: '',
+            actionTaken: text,
+            nextAction: '', nextActionDue: '', nextActionTime: '', nextActionWho: '', nextActionWhere: '', nextActionWith: '', nextActionOwner: '',
+            autoCreatePlan: false, sourceUpdateId: '', linkedRecipeId: '', attachments: [], completedDate: '',
+            createdBy: currentUser?.email || '',
+            createdAt: Date.now()
+          };
+          if(!Array.isArray(p.monthlyUpdates)) p.monthlyUpdates = [];
+          p.monthlyUpdates.push(mu);
+          monthlySummaryAddOpen = false;
+          monthlySummaryBrowseMonth = month;
+          scheduleProjectSave(p);
+          logMuAddedEvent(p, mu);
+          renderProjectsList();
+        });
+        block.querySelectorAll('[data-role="edit-monthly-summary"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const entryId = btn.closest('[data-summary-id]').dataset.summaryId;
+            const mu = (p.monthlyUpdates || []).find(x => x.id === entryId);
+            if(!mu) return;
+            monthlySummaryEditingId = entryId;
+            monthlySummaryEditDraft = mu.actionTaken || '';
+            renderProjectsList();
+          });
+        });
+        block.querySelector('[data-role="save-monthly-summary-edit"]')?.addEventListener('click', () => {
+          const entry = block.querySelector(`[data-summary-id="${CSS.escape(monthlySummaryEditingId)}"]`);
+          const mu = (p.monthlyUpdates || []).find(x => x.id === monthlySummaryEditingId);
+          if(!entry || !mu) return;
+          const before = snapshotMainFields(mu, MU_DIFF_FIELDS);
+          mu.actionTaken = entry.querySelector('.proj-mu-summary-edit-text').value.trim();
+          const changes = diffMainFields(before, mu, MU_DIFF_FIELDS);
+          monthlySummaryEditingId = null;
+          monthlySummaryEditDraft = '';
+          scheduleProjectSave(p);
+          logActivityEvent('updated', 'project', p.name || 'Untitled project', changes);
+          renderProjectsList();
+        });
+        block.querySelector('[data-role="cancel-monthly-summary-edit"]')?.addEventListener('click', () => {
+          monthlySummaryEditingId = null;
+          monthlySummaryEditDraft = '';
+          renderProjectsList();
+        });
+        block.querySelectorAll('[data-role="delete-monthly-summary"]').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const entryId = btn.closest('[data-summary-id]').dataset.summaryId;
+            if(!confirm('Delete this monthly update? This cannot be undone.')) return;
+            p.monthlyUpdates = (p.monthlyUpdates || []).filter(mu => mu.id !== entryId);
+            scheduleProjectSave(p);
+            renderProjectsList();
+          });
+        });
+      }
+
       // Status badge and the PLAN / ACTION TAKEN / NEXT ACTION cards all
       // open the same update-popup — works whether or not the project
       // itself is currently in Edit mode, same as Progress Log's
@@ -3000,6 +3148,122 @@ function projectLatestActivityText(p){
   const latest = [...updates].sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
   return muPlanSummaryLine(latest) || '-';
 }
+// Monthly Update comparison (List view, per request): a project's own
+// "report month" isn't a separate stored field -- it's just the YYYY-MM
+// slice of that entry's existing `date` field (the "When" this update is
+// ABOUT, already distinct from `createdAt`, the real save timestamp --
+// see MU_DIFF_FIELDS' own "When (Date)" label). An entry with no date at
+// all (pre-dates this field, or was never filled in) never matches any
+// month here, by design -- never guessed into a month it didn't actually
+// claim. Several entries can share a month (e.g. logged twice); the most
+// recently SAVED one wins, per request, not the one with the latest
+// report date within that month.
+function projectMonthUpdateInfo(p, monthStr){
+  const updates = (p.monthlyUpdates || [])
+    .map(migrateMonthlyUpdate)
+    .filter(mu => (mu.date || '').slice(0, 7) === monthStr);
+  if(!updates.length) return null;
+  const latest = [...updates].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  return {
+    text: latest.actionTaken || muPlanSummaryLine(latest) || '-',
+    date: latest.date,
+    createdBy: latest.createdBy || ''
+  };
+}
+// One Monthly Update comparison cell -- `variant` is 'selected' (bold
+// text, per request) or 'previous' (light grey background, per request).
+// Text clamps to ~3 lines with a "See more" toggle for anything longer
+// (wired in wireProjectsByStatusCardClicks, which measures each cell's
+// own text after insertion and only shows the toggle when it's actually
+// truncated).
+function renderProjMuCell(info, variant){
+  if(!info){
+    return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty">No update yet this month</div>`;
+  }
+  return `
+    <div class="proj-mu-cell proj-mu-cell-${variant}">
+      <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
+      <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
+      <div class="proj-mu-cell-meta">${info.date ? escapeHtml(formatDateLong(info.date)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
+    </div>
+  `;
+}
+
+// "Monthly Updates" section (per request) -- a simpler, month-first editor
+// onto the exact same p.monthlyUpdates array Activities Updates already
+// uses (see the state vars' own comment for why). A entry added or edited
+// here only ever touches `date` (pinned to the 1st of the picked month)
+// and `actionTaken` -- Plan/Next Action stay whatever they already were
+// (blank on a brand new entry), so this never fights with the richer
+// Activities Updates editor over the same entry; both just show/edit
+// different facets of it. "History" here means browsing past months (see
+// requirement 4's "ดูประวัติย้อนหลังตามเดือนได้") -- same caveat as the rest
+// of this app: no separate per-entry version history beyond what the
+// shared activity-event log already captures (see MU_DIFF_FIELDS usage
+// below), consistent with how Activities Updates' own edits are logged.
+function monthlyUpdatesSectionHtml(p, isEditing){
+  if(!monthlySummaryBrowseMonth) monthlySummaryBrowseMonth = bangkokMonthStr();
+  const browseMonth = monthlySummaryBrowseMonth;
+  const entries = (p.monthlyUpdates || [])
+    .map(migrateMonthlyUpdate)
+    .filter(mu => (mu.date || '').slice(0, 7) === browseMonth)
+    .sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+  return `
+    <div class="field proj-mu-summary-section" style="margin-bottom:0;margin-top:16px;" id="monthly-updates-${escapeHtml(p.id)}">
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
+        <label style="margin-bottom:0;">Monthly Updates</label>
+        <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+          <input type="month" class="proj-mu-summary-browse" value="${escapeHtml(browseMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
+          ${(isEditing && !monthlySummaryAddOpen) ? `<button type="button" class="btn btn-sm" data-role="open-add-monthly-summary">+ Add Monthly Update</button>` : ''}
+        </div>
+      </div>
+      ${isEditing && monthlySummaryAddOpen ? `
+        <div class="proj-mu-summary-add">
+          <div class="field">
+            <label>Month</label>
+            <input type="month" class="proj-mu-summary-draft-month" value="${escapeHtml(monthlySummaryDraftMonth || browseMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
+          </div>
+          <div class="field">
+            <label>Update</label>
+            <textarea class="proj-mu-summary-draft-text" placeholder="What's the progress this month?"></textarea>
+          </div>
+          <div style="display:flex;gap:8px;">
+            <button class="btn btn-sm btn-primary" data-role="save-monthly-summary">${icon('save')} Save</button>
+            <button class="btn btn-sm proj-action-cancel" data-role="cancel-add-monthly-summary">${icon('undo-2')} Cancel</button>
+          </div>
+        </div>
+      ` : ''}
+      ${entries.length ? entries.map(mu => {
+        const isEntryEditing = isEditing && monthlySummaryEditingId === mu.id;
+        if(isEntryEditing){
+          return `
+            <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(mu.id)}">
+              <textarea class="proj-mu-summary-edit-text">${escapeHtml(monthlySummaryEditDraft)}</textarea>
+              <div style="display:flex;gap:8px;margin-top:6px;">
+                <button class="btn btn-sm btn-primary" data-role="save-monthly-summary-edit">${icon('save')} Save</button>
+                <button class="btn btn-sm proj-action-cancel" data-role="cancel-monthly-summary-edit">${icon('undo-2')} Cancel</button>
+              </div>
+            </div>
+          `;
+        }
+        const text = mu.actionTaken || muPlanSummaryLine(mu) || '-';
+        return `
+          <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(mu.id)}">
+            <div class="proj-mu-summary-entry-header">
+              <span class="proj-mu-summary-entry-date">${escapeHtml(formatDateLong(mu.date))}</span>
+              ${mu.createdBy ? `<span class="proj-mu-summary-entry-by">${escapeHtml(mu.createdBy)}</span>` : ''}
+              ${isEditing ? `
+                <button type="button" class="icon-btn" title="Edit" data-role="edit-monthly-summary">${icon('pencil', 12)}</button>
+                <button type="button" class="icon-btn" title="Delete" data-role="delete-monthly-summary">${icon('x', 12)}</button>
+              ` : ''}
+            </div>
+            <div class="proj-mu-summary-entry-text">${escapeHtml(text)}</div>
+          </div>
+        `;
+      }).join('') : `<div class="overview-empty">No update recorded for ${escapeHtml(formatMonthYear(browseMonth))}</div>`}
+    </div>
+  `;
+}
 
 // Same layout as renderBarList, but each bar is colored by its own status
 // (via PROJECT_STATUS_BAR) instead of one flat color for every bar — so
@@ -3017,20 +3281,24 @@ function projectLatestActivityText(p){
 // project, per request) share this same per-status grouping/bar footer,
 // differing only in how each status's own projects are laid out above it
 // -- see renderStatusGroupItems below.
-function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode){
+function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, selectedMonth){
   if(!projectsForStatus.length) return '';
   if(viewMode === 'list'){
+    const previousMonth = previousMonthStr(selectedMonth);
     return `
       <div class="proj-gallery-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <button type="button" class="proj-gallery-list-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
-            ${p.image
-              ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
-              : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
-            <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+          <div class="proj-gallery-list-item" title="${escapeHtml(p.name || 'Untitled project')}">
+            <button type="button" class="proj-gallery-list-identity" data-gallery-project-id="${escapeHtml(p.id)}">
+              ${p.image
+                ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+                : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
+              <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+            </button>
             <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
-            <span class="proj-gallery-list-activity">${escapeHtml(projectLatestActivityText(p))}</span>
-          </button>
+            ${renderProjMuCell(projectMonthUpdateInfo(p, selectedMonth), 'selected')}
+            ${renderProjMuCell(projectMonthUpdateInfo(p, previousMonth), 'previous')}
+          </div>
         `).join('')}
       </div>
     `;
@@ -3048,13 +3316,13 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode){
     </div>
   `;
 }
-function renderStatusBarList(groups, viewMode){
+function renderStatusBarList(groups, viewMode, selectedMonth){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
     const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p));
-    const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode);
+    const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode, selectedMonth);
     return `
       <div class="dash-status-group">
         <button type="button" class="dash-bar-item dash-bar-item-clickable" data-status-filter="${escapeHtml(g.label)}" title="Filter the projects table to ${escapeHtml(g.label)}">

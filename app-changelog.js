@@ -678,7 +678,8 @@ export const CHANGELOG = [
   { version: "3.0.636", date: "2026-10-01", note: "Fixed the Projects table leaving a big gap before Status/Destination/PD when other columns are hidden via Columns -- hiding columns used to stretch the remaining ones to fill the leftover width instead of letting them sit flush together" },
   { version: "3.0.637", date: "2026-10-01", note: "Added a List view to Projects by Status -- one row per project (photo, Project Name, Responsible Person, latest Activity Update) instead of the circular photo grid, toggle sits next to the card's own title" },
   { version: "3.0.638", date: "2026-10-01", note: "Projects by Status List view: Responsible Person and Activity Update now sit in their own columns instead of sharing one line after the project name" },
-  { version: "3.0.639", date: "2026-10-01", note: "Projects by Status: each status's own label/count/bar now sits above its projects instead of below them" }
+  { version: "3.0.639", date: "2026-10-01", note: "Projects by Status: each status's own label/count/bar now sits above its projects instead of below them" },
+  { version: "3.0.640", date: "2026-10-01", note: "Added Monthly Update month-comparison to Projects by Status' List view (Project / Responsible Person / this month / previous month, with a month picker, \"See more\" for long text, and small-screen labels) plus a new \"Monthly Updates\" section on each project's own detail view to add/edit/browse them by month -- both read and write the same Activities Updates data that already existed, just through a simpler month-first editor" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

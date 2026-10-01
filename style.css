@@ -3640,6 +3640,23 @@
      Action Taken / Next Action each read as their own labeled group. */
   .proj-monthly-add{display:flex;flex-direction:column;gap:12px;}
   .proj-monthly-add textarea{width:100%;min-height:44px;}
+  /* "Monthly Updates" section (per request) -- a simpler month-first view
+     onto the same data Activities Updates edits, see
+     monthlyUpdatesSectionHtml's own comment in projects.js. Entries read
+     as plain stacked cards (same bg/border/radius as .mu-card) rather
+     than the timeline-with-a-marker-line Activities Updates uses, since
+     there's no Plan/Action/Next-Action distinction to lay out here, just
+     one text block per entry. */
+  .proj-mu-summary-section{display:flex;flex-direction:column;gap:10px;}
+  .proj-mu-summary-add{display:flex;flex-direction:column;gap:12px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;}
+  .proj-mu-summary-add textarea{width:100%;min-height:70px;}
+  .proj-mu-summary-entry{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px;}
+  .proj-mu-summary-entry-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+  .proj-mu-summary-entry-date{font-size:12px;font-weight:700;color:var(--text);}
+  .proj-mu-summary-entry-by{font-size:11px;color:var(--text-dim);}
+  .proj-mu-summary-entry-header .icon-btn{margin-left:auto;}
+  .proj-mu-summary-entry-text{font-size:13px;color:var(--text);white-space:pre-wrap;word-break:break-word;}
+  .proj-mu-summary-entry textarea{width:100%;min-height:70px;}
   /* Wraps each Plan/Action Taken/Next Action field so its translate
      button (see wireMuTranslateButton) can sit in the corner without
      disturbing the textarea's own layout — takes over the width/flex
@@ -4158,30 +4175,39 @@
   }
   /* "Projects by Status" List view (per request) -- same per-status
      grouping/clickable photo as the Grid view above, just one row per
-     project (Photo/Name/Responsible Person/Activity Update each its own
-     column) instead of a wrapping strip of circles. Responsible Person
-     and Activity Update used to share one line crammed after the project
-     name -- moved into their own columns (per request) so a long Activity
-     Update reads as its own field instead of a trailing run-on. */
+     project across 4 columns (Project / Responsible Person / selected
+     month's Monthly Update / previous month's) instead of a wrapping
+     strip of circles. The row itself is a plain div now, not a button --
+     "See more" (see .proj-mu-cell-more below) needs its own click target
+     inside the row, and a button can't contain another interactive
+     control -- only the Photo+Name piece (.proj-gallery-list-identity)
+     navigates to the project. */
   .proj-gallery-list{
     display:flex;
     flex-direction:column;
-    gap:8px;
+    gap:10px;
   }
   .proj-gallery-list-item{
     display:grid;
-    grid-template-columns:40px minmax(120px,1fr) 120px minmax(200px,2fr);
-    align-items:center;
+    grid-template-columns:minmax(140px,1fr) 110px minmax(180px,1.4fr) minmax(180px,1.4fr);
+    align-items:start;
     gap:10px;
     width:100%;
+  }
+  .proj-gallery-list-identity{
+    display:flex;
+    align-items:center;
+    gap:8px;
     background:none;
     border:none;
     cursor:pointer;
     padding:0;
     font:inherit;
     text-align:left;
+    min-width:0;
   }
   .proj-gallery-list-thumb{
+    flex-shrink:0;
     width:40px;
     height:40px;
     border-radius:50%;
@@ -4198,19 +4224,93 @@
     overflow:hidden;
     text-overflow:ellipsis;
   }
-  .proj-gallery-list-item:hover .proj-gallery-list-name{color:var(--primary);text-decoration:underline;}
+  .proj-gallery-list-identity:hover .proj-gallery-list-name{color:var(--primary);text-decoration:underline;}
   .proj-gallery-list-pd{
-    font-size:12px;
-    color:var(--text-dim);
-    white-space:nowrap;
-    overflow:hidden;
-    text-overflow:ellipsis;
-  }
-  .proj-gallery-list-activity{
     font-size:12px;
     color:var(--text-dim);
     white-space:normal;
     word-break:break-word;
+    padding-top:10px;
+  }
+  /* One Monthly Update cell -- "selected" (the left column, per request)
+     reads in full-strength text; "previous" (right column) gets a light
+     grey card so the two stay visually distinct even at a glance, not
+     just by column position. Text clamps to 3 lines; .expanded (toggled
+     by the "See more" button, see wireProjectsByStatusCardClicks)
+     releases the clamp. */
+  .proj-mu-cell{
+    font-size:12px;
+    border-radius:var(--radius);
+    padding:8px 10px;
+  }
+  .proj-mu-cell-selected{
+    color:var(--text);
+    font-weight:600;
+    background:color-mix(in srgb, var(--primary) 6%, transparent);
+  }
+  .proj-mu-cell-previous{
+    color:var(--text-dim);
+    font-weight:400;
+    background:var(--bg);
+  }
+  .proj-mu-cell-empty{
+    color:var(--text-dim);
+    font-style:italic;
+    font-weight:400;
+    background:var(--bg);
+  }
+  .proj-mu-cell-text{
+    display:-webkit-box;
+    -webkit-line-clamp:3;
+    -webkit-box-orient:vertical;
+    overflow:hidden;
+    white-space:pre-wrap;
+    word-break:break-word;
+  }
+  .proj-mu-cell.expanded .proj-mu-cell-text{-webkit-line-clamp:unset;overflow:visible;}
+  .proj-mu-cell-more{
+    display:block;
+    margin-top:2px;
+    background:none;
+    border:none;
+    padding:0;
+    font-size:11px;
+    font-weight:600;
+    color:var(--primary);
+    cursor:pointer;
+  }
+  .proj-mu-cell-more:hover{text-decoration:underline;}
+  .proj-mu-cell-meta{
+    margin-top:4px;
+    font-size:10px;
+    font-weight:400;
+    color:var(--text-dim);
+  }
+  /* Monthly Update comparison's own month picker, above the List (per
+     request) -- only shown in List mode (see renderProjectsList). */
+  .proj-mu-month-picker{
+    display:flex;
+    align-items:center;
+    gap:8px;
+    flex-wrap:wrap;
+    font-size:12px;
+    color:var(--text-dim);
+    margin-bottom:10px;
+  }
+  .proj-mu-month-picker label{font-weight:600;}
+  .proj-mu-month-picker input[type=month]{
+    padding:4px 8px;
+    border:1px solid var(--border);
+    border-radius:var(--radius);
+    font:inherit;
+    color:inherit;
+  }
+  .proj-mu-month-picker-vs b{color:var(--text);}
+  @media (max-width:700px){
+    .proj-gallery-list-item{grid-template-columns:1fr;gap:6px;}
+    .proj-gallery-list-pd{padding-top:0;}
+    .proj-mu-cell-selected::before{content:"This month";display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--primary);margin-bottom:2px;}
+    .proj-mu-cell-previous::before{content:"Previous month";display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--text-dim);margin-bottom:2px;}
   }
   .dash-bar-item{display:block;width:100%;margin-bottom:8px;background:none;border:none;padding:0;font:inherit;text-align:left;color:inherit;}
   .dash-bar-item:last-child{margin-bottom:0;}
