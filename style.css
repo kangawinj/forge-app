@@ -4156,6 +4156,58 @@
     text-overflow:ellipsis;
     max-width:100%;
   }
+  /* "Projects by Status" List view (per request) -- same per-status
+     grouping/clickable photo as the Grid view above, just one row per
+     project (photo left, Name/Responsible Person/Activity Update stacked
+     to its right) instead of a wrapping strip of circles. */
+  .proj-gallery-list{
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+  }
+  .proj-gallery-list-item{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    width:100%;
+    background:none;
+    border:none;
+    cursor:pointer;
+    padding:0;
+    font:inherit;
+    text-align:left;
+  }
+  .proj-gallery-list-thumb{
+    flex-shrink:0;
+    width:40px;
+    height:40px;
+    border-radius:50%;
+    object-fit:cover;
+    border-width:3px;
+    border-style:solid;
+    box-sizing:border-box;
+  }
+  .proj-gallery-list-info{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
+  .proj-gallery-list-name{
+    font-size:13px;
+    font-weight:600;
+    color:var(--text);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .proj-gallery-list-item:hover .proj-gallery-list-name{color:var(--primary);text-decoration:underline;}
+  .proj-gallery-list-meta{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .dash-bar-item{display:block;width:100%;margin-bottom:8px;background:none;border:none;padding:0;font:inherit;text-align:left;color:inherit;}
   .dash-bar-item:last-child{margin-bottom:0;}
   .dash-bar-item-clickable{cursor:pointer;}

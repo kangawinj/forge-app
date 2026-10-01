@@ -639,6 +639,10 @@ let openProjectFilterMenuKey = null;
 // gets the same stay-open-across-re-renders and click-outside-to-close
 // behavior as every other filter popover on this page for free.
 let responsibleStatusFilters = new Set();
+// "Projects by Status" card: the circular photo grid (default) vs a
+// vertical list -- one row per project, photo + Name + Responsible
+// Person (PD) + latest Activity Update, per request.
+let projectsByStatusViewMode = 'grid';
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -1272,6 +1276,12 @@ function renderNewProjectPanel(){
 // Called once after every dashboardContainer rebuild, same as the Gantt
 // chart's own click wiring right above it.
 function wireProjectsByStatusCardClicks(dashboardContainer){
+  dashboardContainer.querySelector('#projectsByStatusViewToggle')?.querySelectorAll('.view-mode-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      projectsByStatusViewMode = btn.dataset.mode;
+      renderProjectsList();
+    });
+  });
   dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.galleryProjectId;
@@ -1515,8 +1525,14 @@ export function renderProjectsList(){
         </div>
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
-        <div class="dash-card-title">Projects by Status</div>
-        ${renderStatusBarList(projectsByStatus)}
+        <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+          <span>Projects by Status</span>
+          <div class="view-mode-toggle" id="projectsByStatusViewToggle">
+            <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'grid' ? ' active' : ''}" data-mode="grid">${icon('grid', 14)} Grid</button>
+            <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
+          </div>
+        </div>
+        ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -2973,6 +2989,18 @@ export function muRecipeOptionsHtml(selectedId){
     ).join('');
 }
 
+// The most recent Monthly Update's own summary line (same muPlanSummaryLine
+// used by Task Tracking/the Calendar), for the "Projects by Status" List
+// view's Activity Update column -- '-' when there's no update yet rather
+// than leaving the cell blank, matching missingCell's look elsewhere on
+// this page.
+function projectLatestActivityText(p){
+  const updates = (p.monthlyUpdates || []).map(migrateMonthlyUpdate);
+  if(!updates.length) return '-';
+  const latest = [...updates].sort((a,b) => (b.date||'').localeCompare(a.date||''))[0];
+  return muPlanSummaryLine(latest) || '-';
+}
+
 // Same layout as renderBarList, but each bar is colored by its own status
 // (via PROJECT_STATUS_BAR) instead of one flat color for every bar — so
 // "Projects by Status" reads the same way the mini status bar under each
@@ -2985,25 +3013,49 @@ export function muRecipeOptionsHtml(selectedId){
 // count always matches the status's real project count.
 // Both the bar/row and each individual photo are clickable — see
 // wireProjectsByStatusCardClicks, wired once after this HTML is inserted
-// into the dashboard.
-function renderStatusBarList(groups){
+// into the dashboard. Grid (circular photo strip) vs List (one row per
+// project, per request) share this same per-status grouping/bar footer,
+// differing only in how each status's own projects are laid out above it
+// -- see renderStatusGroupItems below.
+function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode){
+  if(!projectsForStatus.length) return '';
+  if(viewMode === 'list'){
+    return `
+      <div class="proj-gallery-list" style="margin-bottom:6px;">
+        ${projectsForStatus.map(p => `
+          <button type="button" class="proj-gallery-list-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
+            ${p.image
+              ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+              : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
+            <span class="proj-gallery-list-info">
+              <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+              <span class="proj-gallery-list-meta">${escapeHtml(p.responsiblePerson || 'Unassigned PD')} &nbsp;·&nbsp; ${escapeHtml(projectLatestActivityText(p))}</span>
+            </span>
+          </button>
+        `).join('')}
+      </div>
+    `;
+  }
+  return `
+    <div class="proj-gallery-grid" style="margin-bottom:6px;">
+      ${projectsForStatus.map(p => `
+        <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
+          ${p.image
+            ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+            : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
+          <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
+        </button>
+      `).join('')}
+    </div>
+  `;
+}
+function renderStatusBarList(groups, viewMode){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
     const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p));
-    const photosHtml = projectsForStatus.length ? `
-      <div class="proj-gallery-grid" style="margin-bottom:6px;">
-        ${projectsForStatus.map(p => `
-          <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
-            ${p.image
-              ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
-              : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${g.label === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
-            <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
-          </button>
-        `).join('')}
-      </div>
-    ` : '';
+    const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode);
     return `
       <div class="dash-status-group">
         ${photosHtml}
