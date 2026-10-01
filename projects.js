@@ -1602,7 +1602,6 @@ export function renderProjectsList(){
           <div class="proj-mu-month-picker">
             <label for="projectsByStatusMonthInput">Monthly Update:</label>
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
-            <span class="proj-mu-month-picker-vs"><b>${escapeHtml(formatMonthYear(projectsByStatusMonth))}</b> vs ${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
           </div>
           <div class="proj-gallery-list-header">
             <span></span>

@@ -4349,7 +4349,6 @@
     font:inherit;
     color:inherit;
   }
-  .proj-mu-month-picker-vs b{color:var(--text);}
   @media (max-width:700px){
     .proj-gallery-list-item{grid-template-columns:1fr;gap:6px;}
     .proj-gallery-list-header{display:none;}
