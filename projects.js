@@ -3174,13 +3174,19 @@ function projectMonthUpdateInfo(p, monthStr){
 // and writes the exact same p.monthlySummaries entry that section itself
 // would (find-by-month, or create one on save if none exists yet for
 // that month), so the two stay in sync automatically -- no separate
-// state to drift.
+// state to drift. The month input auto-fills with whichever cell was
+// clicked but stays editable (per request) -- Save reads whatever month
+// is in that field at that point, not necessarily the one it opened
+// with, so a wrong cell or a late-logged update can be retargeted
+// without closing and re-opening on a different cell.
 function openProjMuQuickEdit(projectId, month){
   const p = projects.find(x => x.id === projectId);
   if(!p) return;
   const existing = (p.monthlySummaries || []).map(migrateMonthlySummary).find(ms => ms.month === month);
-  projMuQuickEditContext = { projectId, month };
-  document.getElementById('projMuQuickEditLabel').textContent = `${p.name || 'Untitled project'} — ${formatMonthYear(month)}`;
+  projMuQuickEditContext = { projectId };
+  document.getElementById('projMuQuickEditProjectName').textContent = p.name || 'Untitled project';
+  document.getElementById('projMuQuickEditMonthInput').value = month;
+  document.getElementById('projMuQuickEditMonthInput').max = bangkokTodayStr().slice(0,7);
   document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
   document.getElementById('projMuQuickEditModalOverlay').classList.add('open');
 }
@@ -3190,9 +3196,14 @@ function closeProjMuQuickEdit(){
 }
 function saveProjMuQuickEdit(){
   if(!projMuQuickEditContext) return;
-  const { projectId, month } = projMuQuickEditContext;
+  const { projectId } = projMuQuickEditContext;
   const p = projects.find(x => x.id === projectId);
   if(!p) { closeProjMuQuickEdit(); return; }
+  const month = document.getElementById('projMuQuickEditMonthInput').value;
+  if(!/^\d{4}-\d{2}$/.test(month)){
+    alert('Please pick a valid month.');
+    return;
+  }
   const text = document.getElementById('projMuQuickEditText').value.trim();
   if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
   const existing = p.monthlySummaries.find(ms => (ms.month || '') === month);
