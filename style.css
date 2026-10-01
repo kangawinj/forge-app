@@ -4158,15 +4158,19 @@
   }
   /* "Projects by Status" List view (per request) -- same per-status
      grouping/clickable photo as the Grid view above, just one row per
-     project (photo left, Name/Responsible Person/Activity Update stacked
-     to its right) instead of a wrapping strip of circles. */
+     project (Photo/Name/Responsible Person/Activity Update each its own
+     column) instead of a wrapping strip of circles. Responsible Person
+     and Activity Update used to share one line crammed after the project
+     name -- moved into their own columns (per request) so a long Activity
+     Update reads as its own field instead of a trailing run-on. */
   .proj-gallery-list{
     display:flex;
     flex-direction:column;
     gap:8px;
   }
   .proj-gallery-list-item{
-    display:flex;
+    display:grid;
+    grid-template-columns:40px minmax(120px,1fr) 120px minmax(200px,2fr);
     align-items:center;
     gap:10px;
     width:100%;
@@ -4178,7 +4182,6 @@
     text-align:left;
   }
   .proj-gallery-list-thumb{
-    flex-shrink:0;
     width:40px;
     height:40px;
     border-radius:50%;
@@ -4186,11 +4189,6 @@
     border-width:3px;
     border-style:solid;
     box-sizing:border-box;
-  }
-  .proj-gallery-list-info{
-    display:flex;
-    flex-direction:column;
-    min-width:0;
   }
   .proj-gallery-list-name{
     font-size:13px;
@@ -4201,12 +4199,18 @@
     text-overflow:ellipsis;
   }
   .proj-gallery-list-item:hover .proj-gallery-list-name{color:var(--primary);text-decoration:underline;}
-  .proj-gallery-list-meta{
-    font-size:11px;
+  .proj-gallery-list-pd{
+    font-size:12px;
     color:var(--text-dim);
     white-space:nowrap;
     overflow:hidden;
     text-overflow:ellipsis;
+  }
+  .proj-gallery-list-activity{
+    font-size:12px;
+    color:var(--text-dim);
+    white-space:normal;
+    word-break:break-word;
   }
   .dash-bar-item{display:block;width:100%;margin-bottom:8px;background:none;border:none;padding:0;font:inherit;text-align:left;color:inherit;}
   .dash-bar-item:last-child{margin-bottom:0;}

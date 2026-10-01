@@ -3027,10 +3027,9 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode){
             ${p.image
               ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
               : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
-            <span class="proj-gallery-list-info">
-              <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
-              <span class="proj-gallery-list-meta">${escapeHtml(p.responsiblePerson || 'Unassigned PD')} &nbsp;·&nbsp; ${escapeHtml(projectLatestActivityText(p))}</span>
-            </span>
+            <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+            <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
+            <span class="proj-gallery-list-activity">${escapeHtml(projectLatestActivityText(p))}</span>
           </button>
         `).join('')}
       </div>
