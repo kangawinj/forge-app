@@ -674,7 +674,8 @@ export const CHANGELOG = [
   { version: "3.0.632", date: "2026-09-30", note: "Moved the Print button to the end of Test Results' toolbar, after List/Summary Table and Export Excel" },
   { version: "3.0.633", date: "2026-09-30", note: "Added Export Excel to Ingredients and Products, same idea as Test Results' own -- one flat row per ingredient/product covering every field on that page" },
   { version: "3.0.634", date: "2026-09-30", note: "Fixed \"Could not export the complete Excel preview\" on recipes with an unconfirmed Idea Price ingredient -- a rare measurement rounding overlap between the price and its IDEA badge used to abort the whole export instead of just skipping that one cell's merge" },
-  { version: "3.0.635", date: "2026-09-30", note: "Added Export Excel to Projects, Sample Submissions, and Reference Lists -- Projects is one row per project (Requirements flattened, Monthly Updates summarized to latest), Sample Submissions is two sheets (Submissions + Samples), Reference Lists is one sheet per list" }
+  { version: "3.0.635", date: "2026-09-30", note: "Added Export Excel to Projects, Sample Submissions, and Reference Lists -- Projects is one row per project (Requirements flattened, Monthly Updates summarized to latest), Sample Submissions is two sheets (Submissions + Samples), Reference Lists is one sheet per list" },
+  { version: "3.0.636", date: "2026-10-01", note: "Fixed the Projects table leaving a big gap before Status/Destination/PD when other columns are hidden via Columns -- hiding columns used to stretch the remaining ones to fill the leftover width instead of letting them sit flush together" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

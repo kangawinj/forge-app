@@ -1083,6 +1083,17 @@
      cell just looked broken instead of helping. */
   .proj-overview-table th{white-space:nowrap;}
   .proj-overview-table td{white-space:normal;word-break:break-word;vertical-align:top;}
+  /* Overrides the global table{width:100%} (per request) -- with several
+     columns hidden via the Columns menu, a 100%-wide table-layout:auto
+     table doesn't just drop the hidden columns' width, it redistributes
+     that freed space across whatever columns are still visible, stretching
+     each one far past its actual content (e.g. Status/Destination/PD left
+     with a big gap between Project and Status instead of sitting flush
+     next to it). width:auto lets the table shrink-wrap to its visible
+     columns' real content width instead, same as hiding a column always
+     should have looked -- with every column shown it still naturally fills
+     most of the card's width anyway, since there's plenty of content. */
+  .proj-overview-table{width:auto;}
   /* Sticky header — pinned just below the sticky top navbar (56px tall) so
      the column labels stay on screen while scrolling down a long list,
      instead of scrolling out of view after the first few rows. */
