@@ -6,7 +6,8 @@ import {
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
   showCloudError, trialStringListHtml, isCurrentUserAdmin,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
-  moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr
+  moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr,
+  wireModalOverlayClose
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -669,6 +670,11 @@ let projectsByStatusViewMode = 'grid';
 // and resolves to the current Bangkok month lazily, the first time the
 // dashboard actually renders.
 let projectsByStatusMonth = null;
+// Monthly Update's own quick-edit popup (per request: click a Monthly
+// Update cell in Projects by Status' List view to add/edit it right
+// there, instead of needing to open the project and find its own
+// Monthly Updates section). { projectId, month } while open, else null.
+let projMuQuickEditContext = null;
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -1334,6 +1340,11 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       const cell = btn.closest('.proj-mu-cell');
       const expanded = cell.classList.toggle('expanded');
       btn.textContent = expanded ? 'See less' : 'See more';
+    });
+  });
+  dashboardContainer.querySelectorAll('[data-role="proj-mu-cell-click"]').forEach(cell => {
+    cell.addEventListener('click', () => {
+      openProjMuQuickEdit(cell.dataset.projectId, cell.dataset.month);
     });
   });
   dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
@@ -3049,6 +3060,10 @@ export function initProjectsModal(){
     renderSidebar();
   }));
   wireProjectModals();
+  document.getElementById('btnCloseProjMuQuickEdit').addEventListener('click', closeProjMuQuickEdit);
+  document.getElementById('btnCancelProjMuQuickEdit').addEventListener('click', closeProjMuQuickEdit);
+  document.getElementById('btnSaveProjMuQuickEdit').addEventListener('click', saveProjMuQuickEdit);
+  wireModalOverlayClose('projMuQuickEditModalOverlay', closeProjMuQuickEdit);
 }
 
 /* ---------- Projects: cross-recipe production tracking (shared via Firestore) ---------- */
@@ -3153,18 +3168,70 @@ function projectMonthUpdateInfo(p, monthStr){
     createdBy: latest.updatedBy || latest.createdBy || ''
   };
 }
+// Monthly Update's quick-edit popup (per request) -- lets a cell in
+// Projects by Status' List view be edited right there instead of needing
+// to open the project and find its own Monthly Updates section. Reads
+// and writes the exact same p.monthlySummaries entry that section itself
+// would (find-by-month, or create one on save if none exists yet for
+// that month), so the two stay in sync automatically -- no separate
+// state to drift.
+function openProjMuQuickEdit(projectId, month){
+  const p = projects.find(x => x.id === projectId);
+  if(!p) return;
+  const existing = (p.monthlySummaries || []).map(migrateMonthlySummary).find(ms => ms.month === month);
+  projMuQuickEditContext = { projectId, month };
+  document.getElementById('projMuQuickEditLabel').textContent = `${p.name || 'Untitled project'} — ${formatMonthYear(month)}`;
+  document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
+  document.getElementById('projMuQuickEditModalOverlay').classList.add('open');
+}
+function closeProjMuQuickEdit(){
+  document.getElementById('projMuQuickEditModalOverlay').classList.remove('open');
+  projMuQuickEditContext = null;
+}
+function saveProjMuQuickEdit(){
+  if(!projMuQuickEditContext) return;
+  const { projectId, month } = projMuQuickEditContext;
+  const p = projects.find(x => x.id === projectId);
+  if(!p) { closeProjMuQuickEdit(); return; }
+  const text = document.getElementById('projMuQuickEditText').value.trim();
+  if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
+  const existing = p.monthlySummaries.find(ms => (ms.month || '') === month);
+  if(existing){
+    const before = existing.text || '';
+    existing.text = text;
+    existing.updatedBy = currentUser?.email || '';
+    existing.updatedAt = Date.now();
+    if(before !== text){
+      logActivityEvent('updated', 'project', p.name || 'Untitled project', [{ field: `Monthly Update (${formatMonthYear(month)})`, before, after: text }]);
+    }
+  } else if(text){
+    const ms = blankMonthlySummary(month, text);
+    p.monthlySummaries.push(ms);
+    logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
+      field: 'Monthly Updates', before: '(no entry)', after: `Added for ${formatMonthYear(month)}: "${text}"`
+    }]);
+  }
+  scheduleProjectSave(p);
+  closeProjMuQuickEdit();
+  renderProjectsList();
+}
 // One Monthly Update comparison cell -- `variant` is 'selected' (bold
 // text, per request) or 'previous' (light grey background, per request).
 // Text clamps to ~3 lines with a "See more" toggle for anything longer
 // (wired in wireProjectsByStatusCardClicks, which measures each cell's
 // own text after insertion and only shows the toggle when it's actually
-// truncated).
-function renderProjMuCell(info, variant){
+// truncated). The whole cell is clickable (per request) -- opens
+// projMuQuickEditModalOverlay to add/edit that project's Monthly Update
+// for that exact month, whether it's the selected or the previous one;
+// "See more" stops its own click from also triggering that (see its own
+// listener).
+function renderProjMuCell(info, variant, projectId, month){
+  const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to add/edit this month's update"`;
   if(!info){
-    return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty">No update yet this month</div>`;
+    return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty" ${dataAttrs}>No update yet this month</div>`;
   }
   return `
-    <div class="proj-mu-cell proj-mu-cell-${variant}">
+    <div class="proj-mu-cell proj-mu-cell-${variant}" ${dataAttrs}>
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
       <div class="proj-mu-cell-meta">${info.recordedAt ? escapeHtml(formatActivityDateTime(info.recordedAt)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
@@ -3278,8 +3345,8 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
               <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
             </button>
             <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
-            ${renderProjMuCell(projectMonthUpdateInfo(p, selectedMonth), 'selected')}
-            ${renderProjMuCell(projectMonthUpdateInfo(p, previousMonth), 'previous')}
+            ${renderProjMuCell(projectMonthUpdateInfo(p, selectedMonth), 'selected', p.id, selectedMonth)}
+            ${renderProjMuCell(projectMonthUpdateInfo(p, previousMonth), 'previous', p.id, previousMonth)}
           </div>
         `).join('')}
       </div>

@@ -680,7 +680,8 @@ export const CHANGELOG = [
   { version: "3.0.638", date: "2026-10-01", note: "Projects by Status List view: Responsible Person and Activity Update now sit in their own columns instead of sharing one line after the project name" },
   { version: "3.0.639", date: "2026-10-01", note: "Projects by Status: each status's own label/count/bar now sits above its projects instead of below them" },
   { version: "3.0.640", date: "2026-10-01", note: "Added Monthly Update month-comparison to Projects by Status' List view (Project / Responsible Person / this month / previous month, with a month picker, \"See more\" for long text, and small-screen labels) plus a new \"Monthly Updates\" section on each project's own detail view to add/edit/browse them by month -- both read and write the same Activities Updates data that already existed, just through a simpler month-first editor" },
-  { version: "3.0.641", date: "2026-10-01", note: "Monthly Update now has its own storage, fully separate from Activities Updates -- entries from the richer Plan/Action Taken/Next Action editor were showing up inside Monthly Update's own month-comparison, which read as the two features bleeding into each other" }
+  { version: "3.0.641", date: "2026-10-01", note: "Monthly Update now has its own storage, fully separate from Activities Updates -- entries from the richer Plan/Action Taken/Next Action editor were showing up inside Monthly Update's own month-comparison, which read as the two features bleeding into each other" },
+  { version: "3.0.642", date: "2026-10-01", note: "Clicking a Monthly Update cell in Projects by Status' List view now opens a popup to add/edit it right there (whether it's the selected or previous month, filled or empty), instead of needing to open the project and find its own Monthly Updates section" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

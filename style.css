@@ -4242,7 +4242,13 @@
     font-size:12px;
     border-radius:var(--radius);
     padding:8px 10px;
+    cursor:pointer;
+    transition:box-shadow .15s;
   }
+  /* Clickable (per request) -- opens projMuQuickEditModalOverlay to
+     add/edit this exact project+month, whether the cell already has an
+     entry or shows the empty state. */
+  .proj-mu-cell:hover{box-shadow:0 0 0 1px var(--primary) inset;}
   .proj-mu-cell-selected{
     color:var(--text);
     font-weight:600;
