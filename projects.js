@@ -3353,7 +3353,10 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
               ${p.image
                 ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
                 : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
-              <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+              <span class="proj-gallery-list-name-wrap">
+                <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
+                <span class="proj-gallery-list-details">${escapeHtml([p.destinationCountry, p.customerName, p.ownerSalesRep].filter(Boolean).join(' · ') || '-')}</span>
+              </span>
             </button>
             <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
             ${renderProjMuCell(projectMonthUpdateInfo(p, selectedMonth), 'selected', p.id, selectedMonth)}

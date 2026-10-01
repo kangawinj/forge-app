@@ -4216,6 +4216,11 @@
     border-style:solid;
     box-sizing:border-box;
   }
+  .proj-gallery-list-name-wrap{
+    display:flex;
+    flex-direction:column;
+    min-width:0;
+  }
   .proj-gallery-list-name{
     font-size:13px;
     font-weight:600;
@@ -4225,6 +4230,15 @@
     text-overflow:ellipsis;
   }
   .proj-gallery-list-identity:hover .proj-gallery-list-name{color:var(--primary);text-decoration:underline;}
+  /* Destination / Customer / Project Owner, per request -- filtered to
+     whichever of the three are actually filled in, "-" if none are. */
+  .proj-gallery-list-details{
+    font-size:11px;
+    color:var(--text-dim);
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
   .proj-gallery-list-pd{
     font-size:12px;
     color:var(--text-dim);
