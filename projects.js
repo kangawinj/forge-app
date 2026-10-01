@@ -3057,11 +3057,11 @@ function renderStatusBarList(groups, viewMode){
     const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode);
     return `
       <div class="dash-status-group">
-        ${photosHtml}
         <button type="button" class="dash-bar-item dash-bar-item-clickable" data-status-filter="${escapeHtml(g.label)}" title="Filter the projects table to ${escapeHtml(g.label)}">
           <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
           <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${color};"></div></div>
         </button>
+        ${photosHtml}
       </div>
     `;
   }).join('');
