@@ -1604,6 +1604,12 @@ export function renderProjectsList(){
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
             <span class="proj-mu-month-picker-vs"><b>${escapeHtml(formatMonthYear(projectsByStatusMonth))}</b> vs ${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
           </div>
+          <div class="proj-gallery-list-header">
+            <span></span>
+            <span></span>
+            <span class="proj-mu-cell-header">${escapeHtml(formatMonthYear(projectsByStatusMonth))}</span>
+            <span class="proj-mu-cell-header">${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
+          </div>
         ` : ''}
         ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>

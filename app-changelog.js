@@ -683,7 +683,8 @@ export const CHANGELOG = [
   { version: "3.0.641", date: "2026-10-01", note: "Monthly Update now has its own storage, fully separate from Activities Updates -- entries from the richer Plan/Action Taken/Next Action editor were showing up inside Monthly Update's own month-comparison, which read as the two features bleeding into each other" },
   { version: "3.0.642", date: "2026-10-01", note: "Clicking a Monthly Update cell in Projects by Status' List view now opens a popup to add/edit it right there (whether it's the selected or previous month, filled or empty), instead of needing to open the project and find its own Monthly Updates section" },
   { version: "3.0.643", date: "2026-10-01", note: "That popup's month now auto-fills from the cell you clicked but stays editable -- Save targets whatever month is picked at that point, so a wrong cell or a late-logged update can be retargeted without closing and re-opening on a different one" },
-  { version: "3.0.644", date: "2026-10-01", note: "Projects by Status' List view now shows Destination / Customer / Project Owner under each project's name, filtered to whichever are actually filled in" }
+  { version: "3.0.644", date: "2026-10-01", note: "Projects by Status' List view now shows Destination / Customer / Project Owner under each project's name, filtered to whichever are actually filled in" },
+  { version: "3.0.645", date: "2026-10-01", note: "Projects by Status' List view now shows a real column header row above the month-comparison columns (e.g. \"October 2026\" / \"September 2026\"), instead of only stating the pair once in the month picker line above the whole list -- hidden on small screens where it would've collapsed out of alignment" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
