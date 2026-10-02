@@ -1345,11 +1345,20 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
   // attachProjectsListener) picks up the change and re-renders for
   // everyone, so no local re-render is done here.
   dashboardContainer.querySelector('[data-role="add-proj-mu-month-column"]')?.addEventListener('click', () => {
+    if(!isCurrentUserAdmin()) return;
     const next = Math.min(projectsByStatusMonthColumnCount + 1, PROJ_MU_MAX_MONTH_COLUMNS);
     setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
       .catch(err => alert('Failed to update: ' + err.message));
   });
+  // Removing a column is admin-only (the button is only rendered for them
+  // too, this is just a second guard) and asks first (per request) -- it's a
+  // shared setting, so it hides that month's column for everyone.
   dashboardContainer.querySelector('[data-role="remove-proj-mu-month-column"]')?.addEventListener('click', () => {
+    if(!isCurrentUserAdmin()) return;
+    const lastMonth = monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).pop();
+    if(!confirm(`Remove the "Summary of ${formatMonthYear(lastMonth)}" column?
+
+This hides it for everyone. No Monthly Update data is deleted — you can add the column back anytime.`)) return;
     const next = Math.max(projectsByStatusMonthColumnCount - 1, PROJ_MU_DEFAULT_MONTH_COLUMNS);
     setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
       .catch(err => alert('Failed to update: ' + err.message));

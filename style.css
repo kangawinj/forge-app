@@ -1876,9 +1876,13 @@
   .costing-margin-cell{
     display:flex;
     flex-wrap:nowrap;
-    align-items:flex-end;
+    align-items:flex-start;
     gap:10px 18px;
   }
+  /* Top-align every costing row (per request): the Overhead / Margin
+     groups inside a cell AND the Selling Price cell beside it all start at
+     the same line, instead of sitting on the grid's bottom edge. */
+  #costingMarginSection > div{align-self:start;}
   .costing-margin-cell > div{min-width:0;}
   .costing-margin-cell > div:first-child{flex:0 0 auto;}
   @media (max-width:520px){
