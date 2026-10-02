@@ -266,6 +266,7 @@ export function blankMonthlySummary(month, text){
     id: uid(),
     month,
     text: text || '',
+    photos: [],
     createdBy: currentUser?.email || '',
     createdAt: now,
     updatedBy: '',
@@ -279,6 +280,7 @@ export function migrateMonthlySummary(ms){
   return {
     ...ms,
     text: ms.text || '',
+    photos: ms.photos || [],
     createdBy: ms.createdBy || '',
     updatedBy: ms.updatedBy || ''
   };

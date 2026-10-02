@@ -685,7 +685,8 @@ export const CHANGELOG = [
   { version: "3.0.643", date: "2026-10-01", note: "That popup's month now auto-fills from the cell you clicked but stays editable -- Save targets whatever month is picked at that point, so a wrong cell or a late-logged update can be retargeted without closing and re-opening on a different one" },
   { version: "3.0.644", date: "2026-10-01", note: "Projects by Status' List view now shows Destination / Customer / Project Owner under each project's name, filtered to whichever are actually filled in" },
   { version: "3.0.645", date: "2026-10-01", note: "Projects by Status' List view now shows a real column header row above the month-comparison columns (e.g. \"October 2026\" / \"September 2026\"), instead of only stating the pair once in the month picker line above the whole list -- hidden on small screens where it would've collapsed out of alignment" },
-  { version: "3.0.646", date: "2026-10-01", note: "Removed the now-redundant \"October 2026 vs September 2026\" text next to the month picker, since the column header row above already states it" }
+  { version: "3.0.646", date: "2026-10-01", note: "Removed the now-redundant \"October 2026 vs September 2026\" text next to the month picker, since the column header row above already states it" },
+  { version: "3.0.647", date: "2026-10-02", note: "Monthly Update's quick-edit popup can now attach up to 6 photos alongside the text -- shown as thumbnails in the popup, the Projects by Status cell itself, and the project's own Monthly Updates section, click any one to preview it full-size" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -675,6 +675,8 @@ let projectsByStatusMonth = null;
 // there, instead of needing to open the project and find its own
 // Monthly Updates section). { projectId, month } while open, else null.
 let projMuQuickEditContext = null;
+let projMuQuickEditDraftPhotos = [];
+const PROJ_MU_QUICK_EDIT_MAX_PHOTOS = 6;
 let projectSortKey = 'updatedAt';
 let projectSortDir = 'desc';
 // Whichever renderProjectsList() call is most recent owns this — see the
@@ -1345,6 +1347,21 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
   dashboardContainer.querySelectorAll('[data-role="proj-mu-cell-click"]').forEach(cell => {
     cell.addEventListener('click', () => {
       openProjMuQuickEdit(cell.dataset.projectId, cell.dataset.month);
+    });
+  });
+  // Monthly Update cell's own photo chips -- stopPropagation keeps a chip
+  // click from also opening the quick-edit popup underneath it.
+  dashboardContainer.querySelectorAll('[data-role="proj-mu-photos"]').forEach(chipList => {
+    chipList.addEventListener('click', e => e.stopPropagation());
+    chipList.querySelectorAll('[data-role="open-mu-attachment-preview"]').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const p = projects.find(x => x.id === chipList.dataset.projectId);
+        const entries = p ? (p.monthlySummaries || []).map(migrateMonthlySummary).filter(x => x.month === chipList.dataset.month) : [];
+        const ms = [...entries].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+        if(!ms) return;
+        const idx = ms.photos.findIndex(a => a.id === btn.dataset.attachmentId);
+        if(idx !== -1) openMuAttachmentPreview(ms.photos, idx);
+      });
     });
   });
   dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
@@ -2926,6 +2943,15 @@ export function renderProjectsList(){
           renderProjectsList();
         }
       });
+      block.querySelectorAll('[data-summary-id] [data-role="proj-mu-summary-photos"] [data-role="open-mu-attachment-preview"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const entryId = btn.closest('[data-summary-id]')?.dataset.summaryId;
+          const ms = (p.monthlySummaries || []).map(migrateMonthlySummary).find(x => x.id === entryId);
+          if(!ms) return;
+          const idx = ms.photos.findIndex(a => a.id === btn.dataset.attachmentId);
+          if(idx !== -1) openMuAttachmentPreview(ms.photos, idx);
+        });
+      });
       if(isEditing){
         block.querySelector('[data-role="open-add-monthly-summary"]')?.addEventListener('click', () => {
           monthlySummaryAddOpen = true;
@@ -3170,7 +3196,8 @@ function projectMonthUpdateInfo(p, monthStr){
   return {
     text: latest.text || '-',
     recordedAt: latest.updatedAt || latest.createdAt,
-    createdBy: latest.updatedBy || latest.createdBy || ''
+    createdBy: latest.updatedBy || latest.createdBy || '',
+    photos: latest.photos || []
   };
 }
 // Monthly Update's quick-edit popup (per request) -- lets a cell in
@@ -3189,15 +3216,23 @@ function openProjMuQuickEdit(projectId, month){
   if(!p) return;
   const existing = (p.monthlySummaries || []).map(migrateMonthlySummary).find(ms => ms.month === month);
   projMuQuickEditContext = { projectId };
+  projMuQuickEditDraftPhotos = existing ? [...existing.photos] : [];
   document.getElementById('projMuQuickEditProjectName').textContent = p.name || 'Untitled project';
   document.getElementById('projMuQuickEditMonthInput').value = month;
   document.getElementById('projMuQuickEditMonthInput').max = bangkokTodayStr().slice(0,7);
   document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
+  const photosEditorEl = document.getElementById('projMuQuickEditPhotosEditor');
+  photosEditorEl.innerHTML = `
+    <div class="mu-attachments-chiplist"></div>
+    <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Add Photo<input type="file" class="mu-attach-input" accept="image/*" multiple style="display:none;"></label>
+  `;
+  wireMuAttachmentEditor(photosEditorEl, () => projMuQuickEditDraftPhotos, null, PROJ_MU_QUICK_EDIT_MAX_PHOTOS);
   document.getElementById('projMuQuickEditModalOverlay').classList.add('open');
 }
 function closeProjMuQuickEdit(){
   document.getElementById('projMuQuickEditModalOverlay').classList.remove('open');
   projMuQuickEditContext = null;
+  projMuQuickEditDraftPhotos = [];
 }
 function saveProjMuQuickEdit(){
   if(!projMuQuickEditContext) return;
@@ -3215,13 +3250,15 @@ function saveProjMuQuickEdit(){
   if(existing){
     const before = existing.text || '';
     existing.text = text;
+    existing.photos = projMuQuickEditDraftPhotos;
     existing.updatedBy = currentUser?.email || '';
     existing.updatedAt = Date.now();
     if(before !== text){
       logActivityEvent('updated', 'project', p.name || 'Untitled project', [{ field: `Monthly Update (${formatMonthYear(month)})`, before, after: text }]);
     }
-  } else if(text){
+  } else if(text || projMuQuickEditDraftPhotos.length){
     const ms = blankMonthlySummary(month, text);
+    ms.photos = projMuQuickEditDraftPhotos;
     p.monthlySummaries.push(ms);
     logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
       field: 'Monthly Updates', before: '(no entry)', after: `Added for ${formatMonthYear(month)}: "${text}"`
@@ -3250,6 +3287,7 @@ function renderProjMuCell(info, variant, projectId, month){
     <div class="proj-mu-cell proj-mu-cell-${variant}" ${dataAttrs}>
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
+      ${info.photos && info.photos.length ? `<div class="mu-attachments-chiplist" data-role="proj-mu-photos" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}">${muAttachmentChipsHtml(info.photos, false)}</div>` : ''}
       <div class="proj-mu-cell-meta">${info.recordedAt ? escapeHtml(formatActivityDateTime(info.recordedAt)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
     </div>
   `;
@@ -3323,6 +3361,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
               ` : ''}
             </div>
             <div class="proj-mu-summary-entry-text">${escapeHtml(ms.text || '-')}</div>
+            ${ms.photos && ms.photos.length ? `<div class="mu-attachments-chiplist" data-role="proj-mu-summary-photos">${muAttachmentChipsHtml(ms.photos, false)}</div>` : ''}
           </div>
         `;
       }).join('') : `<div class="overview-empty">No update recorded for ${escapeHtml(formatMonthYear(browseMonth))}</div>`}

@@ -214,7 +214,7 @@ export function allProjectAttachments(p){
 // container — never a full renderProjectsList(), which would wipe out
 // whatever the user is mid-typing in the Plan/Action Taken/Next Action
 // fields of the very same form.
-export function wireMuAttachmentEditor(container, draftArrayGetter, onChange){
+export function wireMuAttachmentEditor(container, draftArrayGetter, onChange, maxCount = Infinity){
   const input = container.querySelector('.mu-attach-input');
   const chipList = container.querySelector('.mu-attachments-chiplist');
   if(!input || !chipList) return;
@@ -239,9 +239,19 @@ export function wireMuAttachmentEditor(container, draftArrayGetter, onChange){
   input.addEventListener('change', async () => {
     const files = Array.from(input.files || []);
     input.value = '';
-    for(const file of files){
+    const arr = draftArrayGetter();
+    const remaining = maxCount - arr.length;
+    if(remaining <= 0){
+      alert(`You can attach up to ${maxCount} here.`);
+      return;
+    }
+    const toAdd = files.slice(0, remaining);
+    if(files.length > toAdd.length){
+      alert(`Only added ${toAdd.length} of ${files.length} -- up to ${maxCount} allowed.`);
+    }
+    for(const file of toAdd){
       try{
-        draftArrayGetter().push(await fileToMuAttachment(file));
+        arr.push(await fileToMuAttachment(file));
       }catch(err){
         alert(err.message || 'Could not attach that file.');
       }
