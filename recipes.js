@@ -788,9 +788,9 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="Same Overhead Multiplier as Factory Margin's row — repeated here just as a reminder it's already baked into this price">Overhead Multiplier</div>
+              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCompany" readonly tabindex="-1" style="width:70px;" title="Read-only — edit it in Factory Margin's row">
+                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.001" placeholder="1" style="width:70px;" title="Same single Overhead Multiplier as the other rows — editing it here changes all three">
                 <span>×</span>
               </div>
             </div>
@@ -810,9 +810,9 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="Same Overhead Multiplier as Factory Margin's row — repeated here just as a reminder it's already baked into this price">Overhead Multiplier</div>
+              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCustomer" readonly tabindex="-1" style="width:70px;" title="Read-only — edit it in Factory Margin's row">
+                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.001" placeholder="1" style="width:70px;" title="Same single Overhead Multiplier as the other rows — editing it here changes all three">
                 <span>×</span>
               </div>
             </div>
@@ -1273,6 +1273,21 @@ export function renderRecipeEditor(r){
     el.value = r[field] ?? '';
     el.addEventListener('input', e => {
       r[field] = e.target.value === '' ? '' : parseFloat(e.target.value) || 0;
+      updateGrandTotal(r);
+      scheduleSave();
+    });
+  });
+  // Company/Customer rows' own Overhead Multiplier boxes (per request,
+  // editable) are the same single value as Factory's -- typing in any of
+  // them writes the one r.overheadMultiplier and the others follow (see
+  // renderOverview, which skips whichever box is being typed in).
+  ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
+    const el = document.getElementById(id);
+    el.value = r.overheadMultiplier ?? '';
+    el.addEventListener('input', e => {
+      const v = e.target.value;
+      document.getElementById('f-overheadMultiplier').value = v;
+      r.overheadMultiplier = v === '' ? '' : parseFloat(v) || 0;
       updateGrandTotal(r);
       scheduleSave();
     });

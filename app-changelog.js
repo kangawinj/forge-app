@@ -700,7 +700,8 @@ export const CHANGELOG = [
   { version: "3.0.658", date: "2026-10-02", note: "Projects by Status' List view no longer shows the current month's column by default -- admin adds every column, including the first one, via \"+ Add month column\"" },
   { version: "3.0.659", date: "2026-10-02", note: "Recipe Costing: Overhead Multiplier moved up into Factory Margin's own row, and now echoes (read-only) in front of Company Margin and Customer Margin's rows too, as a reminder it's already factored into those prices" },
   { version: "3.0.660", date: "2026-10-02", note: "Recipe Costing: Overhead Multiplier now sits side by side with each margin's Min–Max inputs on the same line (Factory, Company and Customer rows), instead of stacked above them -- Company/Customer's copy is a read-only input mirroring the real one" },
-  { version: "3.0.661", date: "2026-10-02", note: "Test Results' Summary Table now shows the linked project's photo under its name" }
+  { version: "3.0.661", date: "2026-10-02", note: "Test Results' Summary Table now shows the linked project's photo under its name" },
+  { version: "3.0.662", date: "2026-10-02", note: "Recipe Costing: the Overhead Multiplier boxes on the Company and Customer Margin rows are now editable too -- it is still one shared value, so typing in any of the three updates all of them" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

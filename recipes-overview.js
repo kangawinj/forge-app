@@ -92,7 +92,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(companyPriceEl) companyPriceEl.textContent = '—';
     ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
       const el = document.getElementById(id);
-      if(el) el.value = '';
+      if(el && el !== document.activeElement) el.value = document.getElementById('f-overheadMultiplier')?.value ?? '';
     });
     return;
   }
@@ -320,15 +320,15 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   };
   const overheadMultiplier = pct(document.getElementById('f-overheadMultiplier')?.value);
   const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
-  // Company/Customer Margin's own rows repeat the Overhead Multiplier value
-  // in front of them too (per request) -- purely a read-only echo of the
-  // one real input above (Factory Margin's row), since Overhead only ever
-  // feeds into the math once, at Factory price; this is just a reminder
-  // it's already baked in by the time you get to Company/Customer.
-  const overheadEcho = String(overheadMultiplier ?? 1);
+  // Company/Customer Margin's own rows show the same single Overhead
+  // Multiplier too (per request, editable -- see recipes.js's wiring), so
+  // mirror the real box's raw value into them -- except whichever one is
+  // being typed in right now, so a partial entry like "1." isn't rewritten
+  // out from under the cursor.
+  const overheadRaw = document.getElementById('f-overheadMultiplier')?.value ?? '';
   ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.value = overheadEcho;
+    if(el && el !== document.activeElement) el.value = overheadRaw;
   });
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
