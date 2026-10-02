@@ -3257,18 +3257,21 @@ function projectMonthUpdateInfo(p, monthStr){
 // Projects by Status' List view be edited right there instead of needing
 // to open the project and find its own Monthly Updates section. Reads
 // and writes the exact same p.monthlySummaries entry that section itself
-// would (find-by-month, or create one on save if none exists yet for
-// that month), so the two stay in sync automatically -- no separate
-// state to drift. The month input auto-fills with whichever cell was
-// clicked but stays editable (per request) -- Save reads whatever month
-// is in that field at that point, not necessarily the one it opened
-// with, so a wrong cell or a late-logged update can be retargeted
-// without closing and re-opening on a different cell.
+// would, so the two stay in sync automatically -- no separate state to
+// drift. The month input auto-fills with whichever cell was clicked but
+// stays editable (per request) -- Save reads whatever month is in that
+// field at that point, not necessarily the one it opened with, so a
+// wrong cell or a late-logged update can be retargeted without closing
+// and re-opening on a different cell. Retargeting is tracked by the
+// opened entry's own id (entryId below), not by month (per request: if
+// the month is changed, Save must MOVE that same entry to the new month
+// -- not leave the old month's entry sitting there unchanged while also
+// creating a second one at the new month).
 function openProjMuQuickEdit(projectId, month){
   const p = projects.find(x => x.id === projectId);
   if(!p) return;
   const existing = (p.monthlySummaries || []).map(migrateMonthlySummary).find(ms => ms.month === month);
-  projMuQuickEditContext = { projectId };
+  projMuQuickEditContext = { projectId, entryId: existing ? existing.id : null };
   projMuQuickEditDraftPhotos = existing ? [...existing.photos] : [];
   document.getElementById('projMuQuickEditProjectName').textContent = p.name || 'Untitled project';
   document.getElementById('projMuQuickEditMonthInput').value = month;
@@ -3289,7 +3292,7 @@ function closeProjMuQuickEdit(){
 }
 function saveProjMuQuickEdit(){
   if(!projMuQuickEditContext) return;
-  const { projectId } = projMuQuickEditContext;
+  const { projectId, entryId } = projMuQuickEditContext;
   const p = projects.find(x => x.id === projectId);
   if(!p) { closeProjMuQuickEdit(); return; }
   const month = document.getElementById('projMuQuickEditMonthInput').value;
@@ -3299,14 +3302,24 @@ function saveProjMuQuickEdit(){
   }
   const text = document.getElementById('projMuQuickEditText').value.trim();
   if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
-  const existing = p.monthlySummaries.find(ms => (ms.month || '') === month);
+  // Looked up by the entry's own id (the one this popup was opened on),
+  // never by month -- so changing the month field moves that SAME entry
+  // instead of leaving it behind at the old month and creating a second
+  // one at the new month.
+  const existing = entryId ? p.monthlySummaries.find(ms => ms.id === entryId) : null;
   if(existing){
     const before = existing.text || '';
+    const beforeMonth = existing.month;
+    existing.month = month;
     existing.text = text;
     existing.photos = projMuQuickEditDraftPhotos;
     existing.updatedBy = currentUser?.email || '';
     existing.updatedAt = Date.now();
-    if(before !== text){
+    if(beforeMonth !== month){
+      logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
+        field: 'Monthly Updates', before: `${formatMonthYear(beforeMonth)}: "${before}"`, after: `Moved to ${formatMonthYear(month)}: "${text}"`
+      }]);
+    }else if(before !== text){
       logActivityEvent('updated', 'project', p.name || 'Untitled project', [{ field: `Monthly Update (${formatMonthYear(month)})`, before, after: text }]);
     }
   } else if(text || projMuQuickEditDraftPhotos.length){
