@@ -40,8 +40,7 @@ import {
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
-  round2, round4, formatWeight
-} from './recipes-data.js';
+  round2, round4, formatWeight, overheadMultiplierFromPct, overheadPctFromMultiplier } from './recipes-data.js';
 import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
   pushVersionCheckpoint, scheduleVersionCheckpoint, cancelVersionCheckpoint
@@ -58,7 +57,7 @@ import { migrateTrial } from './trials-data.js';
 // Circular imports back to the four files split out below -- safe, same
 // pattern proven throughout this session's other splits: every cross-call
 // happens inside an event handler, never at module-evaluation time.
-import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible, overheadMultiplierFromPct, overheadPctFromMultiplier } from './recipes-overview.js';
+import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible } from './recipes-overview.js';
 import { renderProcesses } from './recipes-processes.js';
 import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent, fixTrialNumber } from './recipes-lifecycle.js';
 // recipes-excel.js imports costingMarginVisible straight from this file --
@@ -770,17 +769,17 @@ export function renderRecipeEditor(r){
               <div class="batch-scale-row">
                 <input type="number" id="f-overheadMultiplier" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Enter as a % — 25% = × 1.625 (converted for you)">
                 <span>%</span>
-                <span class="overhead-times-hint"></span>
               </div>
             </div>
             <div>
-              <div class="batch-stat-label" title="Markup on cost (after the Overhead Multiplier) — e.g. 50% means the selling price is that × 1.5, not ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
+              <div class="batch-stat-label" title="Markup on cost, added to the Overhead % beside it (Min and Max each separately) — e.g. Overhead 25% + Margin 20% = × 1.45">Factory Margin (Min% – Max% Markup on Cost)</div>
               <div class="batch-scale-row">
                 <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on cost, not a % of the selling price">
                 <span>–</span>
                 <input type="number" id="f-factoryMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on cost, not a % of the selling price">
                 <span>%</span>
               </div>
+              <div class="overhead-times-hint" id="overheadCombinedHint"></div>
             </div>
           </div>
           <div>
@@ -793,7 +792,6 @@ export function renderRecipeEditor(r){
               <div class="batch-scale-row">
                 <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows (enter as a %, 25% = × 1.625) — editing it here changes all three">
                 <span>%</span>
-                <span class="overhead-times-hint"></span>
               </div>
             </div>
             <div>
@@ -816,7 +814,6 @@ export function renderRecipeEditor(r){
               <div class="batch-scale-row">
                 <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows (enter as a %, 25% = × 1.625) — editing it here changes all three">
                 <span>%</span>
-                <span class="overhead-times-hint"></span>
               </div>
             </div>
             <div>
@@ -835,7 +832,7 @@ export function renderRecipeEditor(r){
           </div>
           </div>
         </div>
-        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a % and it's converted to the multiplier for you (25% = × 1.625; the multiplier is 1.3 × (1 + %)) — leave it blank to skip (× 1). Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
+        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is ADDED to the Factory Margin % (Min and Max each separately) — Factory Selling Price = Cost × (1 + (Overhead % + Factory Margin %)) — leave it blank for 0%. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 

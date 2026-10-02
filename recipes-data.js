@@ -491,3 +491,13 @@ export function formatWeight(n){
   return (n || 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' g';
 }
 
+// Overhead is typed as a % (25 = the old stored x1.625) -- r.overheadMultiplier
+// still stores the multiplier encoding 1.3 x (1 + %) so saved recipes are
+// unchanged. Factory pricing ADDS Overhead % and Factory Margin % together
+// (per request), Min and Max each separately:
+//   Factory Price = Cost x (1 + (Overhead% + Margin%) / 100)
+export const OVERHEAD_BASE_MULTIPLIER = 1.3;
+export const overheadMultiplierFromPct = pct => +(OVERHEAD_BASE_MULTIPLIER * (1 + pct / 100)).toFixed(6);
+export const overheadPctFromMultiplier = m => (m === '' || m == null || isNaN(parseFloat(m))) ? '' : String(+((parseFloat(m) / OVERHEAD_BASE_MULTIPLIER - 1) * 100).toFixed(4));
+export const overheadPlusMarginPrice = (cost, overheadPct, marginPct) =>
+  (cost != null && marginPct != null) ? cost * (1 + ((overheadPct ?? 0) + marginPct) / 100) : null;

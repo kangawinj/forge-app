@@ -7,7 +7,7 @@ import {
   escapeHtml, icon, ingredientMaster, computePrepareWeight,
   computeIngredientCost, openMaterialDetail
 } from './app.js';
-import { formatWeight } from './recipes-data.js';
+import { formatWeight, overheadPlusMarginPrice } from './recipes-data.js';
 
 // Recipe Overview table (see renderOverview) — 'wt' also covers % of
 // Recipe, since that's just weight expressed as a share of the total and
@@ -26,13 +26,6 @@ let overviewSortDir = 'desc';
 // hidden across a page reload or leaving/reopening a recipe instead of
 // resetting open every time.
 const COSTING_MARGIN_VISIBLE_KEY = 'forge_costingMarginVisible';
-// Overhead is typed as a % (per request) and converted to the real
-// multiplier as OVERHEAD_BASE_MULTIPLIER x (1 + %) -- so the reference 25%
-// = 1.3 x 1.25 = the old 1.625. r.overheadMultiplier itself still stores
-// the multiplier (saved recipes, Excel and the price math unchanged).
-export const OVERHEAD_BASE_MULTIPLIER = 1.3;
-export const overheadMultiplierFromPct = pct => +(OVERHEAD_BASE_MULTIPLIER * (1 + pct / 100)).toFixed(6);
-export const overheadPctFromMultiplier = m => (m === '' || m == null || isNaN(parseFloat(m))) ? '' : String(+((parseFloat(m) / OVERHEAD_BASE_MULTIPLIER - 1) * 100).toFixed(4));
 function loadCostingMarginVisible(){
   try {
     const saved = localStorage.getItem(COSTING_MARGIN_VISIBLE_KEY);
@@ -101,10 +94,8 @@ export function renderOverview(allIngredients, prepareWeightByIng){
       const el = document.getElementById(id);
       if(el && el !== document.activeElement) el.value = document.getElementById('f-overheadMultiplier')?.value ?? '';
     });
-    const emptyOverheadPct = parseFloat(document.getElementById('f-overheadMultiplier')?.value);
-    document.querySelectorAll('.overhead-times-hint').forEach(el => {
-      el.textContent = `= × ${+(isNaN(emptyOverheadPct) ? 1 : overheadMultiplierFromPct(emptyOverheadPct)).toFixed(4)}`;
-    });
+    const emptyHint = document.getElementById('overheadCombinedHint');
+    if(emptyHint) emptyHint.textContent = '';
     return;
   }
 
@@ -329,18 +320,15 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
     return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
   };
-  // The Overhead box is entered as a % (25 -> × 1.625, see overheadMultiplierFromPct).
+  // Overhead is typed as a % and ADDED to Factory Margin's % (Min and Max
+  // separately) -- Factory Price = Cost x (1 + (Overhead% + Margin%)/100).
+  // Blank Overhead counts as 0%.
   const overheadPct = pct(document.getElementById('f-overheadMultiplier')?.value);
-  const overheadMultiplier = overheadPct != null ? overheadMultiplierFromPct(overheadPct) : null;
-  document.querySelectorAll('.overhead-times-hint').forEach(el => {
-    el.textContent = `= × ${+(overheadMultiplier ?? 1).toFixed(4)}`;
-  });
-  const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
-  // Company/Customer Margin's own rows show the same single Overhead
-  // Multiplier too (per request, editable -- see recipes.js's wiring), so
-  // mirror the real box's raw value into them -- except whichever one is
-  // being typed in right now, so a partial entry like "1." isn't rewritten
-  // out from under the cursor.
+  // Company/Customer Margin's own rows show the same single Overhead too
+  // (per request, editable -- see recipes.js's wiring), so mirror the real
+  // box's raw value into them -- except whichever one is being typed in
+  // right now, so a partial entry like "1." isn't rewritten out from under
+  // the cursor.
   const overheadRaw = document.getElementById('f-overheadMultiplier')?.value ?? '';
   ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
     const el = document.getElementById(id);
@@ -349,8 +337,13 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
 
-  const factoryPriceMin = marginPrice(overheadBase, factoryMarginMin);
-  const factoryPriceMax = marginPrice(overheadBase, factoryMarginMax);
+  const factoryPriceMin = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMin);
+  const factoryPriceMax = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMax);
+  const combinedHintEl = document.getElementById('overheadCombinedHint');
+  if(combinedHintEl){
+    const mult = m => +(1 + ((overheadPct ?? 0) + m) / 100).toFixed(4);
+    combinedHintEl.textContent = (factoryMarginMin != null && factoryMarginMax != null) ? `Overhead + Margin = × ${mult(factoryMarginMin)} – × ${mult(factoryMarginMax)}` : '';
+  }
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
     const { text, title } = priceRangeStr(factoryPriceMin, factoryPriceMax);

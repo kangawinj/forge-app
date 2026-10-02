@@ -24,7 +24,7 @@ import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredi
 import {
   fullCode, recipeProductTypeCode, findProjectForRecipe, allIngredientsInRecipe,
   allIngredientsInPart, partTotalWeight, formatWeight, collectIngredientsWithPrepareWeight,
-  findPartByName
+  findPartByName, overheadPctFromMultiplier, overheadPlusMarginPrice
 } from './recipes-data.js';
 import { renderPrintView } from './recipes-print.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
@@ -139,11 +139,11 @@ function computeCostingData(r, ov){
     return `${minStr} – ${maxStr}${costSuffix}`;
   };
 
-  const overheadMultiplier = pct(r.overheadMultiplier);
-  const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
+  // Overhead % is ADDED to Factory Margin % (see overheadPlusMarginPrice).
+  const overheadPct = pct(overheadPctFromMultiplier(r.overheadMultiplier));
   const factoryMarginMin = pct(r.factoryMarginMin), factoryMarginMax = pct(r.factoryMarginMax);
-  const factoryPriceMin = marginPrice(overheadBase, factoryMarginMin);
-  const factoryPriceMax = marginPrice(overheadBase, factoryMarginMax);
+  const factoryPriceMin = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMin);
+  const factoryPriceMax = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
   const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
   const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
@@ -155,7 +155,7 @@ function computeCostingData(r, ov){
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
     servingSize,
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
-    overheadMultiplier,
+    overheadPct,
     factoryMarginMin, factoryMarginMax, factoryPriceRange: priceRangeStr(factoryPriceMin, factoryPriceMax),
     companyMarginMin, companyMarginMax, companyPriceRange: priceRangeStr(companyPriceMin, companyPriceMax),
     customerMarginMin, customerMarginMax, customerPriceRange: priceRangeStr(customerPriceMin, customerPriceMax)
@@ -346,7 +346,7 @@ function buildCostingSheet(wb, r){
     sectionCell.value = 'Overhead & Margins';
     sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
     row++;
-    kv('Overhead Multiplier', c.overheadMultiplier != null ? `×${c.overheadMultiplier}` : '(none, ×1)');
+    kv('Overhead (added to Factory Margin %)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
     kv('Factory Margin (Min–Max % Markup on Cost)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
     kv('Factory Selling Price / Serving', c.factoryPriceRange);
     kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
