@@ -690,7 +690,8 @@ export const CHANGELOG = [
   { version: "3.0.648", date: "2026-10-02", note: "Manage Users: admin can now grant a specific person \"Can see all Projects\" -- same full visibility the admin already has, without making them an admin. Without it, a person still only sees projects their own name is actually attached to" },
   { version: "3.0.649", date: "2026-10-02", note: "Projects by Status' List view column headers now read \"End of October 2026\" / \"End of September 2026\" instead of just the month name" },
   { version: "3.0.650", date: "2026-10-02", note: "Admin can now add more month columns to Projects by Status' List view (up to 6, going further back in time) via a button next to the month picker, and remove extra ones again -- applies to everyone's view, not just the admin's own" },
-  { version: "3.0.651", date: "2026-10-02", note: "Monthly Update's photos now show as a 5-per-row grid of square thumbnails instead of filename pills, in the quick-edit popup, the List view cell, and the project's own Monthly Updates section. Click a photo to preview it full-size and rename it there" }
+  { version: "3.0.651", date: "2026-10-02", note: "Monthly Update's photos now show as a 5-per-row grid of square thumbnails instead of filename pills, in the quick-edit popup, the List view cell, and the project's own Monthly Updates section. Click a photo to preview it full-size and rename it there" },
+  { version: "3.0.652", date: "2026-10-02", note: "Fixed the Attachment Preview popup's Prev/Next buttons literally showing \"${'<'} Prev\" / \"Next ${'>'}\" instead of the arrow symbols" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
