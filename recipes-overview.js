@@ -94,6 +94,10 @@ export function renderOverview(allIngredients, prepareWeightByIng){
       const el = document.getElementById(id);
       if(el && el !== document.activeElement) el.value = document.getElementById('f-overheadMultiplier')?.value ?? '';
     });
+    const emptyOverheadPct = parseFloat(document.getElementById('f-overheadMultiplier')?.value);
+    document.querySelectorAll('.overhead-times-hint').forEach(el => {
+      el.textContent = `= × ${+(isNaN(emptyOverheadPct) ? 1 : 1 + emptyOverheadPct / 100).toFixed(4)}`;
+    });
     return;
   }
 
@@ -318,7 +322,12 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
     return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
   };
-  const overheadMultiplier = pct(document.getElementById('f-overheadMultiplier')?.value);
+  // The Overhead box is entered as a % markup (62.5 -> × 1.625).
+  const overheadPct = pct(document.getElementById('f-overheadMultiplier')?.value);
+  const overheadMultiplier = overheadPct != null ? 1 + overheadPct / 100 : null;
+  document.querySelectorAll('.overhead-times-hint').forEach(el => {
+    el.textContent = `= × ${+(overheadMultiplier ?? 1).toFixed(4)}`;
+  });
   const overheadBase = costPerServing != null ? costPerServing * (overheadMultiplier ?? 1) : null;
   // Company/Customer Margin's own rows show the same single Overhead
   // Multiplier too (per request, editable -- see recipes.js's wiring), so

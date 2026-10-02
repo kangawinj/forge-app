@@ -5988,3 +5988,4 @@
        min-height) is untouched, only the text/placeholder size. */
     #fGuestName, .eval-wizard-comment, .eval-wizard-sensory, .eval-wizard-improve{font-size:16px;}
   }
+.overhead-times-hint{font-size:11px;color:var(--text-dim);white-space:nowrap;}
