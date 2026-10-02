@@ -63,6 +63,7 @@ export function blankRecipe(){
     exchangeRate: '',
     exchangeRateDate: '',
     overheadMultiplier: 1.625,
+    overheadMultiplierMax: 1.625,
     factoryMarginMin: 20,
     factoryMarginMax: 30,
     companyMarginMin: 10,
@@ -180,6 +181,10 @@ export function migrateRecipe(r){
   // Margin defaults -- only backfilled while still genuinely unset (never
   // overwrites a value the user already typed, including 0), same as every
   // other backfill in this function.
+  // Overhead became a Min-Max range (per request) -- recipes saved before
+  // that only have the single overheadMultiplier, which becomes both ends.
+  // Only while still genuinely missing (never refills a Max the user blanked).
+  if(r.overheadMultiplierMax === undefined) r.overheadMultiplierMax = r.overheadMultiplier ?? '';
   if(r.factoryMarginMin === undefined || r.factoryMarginMin === null || r.factoryMarginMin === '') r.factoryMarginMin = 20;
   if(r.factoryMarginMax === undefined || r.factoryMarginMax === null || r.factoryMarginMax === '') r.factoryMarginMax = 30;
   if(r.companyMarginMin === undefined || r.companyMarginMin === null || r.companyMarginMin === '') r.companyMarginMin = 10;

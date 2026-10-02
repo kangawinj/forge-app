@@ -765,9 +765,11 @@ export function renderRecipeEditor(r){
           <div id="costingMarginSection" style="display:${costingMarginVisible ? 'contents' : 'none'};">
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label">Overhead Multiplier</div>
+              <div class="batch-stat-label">Overhead Multiplier (Min% – Max%)</div>
               <div class="batch-scale-row">
-                <input type="number" id="f-overheadMultiplier" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Enter as a % — 25% = × 1.625 (converted for you)">
+                <input type="number" id="f-overheadMultiplier" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Enter as a % of the Factory Selling Price — Material + Overhead + Profit = 100%">
+                <span>–</span>
+                <input type="number" id="f-overheadMultiplierMax" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Enter as a % of the Factory Selling Price — Material + Overhead + Profit = 100%">
                 <span>%</span>
               </div>
             </div>
@@ -788,9 +790,11 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
+              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier (Min% – Max%)</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <span>–</span>
+                <input type="number" id="overviewOverheadEchoCompanyMax" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
                 <span>%</span>
               </div>
             </div>
@@ -810,9 +814,11 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
+              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier (Min% – Max%)</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <span>–</span>
+                <input type="number" id="overviewOverheadEchoCustomerMax" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
                 <span>%</span>
               </div>
             </div>
@@ -832,7 +838,7 @@ export function renderRecipeEditor(r){
           </div>
           </div>
         </div>
-        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %, Min and Max each separately; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company/Customer Margin are markup on the tier before them — a 50% margin means Selling Price = tier below × 1.5 (100% = ×2, 0% = ×1). Factory Margin is the exception: it's a share of the Factory Selling Price itself. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
+        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %; the Min price uses Overhead Min + Margin Min and the Max price uses Overhead Max + Margin Max; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company/Customer Margin are markup on the tier before them — a 50% margin means Selling Price = tier below × 1.5 (100% = ×2, 0% = ×1). Factory Margin is the exception: it's a share of the Factory Selling Price itself. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 
@@ -1283,18 +1289,23 @@ export function renderRecipeEditor(r){
   // Entered as a % (25 -> × 1.625, see overheadMultiplierFromPct) and
   // stored as the multiplier (r.overheadMultiplier) so saved recipes, Excel
   // and the cost math are unchanged.
-  ['f-overheadMultiplier', 'overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
-    const el = document.getElementById(id);
-    el.value = overheadPctFromMultiplier(r.overheadMultiplier);
-    el.addEventListener('input', e => {
-      const v = e.target.value;
-      ['f-overheadMultiplier', 'overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(otherId => {
-        const other = document.getElementById(otherId);
-        if(other !== e.target) other.value = v;
+  [
+    { ids: ['f-overheadMultiplier', 'overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'], field: 'overheadMultiplier' },
+    { ids: ['f-overheadMultiplierMax', 'overviewOverheadEchoCompanyMax', 'overviewOverheadEchoCustomerMax'], field: 'overheadMultiplierMax' }
+  ].forEach(({ ids, field }) => {
+    ids.forEach(id => {
+      const el = document.getElementById(id);
+      el.value = overheadPctFromMultiplier(r[field]);
+      el.addEventListener('input', e => {
+        const v = e.target.value;
+        ids.forEach(otherId => {
+          const other = document.getElementById(otherId);
+          if(other !== e.target) other.value = v;
+        });
+        r[field] = v === '' ? '' : overheadMultiplierFromPct(parseFloat(v) || 0);
+        updateGrandTotal(r);
+        scheduleSave();
       });
-      r.overheadMultiplier = v === '' ? '' : overheadMultiplierFromPct(parseFloat(v) || 0);
-      updateGrandTotal(r);
-      scheduleSave();
     });
   });
   // Pure visibility toggle -- straight DOM manipulation instead of a full

@@ -140,10 +140,11 @@ function computeCostingData(r, ov){
   };
 
   // Factory price = Material + Overhead + Profit shares of 100% (see factoryPriceFromShares).
-  const overheadPct = pct(overheadPctFromMultiplier(r.overheadMultiplier));
+  const overheadPctMin = pct(overheadPctFromMultiplier(r.overheadMultiplier));
+  const overheadPctMax = pct(overheadPctFromMultiplier(r.overheadMultiplierMax ?? r.overheadMultiplier));
   const factoryMarginMin = pct(r.factoryMarginMin) ?? 0, factoryMarginMax = pct(r.factoryMarginMax) ?? 0; // blank counts as 0%
-  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
-  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
+  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
+  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
   const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
   const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
@@ -155,7 +156,7 @@ function computeCostingData(r, ov){
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
     servingSize,
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
-    overheadPct,
+    overheadPctMin, overheadPctMax,
     factoryMarginMin, factoryMarginMax, factoryPriceRange: priceRangeStr(factoryPriceMin, factoryPriceMax),
     companyMarginMin, companyMarginMax, companyPriceRange: priceRangeStr(companyPriceMin, companyPriceMax),
     customerMarginMin, customerMarginMax, customerPriceRange: priceRangeStr(customerPriceMin, customerPriceMax)
@@ -346,7 +347,7 @@ function buildCostingSheet(wb, r){
     sectionCell.value = 'Overhead & Margins';
     sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
     row++;
-    kv('Overhead (% of Factory Selling Price)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
+    kv('Overhead (Min–Max % of Factory Selling Price)', (c.overheadPctMin != null || c.overheadPctMax != null) ? `${c.overheadPctMin ?? 0}–${c.overheadPctMax ?? 0}%` : '(none, 0%)');
     kv('Factory Margin (Min–Max % of Factory Selling Price)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
     kv('Factory Selling Price / Serving', c.factoryPriceRange);
     kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');

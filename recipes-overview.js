@@ -90,9 +90,10 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(perServingWrap) perServingWrap.style.display = 'none';
     if(factoryPriceEl) factoryPriceEl.textContent = '—';
     if(companyPriceEl) companyPriceEl.textContent = '—';
-    ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
+    [['overviewOverheadEchoCompany', 'f-overheadMultiplier'], ['overviewOverheadEchoCustomer', 'f-overheadMultiplier'],
+     ['overviewOverheadEchoCompanyMax', 'f-overheadMultiplierMax'], ['overviewOverheadEchoCustomerMax', 'f-overheadMultiplierMax']].forEach(([id, srcId]) => {
       const el = document.getElementById(id);
-      if(el && el !== document.activeElement) el.value = document.getElementById('f-overheadMultiplier')?.value ?? '';
+      if(el && el !== document.activeElement) el.value = document.getElementById(srcId)?.value ?? '';
     });
     const emptyHint = document.getElementById('overheadCombinedHint');
     if(emptyHint) emptyHint.textContent = '';
@@ -324,32 +325,33 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   // factoryPriceFromShares in recipes-data.js) -- Overhead % and Factory
   // Margin % are both shares OF THE SELLING PRICE, Min and Max separately.
   // Blank Overhead counts as 0%.
-  const overheadPct = pct(document.getElementById('f-overheadMultiplier')?.value);
+  const overheadPctMin = pct(document.getElementById('f-overheadMultiplier')?.value);
+  const overheadPctMax = pct(document.getElementById('f-overheadMultiplierMax')?.value);
   // Company/Customer Margin's own rows show the same single Overhead too
   // (per request, editable -- see recipes.js's wiring), so mirror the real
   // box's raw value into them -- except whichever one is being typed in
   // right now, so a partial entry like "1." isn't rewritten out from under
   // the cursor.
-  const overheadRaw = document.getElementById('f-overheadMultiplier')?.value ?? '';
-  ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
+  [['overviewOverheadEchoCompany', 'f-overheadMultiplier'], ['overviewOverheadEchoCustomer', 'f-overheadMultiplier'],
+   ['overviewOverheadEchoCompanyMax', 'f-overheadMultiplierMax'], ['overviewOverheadEchoCustomerMax', 'f-overheadMultiplierMax']].forEach(([id, srcId]) => {
     const el = document.getElementById(id);
-    if(el && el !== document.activeElement) el.value = overheadRaw;
+    if(el && el !== document.activeElement) el.value = document.getElementById(srcId)?.value ?? '';
   });
   // A blank Factory Margin counts as 0% (Overhead alone is a valid price).
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value) ?? 0;
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value) ?? 0;
 
-  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
-  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
+  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
+  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
   const combinedHintEl = document.getElementById('overheadCombinedHint');
   const sharesInvalid = factoryMarginMin != null && factoryMarginMax != null && (factoryPriceMin == null || factoryPriceMax == null);
   if(combinedHintEl){
     const f = n => +n.toFixed(2);
-    const line = (label, m) => `${label}: Material ${f(100 - (overheadPct ?? 0) - m)}% + Overhead ${f(overheadPct ?? 0)}% + Profit ${f(m)}% = 100%`;
+    const line = (label, o, m) => `${label}: Material ${f(100 - (o ?? 0) - m)}% + Overhead ${f(o ?? 0)}% + Profit ${f(m)}% = 100%`;
     combinedHintEl.textContent = (factoryMarginMin == null || factoryMarginMax == null) ? ''
       : sharesInvalid ? 'Overhead % + Margin % must add up to less than 100%'
-      : `${line('Min', factoryMarginMin)}
-${line('Max', factoryMarginMax)}`;
+      : `${line('Min', overheadPctMin, factoryMarginMin)}
+${line('Max', overheadPctMax, factoryMarginMax)}`;
   }
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
