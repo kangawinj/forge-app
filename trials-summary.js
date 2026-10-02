@@ -258,7 +258,10 @@ export function renderTrialsSummaryTable(container, sortedTrials){
             return `
               <tr>
                 ${i === 0 ? `
-                  <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.name || '-')}</td>
+                  <td rowspan="${g.trials.length}">
+                    ${escapeHtml(linkedProject?.name || '-')}
+                    ${linkedProject?.image ? `<img class="trial-summary-project-photo" src="${escapeHtml(linkedProject.image)}" alt="${escapeHtml(linkedProject.name || 'Project photo')}">` : ''}
+                  </td>
                   <td rowspan="${g.trials.length}">${escapeHtml(linkedProject?.responsiblePerson || '-')}</td>
                 ` : ''}
                 <td class="trial-table-summary-date-cell">${t.testDate ? escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</td>

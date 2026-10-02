@@ -1863,6 +1863,16 @@
   /* Costing's margin rows: Overhead Multiplier and the margin's own Min–Max
      inputs sit side by side on one line (per request), wrapping only when
      the cell is too narrow. */
+  /* Project photo under the name in Test Results' Summary Table. */
+  .trial-summary-project-photo{
+    display:block;
+    width:120px;
+    height:120px;
+    object-fit:cover;
+    margin-top:8px;
+    border-radius:var(--radius);
+    border:1px solid var(--border);
+  }
   .costing-margin-cell{
     display:flex;
     flex-wrap:nowrap;
