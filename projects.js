@@ -4,7 +4,7 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, isCurrentUserAdmin,
+  showCloudError, trialStringListHtml, canSeeAllProjects,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
   moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr,
   wireModalOverlayClose
@@ -510,19 +510,20 @@ function projectMatchesWhoValue(p, value){
 }
 // Single source of truth for "can the signed-in person currently see this
 // project" -- always true for the Unassigned bucket (see
-// getOrCreateUnassignedProject). Admin defaults to seeing every project
-// (the Who filter narrows that down to just the checked PDs, same
-// empty-means-everyone/checked-means-only-them semantics as Task
-// Tracking's own Who filter); everyone else defaults to just their own
-// name-matched projects (myLinkedName, any role -- not just PD), with
-// the Who filter adding specific PDs' projects on top instead of
-// narrowing. Used everywhere a project might be shown outside the main
-// table (status/PD galleries, the Gantt chart, column filter value
-// lists) so the Who filter actually reveals everything consistently
+// getOrCreateUnassignedProject). Admin, and anyone the admin has granted
+// "Can see all Projects" to in Manage Users (canSeeAllProjects), default
+// to seeing every project (the Who filter narrows that down to just the
+// checked PDs, same empty-means-everyone/checked-means-only-them
+// semantics as Task Tracking's own Who filter); everyone else defaults to
+// just their own name-matched projects (myLinkedName, any role -- not
+// just PD), with the Who filter adding specific PDs' projects on top
+// instead of narrowing. Used everywhere a project might be shown outside
+// the main table (status/PD galleries, the Gantt chart, column filter
+// value lists) so the Who filter actually reveals everything consistently
 // instead of just the table rows.
 function isProjectCurrentlyVisible(p){
   if(p?.isUnassignedBucket) return true;
-  if(isCurrentUserAdmin()){
+  if(canSeeAllProjects()){
     if(!projectVisibilityWho.size) return true;
     for(const value of projectVisibilityWho){
       if(projectMatchesWhoValue(p, value)) return true;
@@ -541,13 +542,14 @@ function isProjectCurrentlyVisible(p){
 // never has a PD anyway), plus a PROJECT_WHO_UNASSIGNED pseudo-entry for
 // projects with no PD set, so "no one assigned yet" is something you can
 // filter by too instead of being silently left out of the list. For
-// everyone except admin, the signed-in person's own name is left out of
-// the named options (their projects are always shown regardless of this
-// filter already) -- admin has no such baseline (see
-// isProjectCurrentlyVisible), so their own name stays in the list too.
+// everyone without a "see everyone" baseline, the signed-in person's own
+// name is left out of the named options (their projects are always shown
+// regardless of this filter already) -- canSeeAllProjects() has no such
+// baseline (see isProjectCurrentlyVisible), so their own name stays in
+// the list too.
 function projectWhoFilterOptions(){
   const myName = myLinkedName();
-  const excludeMine = !isCurrentUserAdmin();
+  const excludeMine = !canSeeAllProjects();
   const named = new Set();
   let hasUnassigned = false;
   projects.forEach(p => {
@@ -567,13 +569,13 @@ function projectWhoFilterOptions(){
 function renderProjectWhoFilter(){
   const wrap = document.getElementById('projectWhoFilterWrap');
   if(!wrap) return;
-  const isAdmin = isCurrentUserAdmin();
+  const seesAllByDefault = canSeeAllProjects();
   const { namedOptions, hasUnassigned } = projectWhoFilterOptions();
   const allValues = hasUnassigned ? [...namedOptions, PROJECT_WHO_UNASSIGNED] : namedOptions;
   const allSelected = allValues.length > 0 && allValues.every(v => projectVisibilityWho.has(v));
   wrap.innerHTML = `
     <button type="button" class="btn btn-sm${projectVisibilityWho.size ? ' active' : ''}" id="projectWhoTrigger">
-      Who${projectVisibilityWho.size ? ` (${isAdmin ? '' : '+'}${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
+      Who${projectVisibilityWho.size ? ` (${seesAllByDefault ? '' : '+'}${projectVisibilityWho.size})` : ''} ${icon('chevron-down', 12)}
     </button>
     <div class="proj-col-filter-menu${projectWhoMenuOpen ? ' open' : ''}" id="projectWhoMenu">
       ${allValues.length ? `
@@ -595,7 +597,7 @@ function renderProjectWhoFilter(){
           </label>
         ` : ''}
       </div>
-      ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear${isAdmin ? ' filter' : ''}</button>` : ''}
+      ${projectVisibilityWho.size ? `<button type="button" class="btn btn-sm" id="projectClearWhoFilters" style="margin-top:6px;width:100%;">Clear${seesAllByDefault ? ' filter' : ''}</button>` : ''}
       ` : `<div class="dash-empty" style="padding:4px;">No PD assigned yet</div>`}
     </div>
   `;

@@ -117,7 +117,7 @@ export {
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
-  isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch,
+  isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch, canSeeAllProjects,
   openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText,
   autoGrowTextarea, FOOD_ALLERGEN_COLUMNS, certificateSummaryText
 };
@@ -302,6 +302,16 @@ let myModulePermissions = null; // null = unrestricted (admin/exempt, or not loa
 function hasModuleAccess(key){
   return !myModulePermissions || myModulePermissions[key] !== false;
 }
+// Per-user "can see all Projects" override, set by the admin in Manage
+// Users (a plain top-level field on the same userApprovals/{uid} doc as
+// `permissions` -- not nested inside it, since it governs per-project name-
+// match visibility rather than a whole nav tab). Lets someone who isn't
+// ADMIN_EMAIL get the same "see every project regardless of name match"
+// behavior ADMIN_EMAIL already had, without making them a full admin.
+let myCanSeeAllProjects = false;
+function canSeeAllProjects(){
+  return isCurrentUserAdmin() || myCanSeeAllProjects;
+}
 
 // Per-project/per-activity visibility for non-admins: everyone can see
 // every project's data in Firestore (this is UI-only, same caveat as
@@ -370,7 +380,7 @@ function projectMatchesName(p, name){
   return false;
 }
 function isMyProject(p){
-  if(isCurrentUserAdmin() || p?.isUnassignedBucket) return true;
+  if(canSeeAllProjects() || p?.isUnassignedBucket) return true;
   return projectMatchesName(p, myLinkedName());
 }
 // A single Activities Update entry is visible if it names this person
@@ -1656,6 +1666,7 @@ onAuthStateChanged(auth, user => {
     if(isApprovalExempt(user.email)){
       myApprovalStatus = 'exempt';
       myModulePermissions = null;
+      myCanSeeAllProjects = false;
       unlockAppAfterApproval();
     }else if(!unsubscribeMyApproval){
       unsubscribeMyApproval = onSnapshot(doc(userApprovalsCol, user.uid), snap => {
@@ -1673,6 +1684,7 @@ onAuthStateChanged(auth, user => {
         const data = snap.data();
         myApprovalStatus = data ? data.status : 'pending';
         myModulePermissions = userModulePermissions(data);
+        myCanSeeAllProjects = data?.canSeeAllProjects === true;
         if(myApprovalStatus === 'approved'){
           unlockAppAfterApproval();
           // Covers the admin revoking a module while this person is
@@ -1703,6 +1715,7 @@ onAuthStateChanged(auth, user => {
     currentUser = null;
     myApprovalStatus = null;
     myModulePermissions = null;
+    myCanSeeAllProjects = false;
     if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
     resetRecipesState();
     resetMaterialsState();

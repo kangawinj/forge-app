@@ -50,6 +50,10 @@ function userAdminRowHtml(item, isPendingSection){
       </div>
       ${!isPendingSection && item.email !== ADMIN_EMAIL ? `
       <div class="user-admin-permissions">
+        <label class="user-admin-permission-toggle">
+          <input type="checkbox" data-role="toggle-see-all-projects" data-uid="${escapeHtml(item.id)}" ${item.canSeeAllProjects ? 'checked' : ''}>
+          <b>Can see all Projects</b>
+        </label>
         ${MODULE_PERMISSIONS.map(m => `
           <label class="user-admin-permission-toggle">
             <input type="checkbox" data-role="toggle-permission" data-uid="${escapeHtml(item.id)}" data-module="${m.key}" ${userModulePermissions(item)[m.key] ? 'checked' : ''}>
@@ -83,6 +87,13 @@ function renderUserAdminLists(){
     cb.addEventListener('change', () => {
       const checked = cb.checked;
       setDoc(doc(userApprovalsCol, cb.dataset.uid), { permissions: { [cb.dataset.module]: checked } }, { merge: true })
+        .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
+    });
+  });
+  document.querySelectorAll('#userAdminModalOverlay [data-role="toggle-see-all-projects"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = cb.checked;
+      setDoc(doc(userApprovalsCol, cb.dataset.uid), { canSeeAllProjects: checked }, { merge: true })
         .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
     });
   });
