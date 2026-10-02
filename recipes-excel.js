@@ -24,7 +24,7 @@ import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredi
 import {
   fullCode, recipeProductTypeCode, findProjectForRecipe, allIngredientsInRecipe,
   allIngredientsInPart, partTotalWeight, formatWeight, collectIngredientsWithPrepareWeight,
-  findPartByName, overheadPctFromMultiplier, factoryPriceFromShares, priceFromMarginShare
+  findPartByName, overheadPctFromMultiplier, factoryPriceFromShares
 } from './recipes-data.js';
 import { renderPrintView } from './recipes-print.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
@@ -145,11 +145,13 @@ function computeCostingData(r, ov){
   const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
   const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
-  const companyPriceMin = priceFromMarginShare(factoryPriceMin, companyMarginMin);
-  const companyPriceMax = priceFromMarginShare(factoryPriceMax, companyMarginMax);
+  const companyOverheadMin = pct(r.companyOverheadMin), companyOverheadMax = pct(r.companyOverheadMax);
+  const companyPriceMin = factoryPriceFromShares(factoryPriceMin, companyOverheadMin, companyMarginMin);
+  const companyPriceMax = factoryPriceFromShares(factoryPriceMax, companyOverheadMax, companyMarginMax);
   const customerMarginMin = pct(r.customerMarginMin), customerMarginMax = pct(r.customerMarginMax);
-  const customerPriceMin = priceFromMarginShare(companyPriceMin, customerMarginMin);
-  const customerPriceMax = priceFromMarginShare(companyPriceMax, customerMarginMax);
+  const customerOverheadMin = pct(r.customerOverheadMin), customerOverheadMax = pct(r.customerOverheadMax);
+  const customerPriceMin = factoryPriceFromShares(companyPriceMin, customerOverheadMin, customerMarginMin);
+  const customerPriceMax = factoryPriceFromShares(companyPriceMax, customerOverheadMax, customerMarginMax);
 
   return {
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
@@ -157,8 +159,8 @@ function computeCostingData(r, ov){
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
     overheadPctMin, overheadPctMax,
     factoryMarginMin, factoryMarginMax, factoryPriceRange: priceRangeStr(factoryPriceMin, factoryPriceMax),
-    companyMarginMin, companyMarginMax, companyPriceRange: priceRangeStr(companyPriceMin, companyPriceMax),
-    customerMarginMin, customerMarginMax, customerPriceRange: priceRangeStr(customerPriceMin, customerPriceMax)
+    companyOverheadMin, companyOverheadMax, companyMarginMin, companyMarginMax, companyPriceRange: priceRangeStr(companyPriceMin, companyPriceMax),
+    customerOverheadMin, customerOverheadMax, customerMarginMin, customerMarginMax, customerPriceRange: priceRangeStr(customerPriceMin, customerPriceMax)
   };
 }
 
@@ -349,8 +351,10 @@ function buildCostingSheet(wb, r){
     kv('Overhead (Min–Max % of Factory Selling Price)', (c.overheadPctMin != null || c.overheadPctMax != null) ? `${c.overheadPctMin ?? 0}–${c.overheadPctMax ?? 0}%` : '(none, 0%)');
     kv('Factory Margin (Min–Max % of Factory Selling Price)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
     kv('Factory Selling Price / Serving', c.factoryPriceRange);
+    kv('Company Overhead (Min–Max % of Company Selling Price)', `${c.companyOverheadMin ?? 0}–${c.companyOverheadMax ?? 0}%`);
     kv('Company Margin (Min–Max % of Company Selling Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
     kv('Company Selling Price / Serving', c.companyPriceRange);
+    kv('Customer Overhead (Min–Max % of Customer Selling Price)', `${c.customerOverheadMin ?? 0}–${c.customerOverheadMax ?? 0}%`);
     kv('Customer Margin (Min–Max % of Customer Selling Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
     kv('Customer Selling Price / Serving', c.customerPriceRange);
 

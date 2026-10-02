@@ -7,7 +7,7 @@ import {
   escapeHtml, icon, ingredientMaster, computePrepareWeight,
   computeIngredientCost, openMaterialDetail
 } from './app.js';
-import { formatWeight, factoryPriceFromShares, priceFromMarginShare } from './recipes-data.js';
+import { formatWeight, factoryPriceFromShares } from './recipes-data.js';
 
 // Recipe Overview table (see renderOverview) — 'wt' also covers % of
 // Recipe, since that's just weight expressed as a share of the total and
@@ -90,11 +90,6 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(perServingWrap) perServingWrap.style.display = 'none';
     if(factoryPriceEl) factoryPriceEl.textContent = '—';
     if(companyPriceEl) companyPriceEl.textContent = '—';
-    [['overviewOverheadEchoCompany', 'f-overheadMultiplier'], ['overviewOverheadEchoCustomer', 'f-overheadMultiplier'],
-     ['overviewOverheadEchoCompanyMax', 'f-overheadMultiplierMax'], ['overviewOverheadEchoCustomerMax', 'f-overheadMultiplierMax']].forEach(([id, srcId]) => {
-      const el = document.getElementById(id);
-      if(el && el !== document.activeElement) el.value = document.getElementById(srcId)?.value ?? '';
-    });
     const emptyHint = document.getElementById('overheadCombinedHint');
     if(emptyHint) emptyHint.textContent = '';
     return;
@@ -296,16 +291,14 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     }
   }
 
-  // (Company/Customer Margin are now shares of their own price too -- see priceFromMarginShare.) Old note: markup on the tier before them --
-  // Selling Price = Base × (1 + margin/100) (e.g. a 50% margin means
-  // Selling Price = Base × 1.5, a 100% margin means × 2). Company Selling
-  // Price cascades on top of the Factory price (not off cost directly),
-  // and Customer on top of Company -- Min follows Min through the whole
-  // chain, Max follows Max, so the overall range reflects the worst-case
-  // and best-case ends consistently rather than mixing a low margin on
-  // one tier with a high one on another. Factory's own base is
-  // Cost/Serving times the Overhead Multiplier (if set; unset behaves as
-  // × 1, no adjustment).
+  // Every tier prices as shares of 100% (see factoryPriceFromShares in
+  // recipes-data.js): Price = Base / (1 - (Overhead% + Margin%)/100), where
+  // each tier has its OWN Overhead and Margin. Factory's base is
+  // Cost/Serving; Company's base is the Factory price and Customer's is the
+  // Company price -- Min follows Min through the whole chain, Max follows
+  // Max, so the overall range reflects the low and high ends consistently
+  // rather than mixing a low margin on one tier with a high one on another.
+  // A blank Overhead counts as 0%.
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
   // Renders a Min–Max Selling Price range, rounding each end UP to the
   // nearest 0.05 of the selected currency for a clean asking price
@@ -327,15 +320,9 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   const overheadPctMin = pct(document.getElementById('f-overheadMultiplier')?.value);
   const overheadPctMax = pct(document.getElementById('f-overheadMultiplierMax')?.value);
   // Company/Customer Margin's own rows show the same single Overhead too
-  // (per request, editable -- see recipes.js's wiring), so mirror the real
-  // box's raw value into them -- except whichever one is being typed in
+  //   // box's raw value into them -- except whichever one is being typed in
   // right now, so a partial entry like "1." isn't rewritten out from under
   // the cursor.
-  [['overviewOverheadEchoCompany', 'f-overheadMultiplier'], ['overviewOverheadEchoCustomer', 'f-overheadMultiplier'],
-   ['overviewOverheadEchoCompanyMax', 'f-overheadMultiplierMax'], ['overviewOverheadEchoCustomerMax', 'f-overheadMultiplierMax']].forEach(([id, srcId]) => {
-    const el = document.getElementById(id);
-    if(el && el !== document.activeElement) el.value = document.getElementById(srcId)?.value ?? '';
-  });
   // A blank Factory Margin counts as 0% (Overhead alone is a valid price).
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value) ?? 0;
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value) ?? 0;
@@ -361,18 +348,21 @@ ${line('Max', overheadPctMax, factoryMarginMax)}`;
 
   const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
   const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
-  const companyPriceMin = priceFromMarginShare(factoryPriceMin, companyMarginMin);
-  const companyPriceMax = priceFromMarginShare(factoryPriceMax, companyMarginMax);
+  const companyOverheadMin = pct(document.getElementById('f-companyOverheadMin')?.value);
+  const companyOverheadMax = pct(document.getElementById('f-companyOverheadMax')?.value);
+  const companyPriceMin = factoryPriceFromShares(factoryPriceMin, companyOverheadMin, companyMarginMin);
+  const companyPriceMax = factoryPriceFromShares(factoryPriceMax, companyOverheadMax, companyMarginMax);
   // Same "shares of 100%" breakdown line as Factory's, for Company/Customer.
-  const tierHint = (hintId, baseLabel, mMin, mMax, pMin, pMax) => {
+  const tierHint = (hintId, baseLabel, oMin, oMax, mMin, mMax, pMin, pMax) => {
     const el = document.getElementById(hintId);
     if(!el) return;
     const f = n => +n.toFixed(2);
+    const line = (label, o, m) => `${label}: ${baseLabel} ${f(100 - (o ?? 0) - m)}% + Overhead ${f(o ?? 0)}% + Profit ${f(m)}% = 100%`;
     el.textContent = (mMin == null || mMax == null) ? ''
-      : (pMin == null || pMax == null) ? 'Margin % must be less than 100%'
-      : `Min: ${baseLabel} ${f(100 - mMin)}% + Profit ${f(mMin)}% = 100%\nMax: ${baseLabel} ${f(100 - mMax)}% + Profit ${f(mMax)}% = 100%`;
+      : (pMin == null || pMax == null) ? 'Overhead % + Margin % must add up to less than 100%'
+      : `${line('Min', oMin, mMin)}\n${line('Max', oMax, mMax)}`;
   };
-  tierHint('companyShareHint', 'Factory price', companyMarginMin, companyMarginMax, companyPriceMin, companyPriceMax);
+  tierHint('companyShareHint', 'Factory price', companyOverheadMin, companyOverheadMax, companyMarginMin, companyMarginMax, companyPriceMin, companyPriceMax);
   const companyPriceEl = document.getElementById('overviewCompanyPrice');
   if(companyPriceEl){
     const { text, title } = priceRangeStr(companyPriceMin, companyPriceMax);
@@ -382,9 +372,11 @@ ${line('Max', overheadPctMax, factoryMarginMax)}`;
 
   const customerMarginMin = pct(document.getElementById('f-customerMarginMin')?.value);
   const customerMarginMax = pct(document.getElementById('f-customerMarginMax')?.value);
-  const customerPriceMin = priceFromMarginShare(companyPriceMin, customerMarginMin);
-  const customerPriceMax = priceFromMarginShare(companyPriceMax, customerMarginMax);
-  tierHint('customerShareHint', 'Company price', customerMarginMin, customerMarginMax, customerPriceMin, customerPriceMax);
+  const customerOverheadMin = pct(document.getElementById('f-customerOverheadMin')?.value);
+  const customerOverheadMax = pct(document.getElementById('f-customerOverheadMax')?.value);
+  const customerPriceMin = factoryPriceFromShares(companyPriceMin, customerOverheadMin, customerMarginMin);
+  const customerPriceMax = factoryPriceFromShares(companyPriceMax, customerOverheadMax, customerMarginMax);
+  tierHint('customerShareHint', 'Company price', customerOverheadMin, customerOverheadMax, customerMarginMin, customerMarginMax, customerPriceMin, customerPriceMax);
   const customerPriceEl = document.getElementById('overviewCustomerPrice');
   if(customerPriceEl){
     const { text, title } = priceRangeStr(customerPriceMin, customerPriceMax);

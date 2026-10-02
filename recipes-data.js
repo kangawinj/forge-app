@@ -514,8 +514,3 @@ export const factoryPriceFromShares = (cost, overheadPct, marginPct) => {
   const share = (overheadPct ?? 0) + marginPct;
   return share < 100 ? cost / (1 - share / 100) : null;
 };
-// Company / Customer tiers use the same 100% principle (per request): the
-// price is 100% = the tier below's price + this tier's profit share, so
-//   Price = Base / (1 - Margin% / 100), Margin% must stay below 100.
-export const priceFromMarginShare = (base, marginPct) =>
-  (base != null && marginPct != null && marginPct < 100) ? base / (1 - marginPct / 100) : null;

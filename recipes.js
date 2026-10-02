@@ -790,16 +790,16 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier (Min% – Max%)</div>
+              <div class="batch-stat-label" title="This row's own Overhead, separate from Factory's — a % of its Selling Price">Overhead Multiplier (Min% – Max%)</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="f-companyOverheadMin" min="0" step="0.01" placeholder="e.g. 0" style="width:64px;" title="This row's own Overhead — a % of its Selling Price (blank = 0%)">
                 <span>–</span>
-                <input type="number" id="overviewOverheadEchoCompanyMax" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="f-companyOverheadMax" min="0" step="0.01" placeholder="e.g. 0" style="width:64px;" title="This row's own Overhead — a % of its Selling Price (blank = 0%)">
                 <span>%</span>
               </div>
             </div>
             <div>
-              <div class="batch-stat-label" title="Profit as a % of the Company Selling Price — Factory price + Profit always make up 100% of it (Min and Max each separately)">Company Margin (Min% – Max% of Selling Price)</div>
+              <div class="batch-stat-label" title="Profit as a % of the Company Selling Price — Factory price + Overhead + Profit always make up 100% of it (Min and Max each separately)">Company Margin (Min% – Max% of Selling Price)</div>
               <div class="batch-scale-row">
                 <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Profit as a % of the Company Selling Price (not a markup)">
                 <span>–</span>
@@ -815,16 +815,16 @@ export function renderRecipeEditor(r){
           </div>
           <div class="costing-margin-cell">
             <div>
-              <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier (Min% – Max%)</div>
+              <div class="batch-stat-label" title="This row's own Overhead, separate from Factory's — a % of its Selling Price">Overhead Multiplier (Min% – Max%)</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="f-customerOverheadMin" min="0" step="0.01" placeholder="e.g. 0" style="width:64px;" title="This row's own Overhead — a % of its Selling Price (blank = 0%)">
                 <span>–</span>
-                <input type="number" id="overviewOverheadEchoCustomerMax" min="0" step="0.01" placeholder="e.g. 25" style="width:64px;" title="Same single Overhead as the other rows — editing it here changes all three">
+                <input type="number" id="f-customerOverheadMax" min="0" step="0.01" placeholder="e.g. 0" style="width:64px;" title="This row's own Overhead — a % of its Selling Price (blank = 0%)">
                 <span>%</span>
               </div>
             </div>
             <div>
-              <div class="batch-stat-label" title="Profit as a % of the Customer Selling Price — Company price + Profit always make up 100% of it (Min and Max each separately)">Customer Margin (Min% – Max% of Selling Price)</div>
+              <div class="batch-stat-label" title="Profit as a % of the Customer Selling Price — Company price + Overhead + Profit always make up 100% of it (Min and Max each separately)">Customer Margin (Min% – Max% of Selling Price)</div>
               <div class="batch-scale-row">
                 <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Profit as a % of the Customer Selling Price (not a markup)">
                 <span>–</span>
@@ -840,7 +840,7 @@ export function renderRecipeEditor(r){
           </div>
           </div>
         </div>
-        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %; the Min price uses Overhead Min + Margin Min and the Max price uses Overhead Max + Margin Max; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company and Customer work the same way: Company Selling Price = Factory price + Profit = 100%, so Company Price = Factory Price ÷ (1 − Company Margin %); Customer Selling Price = Company price + Profit = 100%, so Customer Price = Company Price ÷ (1 − Customer Margin %) (each Margin % must be below 100). Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
+        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %; the Min price uses Overhead Min + Margin Min and the Max price uses Overhead Max + Margin Max; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company and Customer work the same way, each with its own Overhead: Company Selling Price = Factory price + Overhead + Profit = 100%, so Company Price = Factory Price ÷ (1 − (Company Overhead % + Company Margin %)); Customer Selling Price = Company price + Overhead + Profit = 100%, so Customer Price = Company Price ÷ (1 − (Customer Overhead % + Customer Margin %)) (Overhead % + Margin % must stay below 100; blank Overhead = 0%). Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 
@@ -1274,7 +1274,9 @@ export function renderRecipeEditor(r){
   [
     ['f-factoryMarginMin', 'factoryMarginMin'], ['f-factoryMarginMax', 'factoryMarginMax'],
     ['f-companyMarginMin', 'companyMarginMin'], ['f-companyMarginMax', 'companyMarginMax'],
-    ['f-customerMarginMin', 'customerMarginMin'], ['f-customerMarginMax', 'customerMarginMax']
+    ['f-customerMarginMin', 'customerMarginMin'], ['f-customerMarginMax', 'customerMarginMax'],
+    ['f-companyOverheadMin', 'companyOverheadMin'], ['f-companyOverheadMax', 'companyOverheadMax'],
+    ['f-customerOverheadMin', 'customerOverheadMin'], ['f-customerOverheadMax', 'customerOverheadMax']
   ].forEach(([inputId, field]) => {
     const el = document.getElementById(inputId);
     el.value = r[field] ?? '';
@@ -1284,30 +1286,18 @@ export function renderRecipeEditor(r){
       scheduleSave();
     });
   });
-  // Company/Customer rows' own Overhead Multiplier boxes (per request,
-  // editable) are the same single value as Factory's -- typing in any of
-  // them writes the one r.overheadMultiplier and the others follow (see
-  // renderOverview, which skips whichever box is being typed in).
-  // Entered as a % (25 -> × 1.625, see overheadMultiplierFromPct) and
-  // stored as the multiplier (r.overheadMultiplier) so saved recipes, Excel
-  // and the cost math are unchanged.
-  [
-    { ids: ['f-overheadMultiplier', 'overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'], field: 'overheadMultiplier' },
-    { ids: ['f-overheadMultiplierMax', 'overviewOverheadEchoCompanyMax', 'overviewOverheadEchoCustomerMax'], field: 'overheadMultiplierMax' }
-  ].forEach(({ ids, field }) => {
-    ids.forEach(id => {
-      const el = document.getElementById(id);
-      el.value = overheadPctFromMultiplier(r[field]);
-      el.addEventListener('input', e => {
-        const v = e.target.value;
-        ids.forEach(otherId => {
-          const other = document.getElementById(otherId);
-          if(other !== e.target) other.value = v;
-        });
-        r[field] = v === '' ? '' : overheadMultiplierFromPct(parseFloat(v) || 0);
-        updateGrandTotal(r);
-        scheduleSave();
-      });
+  // Factory's Overhead is entered as a % (25 -> × 1.625, see
+  // overheadMultiplierFromPct) and stored as the multiplier (r.overheadMultiplier/
+  // overheadMultiplierMax). Company/Customer have their OWN Overhead fields
+  // (plain %, in the generic list above), not a copy of this one.
+  [['f-overheadMultiplier', 'overheadMultiplier'], ['f-overheadMultiplierMax', 'overheadMultiplierMax']].forEach(([id, field]) => {
+    const el = document.getElementById(id);
+    el.value = overheadPctFromMultiplier(r[field]);
+    el.addEventListener('input', e => {
+      const v = e.target.value;
+      r[field] = v === '' ? '' : overheadMultiplierFromPct(parseFloat(v) || 0);
+      updateGrandTotal(r);
+      scheduleSave();
     });
   });
   // Pure visibility toggle -- straight DOM manipulation instead of a full
