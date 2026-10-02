@@ -1625,8 +1625,8 @@ export function renderProjectsList(){
           <div class="proj-gallery-list-header">
             <span></span>
             <span></span>
-            <span class="proj-mu-cell-header">${escapeHtml(formatMonthYear(projectsByStatusMonth))}</span>
-            <span class="proj-mu-cell-header">${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
+            <span class="proj-mu-cell-header">End of ${escapeHtml(formatMonthYear(projectsByStatusMonth))}</span>
+            <span class="proj-mu-cell-header">End of ${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
           </div>
         ` : ''}
         ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
