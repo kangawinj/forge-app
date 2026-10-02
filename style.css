@@ -4274,29 +4274,36 @@
     flex-direction:column;
     gap:10px;
   }
+  /* grid-template-columns is set inline per-render (see renderStatusGroupItems
+     and the dashboard card template in projects.js), sized to however many
+     month columns are currently showing (0 by default -- see
+     projectsByStatusMonthColumnCount's own comment) -- CSS repeat() can't
+     take a 0 count (the whole declaration goes invalid, not just that
+     term), so this can't be driven by a plain custom property the way an
+     always-at-least-1 count could; the base rule here is just the no-month-
+     columns fallback (Name + PD only). */
   .proj-gallery-list-item{
     display:grid;
-    grid-template-columns:minmax(140px,1fr) 110px repeat(var(--proj-mu-col-count,2), minmax(180px,1.4fr));
+    grid-template-columns:minmax(140px,1fr) 110px;
     align-items:start;
     gap:10px;
     width:100%;
   }
   /* Table-style header (per request) -- same grid-template-columns as
-     .proj-gallery-list-item above (both driven by the same --proj-mu-col-
-     count custom property, set on their shared .dash-card ancestor, so
-     admin adding/removing a column keeps both in sync) so "October 2026"/
-     "September 2026"/... land directly over their own columns, shown once
-     above the whole List (not repeated per status group -- Projects by
-     Status' own month picker right above it already states the first pair
-     once; this is just the full set restated as real column headers,
-     legible without scrolling back up past several status groups). Hidden
-     on small screens (see the max-width:700px block below) since the grid
-     itself collapses to one column there, where it'd just read as blank-
-     ish lines -- the per-cell "This month"/"Previous month" labels already
-     cover it. */
+     .proj-gallery-list-item above (see its own comment on why both are set
+     inline instead of here) so "October 2026"/"September 2026"/... land
+     directly over their own columns, shown once above the whole List (not
+     repeated per status group -- Projects by Status' own month picker
+     right above it already states the first pair once; this is just the
+     full set restated as real column headers, legible without scrolling
+     back up past several status groups). Only rendered at all when at
+     least one month column is showing. Hidden on small screens (see the
+     max-width:700px block below) since the grid itself collapses to one
+     column there, where it'd just read as blank-ish lines -- the per-cell
+     "This month"/"Previous month" labels already cover it. */
   .proj-gallery-list-header{
     display:grid;
-    grid-template-columns:minmax(140px,1fr) 110px repeat(var(--proj-mu-col-count,2), minmax(180px,1.4fr));
+    grid-template-columns:minmax(140px,1fr) 110px;
     gap:10px;
     margin-bottom:8px;
   }
@@ -4444,7 +4451,10 @@
     color:inherit;
   }
   @media (max-width:700px){
-    .proj-gallery-list-item{grid-template-columns:1fr;gap:6px;}
+    /* !important: grid-template-columns is now set inline per-render (see
+       projMuListGridColumns in projects.js), which otherwise outranks this
+       media query's own class-based rule. */
+    .proj-gallery-list-item{grid-template-columns:1fr !important;gap:6px;}
     .proj-gallery-list-header{display:none;}
     .proj-gallery-list-pd{padding-top:0;}
     .proj-mu-cell-selected::before{content:"This month";display:block;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.03em;color:var(--primary);margin-bottom:2px;}

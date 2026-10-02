@@ -672,14 +672,17 @@ let projectsByStatusViewMode = 'grid';
 // and resolves to the current Bangkok month lazily, the first time the
 // dashboard actually renders.
 let projectsByStatusMonth = null;
-// How many month-comparison columns List mode shows (per request: admin
-// can add more than just "selected + previous"), 2 by default. Shared
-// across everyone -- not a personal preference -- via a small admin-only
+// How many month-comparison columns List mode shows -- none by default
+// (per request: the current/selected month's own column used to be
+// forced on with nothing in it yet this early in the month, which just
+// read as noise; now every column, including the first one, is something
+// the admin explicitly adds via "+ Add month column"). Shared across
+// everyone -- not a personal preference -- via a small admin-only
 // Firestore doc (see attachProjectsListener's own settings listener
 // below), same "admin decides, everyone sees the result" shape as
 // MODULE_PERMISSIONS in app.js.
-let projectsByStatusMonthColumnCount = 2;
-const PROJ_MU_DEFAULT_MONTH_COLUMNS = 2;
+let projectsByStatusMonthColumnCount = 0;
+const PROJ_MU_DEFAULT_MONTH_COLUMNS = 0;
 const PROJ_MU_MAX_MONTH_COLUMNS = 6;
 let unsubscribeProjectsByStatusSettings = null;
 // Monthly Update's own quick-edit popup (per request: click a Monthly
@@ -1636,7 +1639,7 @@ export function renderProjectsList(){
           <div class="dash-metric-value">${allProductsGlobal.length}</div>
         </div>
       </div>
-      <div class="dash-card" style="margin-bottom:16px;${projectsByStatusViewMode === 'list' ? ` --proj-mu-col-count:${projectsByStatusMonthColumnCount};` : ''}">
+      <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <span>Projects by Status</span>
           <div class="view-mode-toggle" id="projectsByStatusViewToggle">
@@ -1650,16 +1653,18 @@ export function renderProjectsList(){
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
-          <div class="proj-gallery-list-header">
+          ${projectsByStatusMonthColumnCount > 0 ? `
+          <div class="proj-gallery-list-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns(projectsByStatusMonthColumnCount))};">
             <span></span>
             <span></span>
             ${monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).map((m, i, arr) => `
               <span class="proj-mu-cell-header">
                 <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
-                ${isCurrentUserAdmin() && i === arr.length - 1 && i >= PROJ_MU_DEFAULT_MONTH_COLUMNS ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
+                ${isCurrentUserAdmin() && i === arr.length - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
               </span>
             `).join('')}
           </div>
+          ` : ''}
         ` : ''}
         ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
@@ -3225,13 +3230,26 @@ export function muRecipeOptionsHtml(selectedId){
 }
 
 // `count` consecutive months ending at `monthStr`, most recent first --
-// e.g. monthsBackFrom('2026-10', 3) => ['2026-10','2026-09','2026-08'].
-// Powers Projects by Status' List view's month-comparison columns, whose
-// count an admin can grow/shrink via the header row's +/x controls.
+// e.g. monthsBackFrom('2026-10', 3) => ['2026-10','2026-09','2026-08'], and
+// monthsBackFrom('2026-10', 0) => [] (the default -- see
+// projectsByStatusMonthColumnCount's own comment). Powers Projects by
+// Status' List view's month-comparison columns, whose count an admin can
+// grow/shrink via the header row's +/x controls.
 function monthsBackFrom(monthStr, count){
-  const months = [monthStr];
-  for(let i = 1; i < count; i++) months.push(previousMonthStr(months[months.length - 1]));
+  const months = [];
+  for(let i = 0; i < count; i++) months.push(i === 0 ? monthStr : previousMonthStr(months[months.length - 1]));
   return months;
+}
+// grid-template-columns for .proj-gallery-list-item/-header, sized to
+// however many month columns are currently showing -- computed in JS
+// rather than a CSS repeat(var(...)) because CSS repeat() can't take a
+// count of 0 (the whole declaration goes invalid when it does, not just
+// that term), and 0 is this feature's own default (see
+// projectsByStatusMonthColumnCount's own comment).
+function projMuListGridColumns(count){
+  return count > 0
+    ? `minmax(140px,1fr) 110px repeat(${count}, minmax(180px,1.4fr))`
+    : 'minmax(140px,1fr) 110px';
 }
 // Several monthlySummaries entries can share one month (logged twice, or
 // moved into a month that already had its own entry via the quick-edit
@@ -3490,10 +3508,11 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
   if(!projectsForStatus.length) return '';
   if(viewMode === 'list'){
     const months = monthsBackFrom(selectedMonth, projectsByStatusMonthColumnCount);
+    const gridCols = projMuListGridColumns(months.length);
     return `
       <div class="proj-gallery-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item" title="${escapeHtml(p.name || 'Untitled project')}">
+          <div class="proj-gallery-list-item" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
             <button type="button" class="proj-gallery-list-identity" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
                 ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
