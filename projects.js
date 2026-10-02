@@ -679,6 +679,9 @@ let projectsByStatusMonth = null;
 // (projectsByStatusMonthIsLocal), which the shared value no longer
 // overrides until they reload.
 let projectsByStatusSharedStartMonth = '';
+// Months whose column is currently expanded via its "Expand all" button (per
+// request) -- kept here so a re-render (any edit) doesn't collapse them again.
+const projMuExpandedMonths = new Set();
 let projectsByStatusMonthIsLocal = false;
 // How many month-comparison columns List mode shows -- none by default
 // (per request: the current/selected month's own column used to be
@@ -1388,9 +1391,35 @@ This hides it for everyone. No Monthly Update data is deleted — you can add th
   // triggering the row's own open-this-project navigation.
   dashboardContainer.querySelectorAll('.proj-mu-cell-text').forEach(textEl => {
     const moreBtn = textEl.nextElementSibling;
-    if(moreBtn?.dataset.role === 'proj-mu-toggle' && textEl.scrollHeight > textEl.clientHeight + 1){
+    if(moreBtn?.dataset.role !== 'proj-mu-toggle') return;
+    // A cell rendered already expanded (its column's "Expand all" is on)
+    // has no clamp to measure -- drop the class for the measurement, then
+    // put it back, so it still gets a working "See less".
+    const cell = textEl.closest('.proj-mu-cell');
+    const wasExpanded = cell.classList.contains('expanded');
+    if(wasExpanded) cell.classList.remove('expanded');
+    const clamped = textEl.scrollHeight > textEl.clientHeight + 1;
+    if(wasExpanded) cell.classList.add('expanded');
+    if(clamped){
       moreBtn.style.display = '';
+      moreBtn.textContent = wasExpanded ? 'See less' : 'See more';
     }
+  });
+  // "Expand all" / "Collapse all" under each month's header -- flips every
+  // cell in that column in place (not a re-render, which would snap the
+  // sideways scroll position back to the left).
+  dashboardContainer.querySelectorAll('[data-role="proj-mu-expand-column"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const month = btn.dataset.month;
+      const expand = !projMuExpandedMonths.has(month);
+      if(expand) projMuExpandedMonths.add(month); else projMuExpandedMonths.delete(month);
+      dashboardContainer.querySelectorAll(`.proj-mu-cell[data-month="${CSS.escape(month)}"]`).forEach(cell => {
+        cell.classList.toggle('expanded', expand);
+        const more = cell.querySelector('[data-role="proj-mu-toggle"]');
+        if(more && more.style.display !== 'none') more.textContent = expand ? 'See less' : 'See more';
+      });
+      btn.textContent = expand ? 'Collapse all' : 'Expand all';
+    });
   });
   dashboardContainer.querySelectorAll('[data-role="proj-mu-toggle"]').forEach(btn => {
     btn.addEventListener('click', e => {
@@ -1687,7 +1716,10 @@ export function renderProjectsList(){
             <span></span>
             ${monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).map((m, i, arr) => `
               <span class="proj-mu-cell-header">
-                <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
+                <span class="proj-mu-cell-header-main">
+                  <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
+                  <button type="button" class="proj-mu-expand-all" data-role="proj-mu-expand-column" data-month="${escapeHtml(m)}">${projMuExpandedMonths.has(m) ? 'Collapse all' : 'Expand all'}</button>
+                </span>
                 ${isCurrentUserAdmin() && i === arr.length - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
               </span>
             `).join('')}
@@ -3453,7 +3485,7 @@ function renderProjMuCell(info, variant, projectId, month){
     return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty" ${dataAttrs}>No update yet this month</div>`;
   }
   return `
-    <div class="proj-mu-cell proj-mu-cell-${variant}" ${dataAttrs}>
+    <div class="proj-mu-cell proj-mu-cell-${variant}${projMuExpandedMonths.has(month) ? ' expanded' : ''}" ${dataAttrs}>
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
       ${info.photos && info.photos.length ? `<div class="mu-attachments-chiplist proj-mu-photos-grid" data-role="proj-mu-photos" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}">${muAttachmentChipsHtml(info.photos, false)}</div>` : ''}
@@ -3644,6 +3676,7 @@ export function resetProjectsState(){
   projectsByStatusSharedStartMonth = '';
   projectsByStatusMonthIsLocal = false;
   projectsByStatusMonth = null;
+  projMuExpandedMonths.clear();
   resetPendingSubmissionsState();
   projectsLoaded = false;
   projects = [];
