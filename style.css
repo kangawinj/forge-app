@@ -5989,3 +5989,7 @@
     #fGuestName, .eval-wizard-comment, .eval-wizard-sensory, .eval-wizard-improve{font-size:16px;}
   }
 .overhead-times-hint{font-size:11px;color:var(--text-dim);white-space:pre-line;margin-top:2px;}
+.proj-mu-quick-labelrow{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;flex-wrap:wrap;margin-bottom:4px;}
+.proj-mu-quick-labelrow label{margin-bottom:0;}
+.proj-mu-quick-meta{font-size:11px;color:var(--text-dim);text-align:right;line-height:1.4;}
+.proj-mu-quick-meta b{font-weight:600;color:var(--text);}

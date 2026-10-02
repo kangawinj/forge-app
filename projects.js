@@ -3309,6 +3309,14 @@ function openProjMuQuickEdit(projectId, month){
   document.getElementById('projMuQuickEditMonthInput').value = month;
   document.getElementById('projMuQuickEditMonthInput').max = bangkokTodayStr().slice(0,7);
   document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
+  // First author + last editor, each with their date/time (per request) --
+  // blank for a month with no entry yet. An entry that was never edited
+  // reads the same on both lines (updatedBy only fills in on an edit).
+  const metaEl = document.getElementById('projMuQuickEditMeta');
+  const metaLine = (label, who, when) => `<div>${label} <b>${escapeHtml(who || '-')}</b>${when ? ' · ' + escapeHtml(formatActivityDateTime(when)) : ''}</div>`;
+  metaEl.innerHTML = existing
+    ? metaLine('First entered by', existing.createdBy, existing.createdAt) + metaLine('Last edited by', existing.updatedBy || existing.createdBy, existing.updatedAt || existing.createdAt)
+    : '';
   const photosEditorEl = document.getElementById('projMuQuickEditPhotosEditor');
   photosEditorEl.innerHTML = `
     <div class="mu-attachments-chiplist proj-mu-photos-grid"></div>
