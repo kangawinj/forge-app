@@ -799,13 +799,14 @@ export function renderRecipeEditor(r){
               </div>
             </div>
             <div>
-              <div class="batch-stat-label" title="Markup on the Factory Selling Price above, not a % of the final selling price">Company Margin (Min% – Max% Markup on Factory Price)</div>
+              <div class="batch-stat-label" title="Profit as a % of the Company Selling Price — Factory price + Profit always make up 100% of it (Min and Max each separately)">Company Margin (Min% – Max% of Selling Price)</div>
               <div class="batch-scale-row">
-                <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
+                <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Profit as a % of the Company Selling Price (not a markup)">
                 <span>–</span>
-                <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
+                <input type="number" id="f-companyMarginMax" min="0" step="0.01" placeholder="e.g. 50" style="width:64px;" title="Profit as a % of the Company Selling Price (not a markup)">
                 <span>%</span>
               </div>
+              <div class="overhead-times-hint" id="companyShareHint"></div>
             </div>
           </div>
           <div>
@@ -823,13 +824,14 @@ export function renderRecipeEditor(r){
               </div>
             </div>
             <div>
-              <div class="batch-stat-label" title="Markup on the Company Selling Price above, not a % of the final selling price">Customer Margin (Min% – Max% Markup on Company Price)</div>
+              <div class="batch-stat-label" title="Profit as a % of the Customer Selling Price — Company price + Profit always make up 100% of it (Min and Max each separately)">Customer Margin (Min% – Max% of Selling Price)</div>
               <div class="batch-scale-row">
-                <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
+                <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Profit as a % of the Customer Selling Price (not a markup)">
                 <span>–</span>
-                <input type="number" id="f-customerMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
+                <input type="number" id="f-customerMarginMax" min="0" step="0.01" placeholder="e.g. 30" style="width:64px;" title="Profit as a % of the Customer Selling Price (not a markup)">
                 <span>%</span>
               </div>
+              <div class="overhead-times-hint" id="customerShareHint"></div>
             </div>
           </div>
           <div>
@@ -838,7 +840,7 @@ export function renderRecipeEditor(r){
           </div>
           </div>
         </div>
-        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %; the Min price uses Overhead Min + Margin Min and the Max price uses Overhead Max + Margin Max; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company/Customer Margin are markup on the tier before them — a 50% margin means Selling Price = tier below × 1.5 (100% = ×2, 0% = ×1). Factory Margin is the exception: it's a share of the Factory Selling Price itself. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
+        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a %; it is a share of the Factory Selling Price, so Factory Selling Price = Material + Overhead + Profit = 100% (Material % = 100 − Overhead % − Factory Margin %; the Min price uses Overhead Min + Margin Min and the Max price uses Overhead Max + Margin Max; e.g. cost 10 with Overhead 99% and Margin 0% → price 1,000 = Material 10 + Overhead 990) — leave it blank for 0%. Company and Customer work the same way: Company Selling Price = Factory price + Profit = 100%, so Company Price = Factory Price ÷ (1 − Company Margin %); Customer Selling Price = Company price + Profit = 100%, so Customer Price = Company Price ÷ (1 − Customer Margin %) (each Margin % must be below 100). Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 

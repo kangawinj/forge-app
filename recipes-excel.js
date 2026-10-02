@@ -24,7 +24,7 @@ import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredi
 import {
   fullCode, recipeProductTypeCode, findProjectForRecipe, allIngredientsInRecipe,
   allIngredientsInPart, partTotalWeight, formatWeight, collectIngredientsWithPrepareWeight,
-  findPartByName, overheadPctFromMultiplier, factoryPriceFromShares
+  findPartByName, overheadPctFromMultiplier, factoryPriceFromShares, priceFromMarginShare
 } from './recipes-data.js';
 import { renderPrintView } from './recipes-print.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
@@ -131,7 +131,6 @@ function computeCostingData(r, ov){
   const costPerServing = (servingSize > 0 && costPer100 != null) ? (costPer100 / 100 * servingSize) : null;
 
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-  const marginPrice = (base, marginPct) => (base != null && marginPct != null) ? base * (1 + marginPct / 100) : null;
   const priceRangeStr = (min, max) => {
     if(min == null || max == null) return '—';
     const minStr = money(min, true), maxStr = money(max, true);
@@ -146,11 +145,11 @@ function computeCostingData(r, ov){
   const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
   const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
-  const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
-  const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
+  const companyPriceMin = priceFromMarginShare(factoryPriceMin, companyMarginMin);
+  const companyPriceMax = priceFromMarginShare(factoryPriceMax, companyMarginMax);
   const customerMarginMin = pct(r.customerMarginMin), customerMarginMax = pct(r.customerMarginMax);
-  const customerPriceMin = marginPrice(companyPriceMin, customerMarginMin);
-  const customerPriceMax = marginPrice(companyPriceMax, customerMarginMax);
+  const customerPriceMin = priceFromMarginShare(companyPriceMin, customerMarginMin);
+  const customerPriceMax = priceFromMarginShare(companyPriceMax, customerMarginMax);
 
   return {
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
@@ -350,9 +349,9 @@ function buildCostingSheet(wb, r){
     kv('Overhead (Min–Max % of Factory Selling Price)', (c.overheadPctMin != null || c.overheadPctMax != null) ? `${c.overheadPctMin ?? 0}–${c.overheadPctMax ?? 0}%` : '(none, 0%)');
     kv('Factory Margin (Min–Max % of Factory Selling Price)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
     kv('Factory Selling Price / Serving', c.factoryPriceRange);
-    kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
+    kv('Company Margin (Min–Max % of Company Selling Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
     kv('Company Selling Price / Serving', c.companyPriceRange);
-    kv('Customer Margin (Min–Max % Markup on Company Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
+    kv('Customer Margin (Min–Max % of Customer Selling Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
     kv('Customer Selling Price / Serving', c.customerPriceRange);
 
     row++;

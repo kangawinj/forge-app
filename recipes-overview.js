@@ -7,7 +7,7 @@ import {
   escapeHtml, icon, ingredientMaster, computePrepareWeight,
   computeIngredientCost, openMaterialDetail
 } from './app.js';
-import { formatWeight, factoryPriceFromShares } from './recipes-data.js';
+import { formatWeight, factoryPriceFromShares, priceFromMarginShare } from './recipes-data.js';
 
 // Recipe Overview table (see renderOverview) — 'wt' also covers % of
 // Recipe, since that's just weight expressed as a share of the total and
@@ -296,7 +296,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     }
   }
 
-  // Factory/Company/Customer Margin are markup on the tier before them --
+  // (Company/Customer Margin are now shares of their own price too -- see priceFromMarginShare.) Old note: markup on the tier before them --
   // Selling Price = Base × (1 + margin/100) (e.g. a 50% margin means
   // Selling Price = Base × 1.5, a 100% margin means × 2). Company Selling
   // Price cascades on top of the Factory price (not off cost directly),
@@ -307,7 +307,6 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   // Cost/Serving times the Overhead Multiplier (if set; unset behaves as
   // × 1, no adjustment).
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-  const marginPrice = (base, marginPct) => (base != null && marginPct != null) ? base * (1 + marginPct / 100) : null;
   // Renders a Min–Max Selling Price range, rounding each end UP to the
   // nearest 0.05 of the selected currency for a clean asking price
   // (Cost/100g etc. above stay at their exact, unrounded-up value --
@@ -362,8 +361,18 @@ ${line('Max', overheadPctMax, factoryMarginMax)}`;
 
   const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
   const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
-  const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
-  const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
+  const companyPriceMin = priceFromMarginShare(factoryPriceMin, companyMarginMin);
+  const companyPriceMax = priceFromMarginShare(factoryPriceMax, companyMarginMax);
+  // Same "shares of 100%" breakdown line as Factory's, for Company/Customer.
+  const tierHint = (hintId, baseLabel, mMin, mMax, pMin, pMax) => {
+    const el = document.getElementById(hintId);
+    if(!el) return;
+    const f = n => +n.toFixed(2);
+    el.textContent = (mMin == null || mMax == null) ? ''
+      : (pMin == null || pMax == null) ? 'Margin % must be less than 100%'
+      : `Min: ${baseLabel} ${f(100 - mMin)}% + Profit ${f(mMin)}% = 100%\nMax: ${baseLabel} ${f(100 - mMax)}% + Profit ${f(mMax)}% = 100%`;
+  };
+  tierHint('companyShareHint', 'Factory price', companyMarginMin, companyMarginMax, companyPriceMin, companyPriceMax);
   const companyPriceEl = document.getElementById('overviewCompanyPrice');
   if(companyPriceEl){
     const { text, title } = priceRangeStr(companyPriceMin, companyPriceMax);
@@ -373,8 +382,9 @@ ${line('Max', overheadPctMax, factoryMarginMax)}`;
 
   const customerMarginMin = pct(document.getElementById('f-customerMarginMin')?.value);
   const customerMarginMax = pct(document.getElementById('f-customerMarginMax')?.value);
-  const customerPriceMin = marginPrice(companyPriceMin, customerMarginMin);
-  const customerPriceMax = marginPrice(companyPriceMax, customerMarginMax);
+  const customerPriceMin = priceFromMarginShare(companyPriceMin, customerMarginMin);
+  const customerPriceMax = priceFromMarginShare(companyPriceMax, customerMarginMax);
+  tierHint('customerShareHint', 'Company price', customerMarginMin, customerMarginMax, customerPriceMin, customerPriceMax);
   const customerPriceEl = document.getElementById('overviewCustomerPrice');
   if(customerPriceEl){
     const { text, title } = priceRangeStr(customerPriceMin, customerPriceMax);
