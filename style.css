@@ -1860,6 +1860,20 @@
     border:1px solid var(--primary);
     border-radius:var(--radius);
   }
+  /* Costing's margin rows: Overhead Multiplier and the margin's own Min–Max
+     inputs sit side by side on one line (per request), wrapping only when
+     the cell is too narrow. */
+  .costing-margin-cell{
+    display:flex;
+    flex-wrap:nowrap;
+    align-items:flex-end;
+    gap:10px 18px;
+  }
+  .costing-margin-cell > div{min-width:0;}
+  .costing-margin-cell > div:first-child{flex:0 0 auto;}
+  @media (max-width:520px){
+    .costing-margin-cell{flex-wrap:wrap;}
+  }
   .batch-stat-label{
     font-size:12px;
     color:var(--text-dim);

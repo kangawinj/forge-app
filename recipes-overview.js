@@ -92,7 +92,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(companyPriceEl) companyPriceEl.textContent = '—';
     ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
       const el = document.getElementById(id);
-      if(el) el.textContent = '—';
+      if(el) el.value = '';
     });
     return;
   }
@@ -328,7 +328,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   const overheadEcho = String(overheadMultiplier ?? 1);
   ['overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
     const el = document.getElementById(id);
-    if(el) el.textContent = overheadEcho;
+    if(el) el.value = overheadEcho;
   });
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
