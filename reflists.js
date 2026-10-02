@@ -38,12 +38,16 @@ let refListEditingSubs = [];
 // it's currently revealed for the row being edited; refListEditingNote
 // holds its in-progress text (same staging idea as refListEditingSteps).
 let refListEditingNote = '';
+// Search box above the entries (per request) -- filters whichever list tab is
+// open; cleared on switching tabs and on remount.
+let refListSearch = '';
 let refListEditingNoteAdded = false;
 
 export function mountRefListsView(){
   const main = document.getElementById('mainArea');
   main.classList.remove('main-wide', 'trials-a4-width');
   refListEditingId = null;
+  refListSearch = '';
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('list', 24)} Reference Lists</div>
@@ -63,6 +67,9 @@ export function mountRefListsView(){
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button type="button" class="btn btn-sm" id="btnExportRefListsExcel">${icon('download', 14)} Export Excel</button>
+      </div>
+      <div class="reflist-search-row" id="refListSearchRow">
+        <input type="search" id="refListSearchInput" placeholder="Search this list..." autocomplete="off">
       </div>
       <div class="reflist-add-row" id="refListAddRow">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
@@ -90,6 +97,7 @@ export function mountRefListsView(){
     // Trial Code Format is a static reference page, not an editable list —
     // there's nothing to add, so the whole add-row hides for that tab.
     document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
+    document.getElementById('refListSearchRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     const isCustomersTab = refListActiveTab === 'customers';
     document.getElementById('refListNewImageInput').style.display = isCustomersTab ? '' : 'none';
@@ -116,11 +124,17 @@ export function mountRefListsView(){
       btn.classList.add('active');
       refListActiveTab = btn.dataset.key;
       refListEditingId = null;
+      refListSearch = '';
+      document.getElementById('refListSearchInput').value = '';
       updateAddRowFields();
       renderRefListItems();
     });
   });
   updateAddRowFields();
+  document.getElementById('refListSearchInput').addEventListener('input', e => {
+    refListSearch = e.target.value;
+    renderRefListItems();
+  });
   const addNewEntry = () => {
     const input = document.getElementById('refListNewInput');
     const countryInput = document.getElementById('refListNewCountryInput');
@@ -237,9 +251,20 @@ export function renderRefListItems(){
   const isContacts = refListActiveTab === 'salesReps';
   const isCookingMethods = refListActiveTab === 'cookingMethods';
   const isEvaluationCriteria = refListActiveTab === 'evaluationCriteria';
-  const items = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b), undefined, { sensitivity: 'base', numeric: true }));
-  if(items.length === 0){
+  const allItems = [...(metaLists[refListActiveTab] || [])].sort((a,b) => metaItemName(a).localeCompare(metaItemName(b), undefined, { sensitivity: 'base', numeric: true }));
+  if(allItems.length === 0){
     container.innerHTML = `<div class="overview-empty">No ${META_LIST_LABELS[refListActiveTab].toLowerCase()} yet — add one above</div>`;
+    return;
+  }
+  // Case-insensitive match against every text field an entry has (name,
+  // country, contact details, steps, who added it...), skipping images.
+  // The entry being edited always stays visible so typing in the search
+  // box can never make the row you're editing vanish mid-edit.
+  const searchText = refListSearch.trim().toLowerCase();
+  const flatText = v => Array.isArray(v) ? v.map(flatText).join(' ') : (typeof v === 'string' && !v.startsWith('data:')) ? v : (typeof v === 'number' ? String(v) : (v && typeof v === 'object') ? Object.values(v).map(flatText).join(' ') : '');
+  const items = searchText ? allItems.filter(item => item.id === refListEditingId || flatText(item).toLowerCase().includes(searchText)) : allItems;
+  if(items.length === 0){
+    container.innerHTML = `<div class="overview-empty">No matches for "${escapeHtml(refListSearch.trim())}" in ${escapeHtml(META_LIST_LABELS[refListActiveTab])}</div>`;
     return;
   }
   container.innerHTML = items.map(item => {

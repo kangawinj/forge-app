@@ -6014,3 +6014,7 @@
   .proj-mu-hscroll .proj-gallery-list-identity,
   .proj-mu-hscroll .proj-gallery-list-pd{position:static;box-shadow:none;}
 }
+
+/* Reference Lists' search box -- sits between Export Excel and the add row. */
+.reflist-search-row{margin-bottom:12px;}
+.reflist-search-row input{width:100%;box-sizing:border-box;}
