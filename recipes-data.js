@@ -493,11 +493,19 @@ export function formatWeight(n){
 
 // Overhead is typed as a % (25 = the old stored x1.625) -- r.overheadMultiplier
 // still stores the multiplier encoding 1.3 x (1 + %) so saved recipes are
-// unchanged. Factory pricing ADDS Overhead % and Factory Margin % together
-// (per request), Min and Max each separately:
-//   Factory Price = Cost x (1 + (Overhead% + Margin%) / 100)
+// unchanged. The Factory Selling Price is 100% made up of three shares
+// (per request): Material cost + Overhead + Profit, so
+//   Material% = 100 - Overhead% - Margin%
+//   Factory Price = Cost / (Material% / 100) = Cost / (1 - (Overhead% + Margin%)/100)
+// e.g. Cost 10, Overhead 99%, Margin 0% -> Material 1% -> Price 1000
+// (Overhead 990 + Material 10). Min and Max margins each calculate on
+// their own. Overhead% + Margin% must stay below 100 -- otherwise there is
+// no price (returns null).
 export const OVERHEAD_BASE_MULTIPLIER = 1.3;
 export const overheadMultiplierFromPct = pct => +(OVERHEAD_BASE_MULTIPLIER * (1 + pct / 100)).toFixed(6);
 export const overheadPctFromMultiplier = m => (m === '' || m == null || isNaN(parseFloat(m))) ? '' : String(+((parseFloat(m) / OVERHEAD_BASE_MULTIPLIER - 1) * 100).toFixed(4));
-export const overheadPlusMarginPrice = (cost, overheadPct, marginPct) =>
-  (cost != null && marginPct != null) ? cost * (1 + ((overheadPct ?? 0) + marginPct) / 100) : null;
+export const factoryPriceFromShares = (cost, overheadPct, marginPct) => {
+  if(cost == null || marginPct == null) return null;
+  const share = (overheadPct ?? 0) + marginPct;
+  return share < 100 ? cost / (1 - share / 100) : null;
+};

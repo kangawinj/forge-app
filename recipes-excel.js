@@ -24,7 +24,7 @@ import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredi
 import {
   fullCode, recipeProductTypeCode, findProjectForRecipe, allIngredientsInRecipe,
   allIngredientsInPart, partTotalWeight, formatWeight, collectIngredientsWithPrepareWeight,
-  findPartByName, overheadPctFromMultiplier, overheadPlusMarginPrice
+  findPartByName, overheadPctFromMultiplier, factoryPriceFromShares
 } from './recipes-data.js';
 import { renderPrintView } from './recipes-print.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
@@ -139,11 +139,11 @@ function computeCostingData(r, ov){
     return `${minStr} – ${maxStr}${costSuffix}`;
   };
 
-  // Overhead % is ADDED to Factory Margin % (see overheadPlusMarginPrice).
+  // Factory price = Material + Overhead + Profit shares of 100% (see factoryPriceFromShares).
   const overheadPct = pct(overheadPctFromMultiplier(r.overheadMultiplier));
   const factoryMarginMin = pct(r.factoryMarginMin), factoryMarginMax = pct(r.factoryMarginMax);
-  const factoryPriceMin = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMin);
-  const factoryPriceMax = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMax);
+  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
+  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
   const companyPriceMin = marginPrice(factoryPriceMin, companyMarginMin);
   const companyPriceMax = marginPrice(factoryPriceMax, companyMarginMax);
@@ -346,8 +346,8 @@ function buildCostingSheet(wb, r){
     sectionCell.value = 'Overhead & Margins';
     sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
     row++;
-    kv('Overhead (added to Factory Margin %)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
-    kv('Factory Margin (Min–Max % Markup on Cost)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
+    kv('Overhead (% of Factory Selling Price)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
+    kv('Factory Margin (Min–Max % of Factory Selling Price)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
     kv('Factory Selling Price / Serving', c.factoryPriceRange);
     kv('Company Margin (Min–Max % Markup on Factory Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
     kv('Company Selling Price / Serving', c.companyPriceRange);

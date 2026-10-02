@@ -7,7 +7,7 @@ import {
   escapeHtml, icon, ingredientMaster, computePrepareWeight,
   computeIngredientCost, openMaterialDetail
 } from './app.js';
-import { formatWeight, overheadPlusMarginPrice } from './recipes-data.js';
+import { formatWeight, factoryPriceFromShares } from './recipes-data.js';
 
 // Recipe Overview table (see renderOverview) — 'wt' also covers % of
 // Recipe, since that's just weight expressed as a share of the total and
@@ -320,8 +320,9 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
     return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
   };
-  // Overhead is typed as a % and ADDED to Factory Margin's % (Min and Max
-  // separately) -- Factory Price = Cost x (1 + (Overhead% + Margin%)/100).
+  // Factory Price is 100% = Material + Overhead + Profit shares (see
+  // factoryPriceFromShares in recipes-data.js) -- Overhead % and Factory
+  // Margin % are both shares OF THE SELLING PRICE, Min and Max separately.
   // Blank Overhead counts as 0%.
   const overheadPct = pct(document.getElementById('f-overheadMultiplier')?.value);
   // Company/Customer Margin's own rows show the same single Overhead too
@@ -337,18 +338,23 @@ export function renderOverview(allIngredients, prepareWeightByIng){
   const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
   const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
 
-  const factoryPriceMin = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMin);
-  const factoryPriceMax = overheadPlusMarginPrice(costPerServing, overheadPct, factoryMarginMax);
+  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
+  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
   const combinedHintEl = document.getElementById('overheadCombinedHint');
+  const sharesInvalid = factoryMarginMin != null && factoryMarginMax != null && (factoryPriceMin == null || factoryPriceMax == null);
   if(combinedHintEl){
-    const mult = m => +(1 + ((overheadPct ?? 0) + m) / 100).toFixed(4);
-    combinedHintEl.textContent = (factoryMarginMin != null && factoryMarginMax != null) ? `Overhead + Margin = × ${mult(factoryMarginMin)} – × ${mult(factoryMarginMax)}` : '';
+    const f = n => +n.toFixed(2);
+    const line = (label, m) => `${label}: Material ${f(100 - (overheadPct ?? 0) - m)}% + Overhead ${f(overheadPct ?? 0)}% + Profit ${f(m)}% = 100%`;
+    combinedHintEl.textContent = (factoryMarginMin == null || factoryMarginMax == null) ? ''
+      : sharesInvalid ? 'Overhead % + Margin % must add up to less than 100%'
+      : `${line('Min', factoryMarginMin)}
+${line('Max', factoryMarginMax)}`;
   }
   const factoryPriceEl = document.getElementById('overviewFactoryPrice');
   if(factoryPriceEl){
     const { text, title } = priceRangeStr(factoryPriceMin, factoryPriceMax);
     factoryPriceEl.textContent = text;
-    factoryPriceEl.title = title;
+    factoryPriceEl.title = sharesInvalid ? 'Overhead % + Factory Margin % must add up to less than 100% of the selling price' : title;
   }
 
   const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
