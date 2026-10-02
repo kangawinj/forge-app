@@ -688,7 +688,8 @@ export const CHANGELOG = [
   { version: "3.0.646", date: "2026-10-01", note: "Removed the now-redundant \"October 2026 vs September 2026\" text next to the month picker, since the column header row above already states it" },
   { version: "3.0.647", date: "2026-10-02", note: "Monthly Update's quick-edit popup can now attach up to 6 photos alongside the text -- shown as thumbnails in the popup, the Projects by Status cell itself, and the project's own Monthly Updates section, click any one to preview it full-size" },
   { version: "3.0.648", date: "2026-10-02", note: "Manage Users: admin can now grant a specific person \"Can see all Projects\" -- same full visibility the admin already has, without making them an admin. Without it, a person still only sees projects their own name is actually attached to" },
-  { version: "3.0.649", date: "2026-10-02", note: "Projects by Status' List view column headers now read \"End of October 2026\" / \"End of September 2026\" instead of just the month name" }
+  { version: "3.0.649", date: "2026-10-02", note: "Projects by Status' List view column headers now read \"End of October 2026\" / \"End of September 2026\" instead of just the month name" },
+  { version: "3.0.650", date: "2026-10-02", note: "Admin can now add more month columns to Projects by Status' List view (up to 6, going further back in time) via a button next to the month picker, and remove extra ones again -- applies to everyone's view, not just the admin's own" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

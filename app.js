@@ -146,6 +146,12 @@ export const recipeSeriesCol = collection(db, "recipeSeries");
 export const materialsCol = collection(db, "ingredientMaster");
 export const productsCol = collection(db, "productList");
 export const projectsCol = collection(db, "projects");
+// Small admin-configurable app-wide settings, one doc per feature (id =
+// feature key) rather than one big doc -- so an unrelated feature's own
+// settings doc/listener/rules stay independent. First use: projects.js's
+// "projectsByStatus" doc (monthColumnCount) for Projects by Status' List
+// view month-comparison columns.
+export const appSettingsCol = collection(db, "appSettings");
 export const trialsCol = collection(db, "trials");
 // One doc per Recipe Series (id = seriesId), holding whichever Trials were
 // last picked in that series' "Compare Trials" view -- see compare.js --

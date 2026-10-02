@@ -4,10 +4,10 @@ import {
   mainFeatureView, setMainFeatureView, recipesLoaded, currentId, renderMain, renderSidebar,
   recipes, recipeDisplayLabel, fullCode, logActivityEvent, diffMainFields, snapshotMainFields,
   renderBarList, openRecipeFromDashboard, metaLists, metaItemName, projectsCol, PROJECT_STAGES,
-  showCloudError, trialStringListHtml, canSeeAllProjects,
+  showCloudError, trialStringListHtml, canSeeAllProjects, isCurrentUserAdmin,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
   moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr,
-  wireModalOverlayClose
+  wireModalOverlayClose, appSettingsCol
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -672,6 +672,16 @@ let projectsByStatusViewMode = 'grid';
 // and resolves to the current Bangkok month lazily, the first time the
 // dashboard actually renders.
 let projectsByStatusMonth = null;
+// How many month-comparison columns List mode shows (per request: admin
+// can add more than just "selected + previous"), 2 by default. Shared
+// across everyone -- not a personal preference -- via a small admin-only
+// Firestore doc (see attachProjectsListener's own settings listener
+// below), same "admin decides, everyone sees the result" shape as
+// MODULE_PERMISSIONS in app.js.
+let projectsByStatusMonthColumnCount = 2;
+const PROJ_MU_DEFAULT_MONTH_COLUMNS = 2;
+const PROJ_MU_MAX_MONTH_COLUMNS = 6;
+let unsubscribeProjectsByStatusSettings = null;
 // Monthly Update's own quick-edit popup (per request: click a Monthly
 // Update cell in Projects by Status' List view to add/edit it right
 // there, instead of needing to open the project and find its own
@@ -1327,6 +1337,20 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       renderProjectsList();
     }
   });
+  // Admin-only +/x controls for how many month columns List mode shows --
+  // writes the shared setting doc; the onSnapshot listener (see
+  // attachProjectsListener) picks up the change and re-renders for
+  // everyone, so no local re-render is done here.
+  dashboardContainer.querySelector('[data-role="add-proj-mu-month-column"]')?.addEventListener('click', () => {
+    const next = Math.min(projectsByStatusMonthColumnCount + 1, PROJ_MU_MAX_MONTH_COLUMNS);
+    setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
+      .catch(err => alert('Failed to update: ' + err.message));
+  });
+  dashboardContainer.querySelector('[data-role="remove-proj-mu-month-column"]')?.addEventListener('click', () => {
+    const next = Math.max(projectsByStatusMonthColumnCount - 1, PROJ_MU_DEFAULT_MONTH_COLUMNS);
+    setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
+      .catch(err => alert('Failed to update: ' + err.message));
+  });
   // "See more" -- only shown on a cell whose text is actually clamped
   // (scrollHeight taller than the clamped box), checked after insertion
   // since that can't be known from the text alone without measuring the
@@ -1609,7 +1633,7 @@ export function renderProjectsList(){
           <div class="dash-metric-value">${allProductsGlobal.length}</div>
         </div>
       </div>
-      <div class="dash-card" style="margin-bottom:16px;">
+      <div class="dash-card" style="margin-bottom:16px;${projectsByStatusViewMode === 'list' ? ` --proj-mu-col-count:${projectsByStatusMonthColumnCount};` : ''}">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <span>Projects by Status</span>
           <div class="view-mode-toggle" id="projectsByStatusViewToggle">
@@ -1621,12 +1645,17 @@ export function renderProjectsList(){
           <div class="proj-mu-month-picker">
             <label for="projectsByStatusMonthInput">Monthly Update:</label>
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
+            ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
           <div class="proj-gallery-list-header">
             <span></span>
             <span></span>
-            <span class="proj-mu-cell-header">End of ${escapeHtml(formatMonthYear(projectsByStatusMonth))}</span>
-            <span class="proj-mu-cell-header">End of ${escapeHtml(formatMonthYear(previousMonthStr(projectsByStatusMonth)))}</span>
+            ${monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).map((m, i, arr) => `
+              <span class="proj-mu-cell-header">
+                <span>End of ${escapeHtml(formatMonthYear(m))}</span>
+                ${isCurrentUserAdmin() && i === arr.length - 1 && i >= PROJ_MU_DEFAULT_MONTH_COLUMNS ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
+              </span>
+            `).join('')}
           </div>
         ` : ''}
         ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
@@ -3121,6 +3150,15 @@ export function attachProjectsListener(){
     showCloudError('Failed to load projects from Firebase: ' + err.message);
   });
   attachPendingSubmissionsListener();
+  if(!unsubscribeProjectsByStatusSettings){
+    unsubscribeProjectsByStatusSettings = onSnapshot(doc(appSettingsCol, 'projectsByStatus'), snap => {
+      const data = snap.data();
+      projectsByStatusMonthColumnCount = Math.min(Math.max(Number(data?.monthColumnCount) || PROJ_MU_DEFAULT_MONTH_COLUMNS, PROJ_MU_DEFAULT_MONTH_COLUMNS), PROJ_MU_MAX_MONTH_COLUMNS);
+      if(mainFeatureView === 'projects') renderProjectsList();
+    }, err => {
+      console.error('Forge: projects-by-status settings listener error', err);
+    });
+  }
 }
 
 
@@ -3183,6 +3221,15 @@ export function muRecipeOptionsHtml(selectedId){
     ).join('');
 }
 
+// `count` consecutive months ending at `monthStr`, most recent first --
+// e.g. monthsBackFrom('2026-10', 3) => ['2026-10','2026-09','2026-08'].
+// Powers Projects by Status' List view's month-comparison columns, whose
+// count an admin can grow/shrink via the header row's +/x controls.
+function monthsBackFrom(monthStr, count){
+  const months = [monthStr];
+  for(let i = 1; i < count; i++) months.push(previousMonthStr(months[months.length - 1]));
+  return months;
+}
 // Monthly Update comparison (List view, per request): reads p.monthlySummaries
 // -- its own array, deliberately separate from Activities Updates'
 // p.monthlyUpdates (see blankProject's comment in projects-data.js for
@@ -3390,7 +3437,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
 function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, selectedMonth){
   if(!projectsForStatus.length) return '';
   if(viewMode === 'list'){
-    const previousMonth = previousMonthStr(selectedMonth);
+    const months = monthsBackFrom(selectedMonth, projectsByStatusMonthColumnCount);
     return `
       <div class="proj-gallery-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
@@ -3405,8 +3452,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
               </span>
             </button>
             <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
-            ${renderProjMuCell(projectMonthUpdateInfo(p, selectedMonth), 'selected', p.id, selectedMonth)}
-            ${renderProjMuCell(projectMonthUpdateInfo(p, previousMonth), 'previous', p.id, previousMonth)}
+            ${months.map((m, i) => renderProjMuCell(projectMonthUpdateInfo(p, m), i === 0 ? 'selected' : 'previous', p.id, m)).join('')}
           </div>
         `).join('')}
       </div>
@@ -3472,6 +3518,8 @@ let projectsLoaded = false;
 // projectColumnFilters, etc.) — same convention the other three follow.
 export function resetProjectsState(){
   if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
+  if(unsubscribeProjectsByStatusSettings){ unsubscribeProjectsByStatusSettings(); unsubscribeProjectsByStatusSettings = null; }
+  projectsByStatusMonthColumnCount = PROJ_MU_DEFAULT_MONTH_COLUMNS;
   resetPendingSubmissionsState();
   projectsLoaded = false;
   projects = [];

@@ -4189,28 +4189,35 @@
   }
   .proj-gallery-list-item{
     display:grid;
-    grid-template-columns:minmax(140px,1fr) 110px minmax(180px,1.4fr) minmax(180px,1.4fr);
+    grid-template-columns:minmax(140px,1fr) 110px repeat(var(--proj-mu-col-count,2), minmax(180px,1.4fr));
     align-items:start;
     gap:10px;
     width:100%;
   }
   /* Table-style header (per request) -- same grid-template-columns as
-     .proj-gallery-list-item above so "October 2026"/"September 2026" land
-     directly over their own columns, shown once above the whole List (not
-     repeated per status group -- Projects by Status' own month picker
-     right above it already states the pair once; this is just the same
-     pair restated as real column headers, legible without scrolling back
-     up past several status groups). Hidden on small screens (see the
-     max-width:700px block below) since the grid itself collapses to one
-     column there, where it'd just read as 4 blank-ish lines -- the
-     per-cell "This month"/"Previous month" labels already cover it. */
+     .proj-gallery-list-item above (both driven by the same --proj-mu-col-
+     count custom property, set on their shared .dash-card ancestor, so
+     admin adding/removing a column keeps both in sync) so "October 2026"/
+     "September 2026"/... land directly over their own columns, shown once
+     above the whole List (not repeated per status group -- Projects by
+     Status' own month picker right above it already states the first pair
+     once; this is just the full set restated as real column headers,
+     legible without scrolling back up past several status groups). Hidden
+     on small screens (see the max-width:700px block below) since the grid
+     itself collapses to one column there, where it'd just read as blank-
+     ish lines -- the per-cell "This month"/"Previous month" labels already
+     cover it. */
   .proj-gallery-list-header{
     display:grid;
-    grid-template-columns:minmax(140px,1fr) 110px minmax(180px,1.4fr) minmax(180px,1.4fr);
+    grid-template-columns:minmax(140px,1fr) 110px repeat(var(--proj-mu-col-count,2), minmax(180px,1.4fr));
     gap:10px;
     margin-bottom:8px;
   }
   .proj-mu-cell-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:4px;
     padding:0 10px;
     font-size:11px;
     font-weight:700;
