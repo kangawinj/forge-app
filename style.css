@@ -1968,6 +1968,18 @@
     padding:20px;
   }
   .modal-overlay.open{display:flex;}
+  /* Scroll-lock the background page while any modal is open (per request
+     -- scrolling over a modal used to scroll the page behind it instead,
+     since body is the app's real scroll container (see body's own
+     overflow-x:hidden above) and a modal short enough to fit within its
+     own max-height:88vh has nothing of its own to scroll, so the wheel/
+     trackpad gesture fell straight through the overlay to whatever's
+     behind it. :has() is already relied on elsewhere in this file (the
+     print-mode rule a few hundred lines down), so browser support here
+     is a non-issue. */
+  body:has(.modal-overlay.open){
+    overflow-y:hidden;
+  }
   /* The password-confirm dialog can be triggered while another modal is
      already open (e.g. deleting from inside Reference Lists, or
      undismissing a guest response from inside the Share External

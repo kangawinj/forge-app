@@ -692,7 +692,8 @@ export const CHANGELOG = [
   { version: "3.0.650", date: "2026-10-02", note: "Admin can now add more month columns to Projects by Status' List view (up to 6, going further back in time) via a button next to the month picker, and remove extra ones again -- applies to everyone's view, not just the admin's own" },
   { version: "3.0.651", date: "2026-10-02", note: "Monthly Update's photos now show as a 5-per-row grid of square thumbnails instead of filename pills, in the quick-edit popup, the List view cell, and the project's own Monthly Updates section. Click a photo to preview it full-size and rename it there" },
   { version: "3.0.652", date: "2026-10-02", note: "Fixed the Attachment Preview popup's Prev/Next buttons literally showing \"${'<'} Prev\" / \"Next ${'>'}\" instead of the arrow symbols" },
-  { version: "3.0.653", date: "2026-10-02", note: "Fixed Monthly Update's quick-edit popup: changing the month and saving now moves that entry to the new month instead of leaving an unchanged copy behind at the old month while also creating a second one at the new month" }
+  { version: "3.0.653", date: "2026-10-02", note: "Fixed Monthly Update's quick-edit popup: changing the month and saving now moves that entry to the new month instead of leaving an unchanged copy behind at the old month while also creating a second one at the new month" },
+  { version: "3.0.654", date: "2026-10-02", note: "Fixed scrolling while any popup/modal is open scrolling the page behind it instead of staying put" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
