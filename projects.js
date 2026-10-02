@@ -1382,8 +1382,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
     chipList.querySelectorAll('[data-role="open-mu-attachment-preview"]').forEach(btn => {
       btn.addEventListener('click', () => {
         const p = projects.find(x => x.id === chipList.dataset.projectId);
-        const entries = p ? (p.monthlySummaries || []).map(migrateMonthlySummary).filter(x => x.month === chipList.dataset.month) : [];
-        const ms = [...entries].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+        const ms = p ? latestMonthlySummaryForMonth(p, chipList.dataset.month) : null;
         if(!ms) return;
         const idx = ms.photos.findIndex(a => a.id === btn.dataset.attachmentId);
         // ms.photos is the SAME array reference as the real project's own
@@ -3234,18 +3233,33 @@ function monthsBackFrom(monthStr, count){
   for(let i = 1; i < count; i++) months.push(previousMonthStr(months[months.length - 1]));
   return months;
 }
-// Monthly Update comparison (List view, per request): reads p.monthlySummaries
-// -- its own array, deliberately separate from Activities Updates'
-// p.monthlyUpdates (see blankProject's comment in projects-data.js for
-// why) -- filtered to entries whose own `month` field matches. Several
-// entries can share a month (e.g. logged twice); the most recently SAVED
-// one wins, per request.
-function projectMonthUpdateInfo(p, monthStr){
+// Several monthlySummaries entries can share one month (logged twice, or
+// moved into a month that already had its own entry via the quick-edit
+// popup's month field) -- this resolves which one "wins" for display/
+// editing: whichever was most recently SAVED (updatedAt, set on every
+// create/edit/move), not whichever happens to have the oldest/newest
+// createdAt. Sorting by createdAt instead of updatedAt was the actual bug
+// behind an entry that was just moved into a month seemingly vanishing --
+// the cell kept showing whichever entry was created first/last in the
+// app's history, never whichever was just acted on. Shared by the cell's
+// own display (projectMonthUpdateInfo below), the quick-edit popup's own
+// lookup (so it always edits the exact entry the cell is showing, not a
+// different one that happens to share the same month), and the cell's
+// photo-preview click handler.
+function latestMonthlySummaryForMonth(p, monthStr){
   const entries = (p.monthlySummaries || [])
     .map(migrateMonthlySummary)
     .filter(ms => ms.month === monthStr);
   if(!entries.length) return null;
-  const latest = [...entries].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
+  return [...entries].sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0))[0];
+}
+// Monthly Update comparison (List view, per request): reads p.monthlySummaries
+// -- its own array, deliberately separate from Activities Updates'
+// p.monthlyUpdates (see blankProject's comment in projects-data.js for
+// why) -- filtered to entries whose own `month` field matches.
+function projectMonthUpdateInfo(p, monthStr){
+  const latest = latestMonthlySummaryForMonth(p, monthStr);
+  if(!latest) return null;
   return {
     text: latest.text || '-',
     recordedAt: latest.updatedAt || latest.createdAt,
@@ -3270,7 +3284,7 @@ function projectMonthUpdateInfo(p, monthStr){
 function openProjMuQuickEdit(projectId, month){
   const p = projects.find(x => x.id === projectId);
   if(!p) return;
-  const existing = (p.monthlySummaries || []).map(migrateMonthlySummary).find(ms => ms.month === month);
+  const existing = latestMonthlySummaryForMonth(p, month);
   projMuQuickEditContext = { projectId, entryId: existing ? existing.id : null };
   projMuQuickEditDraftPhotos = existing ? [...existing.photos] : [];
   document.getElementById('projMuQuickEditProjectName').textContent = p.name || 'Untitled project';
@@ -3375,7 +3389,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
   const entries = (p.monthlySummaries || [])
     .map(migrateMonthlySummary)
     .filter(ms => ms.month === browseMonth)
-    .sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0));
+    .sort((a,b) => (b.updatedAt || b.createdAt || 0) - (a.updatedAt || a.createdAt || 0));
   return `
     <div class="field proj-mu-summary-section" style="margin-bottom:0;margin-top:16px;" id="monthly-updates-${escapeHtml(p.id)}">
       <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;">
