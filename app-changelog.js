@@ -697,7 +697,8 @@ export const CHANGELOG = [
   { version: "3.0.655", date: "2026-10-02", note: "Fixed Monthly Update: when a month already had its own entry and another one got moved into it, the cell (and the quick-edit popup opened from it) could keep showing the older/wrong entry instead of whichever was actually just saved there" },
   { version: "3.0.656", date: "2026-10-02", note: "Monthly Update's quick-edit popup now warns before overwriting -- if the month you're saving to already has a different entry, it shows both the existing text and what would replace it, and lets you cancel instead of silently losing the old one" },
   { version: "3.0.657", date: "2026-10-02", note: "Projects by Status' List view column headers now read \"Summary of October 2026\" instead of \"End of October 2026\"" },
-  { version: "3.0.658", date: "2026-10-02", note: "Projects by Status' List view no longer shows the current month's column by default -- admin adds every column, including the first one, via \"+ Add month column\"" }
+  { version: "3.0.658", date: "2026-10-02", note: "Projects by Status' List view no longer shows the current month's column by default -- admin adds every column, including the first one, via \"+ Add month column\"" },
+  { version: "3.0.659", date: "2026-10-02", note: "Recipe Costing: Overhead Multiplier moved up into Factory Margin's own row, and now echoes (read-only) in front of Company Margin and Customer Margin's rows too, as a reminder it's already factored into those prices" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

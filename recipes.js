@@ -770,10 +770,7 @@ export function renderRecipeEditor(r){
               <input type="number" id="f-overheadMultiplier" min="0" step="0.001" placeholder="e.g. 1.625" style="width:70px;">
               <span>×</span>
             </div>
-          </div>
-          <div></div>
-          <div>
-            <div class="batch-stat-label" title="Markup on cost (after the Overhead Multiplier above) — e.g. 50% means the selling price is that × 1.5, not ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
+            <div class="batch-stat-label" style="margin-top:8px;" title="Markup on cost (after the Overhead Multiplier above) — e.g. 50% means the selling price is that × 1.5, not ÷ 0.5">Factory Margin (Min% – Max% Markup on Cost)</div>
             <div class="batch-scale-row">
               <input type="number" id="f-factoryMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on cost, not a % of the selling price">
               <span>–</span>
@@ -786,7 +783,8 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewFactoryPrice">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="Markup on the Factory Selling Price above, not a % of the final selling price">Company Margin (Min% – Max% Markup on Factory Price)</div>
+            <div class="batch-stat-label" style="opacity:.6;" title="Same Overhead Multiplier as Factory Margin's own row above -- repeated here just as a reminder it's already baked into this price">Overhead Multiplier: <span id="overviewOverheadEchoCompany">—</span>×</div>
+            <div class="batch-stat-label" style="margin-top:8px;" title="Markup on the Factory Selling Price above, not a % of the final selling price">Company Margin (Min% – Max% Markup on Factory Price)</div>
             <div class="batch-scale-row">
               <input type="number" id="f-companyMarginMin" min="0" step="0.01" placeholder="e.g. 40" style="width:64px;" title="Markup on the Factory Selling Price, not a % of the selling price">
               <span>–</span>
@@ -799,7 +797,8 @@ export function renderRecipeEditor(r){
             <div class="batch-stat-value" id="overviewCompanyPrice">—</div>
           </div>
           <div>
-            <div class="batch-stat-label" title="Markup on the Company Selling Price above, not a % of the final selling price">Customer Margin (Min% – Max% Markup on Company Price)</div>
+            <div class="batch-stat-label" style="opacity:.6;" title="Same Overhead Multiplier as Factory Margin's own row above -- repeated here just as a reminder it's already baked into this price">Overhead Multiplier: <span id="overviewOverheadEchoCustomer">—</span>×</div>
+            <div class="batch-stat-label" style="margin-top:8px;" title="Markup on the Company Selling Price above, not a % of the final selling price">Customer Margin (Min% – Max% Markup on Company Price)</div>
             <div class="batch-scale-row">
               <input type="number" id="f-customerMarginMin" min="0" step="0.01" placeholder="e.g. 20" style="width:64px;" title="Markup on the Company Selling Price, not a % of the selling price">
               <span>–</span>
