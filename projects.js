@@ -672,6 +672,14 @@ let projectsByStatusViewMode = 'grid';
 // and resolves to the current Bangkok month lazily, the first time the
 // dashboard actually renders.
 let projectsByStatusMonth = null;
+// The admin-chosen starting month, shared with everyone (appSettings/
+// projectsByStatus.startMonth, see attachProjectsListener) -- '' means
+// "follow the current month". Changing the picker as admin saves it here;
+// for anyone else the picker is just their own view for this session
+// (projectsByStatusMonthIsLocal), which the shared value no longer
+// overrides until they reload.
+let projectsByStatusSharedStartMonth = '';
+let projectsByStatusMonthIsLocal = false;
 // How many month-comparison columns List mode shows -- none by default
 // (per request: the current/selected month's own column used to be
 // forced on with nothing in it yet this early in the month, which just
@@ -1335,8 +1343,18 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
   // an empty/invalid value (e.g. clearing the field) is ignored rather
   // than re-rendering into a broken "Invalid Date" state.
   dashboardContainer.querySelector('#projectsByStatusMonthInput')?.addEventListener('change', e => {
-    if(/^\d{4}-\d{2}$/.test(e.target.value)){
-      projectsByStatusMonth = e.target.value;
+    const v = e.target.value;
+    if(/^\d{4}-\d{2}$/.test(v)){
+      projectsByStatusMonth = v;
+      if(isCurrentUserAdmin()){
+        // Picking the current month stores '' (keep following the
+        // calendar) instead of pinning a month that'd go stale.
+        projectsByStatusMonthIsLocal = false;
+        setDoc(doc(appSettingsCol, 'projectsByStatus'), { startMonth: v === bangkokMonthStr() ? '' : v }, { merge: true })
+          .catch(err => alert('Failed to update: ' + err.message));
+      }else{
+        projectsByStatusMonthIsLocal = true;
+      }
       renderProjectsList();
     }
   });
@@ -1636,7 +1654,7 @@ export function renderProjectsList(){
       return b.count - a.count || a.label.localeCompare(b.label);
     });
   if(dashboardContainer){
-    if(!projectsByStatusMonth) projectsByStatusMonth = bangkokMonthStr();
+    if(!projectsByStatusMonth) projectsByStatusMonth = projectsByStatusSharedStartMonth || bangkokMonthStr();
     dashboardContainer.innerHTML = `
       <div class="dash-metrics" style="margin-bottom:14px;">
         <div class="dash-metric">
@@ -1659,7 +1677,7 @@ export function renderProjectsList(){
         ${projectsByStatusViewMode === 'list' ? `
           <div class="proj-mu-month-picker">
             <label for="projectsByStatusMonthInput">Monthly Update:</label>
-            <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
+            <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}" title="${isCurrentUserAdmin() ? 'Saved as the starting month for everyone (pick the current month to follow the calendar again)' : 'Your own view only — resets to the starting month on refresh'}">
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth(projectsByStatusMonthColumnCount)}px;">
@@ -3173,6 +3191,8 @@ export function attachProjectsListener(){
     unsubscribeProjectsByStatusSettings = onSnapshot(doc(appSettingsCol, 'projectsByStatus'), snap => {
       const data = snap.data();
       projectsByStatusMonthColumnCount = Math.min(Math.max(Number(data?.monthColumnCount) || PROJ_MU_DEFAULT_MONTH_COLUMNS, PROJ_MU_DEFAULT_MONTH_COLUMNS), PROJ_MU_MAX_MONTH_COLUMNS);
+      projectsByStatusSharedStartMonth = /^\d{4}-\d{2}$/.test(data?.startMonth || '') ? data.startMonth : '';
+      if(!projectsByStatusMonthIsLocal) projectsByStatusMonth = projectsByStatusSharedStartMonth || bangkokMonthStr();
       if(mainFeatureView === 'projects') renderProjectsList();
     }, err => {
       console.error('Forge: projects-by-status settings listener error', err);
@@ -3621,6 +3641,9 @@ export function resetProjectsState(){
   if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
   if(unsubscribeProjectsByStatusSettings){ unsubscribeProjectsByStatusSettings(); unsubscribeProjectsByStatusSettings = null; }
   projectsByStatusMonthColumnCount = PROJ_MU_DEFAULT_MONTH_COLUMNS;
+  projectsByStatusSharedStartMonth = '';
+  projectsByStatusMonthIsLocal = false;
+  projectsByStatusMonth = null;
   resetPendingSubmissionsState();
   projectsLoaded = false;
   projects = [];
