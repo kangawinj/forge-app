@@ -1386,7 +1386,11 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
         const ms = [...entries].sort((a,b) => (b.createdAt || 0) - (a.createdAt || 0))[0];
         if(!ms) return;
         const idx = ms.photos.findIndex(a => a.id === btn.dataset.attachmentId);
-        if(idx !== -1) openMuAttachmentPreview(ms.photos, idx);
+        // ms.photos is the SAME array reference as the real project's own
+        // (migrateMonthlySummary only copies in a missing field, never the
+        // array itself) -- so a rename in the preview popup already lands
+        // on the real data; this just persists + redraws.
+        if(idx !== -1) openMuAttachmentPreview(ms.photos, idx, () => { scheduleProjectSave(p); renderProjectsList(); });
       });
     });
   });
@@ -2980,7 +2984,7 @@ export function renderProjectsList(){
           const ms = (p.monthlySummaries || []).map(migrateMonthlySummary).find(x => x.id === entryId);
           if(!ms) return;
           const idx = ms.photos.findIndex(a => a.id === btn.dataset.attachmentId);
-          if(idx !== -1) openMuAttachmentPreview(ms.photos, idx);
+          if(idx !== -1) openMuAttachmentPreview(ms.photos, idx, () => { scheduleProjectSave(p); renderProjectsList(); });
         });
       });
       if(isEditing){
@@ -3272,7 +3276,7 @@ function openProjMuQuickEdit(projectId, month){
   document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
   const photosEditorEl = document.getElementById('projMuQuickEditPhotosEditor');
   photosEditorEl.innerHTML = `
-    <div class="mu-attachments-chiplist"></div>
+    <div class="mu-attachments-chiplist proj-mu-photos-grid"></div>
     <label class="btn btn-sm mu-attach-btn">${icon('paperclip', 14)} Add Photo<input type="file" class="mu-attach-input" accept="image/*" multiple style="display:none;"></label>
   `;
   wireMuAttachmentEditor(photosEditorEl, () => projMuQuickEditDraftPhotos, null, PROJ_MU_QUICK_EDIT_MAX_PHOTOS);
@@ -3336,7 +3340,7 @@ function renderProjMuCell(info, variant, projectId, month){
     <div class="proj-mu-cell proj-mu-cell-${variant}" ${dataAttrs}>
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
-      ${info.photos && info.photos.length ? `<div class="mu-attachments-chiplist" data-role="proj-mu-photos" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}">${muAttachmentChipsHtml(info.photos, false)}</div>` : ''}
+      ${info.photos && info.photos.length ? `<div class="mu-attachments-chiplist proj-mu-photos-grid" data-role="proj-mu-photos" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}">${muAttachmentChipsHtml(info.photos, false)}</div>` : ''}
       <div class="proj-mu-cell-meta">${info.recordedAt ? escapeHtml(formatActivityDateTime(info.recordedAt)) : '-'}${info.createdBy ? ' &nbsp;·&nbsp; ' + escapeHtml(info.createdBy) : ''}</div>
     </div>
   `;
@@ -3410,7 +3414,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
               ` : ''}
             </div>
             <div class="proj-mu-summary-entry-text">${escapeHtml(ms.text || '-')}</div>
-            ${ms.photos && ms.photos.length ? `<div class="mu-attachments-chiplist" data-role="proj-mu-summary-photos">${muAttachmentChipsHtml(ms.photos, false)}</div>` : ''}
+            ${ms.photos && ms.photos.length ? `<div class="mu-attachments-chiplist proj-mu-photos-grid" data-role="proj-mu-summary-photos">${muAttachmentChipsHtml(ms.photos, false)}</div>` : ''}
           </div>
         `;
       }).join('') : `<div class="overview-empty">No update recorded for ${escapeHtml(formatMonthYear(browseMonth))}</div>`}

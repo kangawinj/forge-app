@@ -232,7 +232,11 @@ export function wireMuAttachmentEditor(container, draftArrayGetter, onChange, ma
       btn.addEventListener('click', () => {
         const arr = draftArrayGetter();
         const idx = arr.findIndex(a => a.id === btn.dataset.attachmentId);
-        if(idx !== -1) openMuAttachmentPreview(arr, idx);
+        // onRename just redraws this still-unsaved draft's own chip list --
+        // safe everywhere this editor is used, since the rename only takes
+        // effect for real once the surrounding form's own Save is clicked,
+        // same as any other field in the draft.
+        if(idx !== -1) openMuAttachmentPreview(arr, idx, redraw);
       });
     });
   };
@@ -268,11 +272,15 @@ export function wireMuAttachmentEditor(container, draftArrayGetter, onChange, ma
 // Images render inline, PDFs render in an iframe (browsers can display
 // those natively), anything else (Word/Excel/CSV) falls back to a plain
 // Download button since there's no way to render those in a browser tab.
-// Prev/Next cycles through every attachment on the same entry.
-let muAttachmentPreviewContext = null; // { attachments, index }
-export function openMuAttachmentPreview(attachments, index){
+// Prev/Next cycles through every attachment on the same entry. `onRename`
+// is optional (per request, so far only Monthly Update's photos pass one)
+// -- when given, the title doubles as a rename field (see
+// .mu-attachment-preview-title-input); without one it stays plain/
+// disabled, since a rename there would have nowhere to be saved.
+let muAttachmentPreviewContext = null; // { attachments, index, onRename }
+export function openMuAttachmentPreview(attachments, index, onRename){
   if(!attachments || !attachments.length) return;
-  muAttachmentPreviewContext = { attachments, index: Math.max(0, Math.min(index, attachments.length - 1)) };
+  muAttachmentPreviewContext = { attachments, index: Math.max(0, Math.min(index, attachments.length - 1)), onRename };
   renderMuAttachmentPreview();
   document.getElementById('muAttachmentPreviewModalOverlay').classList.add('open');
 }
@@ -282,9 +290,11 @@ function closeMuAttachmentPreview(){
 }
 function renderMuAttachmentPreview(){
   if(!muAttachmentPreviewContext) return;
-  const { attachments, index } = muAttachmentPreviewContext;
+  const { attachments, index, onRename } = muAttachmentPreviewContext;
   const a = attachments[index];
-  document.getElementById('muAttachmentPreviewTitle').textContent = a.name;
+  const titleInput = document.getElementById('muAttachmentPreviewTitle');
+  titleInput.value = a.name;
+  titleInput.disabled = !onRename;
   const body = document.getElementById('muAttachmentPreviewBody');
   const isPdf = a.dataUrl.startsWith('data:application/pdf');
   if(a.isImage){
@@ -312,4 +322,18 @@ export function initMuAttachmentPreviewModal(){
   wireModalOverlayClose('muAttachmentPreviewModalOverlay', closeMuAttachmentPreview);
   document.getElementById('btnMuAttachmentPreviewPrev').addEventListener('click', () => muAttachmentPreviewStep(-1));
   document.getElementById('btnMuAttachmentPreviewNext').addEventListener('click', () => muAttachmentPreviewStep(1));
+  const titleInput = document.getElementById('muAttachmentPreviewTitle');
+  titleInput.addEventListener('change', () => {
+    if(!muAttachmentPreviewContext?.onRename) return;
+    const { attachments, index, onRename } = muAttachmentPreviewContext;
+    const a = attachments[index];
+    const next = titleInput.value.trim();
+    if(!next || next === a.name){ titleInput.value = a.name; return; }
+    a.name = next;
+    document.getElementById('btnMuAttachmentPreviewDownload').download = a.name;
+    onRename(a);
+  });
+  titleInput.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); titleInput.blur(); }
+  });
 }

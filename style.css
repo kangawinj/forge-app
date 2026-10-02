@@ -1999,6 +1999,28 @@
     font-size:15px;
     color:var(--primary-dark);
   }
+  /* Attachment Preview's own title doubles as a rename field (per
+     request) -- disabled (plain, no hover/focus background) for callers
+     of openMuAttachmentPreview that don't pass an onRename handler, since
+     a rename there wouldn't have anywhere to be saved. */
+  .mu-attachment-preview-title-input{
+    border:none;
+    background:none;
+    padding:2px 4px;
+    margin:-2px -4px;
+    flex:1;
+    min-width:0;
+    font:inherit;
+  }
+  .mu-attachment-preview-title-input:hover:not(:disabled),
+  .mu-attachment-preview-title-input:focus:not(:disabled){
+    background:var(--bg);
+    border-radius:var(--radius);
+  }
+  .mu-attachment-preview-title-input:disabled{
+    color:inherit;
+    cursor:default;
+  }
   .modal-header-actions{
     display:flex;
     align-items:center;
@@ -3756,6 +3778,59 @@
   .mu-attachment-name-text{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
   .mu-attachment-remove{display:flex;align-items:center;justify-content:center;background:none;border:none;color:var(--text-dim);cursor:pointer;padding:0;flex-shrink:0;}
   .mu-attachment-remove:hover{color:var(--danger);}
+  /* Monthly Update's own photo chip-lists (List view cell, the project
+     detail page's Monthly Updates entries, and the quick-edit popup's own
+     editor) show as a fixed 5-per-row grid of square thumbnails (per
+     request) instead of the filename pills above -- a photo's whole
+     point is to be glanced at, and pills with the full filename wrap
+     messily past 2-3. Reuses the shared .mu-attachment-chip/-thumb/-remove
+     markup from muAttachmentChipsHtml, just restyled onto this grid --
+     clicking a thumbnail still opens the normal full-size Preview popup,
+     which is where the filename can now be edited (see
+     .mu-attachment-preview-title-input above). */
+  .proj-mu-photos-grid{
+    display:grid;
+    grid-template-columns:repeat(5,1fr);
+    gap:4px;
+  }
+  .proj-mu-photos-grid .mu-attachment-chip{
+    position:relative;
+    display:block;
+    max-width:none;
+    padding:0;
+    border:none;
+    background:none;
+    border-radius:var(--radius);
+  }
+  .proj-mu-photos-grid .mu-attachment-name{
+    display:block;
+    width:100%;
+    padding:0;
+  }
+  .proj-mu-photos-grid .mu-attachment-thumb,
+  .proj-mu-photos-grid .mu-attachment-file-icon{
+    width:100%;
+    aspect-ratio:1;
+    border-radius:var(--radius);
+    object-fit:cover;
+  }
+  .proj-mu-photos-grid .mu-attachment-name-text{
+    display:none;
+  }
+  .proj-mu-photos-grid .mu-attachment-remove{
+    position:absolute;
+    top:2px;
+    right:2px;
+    width:16px;
+    height:16px;
+    background:rgba(0,0,0,.55);
+    color:#fff;
+    border-radius:50%;
+  }
+  .proj-mu-photos-grid .mu-attachment-remove:hover{
+    background:var(--danger);
+    color:#fff;
+  }
   .mu-attachments-editor{display:flex;flex-wrap:wrap;align-items:center;gap:6px;}
   .mu-attach-btn{display:inline-flex;align-items:center;gap:5px;}
   /* Products' Allergens -- search + multi-tick picker (see
