@@ -141,7 +141,7 @@ function computeCostingData(r, ov){
 
   // Factory price = Material + Overhead + Profit shares of 100% (see factoryPriceFromShares).
   const overheadPct = pct(overheadPctFromMultiplier(r.overheadMultiplier));
-  const factoryMarginMin = pct(r.factoryMarginMin), factoryMarginMax = pct(r.factoryMarginMax);
+  const factoryMarginMin = pct(r.factoryMarginMin) ?? 0, factoryMarginMax = pct(r.factoryMarginMax) ?? 0; // blank counts as 0%
   const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
   const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
   const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);

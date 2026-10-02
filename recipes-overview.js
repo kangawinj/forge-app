@@ -335,8 +335,9 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     const el = document.getElementById(id);
     if(el && el !== document.activeElement) el.value = overheadRaw;
   });
-  const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value);
-  const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value);
+  // A blank Factory Margin counts as 0% (Overhead alone is a valid price).
+  const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value) ?? 0;
+  const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value) ?? 0;
 
   const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMin);
   const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPct, factoryMarginMax);
