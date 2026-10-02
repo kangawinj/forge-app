@@ -1655,7 +1655,7 @@ export function renderProjectsList(){
             <span></span>
             ${monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).map((m, i, arr) => `
               <span class="proj-mu-cell-header">
-                <span>End of ${escapeHtml(formatMonthYear(m))}</span>
+                <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
                 ${isCurrentUserAdmin() && i === arr.length - 1 && i >= PROJ_MU_DEFAULT_MONTH_COLUMNS ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
               </span>
             `).join('')}
@@ -3321,6 +3321,27 @@ function saveProjMuQuickEdit(){
   // instead of leaving it behind at the old month and creating a second
   // one at the new month.
   const existing = entryId ? p.monthlySummaries.find(ms => ms.id === entryId) : null;
+  // Per request: if this save is landing on a month that already has a
+  // DIFFERENT entry (a genuine move into an occupied month, or typing a
+  // fresh entry and then picking an already-used month before saving),
+  // confirm before overwriting it -- showing what's there now and what
+  // would replace it. This is exactly the scenario that silently erased
+  // Tamakoyaki's own September data earlier: two entries ended up sharing
+  // a month with no warning, and the wrong one won. Confirming "No" aborts
+  // the whole save untouched; confirming "OK" removes the conflicting
+  // entry so there's only ever one entry per month again, never two
+  // silently sharing it.
+  const conflict = p.monthlySummaries.find(ms => (ms.month || '') === month && ms.id !== existing?.id);
+  if(conflict && (!existing || existing.month !== month)){
+    const truncate = s => s && s.length > 160 ? s.slice(0, 160) + '…' : s;
+    const oldPreview = truncate(conflict.text) || '(no text -- photos only)';
+    const newPreview = truncate(text) || '(no text -- photos only)';
+    const ok = confirm(
+      `${formatMonthYear(month)} already has an update saved:\n\n"${oldPreview}"\n\nSaving here will replace it with:\n\n"${newPreview}"\n\nOverwrite it?`
+    );
+    if(!ok) return;
+    p.monthlySummaries = p.monthlySummaries.filter(ms => ms.id !== conflict.id);
+  }
   if(existing){
     const before = existing.text || '';
     const beforeMonth = existing.month;
