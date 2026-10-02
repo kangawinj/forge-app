@@ -702,7 +702,8 @@ export const CHANGELOG = [
   { version: "3.0.660", date: "2026-10-02", note: "Recipe Costing: Overhead Multiplier now sits side by side with each margin's Min–Max inputs on the same line (Factory, Company and Customer rows), instead of stacked above them -- Company/Customer's copy is a read-only input mirroring the real one" },
   { version: "3.0.661", date: "2026-10-02", note: "Test Results' Summary Table now shows the linked project's photo under its name" },
   { version: "3.0.662", date: "2026-10-02", note: "Recipe Costing: the Overhead Multiplier boxes on the Company and Customer Margin rows are now editable too -- it is still one shared value, so typing in any of the three updates all of them" },
-  { version: "3.0.663", date: "2026-10-02", note: "Recipe Costing: Overhead is now typed as a % markup (62.5% instead of 1.625) and converted to the multiplier automatically, with the resulting \"= × 1.625\" shown beside it -- saved recipes, Excel export and the price math are unchanged, existing 1.625 values just display as 62.5%" }
+  { version: "3.0.663", date: "2026-10-02", note: "Recipe Costing: Overhead is now typed as a % markup (62.5% instead of 1.625) and converted to the multiplier automatically, with the resulting \"= × 1.625\" shown beside it -- saved recipes, Excel export and the price math are unchanged, existing 1.625 values just display as 62.5%" },
+  { version: "3.0.664", date: "2026-10-02", note: "Recipe Costing: Overhead is typed as a % again but with the right meaning -- 25% now gives the old 1.625 (multiplier = 1.3 x (1 + %), so 30% = x 1.69, 0% = x 1.3), shown as \"= x 1.625\" beside the box. Existing recipes display their saved 1.625 as 25; price math and Excel are unchanged" }
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

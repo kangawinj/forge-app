@@ -26,6 +26,13 @@ let overviewSortDir = 'desc';
 // hidden across a page reload or leaving/reopening a recipe instead of
 // resetting open every time.
 const COSTING_MARGIN_VISIBLE_KEY = 'forge_costingMarginVisible';
+// Overhead is typed as a % (per request) and converted to the real
+// multiplier as OVERHEAD_BASE_MULTIPLIER x (1 + %) -- so the reference 25%
+// = 1.3 x 1.25 = the old 1.625. r.overheadMultiplier itself still stores
+// the multiplier (saved recipes, Excel and the price math unchanged).
+export const OVERHEAD_BASE_MULTIPLIER = 1.3;
+export const overheadMultiplierFromPct = pct => +(OVERHEAD_BASE_MULTIPLIER * (1 + pct / 100)).toFixed(6);
+export const overheadPctFromMultiplier = m => (m === '' || m == null || isNaN(parseFloat(m))) ? '' : String(+((parseFloat(m) / OVERHEAD_BASE_MULTIPLIER - 1) * 100).toFixed(4));
 function loadCostingMarginVisible(){
   try {
     const saved = localStorage.getItem(COSTING_MARGIN_VISIBLE_KEY);
@@ -96,7 +103,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     });
     const emptyOverheadPct = parseFloat(document.getElementById('f-overheadMultiplier')?.value);
     document.querySelectorAll('.overhead-times-hint').forEach(el => {
-      el.textContent = `= × ${+(isNaN(emptyOverheadPct) ? 1 : 1 + emptyOverheadPct / 100).toFixed(4)}`;
+      el.textContent = `= × ${+(isNaN(emptyOverheadPct) ? 1 : overheadMultiplierFromPct(emptyOverheadPct)).toFixed(4)}`;
     });
     return;
   }
@@ -322,9 +329,9 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
     return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
   };
-  // The Overhead box is entered as a % markup (62.5 -> × 1.625).
+  // The Overhead box is entered as a % (25 -> × 1.625, see overheadMultiplierFromPct).
   const overheadPct = pct(document.getElementById('f-overheadMultiplier')?.value);
-  const overheadMultiplier = overheadPct != null ? 1 + overheadPct / 100 : null;
+  const overheadMultiplier = overheadPct != null ? overheadMultiplierFromPct(overheadPct) : null;
   document.querySelectorAll('.overhead-times-hint').forEach(el => {
     el.textContent = `= × ${+(overheadMultiplier ?? 1).toFixed(4)}`;
   });

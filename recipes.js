@@ -58,7 +58,7 @@ import { migrateTrial } from './trials-data.js';
 // Circular imports back to the four files split out below -- safe, same
 // pattern proven throughout this session's other splits: every cross-call
 // happens inside an event handler, never at module-evaluation time.
-import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible } from './recipes-overview.js';
+import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible, overheadMultiplierFromPct, overheadPctFromMultiplier } from './recipes-overview.js';
 import { renderProcesses } from './recipes-processes.js';
 import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent, fixTrialNumber } from './recipes-lifecycle.js';
 // recipes-excel.js imports costingMarginVisible straight from this file --
@@ -768,7 +768,7 @@ export function renderRecipeEditor(r){
             <div>
               <div class="batch-stat-label">Overhead Multiplier</div>
               <div class="batch-scale-row">
-                <input type="number" id="f-overheadMultiplier" min="0" step="0.01" placeholder="e.g. 62.5" style="width:70px;" title="Enter as a % markup — 62.5% = × 1.625, 0% = × 1">
+                <input type="number" id="f-overheadMultiplier" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Enter as a % — 25% = × 1.625 (converted for you)">
                 <span>%</span>
                 <span class="overhead-times-hint"></span>
               </div>
@@ -791,7 +791,7 @@ export function renderRecipeEditor(r){
             <div>
               <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="0" style="width:70px;" title="Same single Overhead as the other rows (enter as a %) — editing it here changes all three">
+                <input type="number" id="overviewOverheadEchoCompany" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows (enter as a %, 25% = × 1.625) — editing it here changes all three">
                 <span>%</span>
                 <span class="overhead-times-hint"></span>
               </div>
@@ -814,7 +814,7 @@ export function renderRecipeEditor(r){
             <div>
               <div class="batch-stat-label" title="One shared Overhead Multiplier — the same value on every row, editable from any of them">Overhead Multiplier</div>
               <div class="batch-scale-row">
-                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="0" style="width:70px;" title="Same single Overhead as the other rows (enter as a %) — editing it here changes all three">
+                <input type="number" id="overviewOverheadEchoCustomer" min="0" step="0.01" placeholder="e.g. 25" style="width:70px;" title="Same single Overhead as the other rows (enter as a %, 25% = × 1.625) — editing it here changes all three">
                 <span>%</span>
                 <span class="overhead-times-hint"></span>
               </div>
@@ -835,7 +835,7 @@ export function renderRecipeEditor(r){
           </div>
           </div>
         </div>
-        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a % markup (62.5% = × 1.625, 0% = × 1) and it's converted to the multiplier for you — leave it blank to skip; 62.5% (× 1.625) is the reference Overhead value at 25%. Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
+        <div class="compare-legend" id="costingLegend" style="margin-top:12px;display:${costingMarginVisible ? '' : 'none'};">Costs are calculated from weight × the ingredient's Price/kg in the library (always stored in Thai Baht). "No price set" ingredients are excluded from the total — a "*" marks a total that's a partial estimate because at least one ingredient has no price on file. Picking a Currency other than THB converts every figure above using the Exchange Rate you enter (1 unit of that currency = however many THB, as of the Rate Date) — this app has no live rate feed, so nothing converts until a rate is typed in. The Overhead Multiplier applies to Cost/Serving before any margin — enter it as a % and it's converted to the multiplier for you (25% = × 1.625; the multiplier is 1.3 × (1 + %)) — leave it blank to skip (× 1). Factory/Company/Customer Margin are markup — a 50% margin means Selling Price = Cost × 1.5 (100% = ×2, 0% = ×1), each one marked up on the tier before it, not on the final selling price. Selling Price figures round up to the nearest 0.05 of the selected currency (Cost figures above them don't).</div>
       </div>
     </div>
 
@@ -1283,10 +1283,9 @@ export function renderRecipeEditor(r){
   // editable) are the same single value as Factory's -- typing in any of
   // them writes the one r.overheadMultiplier and the others follow (see
   // renderOverview, which skips whichever box is being typed in).
-  // Entered as a % markup (per request) and stored as the multiplier
-  // (r.overheadMultiplier, e.g. 62.5 -> 1.625) so saved recipes, Excel and
-  // the cost math are unchanged.
-  const overheadPctFromMultiplier = m => (m === '' || m == null) ? '' : String(+((parseFloat(m) - 1) * 100).toFixed(4));
+  // Entered as a % (25 -> × 1.625, see overheadMultiplierFromPct) and
+  // stored as the multiplier (r.overheadMultiplier) so saved recipes, Excel
+  // and the cost math are unchanged.
   ['f-overheadMultiplier', 'overviewOverheadEchoCompany', 'overviewOverheadEchoCustomer'].forEach(id => {
     const el = document.getElementById(id);
     el.value = overheadPctFromMultiplier(r.overheadMultiplier);
@@ -1296,7 +1295,7 @@ export function renderRecipeEditor(r){
         const other = document.getElementById(otherId);
         if(other !== e.target) other.value = v;
       });
-      r.overheadMultiplier = v === '' ? '' : 1 + (parseFloat(v) || 0) / 100;
+      r.overheadMultiplier = v === '' ? '' : overheadMultiplierFromPct(parseFloat(v) || 0);
       updateGrandTotal(r);
       scheduleSave();
     });
