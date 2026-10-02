@@ -5997,3 +5997,20 @@
 .proj-mu-quick-labelrow label{margin-bottom:0;}
 .proj-mu-quick-meta{font-size:11px;color:var(--text-dim);text-align:right;line-height:1.4;}
 .proj-mu-quick-meta b{font-weight:600;color:var(--text);}
+
+/* Projects by Status' List view scrolls sideways once there are more month
+   columns than fit (per request) -- header + every status group live in one
+   scroll box so they move together, and the Project/PD columns stay pinned
+   on the left so you still know whose row you're reading. Fixed 220px/110px
+   columns (see projMuListGridColumns) are what the 230px offset below
+   assumes (220 + 10px gap). */
+.proj-mu-hscroll{overflow-x:auto;}
+.proj-mu-hscroll .proj-gallery-list-identity,
+.proj-mu-hscroll .proj-gallery-list-header > span:nth-child(1){position:sticky;left:0;z-index:2;background:var(--panel);}
+.proj-mu-hscroll .proj-gallery-list-pd,
+.proj-mu-hscroll .proj-gallery-list-header > span:nth-child(2){position:sticky;left:230px;z-index:2;background:var(--panel);box-shadow:10px 0 0 var(--panel);}
+@media (max-width:700px){
+  .proj-mu-hscroll-inner{min-width:0 !important;}
+  .proj-mu-hscroll .proj-gallery-list-identity,
+  .proj-mu-hscroll .proj-gallery-list-pd{position:static;box-shadow:none;}
+}

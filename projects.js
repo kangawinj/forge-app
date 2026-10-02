@@ -1662,6 +1662,7 @@ export function renderProjectsList(){
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}">
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
+          <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth(projectsByStatusMonthColumnCount)}px;">
           ${projectsByStatusMonthColumnCount > 0 ? `
           <div class="proj-gallery-list-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns(projectsByStatusMonthColumnCount))};">
             <span></span>
@@ -1674,8 +1675,9 @@ export function renderProjectsList(){
             `).join('')}
           </div>
           ` : ''}
-        ` : ''}
-        ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
+          ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
+          </div></div>
+        ` : renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
@@ -3256,9 +3258,20 @@ function monthsBackFrom(monthStr, count){
 // that term), and 0 is this feature's own default (see
 // projectsByStatusMonthColumnCount's own comment).
 function projMuListGridColumns(count){
+  // With month columns showing, Project/PD are fixed-width (they stay
+  // pinned on the left while the month columns scroll sideways -- see
+  // .proj-mu-hscroll) and each month column keeps a readable minimum width.
   return count > 0
-    ? `minmax(140px,1fr) 110px repeat(${count}, minmax(180px,1.4fr))`
+    ? `${PROJ_MU_NAME_COL_PX}px ${PROJ_MU_PD_COL_PX}px repeat(${count}, minmax(${PROJ_MU_MONTH_COL_MIN_PX}px,1fr))`
     : 'minmax(140px,1fr) 110px';
+}
+const PROJ_MU_NAME_COL_PX = 220;
+const PROJ_MU_PD_COL_PX = 110;
+const PROJ_MU_MONTH_COL_MIN_PX = 240;
+// Narrowest the list may shrink to before the horizontal scrollbar takes
+// over (columns + their 10px grid gaps).
+function projMuListMinWidth(count){
+  return count > 0 ? PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX + count * PROJ_MU_MONTH_COL_MIN_PX + (count + 1) * 10 : 0;
 }
 // Several monthlySummaries entries can share one month (logged twice, or
 // moved into a month that already had its own entry via the quick-edit
