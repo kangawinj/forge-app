@@ -1836,6 +1836,61 @@ function updatePortionToggleLabel(){
   toggle.classList.toggle('has-selection', n > 0);
 }
 
+// Small "..." popover shared by every Part header and ingredient row
+// (Move up / Move down / Delete) -- replaces the bare red X, which was too
+// easy to hit by accident and had no room for the ordering commands.
+let rowMenuEl = null;
+function closeRowMenu(){
+  if(!rowMenuEl) return;
+  rowMenuEl.remove(); rowMenuEl = null;
+  document.removeEventListener('pointerdown', onRowMenuOutside, true);
+  document.removeEventListener('keydown', onRowMenuKey, true);
+  window.removeEventListener('resize', closeRowMenu);
+}
+function onRowMenuOutside(e){ if(rowMenuEl && !rowMenuEl.contains(e.target)) closeRowMenu(); }
+function onRowMenuKey(e){ if(e.key === 'Escape'){ e.stopPropagation(); closeRowMenu(); } }
+function openRowMenu(anchor, entries){
+  closeRowMenu();
+  const m = document.createElement('div');
+  m.className = 'row-menu';
+  m.setAttribute('role', 'menu');
+  entries.forEach(e => {
+    if(e === 'sep'){ const s = document.createElement('div'); s.className = 'row-menu-sep'; m.appendChild(s); return; }
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'row-menu-item' + (e.danger ? ' danger' : '');
+    b.setAttribute('role', 'menuitem');
+    b.textContent = e.label;
+    if(e.disabled) b.disabled = true;
+    b.addEventListener('click', () => { closeRowMenu(); e.onClick(); });
+    m.appendChild(b);
+  });
+  document.body.appendChild(m);
+  const rect = anchor.getBoundingClientRect();
+  const mw = m.offsetWidth, mh = m.offsetHeight;
+  m.style.left = Math.min(Math.max(8, rect.right - mw), window.innerWidth - mw - 8) + 'px';
+  let top = rect.bottom + 4;
+  if(top + mh > window.innerHeight - 8) top = Math.max(8, rect.top - mh - 4);
+  m.style.top = top + 'px';
+  rowMenuEl = m;
+  document.addEventListener('pointerdown', onRowMenuOutside, true);
+  document.addEventListener('keydown', onRowMenuKey, true);
+  window.addEventListener('resize', closeRowMenu);
+  const first = m.querySelector('button:not([disabled])');
+  if(first) first.focus();
+}
+function moveInArray(array, item, dir){
+  const i = array.indexOf(item), j = i + dir;
+  if(i === -1 || j < 0 || j >= array.length) return false;
+  [array[i], array[j]] = [array[j], array[i]];
+  return true;
+}
+function afterRowMove(r){
+  renderParts(r);
+  renderProcesses(r);
+  scheduleSave();
+}
+
 // Renders one Part — and, recursively, every Sub-part nested inside it — as
 // a branch of the tree. The exact same function handles a top-level Part
 // (siblingsArray = r.parts, isNested = false, since the recipe root holds
@@ -1903,7 +1958,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
           <span class="ing-unit">%</span>
         </div>
       </div>
-      <button class="icon-btn" title="Delete this part">${icon('x')}</button>
+      <button class="icon-btn row-menu-btn" title="More actions" aria-label="More actions" aria-haspopup="menu">${icon('ellipsis')}</button>
     ` : `
       <span class="drag-handle" draggable="true" title="Drag onto another Part's title to move this Part (and everything inside it) there">${icon('grip-vertical', 14)}</span>
       <button type="button" class="part-toggle-btn" title="Expand / collapse this part">${icon('chevron-right')}</button>
@@ -1932,7 +1987,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
           <span class="ing-unit">%</span>
         </div>
       </div>
-      <button class="icon-btn" title="Delete this part">${icon('x')}</button>
+      <button class="icon-btn row-menu-btn" title="More actions" aria-label="More actions" aria-haspopup="menu">${icon('ellipsis')}</button>
     `;
 
   const block = document.createElement('div');
@@ -2235,7 +2290,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
             <input type="number" class="ing-pct-display num-input" step="0.01" min="0" max="100" title="Type a % or a weight (g) — the other one is calculated automatically">
             <span class="ing-unit">%</span>
           </div>
-          <button class="icon-btn" title="Delete">${icon('x')}</button>
+          <button class="icon-btn row-menu-btn" title="More actions" aria-label="More actions" aria-haspopup="menu">${icon('ellipsis')}</button>
         </div>
         <div class="ing-hint"></div>
         <div class="ing-subs"></div>
@@ -2477,13 +2532,21 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       });
 
       delBtn.addEventListener('click', () => {
-        const delIdx = part.items.indexOf(ing);
-        if(delIdx !== -1) part.items.splice(delIdx, 1);
-        if(part.items.length === 0) part.items.push(blankIngredient());
-        renderChildren();
-        refreshDisplays(r);
-        renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
-        scheduleSave();
+        const pos = part.items.indexOf(ing);
+        openRowMenu(delBtn, [
+          { label: 'Move up', disabled: pos <= 0, onClick: () => { if(moveInArray(part.items, ing, -1)) afterRowMove(r); } },
+          { label: 'Move down', disabled: pos === -1 || pos >= part.items.length - 1, onClick: () => { if(moveInArray(part.items, ing, 1)) afterRowMove(r); } },
+          'sep',
+          { label: 'Delete', danger: true, onClick: () => {
+            const delIdx = part.items.indexOf(ing);
+            if(delIdx !== -1) part.items.splice(delIdx, 1);
+            if(part.items.length === 0) part.items.push(blankIngredient());
+            renderChildren();
+            refreshDisplays(r);
+            renderProcesses(r); // drop the deleted ingredient from the "Add Component" picker
+            scheduleSave();
+          } }
+        ]);
       });
 
       childrenContainer.appendChild(branch);
@@ -2540,12 +2603,20 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
     deletePartBtn.style.display = 'none';
   } else {
     deletePartBtn.addEventListener('click', () => {
-      if(!confirm(`Delete "${part.name || 'this part'}" and everything inside it?`)) return;
-      const idx = siblingsArray.indexOf(part);
-      if(idx !== -1) siblingsArray.splice(idx, 1);
-      renderParts(r);
-      renderProcesses(r); // drop the deleted part's ingredients from the "Add Component" picker
-      scheduleSave();
+      const pos = siblingsArray.indexOf(part);
+      openRowMenu(deletePartBtn, [
+        { label: 'Move up', disabled: pos <= 0, onClick: () => { if(moveInArray(siblingsArray, part, -1)) afterRowMove(r); } },
+        { label: 'Move down', disabled: pos === -1 || pos >= siblingsArray.length - 1, onClick: () => { if(moveInArray(siblingsArray, part, 1)) afterRowMove(r); } },
+        'sep',
+        { label: 'Delete part', danger: true, onClick: () => {
+          if(!confirm(`Delete "${part.name || 'this part'}" and everything inside it?`)) return;
+          const idx = siblingsArray.indexOf(part);
+          if(idx !== -1) siblingsArray.splice(idx, 1);
+          renderParts(r);
+          renderProcesses(r); // drop the deleted part's ingredients from the "Add Component" picker
+          scheduleSave();
+        } }
+      ]);
     });
   }
 

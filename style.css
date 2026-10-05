@@ -6234,3 +6234,15 @@
   .part-block:not(.sub-part-row) > .part-header{grid-template-columns:22px 28px minmax(0,1fr) 110px 110px 80px 80px 64px 30px;}
   .part-header > .part-ing-count{display:block;width:auto;text-align:right;}
 }
+
+/* "..." row menu (Part headers and ingredient rows in the Formula tree) */
+.row-menu-btn:hover{background:var(--primary-light);color:var(--primary);}
+.row-menu-btn:focus-visible{outline:2px solid var(--primary);}
+.row-menu{position:fixed;z-index:10002;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 12px 32px rgba(12,24,48,.18);padding:6px;min-width:160px;}
+.row-menu-item{display:block;width:100%;min-height:38px;padding:8px 12px;background:none;border:none;border-radius:8px;font:inherit;color:var(--text);cursor:pointer;text-align:left;}
+.row-menu-item:hover:not(:disabled), .row-menu-item:focus-visible{background:var(--primary-light);outline:none;}
+.row-menu-item:disabled{color:#b6bcc8;cursor:default;}
+.row-menu-item.danger{color:var(--danger);}
+.row-menu-item.danger:hover:not(:disabled){background:var(--danger-light);}
+.row-menu-sep{height:1px;background:var(--border);margin:6px 4px;}
+@media (pointer:coarse){ .row-menu-item{min-height:44px;} .row-menu-btn{min-width:44px;min-height:44px;} }
