@@ -837,30 +837,40 @@ export function renderRecipeEditor(r){
       <div class="card-title">4. Components and Process</div>
       <div class="components-process-grid">
       <div class="ingredients-edit-view cp-mode-workspace">
-        <div class="cp-toolbar">
-          <div class="cp-toolbar-group cp-tb-formula">
-            <span class="cp-toolbar-label">Formula total</span>
-            <span class="tree-node-wt tree-root-wt-wrap">
-              <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" inputmode="decimal" title="Type a total weight (g) to scale the whole recipe proportionally">
-              <span class="ing-unit">g</span>
-            </span>
-            <button type="button" class="tree-formula-clipboard-btn" id="btnCopyFormula" title="Copy this recipe's whole formula (every Part)">${icon('copy', 14)}</button>
-            <button type="button" class="tree-formula-clipboard-btn" id="btnPasteFormula" title="Paste a copied formula here — replaces every Part in this recipe">${icon('clipboard-check', 14)}</button>
+        <div class="tt-head">
+          <div class="tt-head-title">
+            <h3 class="tt-title">Components &amp; Process</h3>
+            <div class="tt-recipe" id="ttRecipeName"></div>
           </div>
-          <div class="cp-toolbar-group cp-tb-prepare">
-            <span class="cp-toolbar-label">Prepare weight</span>
-            <strong class="cp-toolbar-value" id="cpToolbarPrepare">0.00 g</strong>
+          <div class="tt-head-totals">
+            <div class="tt-total">
+              <span class="cp-toolbar-label">Formula total</span>
+              <span class="tree-node-wt tree-root-wt-wrap">
+                <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" inputmode="decimal" title="Type a total weight (g) to scale the whole recipe proportionally" aria-label="Formula total in grams">
+                <span class="ing-unit">g</span>
+              </span>
+              <button type="button" class="tree-formula-clipboard-btn" id="btnCopyFormula" title="Copy this recipe's whole formula (every Part)" aria-label="Copy formula">${icon('copy', 14)}</button>
+              <button type="button" class="tree-formula-clipboard-btn" id="btnPasteFormula" title="Paste a copied formula here — replaces every Part in this recipe" aria-label="Paste formula">${icon('clipboard-check', 14)}</button>
+            </div>
+            <div class="tt-total">
+              <span class="cp-toolbar-label">Prepare weight</span>
+              <strong class="cp-toolbar-value" id="cpToolbarPrepare">0.00 g</strong>
+            </div>
           </div>
-          <div class="cp-toolbar-group cp-toolbar-scale">
-            <label class="cp-toolbar-label" for="f-scaleTo">Scale recipe to (g)</label>
-            <input type="number" id="f-scaleTo" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 1000">
-            <button class="btn btn-sm" id="btnScale">Scale</button>
+          <div class="tt-head-save">
+            <span class="tt-status" id="ttStatus" role="status"></span>
+            <button type="button" class="btn btn-primary tt-save" id="ttSaveBtn">${icon('save', 16)} Save changes</button>
           </div>
+        </div>
+        <div class="tt-scale">
+          <label class="cp-toolbar-label" for="f-scaleTo">Scale recipe to (g)</label>
+          <input type="number" id="f-scaleTo" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 1000">
+          <button class="btn btn-sm" id="btnScale">Scale</button>
           <span id="batchTotalDisplay" hidden>0.00 g</span>
-          <button type="button" class="btn btn-sm cp-view-btn cp-lock-exempt" id="btnCpView" title="Switch between the new two-pane layout and the classic inline tree">Classic view</button>
         </div>
         <div class="cp-workspace" id="cpWorkspace"></div>
         <div class="cp-classic" id="cpClassic">
+          <div class="tt-toolbar cp-lock-exempt"><button type="button" class="tt-chip cp-view-toggle" title="Switch between the tree table and this inline layout"></button></div>
           <div class="ingredient-tree">
             <div class="tree-node tree-root-node">
               <span class="tree-node-label">Formula Total</span>
@@ -1094,7 +1104,8 @@ export function renderRecipeEditor(r){
 
   // Switch between the new two-pane "Components & Process" layout and the classic inline tree.
   applyViewMode();
-  document.getElementById('btnCpView').addEventListener('click', () => {
+  document.querySelector('.ingredients-edit-view').addEventListener('click', e => {
+    if(!e.target.closest('.cp-view-toggle')) return;
     setWorkspaceView(isWorkspaceView() ? 'classic' : 'workspace');
     renderParts(r);
   });

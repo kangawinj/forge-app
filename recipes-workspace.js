@@ -1,37 +1,37 @@
-/* ---------- Components & Process workspace ----------
-   The master/detail layout of "4. Components and Process": a collapsible
-   "Recipe structure" tree on the left, and the selected Part's breadcrumb,
-   summary, tabs and ingredient list on the right. It is only a different
-   VIEW over the same recipe data -- every weight / % / Yield / Prepare
-   figure is computed by the same functions the classic inline tree uses
-   (recomputeFromWeights, partTotalWeight, partPrepareWeight,
-   computePrepareWeight ...), and every edit goes through the same rules:
-     - typing a Formula weight sets it directly (the % of its siblings is
-       derived on commit);
-     - typing a % back-solves the weight holding every other sibling fixed
+/* ---------- Components & Process: tree table ----------
+   One table holds the whole formula -- the recipe, every Part and Sub-part,
+   and every ingredient -- as an indented, collapsible tree, so a deeply
+   nested recipe can be read (and edited) on one screen. Columns:
+   Component | Yield | Prepare (g) | Formula (g) | % of parent | note | "...".
+   It is only a different VIEW over the same recipe data: every figure comes
+   from the same functions the old inline tree uses (recomputeFromWeights,
+   partTotalWeight, partPrepareWeight, computePrepareWeight ...), and every
+   edit follows the same rules:
+     - a Formula weight is typed directly; the % of its siblings is derived;
+     - a % back-solves the weight holding every other sibling fixed
        (pct = w / (w + others));
-     - typing a Part's weight / % scales everything inside it
-       proportionally from the state when the edit began;
-     - an ingredient can only get a weight once its name is in the library.
-   Layouts: desktop = tree + table; iPad landscape = compact tree + table
-   without the Prepare column; narrow (iPad portrait / phone) = the tree
-   folds into a "Recipe structure" button, and on phones every ingredient
-   is a card that opens an edit sheet (Done = keep, Cancel = revert; the
-   recipe itself is saved by the existing Save). The old inline tree is
-   still there behind the "Classic view" switch (recipes.js renderParts).
-   Circular imports back to recipes.js are safe -- everything below only
-   runs inside functions, never at module-evaluation time. */
+     - a Part's weight / % scales everything inside it proportionally;
+     - a Part's own Yield is typed on its row (an ingredient's Yield only ever
+       comes from its library variant, so it is shown read-only);
+     - an ingredient only gets a weight once its name is in the library.
+   Values are shown as text; click one to edit it in place (Enter = confirm,
+   Esc = cancel). On narrow screens (iPad portrait, phones) the table keeps
+   just Component / Formula / % and a tap opens an edit sheet with the rest
+   (Done keeps, Cancel reverts). The previous inline layout is still
+   available behind the "Previous layout" switch (recipes.js renderParts).
+   Circular imports back to recipes.js are safe -- everything below only runs
+   inside functions, never at module-evaluation time. */
 import {
-  escapeHtml, icon, ingredientMaster, materialLabel, findMaterialByLabel,
+  escapeHtml, icon, uid, ingredientMaster, materialLabel, findMaterialByLabel,
   computePrepareWeight, partPrepareWeight, isValidYieldPct
 } from './app.js';
 import {
   blankPart, blankIngredient, partTotalWeight, itemWeight, recomputeFromWeights,
-  siblingsWeightExcluding, isPartOrDescendant, round2, round4, formatWeight
+  siblingsWeightExcluding, isPartOrDescendant, round4, formatWeight
 } from './recipes-data.js';
 import {
-  scheduleSave, refreshDisplays, renderParts, unlockedRecipeId, fuzzyMaterialMatches,
-  materialTooltip, hasUnresolvedIngredient, snapshotWeights, applyScaleFromSnapshot,
+  scheduleSave, saveNow, refreshDisplays, renderParts, unlockedRecipeId, fuzzyMaterialMatches,
+  hasUnresolvedIngredient, snapshotWeights, applyScaleFromSnapshot,
   renderIngSubsToggle, registerWorkspaceUpdater
 } from './recipes.js';
 import { renderProcesses } from './recipes-processes.js';
@@ -50,123 +50,76 @@ export function applyViewMode(){
   const on = isWorkspaceView();
   wrap.classList.toggle('cp-mode-workspace', on);
   wrap.classList.toggle('cp-mode-classic', !on);
-  const btn = document.getElementById('btnCpView');
-  if(btn) btn.textContent = on ? 'Classic view' : 'New view';
+  wrap.querySelectorAll('.cp-view-toggle').forEach(b => { b.textContent = on ? 'Previous layout' : 'Tree table'; });
 }
 
 /* ---------- state ---------- */
-const state = { recipeId: null, selected: undefined, selIdx: null, tab: 'ing', navQuery: '', rowQuery: '', navOpen: false };
-let R = null;                 // recipe being edited
-let rowRefs = [];             // per-row refs for in-place refresh
-let navRefs = [];             // { part, weightEl } for in-place refresh
-let navMap = new Map();       // data-nid -> part
-let detailRefs = null;        // header/stat elements for in-place refresh
-let drag = null;              // { item, array }
-const navCollapsed = new WeakSet();
+const state = { recipeId: null, selected: null, query: '', groupsOnly: false };
+let R = null;                       // recipe being edited
+let view = [];                      // entries currently shown, in order
+let allEntries = [];                // every entry (shown or not)
+let rowEls = [];                    // DOM rows, parallel to `view`
+let editing = null;                 // the open in-place editor
+let drag = null;                    // { item, array }
+let statusObserver = null, resizeObserver = null, lastSheetMode = null, toastTimer = null;
+const collapsed = new WeakSet();    // Parts whose children are folded away
 
 const isLocked = () => !R || unlockedRecipeId !== R.id;
 const isPart = it => !!it && (it.kind === 'part' || Array.isArray(it.items));
 const partLabel = p => ((p && p.name) || '').trim() || 'Untitled part';
+const ingLabel = i => ((i && i.name) || '').trim() || 'New ingredient';
 const fixed2 = n => (parseFloat(n) || 0).toFixed(2);
-// A phone-sized screen (the edit sheet becomes a full page sized to the visible viewport) ...
-const isNarrow = () => window.matchMedia && window.matchMedia('(max-width:700px)').matches;
-// ... versus the workspace itself being narrow enough that rows show as cards (matches the CSS container query).
-const isCards = () => { const w = document.getElementById('cpWorkspace'); return !!w && w.clientWidth > 0 && w.clientWidth <= 620; };
-
-function pathTo(parts, target, trail = []){
-  for(const p of (parts || [])){
-    if(!isPart(p)) continue;
-    const t = [...trail, p];
-    if(p === target) return t;
-    const f = pathTo(p.items, target, t);
-    if(f) return f;
-  }
-  return null;
-}
-function idxPathOf(items, target, trail = []){
-  for(let i = 0; i < (items || []).length; i++){
-    const it = items[i];
-    if(!isPart(it)) continue;
-    if(it === target) return [...trail, i];
-    const f = idxPathOf(it.items, target, [...trail, i]);
-    if(f) return f;
-  }
-  return null;
-}
-// Combined Yield effect of a chain of Parts (each Part's own Yield compounds).
-const multFor = path => path.reduce((m, p) => computePrepareWeight(m, p.prepYieldPct), 1);
-const currentPath = () => state.selected ? (pathTo(R.parts, state.selected) || []) : [];
-const containerItems = () => state.selected ? state.selected.items : R.parts;
-const siblingsOfSelected = () => { const p = currentPath(); return p.length > 1 ? p[p.length - 2].items : R.parts; };
 const recipeLabel = () => ((R && R.name) || '').trim() || 'Recipe';
+const isNarrow = () => window.matchMedia && window.matchMedia('(max-width:700px)').matches;
+const wsWidth = () => { const w = document.getElementById('cpWorkspace'); return w ? w.clientWidth : 0; };
+// Phones and iPad portrait: the table keeps Component / Formula / % and a tap opens the edit sheet.
+const isSheetMode = () => { const w = wsWidth(); return w > 0 && w <= 820; };
+const multFor = path => path.reduce((m, p) => computePrepareWeight(m, p.prepYieldPct), 1);
+const selEntry = () => allEntries.find(e => (e.kind === 'root' ? state.selected === null : e.item === state.selected)) || allEntries[0];
 
-function resolveSelection(r){
-  if(state.recipeId !== r.id){
-    state.recipeId = r.id; state.selected = undefined; state.selIdx = null;
-    state.tab = 'ing'; state.navQuery = ''; state.rowQuery = ''; state.navOpen = false;
-  }
-  let ok = state.selected === null || (state.selected && pathTo(r.parts, state.selected));
-  if(!ok && state.selIdx && state.selIdx.length){
-    let items = r.parts, node = null;
-    for(const i of state.selIdx){
-      const it = items[i];
-      if(!isPart(it)){ node = null; break; }
-      node = it; items = it.items;
-    }
-    if(node){ state.selected = node; ok = true; }
-  }
-  if(!ok) state.selected = (r.parts || []).length === 1 ? r.parts[0] : null;
-  state.selIdx = state.selected ? idxPathOf(r.parts, state.selected) : null;
-}
-function setSelection(part){
-  state.selected = part || null;
-  state.selIdx = part ? idxPathOf(R.parts, part) : null;
-  state.tab = 'ing'; state.rowQuery = ''; state.navOpen = false;
-  renderNav();
-  renderDetail();
-  syncNavToggleLabel();
-  const ws = document.getElementById('cpWorkspace');
-  if(ws) ws.classList.remove('nav-open');
-}
-
-/* ---------- small DOM helpers ---------- */
-function lockSubtree(el){
-  if(!el || !isLocked()) return;
-  el.querySelectorAll('input, textarea, select, button').forEach(x => {
-    if(!x.closest('.cp-lock-exempt')) x.disabled = true;
+/* ---------- tree model ---------- */
+function buildEntries(){
+  const out = [{ kind: 'root', item: null, items: R.parts, path: [], depth: 0 }];
+  const walk = (items, path, depth) => items.forEach(it => {
+    const part = isPart(it);
+    out.push({ kind: part ? 'part' : 'ing', item: it, items, path, depth });
+    if(part) walk(it.items, [...path, it], depth + 1);
   });
+  walk(R.parts, [], 1);
+  return out;
 }
-function afterStructureChange(){
-  renderParts(R);          // re-renders this workspace (and recomputes every %)
-  renderProcesses(R);      // Process Components follow Part / ingredient names + weights
-  scheduleSave();
-}
-// Enter commits a number field (same as leaving it), then moves down to the next one on screen.
-function commitOnEnter(el, nextSelector){
-  el.addEventListener('keydown', e => {
-    if(e.key !== 'Enter') return;
-    e.preventDefault();
-    el.blur();
-    if(!nextSelector) return;
-    const all = [...document.querySelectorAll(nextSelector)].filter(n => n.offsetParent !== null && !n.disabled);
-    const next = all[all.indexOf(el) + 1];
-    if(next) next.focus();
+function computeView(){
+  allEntries = buildEntries();
+  const q = state.query.trim().toLowerCase();
+  const show = new Set(), hit = new Set();
+  if(q){
+    allEntries.forEach(e => {
+      if(e.kind === 'root') return;
+      const name = e.kind === 'part' ? partLabel(e.item) : (e.item.name || '');
+      if(name.toLowerCase().includes(q)){ hit.add(e.item); show.add(e.item); e.path.forEach(p => show.add(p)); }
+    });
+  }
+  allEntries.forEach(e => {
+    e.match = false;
+    if(e.kind === 'root'){ e.visible = true; return; }
+    if(q){ e.visible = show.has(e.item); e.match = hit.has(e.item); return; }     // a search shows the found items plus their path
+    e.visible = !(state.groupsOnly && e.kind === 'ing') && !e.path.some(p => collapsed.has(p));
   });
+  view = allEntries.filter(e => e.visible);
 }
-function selectOnFocus(el){
-  let justFocused = false;
-  el.addEventListener('mousedown', () => { justFocused = document.activeElement !== el; });
-  el.addEventListener('focus', () => el.select());
-  el.addEventListener('mouseup', e => { if(justFocused){ e.preventDefault(); justFocused = false; } });
+function validateSelection(){
+  if(state.selected === null) return;
+  if(!allEntries.some(e => e.item === state.selected)) state.selected = null;
 }
-function setNum(el, n){
-  if(!el || document.activeElement === el) return;
-  const v = parseFloat(n) || 0;
-  el.value = v.toFixed(2);
-  el.title = v.toFixed(4);
+// Where "Add ..." goes: the selected Part, or the Part holding the selected ingredient, or the recipe root.
+function targetFor(entry){
+  if(entry.kind === 'root') return { part: null, items: R.parts, path: [], name: recipeLabel() };
+  if(entry.kind === 'part') return { part: entry.item, items: entry.item.items, path: [...entry.path, entry.item], name: partLabel(entry.item) };
+  const part = entry.path[entry.path.length - 1];
+  return { part, items: part.items, path: entry.path, name: partLabel(part) };
 }
 
-/* ---------- scaling a Part (same rules as the classic header fields) ---------- */
+/* ---------- scaling (same rules as the classic header fields) ---------- */
 function seedEmptyPart(part, targetWeight){
   const items = part.items || [];
   if(items.length === 0) return;
@@ -176,16 +129,29 @@ function seedEmptyPart(part, targetWeight){
     else item.weight = round4(share);
   });
 }
-// base + snapshot are captured when an edit begins, so typing digit by digit
-// (through a transient 0) never destroys the original ratios.
-function scalePartTo(part, target, base, snapshot){
+function scalePartTo(part, target){
   if(target < 0) return;
-  const current = base != null ? base : partTotalWeight(part);
+  const current = partTotalWeight(part);
   if(current <= 0){ seedEmptyPart(part, target); return; }
-  applyScaleFromSnapshot(part.items, snapshot || snapshotWeights(part.items), target / current);
+  applyScaleFromSnapshot(part.items, snapshotWeights(part.items), target / current);
+}
+function scaleRecipeTo(target){
+  const current = R.parts.reduce((s, p) => s + partTotalWeight(p), 0);
+  if(target < 0) return;
+  if(current <= 0){ R.parts.forEach(p => seedEmptyPart(p, target / (R.parts.length || 1))); return; }
+  const snap = new Map();
+  R.parts.forEach(p => snapshotWeights(p.items, snap));
+  R.parts.forEach(p => applyScaleFromSnapshot(p.items, snap, target / current));
 }
 
-/* ---------- menus / sheets ---------- */
+/* ---------- shared UI bits ---------- */
+function toast(msg){
+  let t = document.querySelector('.tt-toast');
+  if(!t){ t = document.createElement('div'); t.className = 'tt-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3600);
+}
 let menuEl = null;
 function closeMenu(){
   if(!menuEl) return;
@@ -193,7 +159,6 @@ function closeMenu(){
   document.removeEventListener('pointerdown', onMenuOutside, true);
   document.removeEventListener('keydown', onMenuKey, true);
   window.removeEventListener('resize', closeMenu);
-  window.removeEventListener('scroll', closeMenu, true);
 }
 function onMenuOutside(e){ if(menuEl && !menuEl.contains(e.target)) closeMenu(); }
 function onMenuKey(e){ if(e.key === 'Escape'){ e.stopPropagation(); closeMenu(); } }
@@ -225,7 +190,6 @@ function openMenu(anchor, entries){
   document.addEventListener('pointerdown', onMenuOutside, true);
   document.addEventListener('keydown', onMenuKey, true);
   window.addEventListener('resize', closeMenu);
-  window.addEventListener('scroll', closeMenu, true);
   const first = m.querySelector('button:not([disabled])');
   if(first) first.focus();
 }
@@ -276,6 +240,16 @@ function makeShell({ title, subtitle = '', cancelLabel = 'Cancel', doneLabel = '
   return { backdrop, sheet, body: backdrop.querySelector('.cp-sheet-body'), close, cancel, done };
 }
 
+function commitOnEnter(el){
+  el.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); el.blur(); } });
+}
+function selectOnFocus(el){
+  let justFocused = false;
+  el.addEventListener('mousedown', () => { justFocused = document.activeElement !== el; });
+  el.addEventListener('focus', () => el.select());
+  el.addEventListener('mouseup', e => { if(justFocused){ e.preventDefault(); justFocused = false; } });
+}
+
 /* ---------- ingredient name picker (library search) ---------- */
 function wireNameCombo(input, box, ing, onChange){
   function hide(){ box.innerHTML = ''; box.classList.remove('open'); }
@@ -303,7 +277,7 @@ function wireNameCombo(input, box, ing, onChange){
     ing.name = input.value;
     const m = findMaterialByLabel(input.value);
     ing.materialId = m ? m.id : null;
-    onChange(m);
+    if(onChange) onChange(m);
     refreshDisplays(R);
     renderProcesses(R);
     scheduleSave();
@@ -318,7 +292,7 @@ function libraryHint(ing, matched){
   return { text: 'Pick an ingredient from the library to enter a weight', cls: '' };
 }
 
-/* ---------- moving things around ---------- */
+/* ---------- moving / copying ---------- */
 function moveWithin(array, item, dir){
   const i = array.indexOf(item), j = i + dir;
   if(i === -1 || j < 0 || j >= array.length) return false;
@@ -329,26 +303,39 @@ function moveWithin(array, item, dir){
 function relocate(item, sourceArray, targetArray, index){
   const i = sourceArray.indexOf(item);
   if(i === -1) return false;
+  if(isPart(item) && targetArray !== R.parts){
+    const owner = allEntries.find(e => e.kind === 'part' && e.item.items === targetArray);
+    if(owner && isPartOrDescendant(owner.item, item)) return false;      // never nest a Part inside itself
+  }
   sourceArray.splice(i, 1);
   // A Part never sits completely empty -- same safety net as deleting its last ingredient.
   if(!isPart(item) && sourceArray.length === 0 && sourceArray !== R.parts) sourceArray.push(blankIngredient());
   if(index == null || index > targetArray.length) targetArray.push(item); else targetArray.splice(index, 0, item);
   return true;
 }
-function allPartsFlat(parts = R.parts, depth = 0, out = []){
-  (parts || []).forEach(p => { if(isPart(p)){ out.push({ part: p, depth }); allPartsFlat(p.items, depth + 1, out); } });
-  return out;
+function cloneItem(item){
+  const c = JSON.parse(JSON.stringify(item));
+  const fresh = it => { if(isPart(it)) it.items.forEach(fresh); else it.id = uid(); };
+  fresh(c);
+  if(isPart(c) && (c.name || '').trim()) c.name = `${c.name} (copy)`;
+  return c;
+}
+function afterStructureChange(){
+  renderParts(R);          // re-renders this table (and recomputes every %)
+  renderProcesses(R);      // Process Components follow Part / ingredient names + weights
+  scheduleSave();
 }
 function openMoveTo(item, sourceArray){
   const options = [];
   if(isPart(item)) options.push({ label: `${recipeLabel()} (top level)`, depth: 0, target: R.parts, current: sourceArray === R.parts });
-  allPartsFlat().forEach(({ part, depth }) => {
-    if(isPart(item) && isPartOrDescendant(part, item)) return;      // can't nest a Part inside itself
-    options.push({ label: partLabel(part), depth: depth + 1, target: part.items, current: part.items === sourceArray });
+  allEntries.filter(e => e.kind === 'part').forEach(e => {
+    if(isPart(item) && isPartOrDescendant(e.item, item)) return;      // can't nest a Part inside itself
+    options.push({ label: partLabel(e.item), depth: e.depth, target: e.item.items, current: e.item.items === sourceArray });
   });
-  const shell = makeShell({ title: `Move "${isPart(item) ? partLabel(item) : ((item.name || '').trim() || 'ingredient')}" to…`, footer: false, cancelLabel: 'Close' });
+  const label = isPart(item) ? partLabel(item) : ingLabel(item);
+  const shell = makeShell({ title: `Move "${label}" to…`, footer: false, cancelLabel: 'Close' });
   shell.body.innerHTML = `<div class="cp-pick-list">${options.map((o, i) => `
-    <button type="button" class="cp-pick-item${o.current ? ' current' : ''}" data-i="${i}" style="padding-left:${14 + o.depth * 18}px" ${o.current ? 'disabled' : ''}>
+    <button type="button" class="cp-pick-item${o.current ? ' current' : ''}" data-i="${i}" style="padding-left:${14 + o.depth * 16}px" ${o.current ? 'disabled' : ''}>
       ${icon(o.depth === 0 ? 'package' : 'folder', 16)}<span>${escapeHtml(o.label)}</span>${o.current ? '<em>current</em>' : ''}
     </button>`).join('')}</div>`;
   shell.body.querySelectorAll('.cp-pick-item').forEach(b => b.addEventListener('click', () => {
@@ -358,11 +345,12 @@ function openMoveTo(item, sourceArray){
 }
 
 /* ---------- the edit sheet (Done keeps, Cancel reverts) ---------- */
-function openItemSheet(item, container){
+function openItemSheet(item, ctx){
   closeMenu();
   const part = isPart(item);
-  const owner = state.selected;                       // null at the recipe root
-  const ownerName = owner ? partLabel(owner) : recipeLabel();
+  const container = ctx.items;
+  const ownerName = ctx.path.length ? partLabel(ctx.path[ctx.path.length - 1]) : recipeLabel();
+  const trail = [recipeLabel(), ...ctx.path.map(partLabel)].join(' › ');
   const backup = part
     ? { name: item.name, prepYieldPct: item.prepYieldPct, snap: snapshotWeights(item.items) }
     : JSON.parse(JSON.stringify(item));
@@ -371,7 +359,7 @@ function openItemSheet(item, container){
 
   const shell = makeShell({
     title: part ? 'Edit part' : 'Edit ingredient',
-    subtitle: ownerName,
+    subtitle: trail,
     onCancel(){
       if(part){ item.name = backup.name; item.prepYieldPct = backup.prepYieldPct; applyScaleFromSnapshot(item.items, backup.snap, 1); }
       else{ Object.keys(item).forEach(k => { if(!(k in backup)) delete item[k]; }); Object.assign(item, backup); }
@@ -392,8 +380,8 @@ function openItemSheet(item, container){
     <label class="cp-sheet-label" for="cpShVal" id="cpShValLabel">Formula weight (g)</label>
     <input type="number" id="cpShVal" class="cp-sheet-input cp-sheet-num" step="0.01" min="0" inputmode="decimal" enterkeyhint="done">
     <div class="cp-sheet-readout"><span id="cpShReadLabel"></span><strong id="cpShReadVal"></strong></div>
-    <div class="cp-hint warn" id="cpShMsg" hidden></div>
-    <details class="cp-sheet-more">
+    <div class="cp-hint warn" id="cpShMsg" role="alert" hidden></div>
+    <details class="cp-sheet-more"${isSheetMode() ? ' open' : ''}>
       <summary>More details<small>${part ? 'Yield' : 'Yield, prepare weight, note'}</small></summary>
       <div class="cp-sheet-more-body">
         <div class="cp-sheet-readout"><span>Prepare weight (g)</span><strong id="cpShPrep"></strong></div>
@@ -411,14 +399,13 @@ function openItemSheet(item, container){
   const nameIn = q('#cpShName'), hintEl = q('#cpShHint'), valIn = q('#cpShVal'), valLabel = q('#cpShValLabel');
   const readLabel = q('#cpShReadLabel'), readVal = q('#cpShReadVal'), msg = q('#cpShMsg'), prepEl = q('#cpShPrep');
   nameIn.value = item.name || '';
-  const ancestors = currentPath();                                 // Parts above this row
-  const mult = () => multFor(ancestors);
+  const mult = () => multFor(ctx.path);
 
   function matched(){ return part ? true : !!findMaterialByLabel(nameIn.value); }
   function showMsg(t){ msg.hidden = !t; msg.textContent = t || ''; }
   function refreshReadout(){
     const w = itemWeight(item);
-    if(mode === 'weight'){ readLabel.textContent = `Share of ${ownerName}`; readVal.textContent = `${fixed2(item.percent)}%`; }
+    if(mode === 'weight'){ readLabel.textContent = `% of ${ownerName}`; readVal.textContent = `${fixed2(item.percent)}%`; }
     else{ readLabel.textContent = 'Formula weight'; readVal.textContent = formatWeight(w); }
     const prep = part ? partPrepareWeight(item) * mult() : computePrepareWeight(item.weight, item.prepYieldPct) * mult();
     prepEl.textContent = fixed2(prep);
@@ -445,7 +432,10 @@ function openItemSheet(item, container){
   }
   function applyWeight(w){
     w = Math.max(0, w);
-    if(part) scalePartTo(item, w, baseWeight, backup.snap);
+    if(part){
+      if(baseWeight <= 0) seedEmptyPart(item, w);
+      else applyScaleFromSnapshot(item.items, backup.snap, w / baseWeight);
+    }
     else item.weight = round4(w);
     recomputeFromWeights(R);
   }
@@ -459,7 +449,7 @@ function openItemSheet(item, container){
       const others = container.reduce((s, it) => it === item ? s : s + itemWeight(it), 0);
       const f = v / 100;
       if(others > 0 && f < 1) applyWeight(f * others / (1 - f));
-      else showMsg(others > 0 ? 'Percent must be below 100' : 'Percent can only be set when something else shares this Part');
+      else showMsg(others > 0 ? 'Percent must be below 100' : 'Percent can only be set when something else shares this group');
     }
     refreshReadout();
     scheduleSave();
@@ -492,657 +482,447 @@ function openItemSheet(item, container){
   }
   syncEnabled();
   seedValue();
-  setTimeout(() => {
-    if(!part && !(item.name || '').trim()) nameIn.focus();
-    else if(!valIn.disabled && isNarrow()) { /* leave the keyboard closed until the user taps a field */ }
-  }, 0);
+  setTimeout(() => { if(!part && !(item.name || '').trim()) nameIn.focus(); }, 0);
 }
 
-/* ---------- navigation tree ---------- */
-function nodeMatches(part, q){
-  if(!q) return true;
-  if(partLabel(part).toLowerCase().includes(q)) return true;
-  return part.items.some(it => isPart(it) ? nodeMatches(it, q) : (it.name || '').toLowerCase().includes(q));
+/* ---------- in-place editing ---------- */
+function closeEditor(){
+  if(!editing) return;
+  const { cell, html } = editing;
+  editing = null;
+  cell.classList.remove('editing');
+  cell.innerHTML = html;
 }
-function renderNav(){
-  const tree = document.getElementById('cpTree');
-  if(!tree) return;
-  navMap = new Map(); navRefs = [];
-  let nid = 0;
-  const q = state.navQuery.trim().toLowerCase();
-  const rows = [];
-
-  function nodeHtml(part, depth){
-    const id = String(++nid);
-    navMap.set(id, part);
-    const subs = part.items.filter(isPart);
-    const visibleSubs = subs.filter(s => nodeMatches(s, q));
-    const collapsed = !q && navCollapsed.has(part);
-    const hits = q ? part.items.filter(it => !isPart(it) && (it.name || '').toLowerCase().includes(q)).slice(0, 2).map(it => it.name) : [];
-    const selected = state.selected === part;
-    let html = `
-      <div class="cp-node${selected ? ' selected' : ''}" role="treeitem" tabindex="0" data-nid="${id}" style="--depth:${depth}"
-           ${subs.length ? `aria-expanded="${!collapsed}"` : ''} aria-selected="${selected}">
-        <span class="cp-node-chev${subs.length ? '' : ' empty'}" data-chev="${id}">${subs.length ? icon(collapsed ? 'chevron-right' : 'chevron-down', 16) : ''}</span>
-        <span class="cp-node-icon">${icon(depth <= 1 ? 'package' : 'folder', 18)}</span>
-        <span class="cp-node-text"><span class="cp-node-name">${escapeHtml(partLabel(part))}</span>${hits.length ? `<span class="cp-node-hit">${hits.map(escapeHtml).join(' · ')}</span>` : ''}</span>
-        <span class="cp-node-wt" data-navwt="${id}"></span>
-      </div>`;
-    if(!collapsed) visibleSubs.forEach(s => { html += nodeHtml(s, depth + 1); });
-    return html;
+function currentValue(entry, field){
+  const it = entry.item;
+  if(field === 'name') return it ? (it.name || '') : '';
+  if(field === 'wt') return entry.kind === 'root' ? R.parts.reduce((s, p) => s + partTotalWeight(p), 0) : (entry.kind === 'part' ? partTotalWeight(it) : it.weight);
+  if(field === 'pct') return it.percent;
+  if(field === 'yield') return it.prepYieldPct != null ? it.prepYieldPct : '';
+  return '';
+}
+// Validates and applies one typed value. Returns an error message, or '' when applied.
+function applyValue(entry, field, raw){
+  const it = entry.item;
+  if(field === 'yield'){
+    if(raw === ''){ it.prepYieldPct = null; return ''; }
+    if(!isValidYieldPct(raw)) return 'Yield must be between 0.01% and 999.99%';
+    it.prepYieldPct = parseFloat(raw);
+    return '';
   }
-
-  // Root = the whole recipe.
-  const rootSel = state.selected === null;
-  rows.push(`
-    <div class="cp-node cp-node-root${rootSel ? ' selected' : ''}" role="treeitem" tabindex="0" data-nid="root" style="--depth:0" aria-selected="${rootSel}">
-      <span class="cp-node-chev empty"></span>
-      <span class="cp-node-icon">${icon('flask-conical', 18)}</span>
-      <span class="cp-node-text"><span class="cp-node-name">${escapeHtml(recipeLabel())}</span></span>
-      <span class="cp-node-wt" data-navwt="root"></span>
-    </div>`);
-  R.parts.filter(isPart).filter(p => nodeMatches(p, q)).forEach(p => rows.push(nodeHtml(p, 1)));
-  if(q && rows.length === 1) rows.push('<div class="cp-nav-empty">No parts or ingredients match</div>');
-  tree.innerHTML = rows.join('');
-
-  tree.querySelectorAll('.cp-node').forEach(el => {
-    const id = el.dataset.nid;
-    const part = id === 'root' ? null : navMap.get(id);
-    const choose = () => setSelection(part);
-    el.addEventListener('click', e => {
-      const chev = e.target.closest('.cp-node-chev');
-      if(chev && !chev.classList.contains('empty')){
-        if(navCollapsed.has(part)) navCollapsed.delete(part); else navCollapsed.add(part);
-        renderNav();
-        return;
-      }
-      choose();
-    });
-    el.addEventListener('keydown', e => {
-      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); choose(); }
-      else if(part && e.key === 'ArrowLeft' && !navCollapsed.has(part) && part.items.some(isPart)){ navCollapsed.add(part); renderNav(); }
-      else if(part && e.key === 'ArrowRight' && navCollapsed.has(part)){ navCollapsed.delete(part); renderNav(); }
-    });
-    // Drop an ingredient / Part onto a tree node to move it into that Part.
-    el.addEventListener('dragover', e => {
-      if(!drag) return;
-      if(part){ if(isPart(drag.item) && isPartOrDescendant(part, drag.item)) return; }
-      else if(!isPart(drag.item)) return;     // only a Part can go to the top level
-      e.preventDefault();
-      el.classList.add('drop-target');
-    });
-    el.addEventListener('dragleave', () => el.classList.remove('drop-target'));
-    el.addEventListener('drop', e => {
-      e.preventDefault();
-      el.classList.remove('drop-target');
-      if(!drag) return;
-      if(part && isPart(drag.item) && isPartOrDescendant(part, drag.item)){ drag = null; return; }   // never nest a Part inside itself
-      if(!part && !isPart(drag.item)){ drag = null; return; }
-      const target = part ? part.items : R.parts;
-      if(relocate(drag.item, drag.array, target)){ drag = null; afterStructureChange(); }
-    });
-    navRefs.push({ part, weightEl: el.querySelector('[data-navwt]') });
-  });
-  updateNavWeights();
-  lockSubtree(document.getElementById('cpNav'));
-}
-function updateNavWeights(){
-  navRefs.forEach(({ part, weightEl }) => {
-    if(!weightEl) return;
-    weightEl.textContent = formatWeight(part ? partTotalWeight(part) : R.parts.reduce((s, p) => s + partTotalWeight(p), 0));
-  });
-}
-function syncNavToggleLabel(){
-  const el = document.getElementById('cpNavToggleSel');
-  if(el) el.textContent = state.selected ? partLabel(state.selected) : recipeLabel();
-}
-
-/* ---------- detail pane ---------- */
-function crumbsHtml(path){
-  const parts = [`<button type="button" class="cp-crumb" data-crumb="root">${escapeHtml(recipeLabel())}</button>`];
-  path.forEach((p, i) => {
-    parts.push('<span class="cp-crumb-sep" aria-hidden="true">/</span>');
-    parts.push(i === path.length - 1
-      ? `<span class="cp-crumb current" id="cpCrumbCurrent" aria-current="page">${escapeHtml(partLabel(p))}</span>`
-      : `<button type="button" class="cp-crumb" data-crumb="${i}">${escapeHtml(partLabel(p))}</button>`);
-  });
-  return parts.join('');
-}
-function rowCountText(sel){
-  const items = containerItems();
-  const ing = items.filter(it => !isPart(it) && (it.name || '').trim() !== '').length;
-  const subs = items.filter(isPart).length;
-  if(!sel){ return `${subs} part${subs === 1 ? '' : 's'}`; }
-  const bits = [];
-  if(ing) bits.push(`${ing} ingredient${ing === 1 ? '' : 's'}`);
-  if(subs) bits.push(`${subs} sub-part${subs === 1 ? '' : 's'}`);
-  return bits.join(' · ') || 'Empty';
-}
-
-function renderDetail(){
-  const host = document.getElementById('cpDetail');
-  if(!host) return;
-  closeMenu();
-  const sel = state.selected;
-  const path = currentPath();
-  const parentName = path.length > 1 ? partLabel(path[path.length - 2]) : recipeLabel();
-  const shareLabel = path.length > 1 ? `Share of ${parentName}` : 'Share of recipe';
-
-  host.innerHTML = `
-    <nav class="cp-crumbs cp-lock-exempt" aria-label="Location in the recipe">${crumbsHtml(path)}</nav>
-    <div class="cp-head">
-      <div class="cp-title-wrap">
-        ${sel
-          ? `<input type="text" class="cp-title-input" id="cpPartName" placeholder="Part name" aria-label="Part name">`
-          : `<h3 class="cp-title-static">${escapeHtml(recipeLabel())}</h3>`}
-        <span class="cp-chip" id="cpCount"></span>
-      </div>
-      <button type="button" class="cp-icon-btn cp-head-menu" id="cpHeadMenu" aria-haspopup="menu" aria-label="${sel ? 'Part actions' : 'Recipe actions'}">${icon('ellipsis', 20)}</button>
-    </div>
-    <div class="cp-stats">
-      <div class="cp-stat">
-        <div class="cp-stat-label">${sel ? 'Formula weight' : 'Formula total'}</div>
-        <div class="cp-stat-val">${sel ? '<input type="number" class="cp-num" id="cpPartWt" step="0.01" min="0" inputmode="decimal" aria-label="Formula weight in grams"><em>g</em>' : '<span id="cpRootWt"></span>'}</div>
-      </div>
-      <div class="cp-stat">
-        <div class="cp-stat-label">Prepare weight</div>
-        <div class="cp-stat-val"><span id="cpPartPrep"></span></div>
-      </div>
-      ${sel ? `
-      <div class="cp-stat">
-        <div class="cp-stat-label">Yield</div>
-        <div class="cp-stat-val"><input type="number" class="cp-num" id="cpPartYield" step="0.01" min="0.01" max="999.99" placeholder="100" inputmode="decimal" aria-label="Part yield percent"><em>%</em></div>
-      </div>
-      <div class="cp-stat">
-        <div class="cp-stat-label">${escapeHtml(shareLabel)}</div>
-        <div class="cp-stat-val"><input type="number" class="cp-num" id="cpPartPct" step="0.01" min="0" max="100" inputmode="decimal" aria-label="${escapeHtml(shareLabel)}"><em>%</em></div>
-      </div>` : ''}
-    </div>
-    <div class="cp-tabs cp-lock-exempt" role="tablist">
-      <button type="button" role="tab" class="cp-tab${state.tab === 'ing' ? ' active' : ''}" data-tab="ing" aria-selected="${state.tab === 'ing'}">${sel ? 'Ingredients' : 'Parts'}</button>
-      <button type="button" role="tab" class="cp-tab${state.tab === 'proc' ? ' active' : ''}" data-tab="proc" aria-selected="${state.tab === 'proc'}">Process</button>
-    </div>
-    <div class="cp-panel" id="cpPanel"></div>`;
-
-  detailRefs = {
-    count: host.querySelector('#cpCount'), rootWt: host.querySelector('#cpRootWt'), prep: host.querySelector('#cpPartPrep'),
-    wt: host.querySelector('#cpPartWt'), yld: host.querySelector('#cpPartYield'), pct: host.querySelector('#cpPartPct'),
-    name: host.querySelector('#cpPartName')
-  };
-
-  const crumbBar = host.querySelector('.cp-crumbs');
-  if(crumbBar) crumbBar.scrollLeft = crumbBar.scrollWidth;   // narrow screens scroll the trail; keep the current part in view
-  host.querySelectorAll('[data-crumb]').forEach(b => b.addEventListener('click', () => {
-    const k = b.dataset.crumb;
-    setSelection(k === 'root' ? null : path[+k]);
-  }));
-  host.querySelectorAll('.cp-tab').forEach(b => b.addEventListener('click', () => {
-    state.tab = b.dataset.tab;
-    host.querySelectorAll('.cp-tab').forEach(x => { const on = x === b; x.classList.toggle('active', on); x.setAttribute('aria-selected', on); });
-    renderPanel();
-  }));
-
-  if(sel) wirePartHeader(sel);
-  wireHeadMenu(sel);
-  renderPanel();
-  updateDetailDisplays();
-  lockSubtree(host);
-}
-
-function wirePartHeader(sel){
-  const { name, wt, yld, pct } = detailRefs;
-  name.value = sel.name || '';
-  name.addEventListener('input', () => {
-    sel.name = name.value;
-    const cur = document.getElementById('cpCrumbCurrent'); if(cur) cur.textContent = partLabel(sel);
-    renderNavLabelsOnly();
-    syncNavToggleLabel();
-    renderProcesses(R);
-    scheduleSave();
-  });
-
-  // Scaling a Part's weight / share: same capture-at-focus approach as the classic header fields.
-  let base = null, snap = null;
-  const begin = () => { base = partTotalWeight(sel); snap = snapshotWeights(sel.items); };
-  const end = el => { base = null; snap = null; refreshDisplays(R); setNum(el, el === wt ? partTotalWeight(sel) : sel.percent); };
-  wt.addEventListener('focus', begin);
-  wt.addEventListener('input', () => {
-    const v = parseFloat(wt.value);
-    if(!isNaN(v) && v >= 0) scalePartTo(sel, v, base, snap);
-    scheduleSave();
-  });
-  wt.addEventListener('blur', () => end(wt));
-  commitOnEnter(wt); selectOnFocus(wt);
-
-  pct.addEventListener('focus', begin);
-  pct.addEventListener('input', () => {
-    const v = parseFloat(pct.value);
-    if(isNaN(v) || v < 0) return;
-    const others = siblingsWeightExcluding(siblingsOfSelected(), sel);
-    const f = v / 100;
-    if(others > 0 && f < 1) scalePartTo(sel, f * others / (1 - f), base, snap);
-    scheduleSave();
-  });
-  pct.addEventListener('blur', () => end(pct));
-  commitOnEnter(pct); selectOnFocus(pct);
-
-  yld.addEventListener('input', () => {
-    sel.prepYieldPct = yld.value === '' ? null : (parseFloat(yld.value) || null);
-    yld.classList.toggle('invalid', !isValidYieldPct(yld.value));
-    yld.title = isValidYieldPct(yld.value) ? '' : 'Yield must be between 0.01% and 999.99%';
-    scheduleSave();
-  });
-  yld.addEventListener('blur', () => refreshDisplays(R));
-  commitOnEnter(yld);
-}
-function renderNavLabelsOnly(){
-  document.querySelectorAll('#cpTree .cp-node').forEach(el => {
-    const id = el.dataset.nid;
-    if(id === 'root') return;
-    const part = navMap.get(id);
-    const nameEl = el.querySelector('.cp-node-name');
-    if(part && nameEl) nameEl.textContent = partLabel(part);
-  });
-}
-
-function wireHeadMenu(sel){
-  document.getElementById('cpHeadMenu').addEventListener('click', e => {
-    const btn = e.currentTarget;
-    const entries = [];
-    entries.push({ icon: 'plus', label: sel ? 'Add sub-part' : 'Add part', onClick: () => addPart() });
-    if(sel){
-      const sibs = siblingsOfSelected();
-      entries.push({ icon: 'chevron-up', label: 'Move up', disabled: sibs.indexOf(sel) <= 0, onClick: () => { if(moveWithin(sibs, sel, -1)) afterStructureChange(); } });
-      entries.push({ icon: 'chevron-down', label: 'Move down', disabled: sibs.indexOf(sel) >= sibs.length - 1, onClick: () => { if(moveWithin(sibs, sel, 1)) afterStructureChange(); } });
-      entries.push({ icon: 'move', label: 'Move to…', onClick: () => openMoveTo(sel, sibs) });
-      entries.push('sep');
-      const isLastTop = sibs === R.parts && R.parts.length <= 1;
-      entries.push({ icon: 'trash-2', label: 'Delete part', danger: true, disabled: isLastTop, onClick: () => deleteSelectedPart() });
+  const v = parseFloat(raw);
+  if(raw === '' || !isFinite(v) || v < 0) return 'Enter a number of 0 or more';
+  if(field === 'wt'){
+    if(entry.kind === 'root') scaleRecipeTo(v);
+    else if(entry.kind === 'part') scalePartTo(it, v);
+    else{
+      if(!it.materialId) return 'Pick the ingredient from the library first';
+      it.weight = v;
     }
-    openMenu(btn, entries);
+  }else if(field === 'pct'){
+    if(entry.kind === 'ing' && !it.materialId) return 'Pick the ingredient from the library first';
+    if(v >= 100) return 'Percent must be below 100';
+    const others = entry.kind === 'part' ? siblingsWeightExcluding(entry.items, it) : entry.items.reduce((s, x) => x === it ? s : s + itemWeight(x), 0);
+    if(others <= 0) return 'Percent can only be set when something else shares this group';
+    const target = (v / 100) * others / (1 - v / 100);
+    if(entry.kind === 'part') scalePartTo(it, target);
+    else it.weight = round4(target);
+  }
+  return '';
+}
+function startEdit(idx, field){
+  const entry = view[idx];
+  if(!entry) return;
+  if(isLocked()) return;
+  if(isSheetMode()){
+    if(entry.kind === 'root'){ toast('Use "Scale recipe to" above to change the whole recipe weight'); return; }
+    openItemSheet(entry.item, entry);
+    return;
+  }
+  if(entry.kind === 'root' && field !== 'wt') return;
+  if(entry.kind === 'ing' && (field === 'wt' || field === 'pct') && !entry.item.materialId){ field = 'name'; toast('Pick the ingredient from the library first'); }
+  if(entry.kind === 'ing' && field === 'yield') return;
+  closeEditor();
+  const row = rowEls[idx];
+  const cell = row.querySelector(field === 'name' ? '.tt-c-name .tt-name-block' : `.tt-c-${field}`);
+  if(!cell) return;
+  const original = currentValue(entry, field);
+  const html = cell.innerHTML;
+  const numeric = field !== 'name';
+  cell.classList.add('editing');
+  const label = field === 'name' ? 'Name' : field === 'wt' ? 'Formula weight (g)' : field === 'pct' ? '% of parent' : 'Yield (%)';
+  cell.innerHTML = `
+    <div class="tt-editor${numeric ? ' num' : ' name'}">
+      <div class="${numeric ? '' : 'cp-name-wrap'} tt-input-wrap">
+        <input class="tt-input" type="${numeric ? 'number' : 'text'}" ${numeric ? 'step="0.01" min="0" inputmode="decimal"' : 'autocomplete="off"'} aria-label="${escapeHtml(label)}" enterkeyhint="done">
+        ${numeric ? '' : '<div class="cp-sugg-box"></div>'}
+      </div>
+      <button type="button" class="tt-ok" aria-label="Confirm">${icon('check', 16)}</button>
+      <button type="button" class="tt-cancel" aria-label="Cancel">${icon('x', 16)}</button>
+      <div class="tt-err" role="alert" hidden></div>
+    </div>`;
+  const input = cell.querySelector('.tt-input');
+  const err = cell.querySelector('.tt-err');
+  const ed = { cell, html, entry, field, done: false };
+  editing = ed;
+  input.value = numeric ? (field === 'yield' ? (original === '' ? '' : original) : fixed2(original)) : (original || '');
+  if(!numeric && entry.kind === 'ing'){
+    const orig = { name: entry.item.name, materialId: entry.item.materialId };
+    ed.revert = () => { entry.item.name = orig.name; entry.item.materialId = orig.materialId; };
+    wireNameCombo(input, cell.querySelector('.cp-sugg-box'), entry.item, null);
+  }
+  if(!numeric && entry.kind === 'part'){
+    const orig = entry.item.name;
+    ed.revert = () => { entry.item.name = orig; };
+    input.addEventListener('input', () => { entry.item.name = input.value; renderProcesses(R); scheduleSave(); });
+  }
+  function finish(commit){
+    if(ed.done) return;
+    if(commit && numeric){
+      const msg = applyValue(entry, field, input.value.trim());
+      if(msg){ err.textContent = msg; err.hidden = false; input.classList.add('invalid'); input.setAttribute('aria-invalid', 'true'); input.focus(); return; }
+      recomputeFromWeights(R);
+      ed.done = true;
+      closeEditor();
+      refreshDisplays(R);
+      scheduleSave();
+      return;
+    }
+    ed.done = true;
+    if(!commit && ed.revert){ ed.revert(); recomputeFromWeights(R); }
+    closeEditor();
+    refreshDisplays(R);
+    if(!numeric){ renderRows(); renderProcesses(R); }     // a new name changes the row's text, code line and library check
+  }
+  input.addEventListener('keydown', e => {
+    if(e.key === 'Enter'){ e.preventDefault(); finish(true); focusRow(idx); }
+    else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); finish(false); focusRow(idx); }
   });
+  input.addEventListener('blur', e => {
+    const to = e.relatedTarget;
+    if(to && cell.contains(to)) return;
+    setTimeout(() => { if(!ed.done && editing === ed) finish(true); }, 0);
+  });
+  const ok = cell.querySelector('.tt-ok'), no = cell.querySelector('.tt-cancel');
+  [ok, no].forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));
+  ok.addEventListener('click', () => { finish(true); focusRow(idx); });
+  no.addEventListener('click', () => { finish(false); focusRow(idx); });
+  input.focus();
+  input.select();
+}
+function focusRow(idx){
+  const row = rowEls[idx];
+  if(row) row.focus({ preventScroll: true });
 }
 
-function addPart(){
-  const target = containerItems();
-  const part = blankPart(state.selected ? '' : `Part ${R.parts.length + 1}`);
-  target.push(part);
-  state.selected = part;
-  state.selIdx = idxPathOf(R.parts, part);
-  state.tab = 'ing';
-  afterStructureChange();
-  setTimeout(() => { const n = document.getElementById('cpPartName'); if(n){ n.focus(); n.select(); } }, 0);
+/* ---------- rendering ---------- */
+const GUIDE_CAP_WIDE = 8, GUIDE_CAP_NARROW = 3;
+function rowHtml(e, idx, sheetMode){
+  const it = e.item;
+  const isRoot = e.kind === 'root', part = e.kind === 'part';
+  const group = isRoot || part;
+  const lvl = Math.min(e.depth, sheetMode ? GUIDE_CAP_NARROW : GUIDE_CAP_WIDE);
+  const guides = '<i class="tt-guide"></i>'.repeat(Math.max(0, lvl - (group ? 1 : 0)));
+  const name = isRoot ? recipeLabel() : (part ? partLabel(it) : ingLabel(it));
+  const hasKids = group && (isRoot ? R.parts.length > 0 : it.items.length > 0);
+  const open = group && !collapsed.has(it) && !state.query.trim();
+  const sel = (isRoot ? state.selected === null : state.selected === it);
+  const mat = !group && it.materialId ? ingredientMaster.find(m => m.id === it.materialId) : null;
+  const locked = isLocked();
+  const editable = (field, text, aria) => locked
+    ? `<span class="tt-val" data-f="${field}">${text}</span>`
+    : `<button type="button" class="tt-edit tt-val" data-edit="${field}" data-f="${field}" aria-label="${escapeHtml(aria)}">${text}</button>`;
+  let sub = '';
+  if(!group){
+    if(mat && mat.vendorCode) sub = `<small class="tt-sub">Code: ${escapeHtml(mat.vendorCode)}</small>`;
+    else if(!mat && (it.name || '').trim()) sub = `<small class="tt-sub warn">${icon('alert-triangle', 12)} Not in the library</small>`;
+  }
+  if(e.match && e.path.length) sub += `<small class="tt-sub path">in ${escapeHtml(e.path.map(partLabel).join(' › '))}</small>`;
+  const yv = part ? (it.prepYieldPct != null && it.prepYieldPct !== '' ? it.prepYieldPct : 100) : null;
+  const ingY = !group ? parseFloat(it.prepYieldPct) : NaN;
+  const yieldCell = isRoot ? '<span class="tt-dash" aria-label="none">–</span>'
+    : part ? editable('yield', `${yv} %`, `Edit yield of ${name}`)
+    : (isFinite(ingY) && ingY > 0 && ingY !== 100 ? `<span class="tt-val ro" data-f="yield">${ingY} %</span>` : '<span class="tt-dash" aria-label="none">–</span>');
+  const wtText = fixed2(currentValue(e, 'wt'));
+  const pctCell = isRoot ? '<span class="tt-dash" aria-label="none">–</span>' : editable('pct', `${fixed2(it.percent)} %`, `Edit % of parent for ${name}`);
+  const chev = group
+    ? (hasKids
+        ? `<button type="button" class="tt-chev" data-chev="1" aria-expanded="${open}" aria-label="${open ? 'Collapse' : 'Expand'} ${escapeHtml(name)}">${icon(open ? 'chevron-down' : 'chevron-right', 16)}</button>`
+        : '<span class="tt-chev-sp"></span>')
+    : '<span class="tt-chev-sp"></span>';
+  const nameBtn = (isRoot || locked)
+    ? `<span class="tt-name${group ? ' grp' : ''}" data-f="name">${escapeHtml(name)}</span>`
+    : `<button type="button" class="tt-edit tt-name${group ? ' grp' : ''}${!group && !(it.name || '').trim() ? ' ph' : ''}" data-edit="name" data-f="name" aria-label="Edit name: ${escapeHtml(name)}">${escapeHtml(name)}</button>`;
+  const hasNote = !group && (it.note || '').trim();
+  return `
+    <div class="tt-row ${isRoot ? 'tt-root' : group ? 'tt-part' : 'tt-ing'}${sel ? ' selected' : ''}${e.match ? ' hit' : ''}" role="row" data-idx="${idx}"
+         aria-level="${e.depth + 1}" ${group ? `aria-expanded="${open}"` : ''} aria-selected="${sel}" tabindex="${sel ? 0 : -1}">
+      <div class="tt-c tt-c-handle" role="gridcell">${isRoot || locked ? '' : `<span class="tt-drag" draggable="true" title="Drag to reorder or move" aria-hidden="true">${icon('grip-vertical', 14)}</span>`}</div>
+      <div class="tt-c tt-c-name" role="gridcell">
+        <span class="tt-guides" aria-hidden="true">${guides}</span>${chev}
+        <span class="tt-kind" aria-hidden="true">${icon(group ? 'folder' : 'file-text', 18)}</span>
+        <span class="tt-name-block">${nameBtn}${sub}</span>${hasNote ? `<span class="tt-note-inline" role="img" aria-label="Has a note">${icon('file-text', 14)}</span>` : ''}
+      </div>
+      <div class="tt-c tt-c-yield num" role="gridcell">${yieldCell}</div>
+      <div class="tt-c tt-c-prep num" role="gridcell"><span class="tt-prep" data-f="prep"></span></div>
+      <div class="tt-c tt-c-wt num" role="gridcell">${editable('wt', wtText, `Edit formula weight of ${name}`)}</div>
+      <div class="tt-c tt-c-pct num" role="gridcell">${pctCell}</div>
+      <div class="tt-c tt-c-note" role="gridcell">${hasNote ? `<button type="button" class="tt-icon-btn tt-note" aria-label="View note for ${escapeHtml(name)}" title="${escapeHtml(it.note)}">${icon('file-text', 18)}</button>` : ''}</div>
+      <div class="tt-c tt-c-menu" role="gridcell"><button type="button" class="tt-icon-btn tt-menu" aria-haspopup="menu" aria-label="Actions for ${escapeHtml(name)}"${locked ? ' disabled' : ''}>${icon('ellipsis', 18)}</button></div>
+    </div>`;
 }
-function deleteSelectedPart(){
-  const sel = state.selected;
-  if(!sel) return;
-  if(!confirm(`Delete "${sel.name || 'this part'}" and everything inside it?`)) return;
-  const path = currentPath();
-  const sibs = siblingsOfSelected();
-  const i = sibs.indexOf(sel);
-  if(i !== -1) sibs.splice(i, 1);
-  state.selected = path.length > 1 ? path[path.length - 2] : null;
-  state.selIdx = state.selected ? idxPathOf(R.parts, state.selected) : null;
-  afterStructureChange();
+
+function renderRows(){
+  const grid = document.getElementById('ttRows');
+  if(!grid) return;
+  closeEditor();
+  closeMenu();
+  computeView();
+  validateSelection();
+  const sheetMode = isSheetMode();
+  lastSheetMode = sheetMode;
+  grid.innerHTML = view.map((e, i) => rowHtml(e, i, sheetMode)).join('') +
+    (R.parts.length === 0 ? '<div class="tt-empty">No parts yet — use “Add part” below to create the first one</div>' : '') +
+    (state.query.trim() && view.length <= 1 && R.parts.length ? '<div class="tt-empty">Nothing in this recipe matches your search</div>' : '');
+  rowEls = [...grid.querySelectorAll('.tt-row')];
+  updateDisplays();
+  renderCommandBar();
 }
+
+// Prepare / weights / % in place (never touches an open editor).
+function updateDisplays(){
+  if(!R || !rowEls.length) return;
+  view.forEach((e, i) => {
+    const row = rowEls[i];
+    if(!row) return;
+    const it = e.item;
+    const isRoot = e.kind === 'root';
+    let prep;
+    if(isRoot) prep = R.parts.reduce((s, p) => s + partPrepareWeight(p), 0);
+    else if(e.kind === 'part') prep = partPrepareWeight(it) * multFor(e.path);
+    else prep = computePrepareWeight(it.weight, it.prepYieldPct) * multFor(e.path);
+    const set = (f, text) => { const el = row.querySelector(`[data-f="${f}"]`); if(el && !el.closest('.editing')) el.textContent = text; };
+    set('prep', fixed2(prep));
+    set('wt', fixed2(currentValue(e, 'wt')));
+    if(!isRoot) set('pct', `${fixed2(it.percent)} %`);
+    if(e.kind === 'part'){ const y = it.prepYieldPct != null && it.prepYieldPct !== '' ? it.prepYieldPct : 100; set('yield', `${y} %`); }
+    const y = isRoot ? NaN : parseFloat(it.prepYieldPct);
+    const prepEl = row.querySelector('[data-f="prep"]');
+    if(prepEl) prepEl.classList.toggle('lossy', isFinite(y) && y > 0 && y < 100);
+  });
+  updateCommandBarTotals();
+}
+
+function renderCommandBar(){
+  const bar = document.getElementById('ttBar');
+  if(!bar) return;
+  const e = selEntry();
+  const t = targetFor(e);
+  const locked = isLocked();
+  const selName = e.kind === 'root' ? recipeLabel() : (e.kind === 'part' ? partLabel(e.item) : ingLabel(e.item));
+  const toRoot = e.kind === 'root';
+  bar.innerHTML = `
+    <div class="tt-bar-sel"><span class="tt-bar-label">Selected:</span> <strong class="tt-bar-name">${escapeHtml(selName)}</strong>${e.kind === 'ing' ? `<span class="tt-bar-in"> in ${escapeHtml(t.name)}</span>` : ''}</div>
+    <div class="tt-bar-actions">
+      <button type="button" class="btn tt-bar-btn" id="ttAddIng"${locked || toRoot ? ' disabled' : ''} title="${toRoot ? 'Select a part to add ingredients to it' : `Add an ingredient to ${escapeHtml(t.name)}`}">${icon('plus', 16)}<span>Add ingredient</span></button>
+      <button type="button" class="btn tt-bar-btn" id="ttAddSub"${locked ? ' disabled' : ''} title="${toRoot ? 'Add a top-level part' : `Add a sub-part to ${escapeHtml(t.name)}`}">${icon('plus', 16)}<span>${toRoot ? 'Add part' : 'Add sub-part'}</span></button>
+      <button type="button" class="btn tt-bar-btn" id="ttEditProc" title="Go to Process Steps">${icon('sliders-horizontal', 16)}<span>Edit process</span></button>
+    </div>
+    <div class="tt-bar-info" id="ttBarInfo" aria-live="polite"></div>`;
+  updateCommandBarTotals();
+}
+function updateCommandBarTotals(){
+  const info = document.getElementById('ttBarInfo');
+  if(!info) return;
+  const e = selEntry();
+  const t = targetFor(e);
+  const total = t.part ? partTotalWeight(t.part) : R.parts.reduce((s, p) => s + partTotalWeight(p), 0);
+  const pct = t.items.reduce((s, x) => s + (parseFloat(x.percent) || 0), 0);
+  const ok = total <= 0 || Math.abs(pct - 100) < 0.05;
+  info.className = 'tt-bar-info' + (ok ? '' : ' bad');
+  info.innerHTML = `<span class="tt-bar-total">${escapeHtml(t.name)} total: <b>${formatWeight(total)}</b>${total > 0 ? ` · <b>${pct.toFixed(2)}%</b>` : ''}</span>` +
+    (ok ? '' : `<span class="tt-bar-warn">${icon('alert-triangle', 14)} Percent total is ${pct.toFixed(2)}%, not 100%</span>`);
+}
+
+function selectEntry(idx, { scroll } = {}){
+  const e = view[idx];
+  if(!e) return;
+  state.selected = e.kind === 'root' ? null : e.item;
+  rowEls.forEach((el, i) => {
+    const on = i === idx;
+    el.classList.toggle('selected', on);
+    el.setAttribute('aria-selected', on);
+    el.tabIndex = on ? 0 : -1;
+  });
+  renderCommandBar();
+  if(scroll) rowEls[idx].scrollIntoView({ block: 'nearest' });
+}
+
+/* ---------- adding ---------- */
 function addIngredient(){
-  const sel = state.selected;
-  if(!sel) return;
-  if(hasUnresolvedIngredient(sel)){
+  const e = selEntry();
+  if(e.kind === 'root') return;
+  const t = targetFor(e);
+  if(hasUnresolvedIngredient(t.part)){
     alert('This part has an ingredient that is not yet in the library. Please select from the library or add it first before adding the next row.');
     return;
   }
   const ing = blankIngredient();
-  sel.items.push(ing);
-  renderParts(R);
-  refreshDisplays(R);
-  scheduleSave();
-  if(isCards()){
-    openItemSheet(ing, sel.items);
-  }else{
-    setTimeout(() => {
-      const rows = document.querySelectorAll('#cpPanel .cp-row-ing .cp-name-input');
-      const last = rows[rows.length - 1];
-      if(last){ last.focus(); last.scrollIntoView({ block: 'nearest' }); }
-    }, 0);
-  }
+  t.items.push(ing);
+  collapsed.delete(t.part);
+  state.selected = ing;
+  afterStructureChange();
+  focusNew(ing);
+}
+function addSubPart(){
+  const e = selEntry();
+  const t = targetFor(e);
+  const part = blankPart(t.part ? '' : `Part ${R.parts.length + 1}`);
+  t.items.push(part);
+  if(t.part) collapsed.delete(t.part);
+  state.selected = part;
+  afterStructureChange();
+  focusNew(part);
+}
+function focusNew(item){
+  setTimeout(() => {
+    const idx = view.findIndex(x => x.item === item);
+    if(idx === -1) return;
+    selectEntry(idx, { scroll: true });
+    startEdit(idx, 'name');
+  }, 0);
 }
 
-/* ---------- panel: Ingredients / Process ---------- */
-function renderPanel(){
-  const panel = document.getElementById('cpPanel');
-  if(!panel) return;
-  closeMenu();
-  rowRefs = [];
-  if(state.tab === 'proc'){ renderProcessPanel(panel); lockSubtree(panel); return; }
-  const sel = state.selected;
-  const path = currentPath();
-  const ownerName = sel ? partLabel(sel) : recipeLabel();
-  panel.innerHTML = `
-    <div class="cp-listbar">
-      <div class="cp-search cp-search-wide cp-lock-exempt">${icon('search', 16)}<input type="search" id="cpRowSearch" placeholder="${sel ? 'Search ingredients…' : 'Search parts…'}" aria-label="Search this list" value="${escapeHtml(state.rowQuery)}"></div>
-      <div class="cp-listbar-actions">
-        ${sel ? `<button type="button" class="btn cp-btn" id="cpAddSub">${icon('plus', 16)} Add sub-part</button>
-                 <button type="button" class="btn btn-primary cp-btn" id="cpAddIng">${icon('plus', 16)} Add ingredient</button>`
-              : `<button type="button" class="btn btn-primary cp-btn" id="cpAddPart">${icon('plus', 16)} Add part</button>`}
-      </div>
-    </div>
-    <div class="cp-table" role="table" aria-label="${escapeHtml(ownerName)} contents">
-      <div class="cp-row cp-thead" role="row">
-        <div class="cp-c-handle"></div>
-        <div class="cp-c-name" role="columnheader">${sel ? 'Ingredient' : 'Part'}</div>
-        <div class="cp-c-prep num" role="columnheader">Prepare (g)</div>
-        <div class="cp-c-wt num" role="columnheader">Formula (g)</div>
-        <div class="cp-c-pct num" role="columnheader" id="cpPctHead">% of ${escapeHtml(ownerName)}</div>
-        <div class="cp-c-note" role="columnheader">${sel ? 'Notes' : ''}</div>
-        <div class="cp-c-menu"></div>
-      </div>
-      <div class="cp-rows" id="cpRows"></div>
-      <div class="cp-row cp-tfoot" role="row">
-        <div class="cp-c-handle"></div>
-        <div class="cp-c-name"><strong>Total</strong></div>
-        <div class="cp-c-prep num"><strong id="cpFootPrep"></strong></div>
-        <div class="cp-c-wt num"><strong id="cpFootWt"></strong></div>
-        <div class="cp-c-pct num"><strong id="cpFootPct"></strong></div>
-        <div class="cp-c-note cp-foot-ok" id="cpFootOk"></div>
-        <div class="cp-c-menu"></div>
-      </div>
-    </div>
-    <div class="cp-foot-note">${icon('alert-triangle', 14)}<span>Percentages are relative to ${sel ? 'the selected part' : 'the whole recipe'} (<b>${escapeHtml(ownerName)}</b>).</span></div>
-    <div class="cp-mbar">
-      <div class="cp-mbar-total"><span>Total</span><strong id="cpMbarWt"></strong><span class="cp-mbar-dot">•</span><strong id="cpMbarPct"></strong></div>
-      ${sel ? `<button type="button" class="btn btn-primary cp-btn cp-mbar-add" id="cpAddIngM">${icon('plus', 18)} Add ingredient</button>`
-            : `<button type="button" class="btn btn-primary cp-btn cp-mbar-add" id="cpAddPartM">${icon('plus', 18)} Add part</button>`}
-    </div>`;
-
-  const rowsEl = panel.querySelector('#cpRows');
-  const items = containerItems();
-  if(items.length === 0){
-    rowsEl.innerHTML = '<div class="cp-empty">No parts yet — use “Add part” to create the first one</div>';
+/* ---------- row menu ---------- */
+function rowMenuEntries(idx){
+  const e = view[idx];
+  const it = e.item;
+  if(e.kind === 'root'){
+    return [
+      { icon: 'plus', label: 'Add part', onClick: () => { selectEntry(idx); addSubPart(); } },
+      { icon: 'chevron-down', label: 'Expand all', onClick: expandAll },
+      { icon: 'chevron-up', label: 'Collapse all', onClick: collapseAll }
+    ];
   }
-  items.forEach(item => rowsEl.appendChild(isPart(item) ? buildPartRow(item, items) : buildIngredientRow(item, items)));
-
-  const search = panel.querySelector('#cpRowSearch');
-  function applyRowFilter(){
-    const qq = state.rowQuery.trim().toLowerCase();
-    rowRefs.forEach(ref => {
-      const name = isPart(ref.item) ? partLabel(ref.item) : (ref.item.name || '');
-      ref.row.hidden = !!qq && !name.toLowerCase().includes(qq);
-    });
-  }
-  search.addEventListener('input', () => { state.rowQuery = search.value; applyRowFilter(); });
-  applyRowFilter();
-
-  const on = (id, fn) => { const el = panel.querySelector(id); if(el) el.addEventListener('click', fn); };
-  on('#cpAddIng', addIngredient); on('#cpAddIngM', addIngredient);
-  on('#cpAddSub', addPart); on('#cpAddPart', addPart); on('#cpAddPartM', addPart);
-
-  updateDetailDisplays();
-  lockSubtree(panel);
-}
-
-function rowMenuEntries(item, items){
-  const part = isPart(item);
-  const i = items.indexOf(item);
-  const entries = [];
-  entries.push({ icon: part ? 'folder' : 'file-text', label: part ? 'Edit part…' : 'Edit details…', onClick: () => openItemSheet(item, items) });
-  if(part) entries.push({ icon: 'chevron-right', label: 'Open', onClick: () => setSelection(item) });
-  entries.push({ icon: 'chevron-up', label: 'Move up', disabled: i <= 0, onClick: () => { if(moveWithin(items, item, -1)) afterStructureChange(); } });
-  entries.push({ icon: 'chevron-down', label: 'Move down', disabled: i >= items.length - 1, onClick: () => { if(moveWithin(items, item, 1)) afterStructureChange(); } });
-  entries.push({ icon: 'move', label: 'Move to…', onClick: () => openMoveTo(item, items) });
+  const part = e.kind === 'part';
+  const items = e.items;
+  const i = items.indexOf(it);
+  const entries = [{ icon: part ? 'folder' : 'file-text', label: part ? 'Edit part…' : 'Edit details…', onClick: () => openItemSheet(it, e) }];
+  if(part) entries.push({ icon: 'plus', label: 'Add ingredient here', onClick: () => { selectEntry(idx); addIngredient(); } }, { icon: 'plus', label: 'Add sub-part here', onClick: () => { selectEntry(idx); addSubPart(); } });
+  entries.push('sep');
+  entries.push({ icon: 'copy', label: 'Duplicate', onClick: () => { items.splice(i + 1, 0, cloneItem(it)); afterStructureChange(); } });
+  entries.push({ icon: 'chevron-up', label: 'Move up', disabled: i <= 0, onClick: () => { if(moveWithin(items, it, -1)) afterStructureChange(); } });
+  entries.push({ icon: 'chevron-down', label: 'Move down', disabled: i >= items.length - 1, onClick: () => { if(moveWithin(items, it, 1)) afterStructureChange(); } });
+  entries.push({ icon: 'move', label: 'Move to…', onClick: () => openMoveTo(it, items) });
   entries.push('sep');
   const lastTop = items === R.parts && R.parts.length <= 1;
   entries.push({ icon: 'trash-2', label: part ? 'Delete part' : 'Delete', danger: true, disabled: lastTop, onClick: () => {
-    if(part && !confirm(`Delete "${item.name || 'this part'}" and everything inside it?`)) return;
-    const idx = items.indexOf(item);
-    if(idx !== -1) items.splice(idx, 1);
-    if(!part && items.length === 0) items.push(blankIngredient());
+    if(part && !confirm(`Delete "${it.name || 'this part'}" and everything inside it?`)) return;
+    const k = items.indexOf(it);
+    if(k !== -1) items.splice(k, 1);
+    if(!part && items.length === 0 && items !== R.parts) items.push(blankIngredient());
+    if(state.selected === it) state.selected = e.path.length ? e.path[e.path.length - 1] : null;
     afterStructureChange();
   } });
   return entries;
 }
+function expandAll(){ allEntries.forEach(e => { if(e.kind === 'part') collapsed.delete(e.item); }); renderRows(); }
+function collapseAll(){ allEntries.forEach(e => { if(e.kind === 'part' && e.item.items.length) collapsed.add(e.item); }); renderRows(); }
 
-// Drag a row by its handle to reorder (or onto a node of the tree to move it there).
-function wireRowDrag(row, item, items){
-  const handle = row.querySelector('.cp-drag');
-  handle.addEventListener('dragstart', e => {
-    drag = { item, array: items };
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', 'row');
-    row.classList.add('dragging');
-  });
-  handle.addEventListener('dragend', () => { row.classList.remove('dragging'); drag = null; });
-  row.addEventListener('dragover', e => {
-    if(!drag || drag.item === item || drag.array !== items) return;
-    e.preventDefault();
-    const rect = row.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    row.classList.toggle('drop-before', before);
-    row.classList.toggle('drop-after', !before);
-  });
-  row.addEventListener('dragleave', () => row.classList.remove('drop-before', 'drop-after'));
-  row.addEventListener('drop', e => {
-    e.preventDefault();
-    const rect = row.getBoundingClientRect();
-    const before = e.clientY < rect.top + rect.height / 2;
-    row.classList.remove('drop-before', 'drop-after');
-    if(!drag || drag.item === item || drag.array !== items) return;
-    const moving = drag.item;
-    items.splice(items.indexOf(moving), 1);
-    let at = items.indexOf(item);
-    if(!before) at += 1;
-    items.splice(at, 0, moving);
-    drag = null;
-    afterStructureChange();
-  });
-}
-
-function rowShell(kind){
-  const row = document.createElement('div');
-  row.className = `cp-row cp-row-${kind}`;
-  row.setAttribute('role', 'row');
-  return row;
-}
-const cellFields = (pctLabel) => `
-  <div class="cp-cell cp-c-prep"><span class="cp-cell-label">Prepare (g)</span><span class="cp-prep"></span></div>
-  <div class="cp-cell cp-c-wt"><span class="cp-cell-label">Formula (g)</span><span class="cp-field"><input type="number" class="cp-num cp-wt-input" step="0.01" min="0" inputmode="decimal" aria-label="Formula weight in grams"><em>g</em></span></div>
-  <div class="cp-cell cp-c-pct"><span class="cp-cell-label cp-pct-label">${escapeHtml(pctLabel)}</span><span class="cp-field"><input type="number" class="cp-num cp-pct-input" step="0.01" min="0" max="100" inputmode="decimal" aria-label="${escapeHtml(pctLabel)}"><em>%</em></span></div>`;
-
-function buildIngredientRow(ing, items){
-  const row = rowShell('ing');
-  const pctLabel = `% of ${state.selected ? partLabel(state.selected) : recipeLabel()}`;
-  row.innerHTML = `
-    <div class="cp-cell cp-c-handle"><span class="cp-drag" draggable="true" title="Drag to reorder — or drop it on a part in the structure to move it there">${icon('grip-vertical', 16)}</span></div>
-    <div class="cp-cell cp-c-name">
-      <div class="cp-name-wrap"><input type="text" class="cp-name-input" placeholder="Search the library or type a name" autocomplete="off" aria-label="Ingredient name"><div class="cp-sugg-box"></div></div>
-      <div class="cp-name-static"></div>
-      <div class="cp-hint"></div>
-    </div>
-    ${cellFields(pctLabel)}
-    <div class="cp-cell cp-c-note"><button type="button" class="cp-icon-btn cp-note-btn" title="Details and note" aria-label="Details and note">${icon('file-text', 18)}</button></div>
-    <div class="cp-cell cp-c-menu"><button type="button" class="cp-icon-btn cp-menu-btn" aria-haspopup="menu" aria-label="Row actions">${icon('ellipsis', 18)}</button></div>`;
-
-  const nameIn = row.querySelector('.cp-name-input'), nameStatic = row.querySelector('.cp-name-static');
-  const hintEl = row.querySelector('.cp-hint');
-  const wtIn = row.querySelector('.cp-wt-input'), pctIn = row.querySelector('.cp-pct-input');
-  const noteBtn = row.querySelector('.cp-note-btn');
-  nameIn.value = ing.name || '';
-
-  function syncLibrary(m){
-    const matched = m !== undefined ? m : findMaterialByLabel(nameIn.value);
-    wtIn.disabled = !matched; pctIn.disabled = !matched;
-    nameIn.classList.remove('is-linked', 'invalid');
-    if(matched){ nameIn.classList.add('is-linked'); nameIn.title = materialTooltip(matched); } else { nameIn.title = ''; if(nameIn.value.trim()) nameIn.classList.add('invalid'); }
-    const h = libraryHint(ing, matched);
-    hintEl.textContent = h.text; hintEl.className = 'cp-hint ' + h.cls;
-    hintEl.hidden = !h.text;
-    nameStatic.textContent = nameIn.value.trim() || 'Tap to choose an ingredient';
-    nameStatic.classList.toggle('placeholder', !nameIn.value.trim());
-    noteBtn.classList.toggle('has-note', !!(ing.note || '').trim());
-    if(isLocked()){ wtIn.disabled = true; pctIn.disabled = true; }
-  }
-  wireNameCombo(nameIn, row.querySelector('.cp-sugg-box'), ing, m => syncLibrary(m));
-  syncLibrary();
-
-  wtIn.addEventListener('input', () => { ing.weight = clampWeightInput(wtIn.value); scheduleSave(); });
-  wtIn.addEventListener('blur', () => { refreshDisplays(R); setNum(wtIn, ing.weight); });
-  commitOnEnter(wtIn, '#cpPanel .cp-wt-input'); selectOnFocus(wtIn);
-
-  pctIn.addEventListener('input', () => {
-    const v = parseFloat(pctIn.value);
-    if(isNaN(v) || v < 0) return;
-    const others = items.reduce((s, it) => it === ing ? s : s + itemWeight(it), 0);
-    const f = v / 100;
-    if(others > 0 && f < 1){ ing.weight = round4(f * others / (1 - f)); setNum(wtIn, ing.weight); }
-    scheduleSave();
-  });
-  pctIn.addEventListener('blur', () => { refreshDisplays(R); setNum(pctIn, ing.percent); });
-  commitOnEnter(pctIn, '#cpPanel .cp-pct-input'); selectOnFocus(pctIn);
-
-  const openSheet = () => openItemSheet(ing, items);
-  noteBtn.addEventListener('click', openSheet);
-  row.querySelector('.cp-menu-btn').addEventListener('click', e => openMenu(e.currentTarget, rowMenuEntries(ing, items)));
-  // On phones the whole card is the tap target; the library search + inline fields live in the sheet.
-  row.addEventListener('click', e => {
-    if(!isCards() || e.target.closest('.cp-menu-btn, .cp-note-btn, .cp-drag')) return;
-    openSheet();
-  });
-  wireRowDrag(row, ing, items);
-  rowRefs.push({ row, item: ing, kind: 'ing', wtIn, pctIn, prepEl: row.querySelector('.cp-prep'), nameStatic, noteBtn });
-  return row;
-}
-const clampWeightInput = v => Math.max(0, parseFloat(v) || 0);
-
-function buildPartRow(part, items){
-  const row = rowShell('part');
-  const pctLabel = `% of ${state.selected ? partLabel(state.selected) : recipeLabel()}`;
-  row.innerHTML = `
-    <div class="cp-cell cp-c-handle"><span class="cp-drag" draggable="true" title="Drag to reorder — or drop it on another part in the structure to nest it there">${icon('grip-vertical', 16)}</span></div>
-    <div class="cp-cell cp-c-name">
-      <button type="button" class="cp-part-link cp-lock-exempt" title="Open this part">${icon('folder', 18)}<span class="cp-part-link-text"><span class="cp-part-link-name"></span><small class="cp-part-link-sub"></small></span></button>
-    </div>
-    ${cellFields(pctLabel)}
-    <div class="cp-cell cp-c-note"><button type="button" class="cp-icon-btn cp-open-btn cp-lock-exempt" title="Open this part" aria-label="Open this part">${icon('chevron-right', 18)}</button></div>
-    <div class="cp-cell cp-c-menu"><button type="button" class="cp-icon-btn cp-menu-btn" aria-haspopup="menu" aria-label="Row actions">${icon('ellipsis', 18)}</button></div>`;
-  const wtIn = row.querySelector('.cp-wt-input'), pctIn = row.querySelector('.cp-pct-input');
-  const nameEl = row.querySelector('.cp-part-link-name'), subEl = row.querySelector('.cp-part-link-sub');
-
-  let base = null, snap = null;
-  const begin = () => { base = partTotalWeight(part); snap = snapshotWeights(part.items); };
-  const end = (el, value) => { base = null; snap = null; refreshDisplays(R); setNum(el, value()); };
-  wtIn.addEventListener('focus', begin);
-  wtIn.addEventListener('input', () => { const v = parseFloat(wtIn.value); if(!isNaN(v) && v >= 0) scalePartTo(part, v, base, snap); scheduleSave(); });
-  wtIn.addEventListener('blur', () => end(wtIn, () => partTotalWeight(part)));
-  commitOnEnter(wtIn, '#cpPanel .cp-wt-input'); selectOnFocus(wtIn);
-  pctIn.addEventListener('focus', begin);
-  pctIn.addEventListener('input', () => {
-    const v = parseFloat(pctIn.value);
-    if(isNaN(v) || v < 0) return;
-    const others = siblingsWeightExcluding(items, part);
-    const f = v / 100;
-    if(others > 0 && f < 1) scalePartTo(part, f * others / (1 - f), base, snap);
-    scheduleSave();
-  });
-  pctIn.addEventListener('blur', () => end(pctIn, () => part.percent));
-  commitOnEnter(pctIn, '#cpPanel .cp-pct-input'); selectOnFocus(pctIn);
-
-  const open = () => setSelection(part);
-  row.querySelector('.cp-part-link').addEventListener('click', e => { e.stopPropagation(); open(); });
-  row.querySelector('.cp-open-btn').addEventListener('click', e => { e.stopPropagation(); open(); });
-  row.querySelector('.cp-menu-btn').addEventListener('click', e => openMenu(e.currentTarget, rowMenuEntries(part, items)));
-  row.addEventListener('click', e => {
-    if(!isCards() || e.target.closest('.cp-menu-btn, .cp-drag, .cp-part-link, .cp-open-btn, input')) return;
-    open();
-  });
-  wireRowDrag(row, part, items);
-  rowRefs.push({ row, item: part, kind: 'part', wtIn, pctIn, prepEl: row.querySelector('.cp-prep'), nameEl, subEl });
-  return row;
-}
-
-/* ---------- Process tab (read-only; editing stays in "5. Process Steps") ---------- */
-function renderProcessPanel(panel){
-  const sel = state.selected;
-  const name = sel ? partLabel(sel) : '';
-  const list = (R.processes || []).filter(p => {
-    const hasContent = (p.title || '').trim() !== '' || (p.steps || []).some(s => (s || '').trim() !== '');
-    if(!hasContent) return false;
-    if(!sel) return true;
-    return (p.components || []).some(c => (c.name || '').trim() === (sel.name || '').trim() && (sel.name || '').trim() !== '');
-  });
-  panel.innerHTML = `
-    <div class="cp-proc-note">${sel
-      ? `Process steps that use <b>${escapeHtml(name)}</b> as a component.`
-      : 'All process steps for this recipe.'}
-      <button type="button" class="btn cp-btn cp-lock-exempt" id="cpGoProcess">Open Process Steps</button></div>
-    ${list.length ? list.map(p => {
-      const steps = (p.steps || []).filter(s => (s || '').trim() !== '');
-      return `<div class="cp-proc"><div class="cp-proc-title">${escapeHtml(p.title || 'Untitled process')}</div>
-        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="cp-hint">No steps yet</div>'}</div>`;
-    }).join('') : '<div class="cp-empty">No process steps use this part yet — add it as a Component in “5. Process Steps”.</div>'}`;
-  panel.querySelector('#cpGoProcess').addEventListener('click', () => {
-    const t = document.getElementById('processesList');
-    if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
-}
-
-/* ---------- in-place refresh (every figure re-derived from the live data) ---------- */
-function updateDetailDisplays(){
-  if(!R || !detailRefs) return;
-  const sel = state.selected;
-  const path = currentPath();
-  const mult = multFor(path);
-  const items = containerItems();
-  const total = sel ? partTotalWeight(sel) : R.parts.reduce((s, p) => s + partTotalWeight(p), 0);
-  const prepTotal = sel ? partPrepareWeight(sel) * multFor(path.slice(0, -1)) : R.parts.reduce((s, p) => s + partPrepareWeight(p), 0);
-
-  if(detailRefs.count) detailRefs.count.textContent = rowCountText(sel);
-  if(detailRefs.rootWt) detailRefs.rootWt.textContent = formatWeight(total);
-  if(detailRefs.prep){
-    detailRefs.prep.textContent = formatWeight(prepTotal);
-    const py = parseFloat(sel && sel.prepYieldPct);
-    detailRefs.prep.classList.toggle('lossy', !!sel && isFinite(py) && py > 0 && py < 100);
-  }
-  if(sel){
-    setNum(detailRefs.wt, total);
-    setNum(detailRefs.pct, sel.percent);
-    if(detailRefs.yld && document.activeElement !== detailRefs.yld) detailRefs.yld.value = sel.prepYieldPct != null ? sel.prepYieldPct : '';
-  }
-
-  rowRefs.forEach(ref => {
-    const it = ref.item;
-    if(ref.kind === 'ing'){
-      setNum(ref.wtIn, it.weight);
-      setNum(ref.pctIn, it.percent);
-      const prep = computePrepareWeight(it.weight, it.prepYieldPct) * mult;
-      ref.prepEl.textContent = fixed2(prep);
-      const y = parseFloat(it.prepYieldPct);
-      ref.prepEl.classList.toggle('lossy', isFinite(y) && y > 0 && y < 100);
-      ref.noteBtn.classList.toggle('has-note', !!(it.note || '').trim());
-    }else{
-      const w = partTotalWeight(it);
-      setNum(ref.wtIn, w);
-      setNum(ref.pctIn, it.percent);
-      ref.prepEl.textContent = fixed2(partPrepareWeight(it) * mult);
-      ref.nameEl.textContent = partLabel(it);
-      const n = it.items.filter(x => isPart(x) || (x.name || '').trim() !== '').length;
-      ref.subEl.textContent = `${n} item${n === 1 ? '' : 's'}`;
+/* ---------- grid events (one delegated listener each -- cheap for big recipes) ---------- */
+function wireGrid(grid){
+  const rowOf = el => { const r = el.closest('.tt-row'); return r && r.dataset.idx !== undefined ? +r.dataset.idx : -1; };
+  grid.addEventListener('click', ev => {
+    const idx = rowOf(ev.target);
+    if(idx < 0) return;
+    const e = view[idx];
+    if(ev.target.closest('.tt-chev')){
+      if(collapsed.has(e.item)) collapsed.delete(e.item); else collapsed.add(e.item);
+      renderRows();
+      focusRow(idx);
+      return;
     }
+    if(ev.target.closest('.tt-menu')){ selectEntry(idx); openMenu(ev.target.closest('.tt-menu'), rowMenuEntries(idx)); return; }
+    if(ev.target.closest('.tt-note')){ selectEntry(idx); if(!isLocked()) openItemSheet(e.item, e); else toast('Unlock the recipe to edit its note'); return; }
+    if(ev.target.closest('.tt-editor')) return;
+    const editBtn = ev.target.closest('[data-edit]');
+    selectEntry(idx);
+    if(editBtn){ startEdit(idx, editBtn.dataset.edit); return; }
+    if(isSheetMode() && e.kind !== 'root' && !isLocked()) openItemSheet(e.item, e);
   });
-
-  const footWt = document.getElementById('cpFootWt');
-  if(footWt){
-    footWt.textContent = fixed2(total);
-    const pct = items.reduce((s, it) => s + (parseFloat(it.percent) || 0), 0);
-    document.getElementById('cpFootPrep').textContent = fixed2(prepTotal);
-    document.getElementById('cpFootPct').textContent = `${pct.toFixed(2)}%`;
-    const ok = total <= 0 || Math.abs(pct - 100) < 0.05;
-    const okEl = document.getElementById('cpFootOk');
-    okEl.innerHTML = total > 0 ? `<span class="cp-ok ${ok ? '' : 'bad'}">${icon(ok ? 'check' : 'alert-triangle', 14)} Percent total: ${Math.round(pct * 100) / 100}%</span>` : '';
-    const mw = document.getElementById('cpMbarWt'), mp = document.getElementById('cpMbarPct');
-    if(mw) mw.textContent = formatWeight(total);
-    if(mp) mp.textContent = `${pct.toFixed(2)}%`;
+  grid.addEventListener('keydown', ev => {
+    if(ev.target.closest('.tt-editor')) return;
+    const row = ev.target.closest('.tt-row');
+    if(!row || row.dataset.idx === undefined) return;
+    if(ev.target !== row && ev.target.closest('button') && ev.key !== 'ArrowDown' && ev.key !== 'ArrowUp') return;
+    const idx = +row.dataset.idx, e = view[idx];
+    const go = n => { if(n >= 0 && n < view.length){ ev.preventDefault(); selectEntry(n, { scroll: true }); focusRow(n); } };
+    if(ev.key === 'ArrowDown') go(idx + 1);
+    else if(ev.key === 'ArrowUp') go(idx - 1);
+    else if(ev.key === 'Home') go(0);
+    else if(ev.key === 'End') go(view.length - 1);
+    else if(ev.key === 'ArrowRight' && e.kind !== 'ing' && collapsed.has(e.item)){ ev.preventDefault(); collapsed.delete(e.item); renderRows(); focusRow(idx); }
+    else if(ev.key === 'ArrowLeft' && e.kind === 'part' && !collapsed.has(e.item) && e.item.items.length){ ev.preventDefault(); collapsed.add(e.item); renderRows(); focusRow(idx); }
+    else if(ev.key === 'Enter' || ev.key === 'F2'){ ev.preventDefault(); startEdit(idx, ev.key === 'F2' ? 'name' : 'wt'); }
+  });
+  // drag a row by its handle: before/after = reorder (also across groups); middle of a group = move into it
+  grid.addEventListener('dragstart', ev => {
+    const handle = ev.target.closest('.tt-drag');
+    if(!handle) return;
+    const idx = rowOf(handle), e = view[idx];
+    drag = { item: e.item, array: e.items };
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', 'row');
+    rowEls[idx].classList.add('dragging');
+  });
+  grid.addEventListener('dragend', () => { rowEls.forEach(r => r.classList.remove('dragging', 'drop-before', 'drop-after', 'drop-into')); drag = null; });
+  function zoneFor(ev, row, e){
+    const rect = row.getBoundingClientRect();
+    const rel = (ev.clientY - rect.top) / rect.height;
+    if(e.kind === 'root') return 'into';
+    if(e.kind === 'part' && rel > 0.3 && rel < 0.7) return 'into';
+    return rel < 0.5 ? 'before' : 'after';
   }
-  updateNavWeights();
+  function dropAllowed(e, zone){
+    if(!drag || drag.item === e.item) return false;
+    if(e.kind === 'root') return isPart(drag.item);                       // only a Part can go to the top level
+    if(isPart(drag.item)){
+      if(zone === 'into'){ if(e.kind === 'part' && isPartOrDescendant(e.item, drag.item)) return false; }
+      else{
+        if(e.path.includes(drag.item)) return false;                      // not beside one of its own descendants
+      }
+    }else if(zone !== 'into' && e.items === R.parts) return false;        // an ingredient can't sit at the top level
+    return true;
+  }
+  grid.addEventListener('dragover', ev => {
+    const row = ev.target.closest('.tt-row'); if(!row || row.dataset.idx === undefined || !drag) return;
+    const e = view[+row.dataset.idx], zone = zoneFor(ev, row, e);
+    if(!dropAllowed(e, zone)) return;
+    ev.preventDefault();
+    rowEls.forEach(r => r.classList.remove('drop-before', 'drop-after', 'drop-into'));
+    row.classList.add(`drop-${zone}`);
+  });
+  grid.addEventListener('drop', ev => {
+    const row = ev.target.closest('.tt-row'); if(!row || row.dataset.idx === undefined || !drag) return;
+    ev.preventDefault();
+    const e = view[+row.dataset.idx], zone = zoneFor(ev, row, e);
+    if(!dropAllowed(e, zone)){ drag = null; return; }
+    const moving = drag.item, src = drag.array;
+    let ok;
+    if(zone === 'into'){
+      const target = e.kind === 'root' ? R.parts : e.item.items;
+      ok = relocate(moving, src, target);
+      if(ok && e.kind === 'part') collapsed.delete(e.item);
+    }else{
+      const si = src.indexOf(moving);
+      let at = e.items.indexOf(e.item);
+      if(e.items === src && si !== -1 && si < at) at -= 1;   // removing it first shifts the target left
+      if(zone === 'after') at += 1;
+      ok = relocate(moving, src, e.items, at);
+    }
+    drag = null;
+    if(ok) afterStructureChange();
+  });
 }
 
 /* ---------- entry point (called by recipes.js renderParts) ---------- */
@@ -1150,39 +930,88 @@ export function renderWorkspace(r){
   R = r;
   const host = document.getElementById('cpWorkspace');
   if(!host) return;
-  resolveSelection(r);
+  if(state.recipeId !== r.id){ state.recipeId = r.id; state.selected = null; state.query = ''; state.groupsOnly = false; }
+  const prevScroll = document.getElementById('ttScroll');
+  const scrollTop = prevScroll ? prevScroll.scrollTop : 0;
+  closeEditor();
   closeMenu();
-  host.classList.toggle('nav-open', state.navOpen);
   host.innerHTML = `
-    <button type="button" class="cp-nav-toggle cp-lock-exempt" id="cpNavToggle" aria-expanded="${state.navOpen}" aria-controls="cpNav">
-      ${icon('git-branch', 18)}<span class="cp-nav-toggle-text"><b>Recipe structure</b><small id="cpNavToggleSel"></small></span>${icon('chevron-down', 18)}
-    </button>
-    <div class="cp-body">
-      <aside class="cp-nav" id="cpNav" aria-label="Recipe structure">
-        <div class="cp-nav-head">Recipe structure</div>
-        <div class="cp-search cp-lock-exempt">${icon('search', 16)}<input type="search" id="cpNavSearch" placeholder="Search ingredients or parts…" aria-label="Search the recipe structure" value="${escapeHtml(state.navQuery)}"></div>
-        <div class="cp-tree cp-lock-exempt" id="cpTree" role="tree" aria-label="Parts"></div>
-        <button type="button" class="btn cp-btn cp-nav-add" id="cpNavAdd">${icon('plus', 16)} <span id="cpNavAddText"></span></button>
-      </aside>
-      <section class="cp-detail" id="cpDetail" aria-live="polite"></section>
-    </div>`;
+    <div class="tt-toolbar cp-lock-exempt">
+      <button type="button" class="tt-chip cp-view-toggle" title="Switch between this tree table and the previous inline layout"></button>
+      <div class="cp-search tt-search">${icon('search', 16)}<input type="search" id="ttSearch" placeholder="Find ingredient or sub-part…" aria-label="Find an ingredient or sub-part" value="${escapeHtml(state.query)}"></div>
+      <button type="button" class="tt-tool" id="ttCollapseAll" aria-label="Collapse all groups">${icon('chevron-up', 16)}<span>Collapse all</span></button>
+      <button type="button" class="tt-tool" id="ttExpandAll" aria-label="Expand all groups">${icon('chevron-down', 16)}<span>Expand all</span></button>
+      <label class="tt-switch"><span class="tt-switch-label">${icon('folder', 16)}<span>Groups only</span></span>
+        <input type="checkbox" role="switch" id="ttGroupsOnly" ${state.groupsOnly ? 'checked' : ''}><span class="tt-switch-track" aria-hidden="true"></span></label>
+    </div>
+    <div class="tt-wrap cp-lock-exempt">
+      <div class="tt-scroll" id="ttScroll">
+        <div class="tt-grid" role="treegrid" aria-label="Components and ingredients" id="ttGrid">
+          <div class="tt-row tt-head" role="row">
+            <div class="tt-c tt-c-handle" role="columnheader"></div>
+            <div class="tt-c tt-c-name" role="columnheader">Component</div>
+            <div class="tt-c tt-c-yield num" role="columnheader">Yield</div>
+            <div class="tt-c tt-c-prep num" role="columnheader">Prepare (g)</div>
+            <div class="tt-c tt-c-wt num" role="columnheader">Formula (g)</div>
+            <div class="tt-c tt-c-pct num" role="columnheader">% of parent</div>
+            <div class="tt-c tt-c-note" role="columnheader"><span class="sr-only">Note</span></div>
+            <div class="tt-c tt-c-menu" role="columnheader"><span class="sr-only">Actions</span></div>
+          </div>
+          <div id="ttRows" role="rowgroup"></div>
+        </div>
+      </div>
+    </div>
+    <div class="tt-bar cp-lock-exempt" id="ttBar" role="toolbar" aria-label="Actions for the selected group"></div>`;
 
-  document.getElementById('cpNavToggle').addEventListener('click', () => {
-    state.navOpen = !state.navOpen;
-    host.classList.toggle('nav-open', state.navOpen);
-    document.getElementById('cpNavToggle').setAttribute('aria-expanded', state.navOpen);
+  applyViewMode();
+  const search = document.getElementById('ttSearch');
+  search.addEventListener('input', () => { state.query = search.value; renderRows(); });
+  search.addEventListener('keydown', e => { if(e.key === 'Escape' && search.value){ search.value = ''; state.query = ''; renderRows(); } });
+  document.getElementById('ttCollapseAll').addEventListener('click', collapseAll);
+  document.getElementById('ttExpandAll').addEventListener('click', expandAll);
+  document.getElementById('ttGroupsOnly').addEventListener('change', e => { state.groupsOnly = e.target.checked; renderRows(); });
+  wireGrid(document.getElementById('ttGrid'));
+  document.getElementById('ttBar').addEventListener('click', e => {
+    const b = e.target.closest('button'); if(!b || b.disabled) return;
+    if(b.id === 'ttAddIng') addIngredient();
+    else if(b.id === 'ttAddSub') addSubPart();
+    else if(b.id === 'ttEditProc'){ const t = document.getElementById('processesList'); if(t) t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
   });
-  document.getElementById('cpNavSearch').addEventListener('input', e => { state.navQuery = e.target.value; renderNav(); });
-  const addBtn = document.getElementById('cpNavAdd');
-  document.getElementById('cpNavAddText').textContent = state.selected ? 'Add sub-part' : 'Add part';
-  addBtn.addEventListener('click', addPart);
 
-  renderNav();
-  renderDetail();
-  syncNavToggleLabel();
-  lockSubtree(addBtn);
-  registerWorkspaceUpdater(() => {
-    // The tree text can also change from outside (a renamed recipe) -- keep labels current.
-    updateDetailDisplays();
-  });
+  renderRows();
+  const sc = document.getElementById('ttScroll');
+  if(sc) sc.scrollTop = scrollTop;
+  setupHeader(r);
+  registerWorkspaceUpdater(updateDisplays);
+
+  if(resizeObserver) resizeObserver.disconnect();
+  if(window.ResizeObserver){
+    resizeObserver = new ResizeObserver(() => { if(lastSheetMode !== null && isSheetMode() !== lastSheetMode) renderRows(); });
+    resizeObserver.observe(host);
+  }
+}
+
+// Header strip: recipe name, unsaved-changes status mirrored from the page's own save status, and Save.
+function setupHeader(r){
+  const nameEl = document.getElementById('ttRecipeName');
+  if(nameEl) nameEl.textContent = r.name || 'Untitled recipe';
+  const status = document.getElementById('ttStatus');
+  const src = document.getElementById('saveStatus');
+  const btn = document.getElementById('ttSaveBtn');
+  const locked = isLocked();
+  if(btn){ btn.hidden = locked; btn.onclick = () => saveNow(); }
+  function sync(){
+    if(!status) return;
+    if(locked){ status.className = 'tt-status ro'; status.innerHTML = `${icon('lock', 14)} Read-only`; return; }
+    const t = src ? src.textContent.trim() : '';
+    if(/^saving/i.test(t)){ status.className = 'tt-status dirty'; status.innerHTML = '<span class="tt-dot"></span> Unsaved changes…'; }
+    else if(/^saved/i.test(t)){ status.className = 'tt-status ok'; status.innerHTML = `${icon('check', 14)} ${escapeHtml(t)}`; }
+    else { status.className = 'tt-status'; status.textContent = ''; }
+  }
+  if(statusObserver) statusObserver.disconnect();
+  if(src){
+    statusObserver = new MutationObserver(sync);
+    statusObserver.observe(src, { childList: true, characterData: true, subtree: true });
+  }
+  sync();
 }
