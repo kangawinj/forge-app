@@ -62,14 +62,21 @@ export function blankRecipe(){
     pricingCurrency: 'THB',
     exchangeRate: '',
     exchangeRateDate: '',
-    overheadMultiplier: 1.625,
-    overheadMultiplierMax: 1.625,
-    factoryMarginMin: 20,
-    factoryMarginMax: 30,
+    // New-recipe Costing defaults (per request): Factory Overhead 30% / Margin
+    // 10%, Company Overhead 10% / Margin 10%, Customer Overhead 55% / Margin
+    // 10%. Factory Overhead is stored as the multiplier 1.3 x (1 + %) -- see
+    // overheadMultiplierFromPct -- so 30% is 1.69. (The *Max fields are no
+    // longer used by the screen; kept equal to Min so old readers see the same.)
+    overheadMultiplier: 1.69,
+    overheadMultiplierMax: 1.69,
+    factoryMarginMin: 10,
+    factoryMarginMax: 10,
+    companyOverheadMin: 10,
     companyMarginMin: 10,
-    companyMarginMax: 20,
-    customerMarginMin: 20,
-    customerMarginMax: 30,
+    companyMarginMax: 10,
+    customerOverheadMin: 55,
+    customerMarginMin: 10,
+    customerMarginMax: 10,
     versions: [],
     portionComponents: [],
     portionYieldPct: '',
