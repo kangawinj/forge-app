@@ -122,7 +122,7 @@ export function readOnlyProcessesHtml(processes, parts){
             </tr></tfoot>
           </table>
         ` : ''}
-        ${actualYieldHtml}
+        ${p.showActualYield === false ? '' : actualYieldHtml}
         ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       </div>
     `;

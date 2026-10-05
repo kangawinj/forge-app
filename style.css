@@ -6039,3 +6039,7 @@
   cursor:pointer;
 }
 .proj-mu-expand-all:hover{border-color:var(--primary);}
+
+/* Actual Yield's show/hide eye (per Process) next to its title. */
+.process-yield-title-row{display:flex;align-items:center;gap:8px;}
+.proc-yield-hidden-note{font-size:11px;font-weight:400;color:var(--text-dim);}

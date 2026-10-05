@@ -68,7 +68,11 @@ export function renderProcesses(r){
       </div>
 
       <div class="process-actual-yield">
-        <div class="process-components-title">Actual Yield</div>
+        <div class="process-components-title process-yield-title-row">
+          <span>Actual Yield</span>
+          <button type="button" class="icon-btn proc-yield-toggle"></button>
+          <span class="proc-yield-hidden-note">Hidden — also left out of Preview, Print and Excel</span>
+        </div>
         <div class="process-actual-yield-fields">
           <div class="process-yield-photos">
             <div class="trial-photos-row proc-photos-row"></div>
@@ -103,6 +107,28 @@ export function renderProcesses(r){
       <div class="process-steps-list"></div>
       <button class="btn btn-sm add-row-btn" data-role="add-step">+ Add Step</button>
     `;
+
+    // Show/hide this Process's whole Actual Yield section (per request) --
+    // per Process, saved on the recipe (proc.showActualYield; unset means
+    // shown, so every existing recipe looks the same as before). Hiding it
+    // also drops it from Preview/Print/Excel, so a Process that doesn't need
+    // an Actual Yield doesn't print an empty template either.
+    const yieldToggleBtn = block.querySelector('.proc-yield-toggle');
+    const yieldFields = block.querySelector('.process-actual-yield-fields');
+    const yieldHiddenNote = block.querySelector('.proc-yield-hidden-note');
+    const applyYieldVisibility = () => {
+      const shown = proc.showActualYield !== false;
+      yieldFields.style.display = shown ? '' : 'none';
+      yieldHiddenNote.style.display = shown ? 'none' : '';
+      yieldToggleBtn.innerHTML = icon(shown ? 'eye' : 'eye-off');
+      yieldToggleBtn.title = shown ? 'Hide Actual Yield for this process' : 'Show Actual Yield for this process';
+    };
+    applyYieldVisibility();
+    yieldToggleBtn.addEventListener('click', () => {
+      proc.showActualYield = proc.showActualYield === false;
+      applyYieldVisibility();
+      scheduleSave();
+    });
 
     const titleInput = block.querySelector('.process-title');
     titleInput.value = proc.title || '';

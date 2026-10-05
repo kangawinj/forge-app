@@ -518,14 +518,17 @@ function buildProcessSheet(wb, r){
     const wtBefore = parseFloat(p.weightBefore);
     const wtAfter = parseFloat(p.weightAfter);
     const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
-    setRow(['Actual Yield'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
-    setRow(['', 'Weight Before / After', `${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}`, `Yield ${actualYieldPct}`]);
-    ['brix','salt','ph'].forEach(field => {
-      const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);
-      const validReps = reps.filter(v => v != null);
-      const label = field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH';
-      setRow(['', label, reps.map(v => v != null ? v : '—').join(', '), `Avg ${avgOf(validReps.map(Number)) || '—'}`]);
-    });
+    if(p.showActualYield !== false){
+      setRow(['Actual Yield'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+      setRow(['', 'Weight Before / After', `${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}`, `Yield ${actualYieldPct}`]);
+      ['brix','salt','ph'].forEach(field => {
+        const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);
+        const validReps = reps.filter(v => v != null);
+        const label = field === 'brix' ? '°Brix' : field === 'salt' ? '%Salt' : 'pH';
+        setRow(['', label, reps.map(v => v != null ? v : '—').join(', '), `Avg ${avgOf(validReps.map(Number)) || '—'}`]);
+      });
+
+    }
 
     setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
     const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
