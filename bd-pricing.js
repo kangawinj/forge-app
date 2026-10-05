@@ -35,7 +35,7 @@ function blankScenario(name){
     id: uid(), name,
     mode: 'cost',              // 'cost' = start from cost, 'target' = start from the target price
     materialOverride: null,    // null = use the recipe's cost; a number = typed by hand
-    tiers: [{ o: 25, m: 10, w: null }, { o: 5, m: 10, w: null }, { o: 25, m: 10, w: null }],   // expense % / target profit %, per tier, of THAT tier's selling price
+    tiers: [{ o: 30, m: 10, w: null }, { o: 10, m: 10, w: null }, { o: 55, m: 10, w: null }],   // starting values (same as a new recipe's Costing card): expense % / target profit %, per tier, of THAT tier's selling price
     extras: [],                // { id, name, tier, unit: 'amount' | 'percent', value }
     targetPrice: null,
     targetRef: 'customer',     // which price the target means: 'company' (company -> customer) or 'customer' (customer's resale)
