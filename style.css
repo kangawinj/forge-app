@@ -3847,11 +3847,16 @@
     width:100%;
     padding:0;
   }
+  /* height:auto matters -- the base .mu-attachment-thumb rule pins height:20px,
+     which silently beat aspect-ratio and left these as wide pills instead of
+     squares. display:block drops the inline baseline gap under the image. */
   .proj-mu-photos-grid .mu-attachment-thumb,
   .proj-mu-photos-grid .mu-attachment-file-icon{
+    display:block;
     width:100%;
-    aspect-ratio:1;
-    border-radius:var(--radius);
+    height:auto;
+    aspect-ratio:1 / 1;
+    border-radius:8px;
     object-fit:cover;
   }
   .proj-mu-photos-grid .mu-attachment-name-text{
