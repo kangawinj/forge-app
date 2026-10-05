@@ -837,7 +837,7 @@ export function renderRecipeEditor(r){
       <div class="card-title">4. Components and Process</div>
       <div class="components-process-grid">
       <div class="ingredients-edit-view cp-mode-workspace">
-        <div class="tt-head">
+        <div class="tt-top">
           <div class="tt-head-title">
             <h3 class="tt-title">Components &amp; Process</h3>
             <div class="tt-recipe" id="ttRecipeName"></div>

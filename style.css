@@ -6207,13 +6207,13 @@
               the edit sheet (Yield, Prepare, Note live there). */
 .cp-mode-workspace .cp-classic{display:none;}
 .cp-mode-classic .cp-workspace{display:none;}
-.cp-workspace [hidden], .cp-sheet [hidden], .tt-head [hidden]{display:none !important;}
+.cp-workspace [hidden], .cp-sheet [hidden], .tt-top [hidden]{display:none !important;}
 .cp-lock-exempt{position:relative;z-index:16;}
 .sr-only{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0;}
 .cp-workspace{container:cpw / inline-size;position:relative;}
 
 /* header: title + totals + save */
-.tt-head{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin:2px 0 10px;}
+.tt-top{display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin:2px 0 10px;}
 .tt-head-title{flex:1 1 240px;min-width:0;}
 .tt-title{margin:0;font-size:22px;font-weight:800;color:var(--primary-dark);}
 .tt-recipe{color:var(--text-dim);font-weight:600;overflow-wrap:anywhere;}
@@ -6443,4 +6443,41 @@ body.cp-sheet-open{overflow:hidden;}
   .cp-menu-item, .cp-pick-item{min-height:44px;}
   .tt-head-totals .tree-root-wt-input{min-height:44px;}
 }
-@media print{ .cp-sheet-backdrop, .cp-menu, .cp-workspace, .tt-head, .tt-scale, .tt-toast{display:none !important;} }
+@media print{ .cp-sheet-backdrop, .cp-menu, .cp-workspace, .tt-top, .tt-scale, .tt-toast{display:none !important;} }
+
+/* ===== Classic tree: one set of column tracks for every row =====
+   Prepare / Formula / % / delete sit in the same fixed tracks on every Part
+   header and every ingredient row, whatever the nesting depth -- only the
+   name column (1fr) absorbs the indent. The name -> right-hand cluster gap
+   holds the count + Yield chip on a Part and the Note on an ingredient.
+   Below ~620px the original wrapping layout is kept. */
+.ingredient-tree{container:cptree / inline-size;}
+@container cptree (min-width:560px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{
+    display:grid;
+    grid-template-columns:48px minmax(0,1fr) 0 96px 72px 72px 58px 28px;
+    align-items:center;
+    column-gap:4px;
+  }
+  .part-block:not(.sub-part-row) > .part-header{
+    display:grid;
+    grid-template-columns:22px 28px minmax(0,1fr) 0 96px 72px 72px 58px 28px;
+    align-items:center;
+    column-gap:4px;
+  }
+  .part-header > .part-name{max-width:none;min-width:0;width:100%;}
+  .part-header > .part-ing-count{overflow:hidden;min-width:0;width:0;padding:0;margin:0;}   /* its track is 0 wide here -- keeps every later cell in its own column */
+  .ing-edit-row > .ing-note{grid-column:3 / 5;min-width:0;width:100%;}
+  .ing-edit-row > .ing-name-wrap{min-width:0;}
+  .part-header > .part-yield-chip{margin-left:0;justify-self:end;}
+  .ing-edit-row .row-value-col, .part-header .row-value-col{min-width:0;}
+}
+@container cptree (min-width:700px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:48px minmax(0,1fr) 0 110px 80px 80px 64px 30px;column-gap:6px;}
+  .part-block:not(.sub-part-row) > .part-header{grid-template-columns:22px 28px minmax(0,1fr) 0 110px 80px 80px 64px 30px;column-gap:6px;}
+}
+@container cptree (min-width:860px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:48px minmax(0,1fr) 110px 110px 80px 80px 64px 30px;}
+  .part-block:not(.sub-part-row) > .part-header{grid-template-columns:22px 28px minmax(0,1fr) 110px 110px 80px 80px 64px 30px;}
+  .part-header > .part-ing-count{display:block;width:auto;text-align:right;}
+}

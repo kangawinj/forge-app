@@ -37,9 +37,10 @@ import {
 import { renderProcesses } from './recipes-processes.js';
 
 /* ---------- view switch (per browser, like the other layout preferences) ---------- */
-const VIEW_KEY = 'forge_cp_view';
+// The classic inline tree is the default; the tree table is opt-in (new key, so earlier test choices don't carry over).
+const VIEW_KEY = 'forge_cp_view2';
 export function isWorkspaceView(){
-  try { return localStorage.getItem(VIEW_KEY) !== 'classic'; } catch(e){ return true; }
+  try { return localStorage.getItem(VIEW_KEY) === 'workspace'; } catch(e){ return false; }
 }
 export function setWorkspaceView(mode){
   try { localStorage.setItem(VIEW_KEY, mode); } catch(e){}
@@ -50,7 +51,7 @@ export function applyViewMode(){
   const on = isWorkspaceView();
   wrap.classList.toggle('cp-mode-workspace', on);
   wrap.classList.toggle('cp-mode-classic', !on);
-  wrap.querySelectorAll('.cp-view-toggle').forEach(b => { b.textContent = on ? 'Previous layout' : 'Tree table'; });
+  wrap.querySelectorAll('.cp-view-toggle').forEach(b => { b.textContent = on ? 'Classic tree' : 'Tree table'; });
 }
 
 /* ---------- state ---------- */
