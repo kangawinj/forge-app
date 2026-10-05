@@ -131,36 +131,29 @@ function computeCostingData(r, ov){
   const costPerServing = (servingSize > 0 && costPer100 != null) ? (costPer100 / 100 * servingSize) : null;
 
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-  const priceRangeStr = (min, max) => {
-    if(min == null || max == null) return '—';
-    const minStr = money(min, true), maxStr = money(max, true);
-    if(minStr == null || maxStr == null) return '—';
-    return `${minStr} – ${maxStr}${costSuffix}`;
+  const priceStr = v => {
+    if(v == null) return '—';
+    const str = money(v, true);
+    return str == null ? '—' : `${str}${costSuffix}`;
   };
 
-  // Factory price = Material + Overhead + Profit shares of 100% (see factoryPriceFromShares).
-  const overheadPctMin = pct(overheadPctFromMultiplier(r.overheadMultiplier));
-  const overheadPctMax = pct(overheadPctFromMultiplier(r.overheadMultiplierMax ?? r.overheadMultiplier));
-  const factoryMarginMin = pct(r.factoryMarginMin) ?? 0, factoryMarginMax = pct(r.factoryMarginMax) ?? 0; // blank counts as 0%
-  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
-  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
-  const companyMarginMin = pct(r.companyMarginMin), companyMarginMax = pct(r.companyMarginMax);
-  const companyOverheadMin = pct(r.companyOverheadMin), companyOverheadMax = pct(r.companyOverheadMax);
-  const companyPriceMin = factoryPriceFromShares(factoryPriceMin, companyOverheadMin, companyMarginMin);
-  const companyPriceMax = factoryPriceFromShares(factoryPriceMax, companyOverheadMax, companyMarginMax);
-  const customerMarginMin = pct(r.customerMarginMin), customerMarginMax = pct(r.customerMarginMax);
-  const customerOverheadMin = pct(r.customerOverheadMin), customerOverheadMax = pct(r.customerOverheadMax);
-  const customerPriceMin = factoryPriceFromShares(companyPriceMin, customerOverheadMin, customerMarginMin);
-  const customerPriceMax = factoryPriceFromShares(companyPriceMax, customerOverheadMax, customerMarginMax);
+  // Every tier = base + Overhead + Profit shares of 100% (see factoryPriceFromShares).
+  const overheadPct = pct(overheadPctFromMultiplier(r.overheadMultiplier));
+  const factoryMargin = pct(r.factoryMarginMin) ?? 0; // blank counts as 0%
+  const factoryPrice = factoryPriceFromShares(costPerServing, overheadPct, factoryMargin);
+  const companyMargin = pct(r.companyMarginMin), companyOverhead = pct(r.companyOverheadMin);
+  const companyPrice = factoryPriceFromShares(factoryPrice, companyOverhead, companyMargin);
+  const customerMargin = pct(r.customerMarginMin), customerOverhead = pct(r.customerOverheadMin);
+  const customerPrice = factoryPriceFromShares(companyPrice, customerOverhead, customerMargin);
 
   return {
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
     servingSize,
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
-    overheadPctMin, overheadPctMax,
-    factoryMarginMin, factoryMarginMax, factoryPriceRange: priceRangeStr(factoryPriceMin, factoryPriceMax),
-    companyOverheadMin, companyOverheadMax, companyMarginMin, companyMarginMax, companyPriceRange: priceRangeStr(companyPriceMin, companyPriceMax),
-    customerOverheadMin, customerOverheadMax, customerMarginMin, customerMarginMax, customerPriceRange: priceRangeStr(customerPriceMin, customerPriceMax)
+    overheadPct,
+    factoryMargin, factoryPriceText: priceStr(factoryPrice),
+    companyOverhead, companyMargin, companyPriceText: priceStr(companyPrice),
+    customerOverhead, customerMargin, customerPriceText: priceStr(customerPrice)
   };
 }
 
@@ -348,15 +341,15 @@ function buildCostingSheet(wb, r){
     sectionCell.value = 'Overhead & Margins';
     sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
     row++;
-    kv('Overhead (Min–Max % of Factory Selling Price)', (c.overheadPctMin != null || c.overheadPctMax != null) ? `${c.overheadPctMin ?? 0}–${c.overheadPctMax ?? 0}%` : '(none, 0%)');
-    kv('Factory Margin (Min–Max % of Factory Selling Price)', (c.factoryMarginMin!=null && c.factoryMarginMax!=null) ? `${c.factoryMarginMin}–${c.factoryMarginMax}%` : '');
-    kv('Factory Selling Price / Serving', c.factoryPriceRange);
-    kv('Company Overhead (Min–Max % of Company Selling Price)', `${c.companyOverheadMin ?? 0}–${c.companyOverheadMax ?? 0}%`);
-    kv('Company Margin (Min–Max % of Company Selling Price)', (c.companyMarginMin!=null && c.companyMarginMax!=null) ? `${c.companyMarginMin}–${c.companyMarginMax}%` : '');
-    kv('Company Selling Price / Serving', c.companyPriceRange);
-    kv('Customer Overhead (Min–Max % of Customer Selling Price)', `${c.customerOverheadMin ?? 0}–${c.customerOverheadMax ?? 0}%`);
-    kv('Customer Margin (Min–Max % of Customer Selling Price)', (c.customerMarginMin!=null && c.customerMarginMax!=null) ? `${c.customerMarginMin}–${c.customerMarginMax}%` : '');
-    kv('Customer Selling Price / Serving', c.customerPriceRange);
+    kv('Overhead (% of Factory Selling Price)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
+    kv('Factory Margin (% of Factory Selling Price)', `${c.factoryMargin}%`);
+    kv('Factory Selling Price / Serving', c.factoryPriceText);
+    kv('Company Overhead (% of Company Selling Price)', `${c.companyOverhead ?? 0}%`);
+    kv('Company Margin (% of Company Selling Price)', c.companyMargin != null ? `${c.companyMargin}%` : '');
+    kv('Company Selling Price / Serving', c.companyPriceText);
+    kv('Customer Overhead (% of Customer Selling Price)', `${c.customerOverhead ?? 0}%`);
+    kv('Customer Margin (% of Customer Selling Price)', c.customerMargin != null ? `${c.customerMargin}%` : '');
+    kv('Customer Selling Price / Serving', c.customerPriceText);
 
     row++;
     ws.mergeCells(row, 1, row, 2);

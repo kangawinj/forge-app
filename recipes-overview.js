@@ -90,8 +90,7 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     if(perServingWrap) perServingWrap.style.display = 'none';
     if(factoryPriceEl) factoryPriceEl.textContent = '—';
     if(companyPriceEl) companyPriceEl.textContent = '—';
-    const emptyHint = document.getElementById('overheadCombinedHint');
-    if(emptyHint) emptyHint.textContent = '';
+    ['overheadCombinedHint', 'companyShareHint', 'customerShareHint'].forEach(id => { const h = document.getElementById(id); if(h) h.textContent = ''; });
     return;
   }
 
@@ -291,96 +290,58 @@ export function renderOverview(allIngredients, prepareWeightByIng){
     }
   }
 
-  // Every tier prices as shares of 100% (see factoryPriceFromShares in
-  // recipes-data.js): Price = Base / (1 - (Overhead% + Margin%)/100), where
-  // each tier has its OWN Overhead and Margin. Factory's base is
-  // Cost/Serving; Company's base is the Factory price and Customer's is the
-  // Company price -- Min follows Min through the whole chain, Max follows
-  // Max, so the overall range reflects the low and high ends consistently
-  // rather than mixing a low margin on one tier with a high one on another.
-  // A blank Overhead counts as 0%.
   const pct = v => { const n = parseFloat(v); return isNaN(n) ? null : n; };
-  // Renders a Min–Max Selling Price range, rounding each end UP to the
+  // Renders a Selling Price, rounding it UP to the
   // nearest 0.05 of the selected currency for a clean asking price
   // (Cost/100g etc. above stay at their exact, unrounded-up value --
   // this is deliberately only for the three Selling Price figures
   // below). Distinguishes "the margin math itself has nothing to show"
   // from "it does, but there's no Exchange Rate to display it in yet"
   // so the tooltip points at whichever is actually missing.
-  const priceRangeStr = (min, max) => {
-    if(min == null || max == null) return { text: '—', title: '' };
-    const minStr = money(min, true), maxStr = money(max, true);
-    if(minStr == null || maxStr == null) return { text: '—', title: rateMissingTitle };
-    return { text: `${minStr} – ${maxStr}${costSuffix}`, title: missingPriceTitle };
+  const priceStr = v => {
+    if(v == null) return { text: '—', title: '' };
+    const str = money(v, true);
+    if(str == null) return { text: '—', title: rateMissingTitle };
+    return { text: `${str}${costSuffix}`, title: missingPriceTitle };
   };
-  // Factory Price is 100% = Material + Overhead + Profit shares (see
-  // factoryPriceFromShares in recipes-data.js) -- Overhead % and Factory
-  // Margin % are both shares OF THE SELLING PRICE, Min and Max separately.
-  // Blank Overhead counts as 0%.
-  const overheadPctMin = pct(document.getElementById('f-overheadMultiplier')?.value);
-  const overheadPctMax = pct(document.getElementById('f-overheadMultiplierMax')?.value);
-  // Company/Customer Margin's own rows show the same single Overhead too
-  //   // box's raw value into them -- except whichever one is being typed in
-  // right now, so a partial entry like "1." isn't rewritten out from under
-  // the cursor.
-  // A blank Factory Margin counts as 0% (Overhead alone is a valid price).
-  const factoryMarginMin = pct(document.getElementById('f-factoryMarginMin')?.value) ?? 0;
-  const factoryMarginMax = pct(document.getElementById('f-factoryMarginMax')?.value) ?? 0;
-
-  const factoryPriceMin = factoryPriceFromShares(costPerServing, overheadPctMin, factoryMarginMin);
-  const factoryPriceMax = factoryPriceFromShares(costPerServing, overheadPctMax, factoryMarginMax);
-  const combinedHintEl = document.getElementById('overheadCombinedHint');
-  const sharesInvalid = factoryMarginMin != null && factoryMarginMax != null && (factoryPriceMin == null || factoryPriceMax == null);
-  if(combinedHintEl){
-    const f = n => +n.toFixed(2);
-    const line = (label, o, m) => `${label}: Material ${f(100 - (o ?? 0) - m)}% + Overhead ${f(o ?? 0)}% + Profit ${f(m)}% = 100%`;
-    combinedHintEl.textContent = (factoryMarginMin == null || factoryMarginMax == null) ? ''
-      : sharesInvalid ? 'Overhead % + Margin % must add up to less than 100%'
-      : `${line('Min', overheadPctMin, factoryMarginMin)}
-${line('Max', overheadPctMax, factoryMarginMax)}`;
-  }
-  const factoryPriceEl = document.getElementById('overviewFactoryPrice');
-  if(factoryPriceEl){
-    const { text, title } = priceRangeStr(factoryPriceMin, factoryPriceMax);
-    factoryPriceEl.textContent = text;
-    factoryPriceEl.title = sharesInvalid ? 'Overhead % + Factory Margin % must add up to less than 100% of the selling price' : title;
-  }
-
-  const companyMarginMin = pct(document.getElementById('f-companyMarginMin')?.value);
-  const companyMarginMax = pct(document.getElementById('f-companyMarginMax')?.value);
-  const companyOverheadMin = pct(document.getElementById('f-companyOverheadMin')?.value);
-  const companyOverheadMax = pct(document.getElementById('f-companyOverheadMax')?.value);
-  const companyPriceMin = factoryPriceFromShares(factoryPriceMin, companyOverheadMin, companyMarginMin);
-  const companyPriceMax = factoryPriceFromShares(factoryPriceMax, companyOverheadMax, companyMarginMax);
-  // Same "shares of 100%" breakdown line as Factory's, for Company/Customer.
-  const tierHint = (hintId, baseLabel, oMin, oMax, mMin, mMax, pMin, pMax) => {
+  // Each tier prices as shares of 100% (see factoryPriceFromShares in
+  // recipes-data.js): Price = Base / (1 - (Overhead% + Margin%)/100), where
+  // every tier has its OWN Overhead and Margin, both shares OF THAT TIER'S
+  // SELLING PRICE. Factory's base is Cost/Serving, Company's is the Factory
+  // price, Customer's is the Company price. A blank Overhead counts as 0%,
+  // and so does a blank Factory Margin (Overhead alone is a valid price).
+  const sharesHint = (hintId, baseLabel, o, m) => {
     const el = document.getElementById(hintId);
     if(!el) return;
     const f = n => +n.toFixed(2);
-    const line = (label, o, m) => `${label}: ${baseLabel} ${f(100 - (o ?? 0) - m)}% + Overhead ${f(o ?? 0)}% + Profit ${f(m)}% = 100%`;
-    el.textContent = (mMin == null || mMax == null) ? ''
-      : (pMin == null || pMax == null) ? 'Overhead % + Margin % must add up to less than 100%'
-      : `${line('Min', oMin, mMin)}\n${line('Max', oMax, mMax)}`;
+    el.textContent = m == null ? ''
+      : ((o ?? 0) + m >= 100) ? 'Overhead % + Margin % must add up to less than 100%'
+      : `${baseLabel} ${f(100 - (o ?? 0) - m)}% + Overhead ${f(o ?? 0)}% + Profit ${f(m)}% = 100%`;
   };
-  tierHint('companyShareHint', 'Factory price', companyOverheadMin, companyOverheadMax, companyMarginMin, companyMarginMax, companyPriceMin, companyPriceMax);
-  const companyPriceEl = document.getElementById('overviewCompanyPrice');
-  if(companyPriceEl){
-    const { text, title } = priceRangeStr(companyPriceMin, companyPriceMax);
-    companyPriceEl.textContent = text;
-    companyPriceEl.title = title;
-  }
+  const setPrice = (id, price, invalidTitle) => {
+    const el = document.getElementById(id);
+    if(!el) return;
+    const { text, title } = priceStr(price);
+    el.textContent = text;
+    el.title = invalidTitle || title;
+  };
+  const sharesInvalid = (o, m) => m != null && (o ?? 0) + m >= 100;
 
-  const customerMarginMin = pct(document.getElementById('f-customerMarginMin')?.value);
-  const customerMarginMax = pct(document.getElementById('f-customerMarginMax')?.value);
-  const customerOverheadMin = pct(document.getElementById('f-customerOverheadMin')?.value);
-  const customerOverheadMax = pct(document.getElementById('f-customerOverheadMax')?.value);
-  const customerPriceMin = factoryPriceFromShares(companyPriceMin, customerOverheadMin, customerMarginMin);
-  const customerPriceMax = factoryPriceFromShares(companyPriceMax, customerOverheadMax, customerMarginMax);
-  tierHint('customerShareHint', 'Company price', customerOverheadMin, customerOverheadMax, customerMarginMin, customerMarginMax, customerPriceMin, customerPriceMax);
-  const customerPriceEl = document.getElementById('overviewCustomerPrice');
-  if(customerPriceEl){
-    const { text, title } = priceRangeStr(customerPriceMin, customerPriceMax);
-    customerPriceEl.textContent = text;
-    customerPriceEl.title = title;
-  }
+  const factoryOverhead = pct(document.getElementById('f-overheadMultiplier')?.value);
+  const factoryMargin = pct(document.getElementById('f-factoryMarginMin')?.value) ?? 0;
+  const factoryPrice = factoryPriceFromShares(costPerServing, factoryOverhead, factoryMargin);
+  sharesHint('overheadCombinedHint', 'Material', factoryOverhead, factoryMargin);
+  setPrice('overviewFactoryPrice', factoryPrice, sharesInvalid(factoryOverhead, factoryMargin) ? 'Overhead % + Factory Margin % must add up to less than 100% of the selling price' : '');
+
+  const companyOverhead = pct(document.getElementById('f-companyOverheadMin')?.value);
+  const companyMargin = pct(document.getElementById('f-companyMarginMin')?.value);
+  const companyPrice = factoryPriceFromShares(factoryPrice, companyOverhead, companyMargin);
+  sharesHint('companyShareHint', 'Factory price', companyOverhead, companyMargin);
+  setPrice('overviewCompanyPrice', companyPrice, sharesInvalid(companyOverhead, companyMargin) ? 'Overhead % + Company Margin % must add up to less than 100% of the selling price' : '');
+
+  const customerOverhead = pct(document.getElementById('f-customerOverheadMin')?.value);
+  const customerMargin = pct(document.getElementById('f-customerMarginMin')?.value);
+  const customerPrice = factoryPriceFromShares(companyPrice, customerOverhead, customerMargin);
+  sharesHint('customerShareHint', 'Company price', customerOverhead, customerMargin);
+  setPrice('overviewCustomerPrice', customerPrice, sharesInvalid(customerOverhead, customerMargin) ? 'Overhead % + Customer Margin % must add up to less than 100% of the selling price' : '');
 }
