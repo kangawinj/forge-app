@@ -72,7 +72,7 @@ export function readOnlyProcessesHtml(processes, parts){
     ` : '';
 
     const actualYieldHtml = `
-      <div class="process-view-yield-title">Actual Yield</div>
+      <div class="process-view-yield-title">Trial Results Section</div>
       <div class="process-view-yield-row">
         ${photosHtml}
         <table class="compare-table process-view-yield-table">

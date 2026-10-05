@@ -519,7 +519,7 @@ function buildProcessSheet(wb, r){
     const wtAfter = parseFloat(p.weightAfter);
     const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
     if(p.showActualYield !== false){
-      setRow(['Actual Yield'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+      setRow(['Trial Results Section'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
       setRow(['', 'Weight Before / After', `${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}`, `Yield ${actualYieldPct}`]);
       ['brix','salt','ph'].forEach(field => {
         const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);

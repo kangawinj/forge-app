@@ -69,7 +69,7 @@ export function renderProcesses(r){
 
       <div class="process-actual-yield">
         <div class="process-components-title process-yield-title-row">
-          <span>Actual Yield</span>
+          <span>Trial Results Section</span>
           <button type="button" class="icon-btn proc-yield-toggle"></button>
           <span class="proc-yield-hidden-note">Hidden — also left out of Preview, Print and Excel</span>
         </div>
@@ -121,7 +121,7 @@ export function renderProcesses(r){
       yieldFields.style.display = shown ? '' : 'none';
       yieldHiddenNote.style.display = shown ? 'none' : '';
       yieldToggleBtn.innerHTML = icon(shown ? 'eye' : 'eye-off');
-      yieldToggleBtn.title = shown ? 'Hide Actual Yield for this process' : 'Show Actual Yield for this process';
+      yieldToggleBtn.title = shown ? 'Hide the Trial Results Section for this process' : 'Show the Trial Results Section for this process';
     };
     applyYieldVisibility();
     yieldToggleBtn.addEventListener('click', () => {
