@@ -59,6 +59,7 @@ import { migrateTrial } from './trials-data.js';
 // happens inside an event handler, never at module-evaluation time.
 import { overviewHeaderRowHtml, renderOverview, costingMarginVisible, toggleOverviewSort, toggleCostingMarginVisible } from './recipes-overview.js';
 import { renderProcesses } from './recipes-processes.js';
+import { renderWorkspace, isWorkspaceView, setWorkspaceView, applyViewMode } from './recipes-workspace.js';
 import { confirmAndCreateNewTrial, startTrialSeriesForRecipe, duplicateAsNewRecipe, deleteCurrent, fixTrialNumber } from './recipes-lifecycle.js';
 // recipes-excel.js imports costingMarginVisible straight from this file --
 // a bare import above doesn't automatically re-export it, so this keeps
@@ -540,7 +541,7 @@ function ingSubIngredientsHtml(ing, matched){
 // snapshot its %Yield into the row's Prepare Weight fields, which live
 // outside this function's own DOM (see the ing-yield/.ing-prepare-display
 // wiring in renderRows).
-function renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked){
+export function renderIngSubsToggle(subsEl, ing, matched, noteInput, onPicked){
   subsEl.innerHTML = ingSubIngredientsHtml(ing, matched);
   const btn = subsEl.querySelector('[data-role="toggle-ing-subs"]');
   if(!btn) return;
@@ -835,34 +836,41 @@ export function renderRecipeEditor(r){
     <div class="card">
       <div class="card-title">4. Components and Process</div>
       <div class="components-process-grid">
-      <div class="ingredients-edit-view">
-      <div class="ingredient-tree">
-        <div class="tree-node tree-root-node">
-          <span class="tree-node-label">Formula Total</span>
-          <button type="button" class="tree-formula-clipboard-btn" id="btnCopyFormula" title="Copy this recipe's whole formula (every Part)">${icon('copy', 14)}</button>
-          <button type="button" class="tree-formula-clipboard-btn" id="btnPasteFormula" title="Paste a copied formula here — replaces every Part in this recipe">${icon('clipboard-check', 14)}</button>
-          <span class="tree-node-wt tree-root-wt-wrap">
-            <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" title="Type a total weight (g) to scale the whole recipe proportionally">
-            <span class="ing-unit">g</span>
-          </span>
-          <span class="tree-node-pct">100.00%</span>
-        </div>
-        <div id="partsContainer" class="tree-children"></div>
-        <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
-      </div>
-      <div class="batch-summary">
-        <div>
-          <div class="batch-stat-label">Total Recipe Weight (auto-calculated from all ingredient weights)</div>
-          <div class="batch-stat-value" id="batchTotalDisplay">0.00 g</div>
-        </div>
-        <div>
-          <div class="batch-stat-label">Scale Recipe To (g)</div>
-          <div class="batch-scale-row">
-            <input type="number" id="f-scaleTo" min="0" step="0.01" placeholder="e.g. 1000">
+      <div class="ingredients-edit-view cp-mode-workspace">
+        <div class="cp-toolbar">
+          <div class="cp-toolbar-group cp-tb-formula">
+            <span class="cp-toolbar-label">Formula total</span>
+            <span class="tree-node-wt tree-root-wt-wrap">
+              <input type="number" class="num-input tree-root-wt-input" id="treeRootWt" step="0.01" min="0" inputmode="decimal" title="Type a total weight (g) to scale the whole recipe proportionally">
+              <span class="ing-unit">g</span>
+            </span>
+            <button type="button" class="tree-formula-clipboard-btn" id="btnCopyFormula" title="Copy this recipe's whole formula (every Part)">${icon('copy', 14)}</button>
+            <button type="button" class="tree-formula-clipboard-btn" id="btnPasteFormula" title="Paste a copied formula here — replaces every Part in this recipe">${icon('clipboard-check', 14)}</button>
+          </div>
+          <div class="cp-toolbar-group cp-tb-prepare">
+            <span class="cp-toolbar-label">Prepare weight</span>
+            <strong class="cp-toolbar-value" id="cpToolbarPrepare">0.00 g</strong>
+          </div>
+          <div class="cp-toolbar-group cp-toolbar-scale">
+            <label class="cp-toolbar-label" for="f-scaleTo">Scale recipe to (g)</label>
+            <input type="number" id="f-scaleTo" min="0" step="0.01" inputmode="decimal" placeholder="e.g. 1000">
             <button class="btn btn-sm" id="btnScale">Scale</button>
           </div>
+          <span id="batchTotalDisplay" hidden>0.00 g</span>
+          <button type="button" class="btn btn-sm cp-view-btn cp-lock-exempt" id="btnCpView" title="Switch between the new two-pane layout and the classic inline tree">Classic view</button>
         </div>
-      </div>
+        <div class="cp-workspace" id="cpWorkspace"></div>
+        <div class="cp-classic" id="cpClassic">
+          <div class="ingredient-tree">
+            <div class="tree-node tree-root-node">
+              <span class="tree-node-label">Formula Total</span>
+              <span class="tree-node-wt tree-root-wt-wrap"><span id="cpClassicRootWt">0.00 g</span></span>
+              <span class="tree-node-pct">100.00%</span>
+            </div>
+            <div id="partsContainer" class="tree-children"></div>
+            <button class="btn btn-sm add-row-btn" id="btnAddPart">+ Add Part</button>
+          </div>
+        </div>
       </div>
       </div>
       <div class="print-only components-process-print-grid">
@@ -1082,6 +1090,13 @@ export function renderRecipeEditor(r){
     recomputeFromWeights(r);
     renderParts(r);
     scheduleSave();
+  });
+
+  // Switch between the new two-pane "Components & Process" layout and the classic inline tree.
+  applyViewMode();
+  document.getElementById('btnCpView').addEventListener('click', () => {
+    setWorkspaceView(isWorkspaceView() ? 'classic' : 'workspace');
+    renderParts(r);
   });
 
   document.getElementById('f-portionYield').addEventListener('input', e => {
@@ -1470,7 +1485,7 @@ function renderLockState(r){
     banner.className = 'lock-banner locked';
     banner.innerHTML = `${icon('lock')} This recipe is read-only <button class="btn btn-sm btn-primary lock-banner-action" id="btnUnlockEdit">${icon('unlock')} Unlock to Edit</button>`;
     document.getElementById('btnUnlockEdit').addEventListener('click', () => promptUnlockRecipe(r));
-    cards.querySelectorAll('input, textarea, select, button').forEach(el => { el.disabled = true; });
+    cards.querySelectorAll('input, textarea, select, button').forEach(el => { if(!el.closest('.cp-lock-exempt')) el.disabled = true; });
     // A disabled form control never fires click/focus at all (that's what
     // disabled means), so clicking a locked field to edit it previously
     // just did nothing -- this transparent click-catcher sits on top of
@@ -1492,8 +1507,10 @@ function renderLockState(r){
 // arbitrarily deep tree tractable: each Part already knows exactly which
 // DOM nodes are its own (not a descendant Sub-part's), no re-matching needed.
 let partDisplayUpdaters = [];
+// The workspace layout hooks its own in-place refresh in here (renderParts resets this list on every render).
+export function registerWorkspaceUpdater(fn){ partDisplayUpdaters.push(fn); }
 
-function refreshDisplays(r){
+export function refreshDisplays(r){
   const totalWeight = recomputeFromWeights(r);
   const batchEl = document.getElementById('batchTotalDisplay');
   if(batchEl) batchEl.textContent = formatWeight(totalWeight);
@@ -1514,6 +1531,10 @@ function refreshDisplays(r){
 function updateTreeRoot(r){
   const wtEl = document.getElementById('treeRootWt');
   if(wtEl && document.activeElement !== wtEl) wtEl.value = (r.batchWeight || 0).toFixed(2);
+  const prepEl = document.getElementById('cpToolbarPrepare');
+  if(prepEl) prepEl.textContent = formatWeight((r.parts || []).reduce((s, p) => s + partPrepareWeight(p), 0));
+  const classicWt = document.getElementById('cpClassicRootWt');
+  if(classicWt) classicWt.textContent = formatWeight(r.batchWeight || 0);
 }
 
 // Remembers which Parts the user has explicitly expanded/collapsed by
@@ -1559,6 +1580,15 @@ export function renderParts(r){
   if(batchEl) batchEl.textContent = formatWeight(r.batchWeight);
 
   partDisplayUpdaters = [];
+  applyViewMode();
+  if(isWorkspaceView()){
+    // New two-pane layout (recipes-workspace.js) -- same data and math, different view.
+    renderWorkspace(r);
+    updateGrandTotal(r);
+    updateTreeRoot(r);
+    renderPortionComponents(r);
+    return;
+  }
   const container = document.getElementById('partsContainer');
   container.innerHTML = '';
   if(r.parts.length === 0){
@@ -1624,14 +1654,14 @@ function setPrecisionField(el, n){
 // multiplies each ingredient's ORIGINAL weight by the factor, never a
 // previously-written one, so an intermediate keystroke that briefly implies
 // a 0 factor can't permanently zero anything out.
-function snapshotWeights(items, map = new Map()){
+export function snapshotWeights(items, map = new Map()){
   (items || []).forEach(item => {
     if(item.kind === 'part') snapshotWeights(item.items, map);
     else map.set(item, parseFloat(item.weight) || 0);
   });
   return map;
 }
-function applyScaleFromSnapshot(items, snapshot, factor){
+export function applyScaleFromSnapshot(items, snapshot, factor){
   (items || []).forEach(item => {
     if(item.kind === 'part') applyScaleFromSnapshot(item.items, snapshot, factor);
     else item.weight = round4((snapshot.get(item) || 0) * factor);
@@ -2609,7 +2639,7 @@ function updateGrandTotal(r){
   renderOverview(allIngredients, prepareWeightByIng);
 }
 
-function materialTooltip(m){
+export function materialTooltip(m){
   const lines = [
     `EN: ${m.nameEn}`,
     `TH: ${m.nameTh}`,
@@ -2623,7 +2653,7 @@ function materialTooltip(m){
   return lines.join('\n');
 }
 
-function hasUnresolvedIngredient(part){
+export function hasUnresolvedIngredient(part){
   return partIngredients(part).some(i => (i.name || '').trim() !== '' && !i.materialId);
 }
 
@@ -2635,7 +2665,7 @@ function isSubsequence(query, text){
   return qi === query.length;
 }
 
-function fuzzyMaterialMatches(query, limit){
+export function fuzzyMaterialMatches(query, limit){
   const q = (query || '').trim().toLowerCase();
   if(!q) return [];
   const scored = ingredientMaster.map(m => {
