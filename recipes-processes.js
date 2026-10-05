@@ -237,7 +237,7 @@ export function renderProcesses(r){
         row.className = 'step-row';
         row.innerHTML = `
           <div class="step-badge">${idx+1}</div>
-          <div class="step-body"><textarea placeholder="Describe step ${idx+1}..."></textarea></div>
+          <div class="step-body"><textarea rows="1" placeholder="Describe step ${idx+1}..."></textarea></div>
           <div class="step-controls">
             <button class="icon-btn" title="Move up">${icon('chevron-up')}</button>
             <button class="icon-btn" title="Move down">${icon('chevron-down')}</button>
@@ -246,7 +246,9 @@ export function renderProcesses(r){
         `;
         const ta = row.querySelector('textarea');
         ta.value = step;
-        ta.addEventListener('input', e => { proc.steps[idx] = e.target.value; scheduleSave(); });
+        // One compact line that grows only when the step text needs more.
+        const fit = () => { ta.style.height = 'auto'; const h = ta.scrollHeight; ta.style.height = h > 0 ? h + 'px' : ''; };
+        ta.addEventListener('input', e => { proc.steps[idx] = e.target.value; fit(); scheduleSave(); });
 
         const [upBtn, downBtn, delBtn] = row.querySelectorAll('.icon-btn');
         upBtn.addEventListener('click', () => {
@@ -265,6 +267,9 @@ export function renderProcesses(r){
         });
 
         stepsListEl.appendChild(row);
+        fit();
+        // Re-fit once the row is on screen / resized (it may be built while hidden or detached).
+        if(window.ResizeObserver) new ResizeObserver(fit).observe(ta);
       });
     }
     renderStepRows();
