@@ -118,10 +118,15 @@ function computeCostingData(r, ov){
   const pricingCurrency = r.pricingCurrency || 'THB';
   const exchangeRateVal = parseFloat(r.exchangeRate);
   const rateAvailable = pricingCurrency === 'THB' || (isFinite(exchangeRateVal) && exchangeRateVal > 0);
-  const money = (v, roundUp005) => {
+  const moneyNum = (v, roundUp005) => {
     if(v == null || !rateAvailable) return null;
     let converted = pricingCurrency === 'THB' ? v : (v / exchangeRateVal);
     if(roundUp005) converted = Math.ceil(converted / 0.05) * 0.05;
+    return converted;
+  };
+  const money = (v, roundUp005) => {
+    const converted = moneyNum(v, roundUp005);
+    if(converted == null) return null;
     return pricingCurrency === 'THB' ? `฿${converted.toFixed(2)}` : `${converted.toFixed(2)} ${pricingCurrency}`;
   };
   const costSuffix = ov.costSuffix;
@@ -150,6 +155,8 @@ function computeCostingData(r, ov){
     pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
     servingSize,
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
+    costPerServingNum: moneyNum(costPerServing), costPer100Num: moneyNum(costPer100), costPerKgNum: moneyNum(costPerKg),
+    factoryPriceNum: moneyNum(factoryPrice, true), companyPriceNum: moneyNum(companyPrice, true), customerPriceNum: moneyNum(customerPrice, true),
     overheadPct,
     factoryMargin, factoryPriceText: priceStr(factoryPrice),
     companyOverhead, companyMargin, companyPriceText: priceStr(companyPrice),
@@ -234,18 +241,35 @@ function buildProductDetailsSheet(wb, r){
   kv('Total weight', formatWeight(totalWt));
 }
 
+// Cells the user may type over (everything else is a live formula that
+// recalculates when they do) get a pale yellow fill.
+const XL_INPUT_FILL = { type: 'pattern', pattern: 'solid', fgColor: { argb: xlArgb('#fff6d6') } };
+function markInput(cell){ cell.fill = XL_INPUT_FILL; }
+function addInputLegend(ws, colSpan){
+  const rn = ws.lastRow ? ws.lastRow.number + 2 : 3;
+  ws.mergeCells(rn, 1, rn, colSpan);
+  const cell = ws.getCell(rn, 1);
+  cell.value = 'Yellow cells are inputs — change them and every other figure on this sheet recalculates.';
+  cell.font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
+}
+// Excel's way of writing computePrepareWeight's yield fallback (blank / 0 = 100%).
+const xlYield = ref => `IF(${ref}>0,${ref}/100,1)`;
+
 // "2. Recipe Overview (all parts combined)" -- ingredients grouped by
 // name+Prep across every Part (not the Part tree itself, which is its own
 // separate sheet below) -- same table/columns/sort (heaviest first) as the
-// live on-screen card.
+// live on-screen card. % of Recipe, Cost and the totals are live formulas
+// (Formula/Prepare Wt. and Price / kg are the inputs). Returns the cell
+// references the Costing sheet links to (null when there are no rows).
 function buildRecipeOverviewSheet(wb, r){
-  const ws = wb.addWorksheet('2. Recipe Overview');
+  const SHEET = '2. Recipe Overview';
+  const ws = wb.addWorksheet(SHEET);
   ws.columns = [
-    { width: 6 }, { width: 40 }, { width: 30 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 14 }
+    { width: 6 }, { width: 40 }, { width: 30 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 14 }, { width: 14 }
   ];
-  addSectionTitleBar(ws, '2. Recipe Overview (all parts combined)', 7);
+  addSectionTitleBar(ws, '2. Recipe Overview (all parts combined)', 8);
 
-  const headerRow = ws.addRow(['#', 'Ingredient / Prep', 'Brand / Vendor / Manufacturer', '% of Recipe', 'Formula Wt. (g)', 'Prepare Wt. (g)', 'Cost (฿)']);
+  const headerRow = ws.addRow(['#', 'Ingredient / Prep', 'Brand / Vendor / Manufacturer', '% of Recipe', 'Formula Wt. (g)', 'Prepare Wt. (g)', 'Cost (฿)', 'Price / kg (฿)']);
   headerRow.eachCell(cell => {
     cell.font = { bold: true, color: { argb: XL_COLORS.headerText } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.headerFill } };
@@ -255,111 +279,192 @@ function buildRecipeOverviewSheet(wb, r){
 
   const ov = computeRecipeOverviewData(r);
   const sorted = [...ov.rows].sort((a,b) => b.wt - a.wt);
+  let refs = null;
 
   if(sorted.length === 0){
     ws.addRow(['', 'No ingredient names entered yet']);
   } else {
+    const firstRow = headerRow.number + 1;
+    const lastRow = firstRow + sorted.length - 1;
+    const totalRowNum = lastRow + 1;
+    const totWt = `$E$${totalRowNum}`;
     sorted.forEach((g, idx) => {
+      const rn = firstRow + idx;
       const subLabel = [g.brand, g.vendorName, g.manufacturer].filter(Boolean).join(' · ');
       const row = ws.addRow([
         idx+1,
         g.note ? `${g.name} (${g.note})` : g.name,
         subLabel,
-        g.pct, g.wt, g.prepareWt,
-        g.cost != null ? g.cost : null
+        { formula: `IF(${totWt}=0,0,E${rn}/${totWt}*100)`, result: g.pct },
+        g.wt, g.prepareWt,
+        { formula: `IF(ISNUMBER(H${rn}),F${rn}/1000*H${rn},"")`, result: g.cost != null ? g.cost : '' },
+        g.pricePerKg != null ? g.pricePerKg : null
       ]);
-      row.eachCell((cell, colNumber) => {
+      for(let c = 1; c <= 8; c++){
+        const cell = row.getCell(c);
         cell.border = { bottom: xlThinBorder() };
-        if(colNumber >= 4) cell.alignment = { horizontal: 'right' };
-      });
+        if(c >= 4) cell.alignment = { horizontal: 'right' };
+      }
       row.getCell(2).font = { color: { argb: XL_COLORS.text } };
       row.getCell(3).font = { size: 10, color: { argb: XL_COLORS.dim } };
       row.getCell(4).numFmt = '0.00"%"';
       row.getCell(5).numFmt = '#,##0.00';
       row.getCell(6).numFmt = '#,##0.00';
-      if(g.cost != null) row.getCell(7).numFmt = '#,##0.00';
+      row.getCell(7).numFmt = '#,##0.00';
+      row.getCell(8).numFmt = '#,##0.00';
+      markInput(row.getCell(8));
     });
 
-    const totalRow = ws.addRow(['', 'Formula Total', '', 100, ov.totalRecipeWeight, ov.prepareTotal, ov.totalCost != null ? ov.totalCost : null]);
-    totalRow.eachCell((cell, colNumber) => {
+    const sumOf = col => `SUM(${col}${firstRow}:${col}${lastRow})`;
+    // Ingredients with no name aren't listed, but their weight is still in the recipe total.
+    const listedWt = sorted.reduce((s,g) => s + g.wt, 0);
+    const hiddenWt = Math.max(0, ov.totalRecipeWeight - listedWt);
+    const hasHidden = hiddenWt > 1e-9;
+    const totalRow = ws.addRow([
+      '', 'Formula Total', '',
+      hasHidden
+        ? { formula: `IF(E${totalRowNum}=0,0,100)`, result: ov.totalRecipeWeight > 0 ? 100 : 0 }
+        : { formula: sumOf('D'), result: ov.rows.reduce((s,g) => s + g.pct, 0) },
+      { formula: `${sumOf('E')}${hasHidden ? `+${hiddenWt}` : ''}`, result: ov.totalRecipeWeight },
+      { formula: sumOf('F'), result: ov.prepareTotal },
+      { formula: `IF(COUNT(G${firstRow}:G${lastRow})=0,"",${sumOf('G')})`, result: ov.totalCost != null ? ov.totalCost : '' }
+    ]);
+    for(let c = 1; c <= 8; c++){
+      const cell = totalRow.getCell(c);
       cell.font = { bold: true, color: { argb: XL_COLORS.text } };
       cell.border = { top: { style: 'medium', color: { argb: XL_COLORS.text } } };
-      if(colNumber >= 4) cell.alignment = { horizontal: 'right' };
-    });
+      if(c >= 4) cell.alignment = { horizontal: 'right' };
+    }
     totalRow.getCell(4).numFmt = '0.00"%"';
     totalRow.getCell(5).numFmt = '#,##0.00';
     totalRow.getCell(6).numFmt = '#,##0.00';
-    if(ov.totalCost != null) totalRow.getCell(7).numFmt = '#,##0.00';
+    totalRow.getCell(7).numFmt = '#,##0.00';
 
     if(ov.costSuffix){
       const noteRow = ws.addRow(['', '* Some ingredients have no Price/kg on file in the Ingredient Library — this total doesn\'t include their cost.']);
       noteRow.getCell(2).font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
     }
+    addInputLegend(ws, 8);
+    refs = { totalWeight: `'${SHEET}'!$E$${totalRowNum}`, totalCost: `'${SHEET}'!$G$${totalRowNum}` };
   }
 
   ws.views = [{ state: 'frozen', ySplit: 2 }];
+  return refs;
 }
 
 // "3. Costing" -- Currency/Exchange Rate/Serving Size, Cost/100g/Cost/kg/
-// Cost per Serving, then the Overhead Multiplier + three-tier Factory/
-// Company/Customer Margin cascade, same figures as the live card.
-function buildCostingSheet(wb, r){
+// Cost per Serving, then the Overhead + three-tier Factory/Company/Customer
+// Margin cascade, same figures as the live card -- as live formulas fed by
+// the Overview sheet's totals and the yellow input cells (Currency, Exchange
+// Rate, Serving size, Overhead and Margin %). Every tier price = the tier
+// below / (1 - (Overhead% + Margin%)/100), chained on the UNROUNDED figure
+// and shown rounded up to 0.05, exactly like the live card.
+function buildCostingSheet(wb, r, ovRefs){
   const ws = wb.addWorksheet('3. Costing');
-  ws.columns = [{ width: 34 }, { width: 40 }];
-  addSectionTitleBar(ws, '3. Costing', 2);
+  ws.columns = [{ width: 46 }, { width: 22 }, { width: 46 }];
+  addSectionTitleBar(ws, '3. Costing', 3);
   let row = 3;
 
-  function kv(label, value){
-    ws.getCell(row, 1).value = label;
-    ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
-    ws.getCell(row, 2).value = (value === null || value === undefined || value === '') ? '—' : value;
-    row++;
+  function put(label, value, { fmt, input, note, align = 'right' } = {}){
+    const rn = row++;
+    const lc = ws.getCell(rn, 1);
+    lc.value = label;
+    lc.font = { bold: true, color: { argb: XL_COLORS.text } };
+    const vc = ws.getCell(rn, 2);
+    vc.value = value === undefined ? null : value;
+    vc.alignment = { horizontal: align };
+    if(fmt) vc.numFmt = fmt;
+    if(input) markInput(vc);
+    if(note){
+      const nc = ws.getCell(rn, 3);
+      nc.value = note;
+      nc.font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
+    }
+    return rn;
   }
 
   const ov = computeRecipeOverviewData(r);
   const c = computeCostingData(r, ov);
+  const isThb = c.pricingCurrency === 'THB';
+  const moneyFmt = isThb ? '"฿"#,##0.00' : `#,##0.00" ${c.pricingCurrency}"`;
+  const pctFmt = '0.00"%"';
+  const dash = v => (v == null ? '—' : v);
 
-  kv('Currency', c.pricingCurrency);
-  if(c.pricingCurrency !== 'THB'){
-    kv('Exchange Rate (1 = ? THB)', c.exchangeRateVal);
-    kv('Rate Date', c.exchangeRateDate);
-  }
-  kv('Amount per Serving (g)', c.servingSize || '');
-  if(c.servingSize) kv('Cost RM / Serving', c.costPerServing ? `${c.costPerServing}${c.costSuffix}` : '—');
-  kv('Cost RM / 100 g', c.costPer100 ? `${c.costPer100}${c.costSuffix}` : '—');
-  kv('Cost RM / kg', c.costPerKg ? `${c.costPerKg}${c.costSuffix}` : '—');
+  const rCur = put('Currency', c.pricingCurrency, { input: true });
+  const rRate = put('Exchange Rate (1 = ? THB)', c.exchangeRateVal, { input: true, fmt: '#,##0.0000', note: 'Only used when Currency is not THB' });
+  if(!isThb) put('Rate Date', c.exchangeRateDate || null, { align: 'right' });
+  const rServ = put('Amount per Serving (g)', c.servingSize || null, { input: true, fmt: '#,##0.##' });
 
-  // Overhead Multiplier / Margins / Selling Price (and the explanatory note
-  // below them) mirror the live Costing card's own eye toggle
-  // (btnToggleCostingMargin / costingMarginVisible, a per-browser
-  // localStorage preference -- see its wiring further up this file) --
-  // whichever state it's currently in when Export Excel is clicked is what
-  // ships in the workbook, same as what Print/Preview would show right now.
+  const cur = `$B$${rCur}`, rate = `$B$${rRate}`, serv = `$B$${rServ}`;
+  const div = `IF(${cur}="THB",1,${rate})`;
+  const tc = ovRefs ? ovRefs.totalCost : null, tw = ovRefs ? ovRefs.totalWeight : null;
+  const costCell = (mult, per, result) => {
+    if(!ovRefs) return '—';
+    const core = per === 'serving' ? `IF(${serv}>0,${tc}/${tw}*${serv}/${div},"—")` : `${tc}/${tw}*${mult}/${div}`;
+    return { formula: `IFERROR(IF(ISNUMBER(${tc}),${core},"—"),"—")`, result: dash(result) };
+  };
+  const sfx = c.costSuffix ? { note: c.costSuffix + ' some ingredients have no Price/kg — cost is incomplete' } : {};
+  const rCps = put('Cost RM / Serving', costCell(1, 'serving', c.costPerServingNum), { fmt: moneyFmt, ...sfx });
+  put('Cost RM / 100 g', costCell(100, 'w', c.costPer100Num), { fmt: moneyFmt, ...sfx });
+  put('Cost RM / kg', costCell(1000, 'w', c.costPerKgNum), { fmt: moneyFmt, ...sfx });
+
+  // Overhead / Margins / Selling Price (and the explanatory note below them)
+  // mirror the live Costing card's own eye toggle (btnToggleCostingMargin /
+  // costingMarginVisible, a per-browser localStorage preference) -- whichever
+  // state it's in when Export Excel is clicked is what ships in the workbook.
   if(costingMarginVisible){
     row++;
     const sectionCell = ws.getCell(row, 1);
     sectionCell.value = 'Overhead & Margins';
     sectionCell.font = { bold: true, size: 12, color: { argb: XL_COLORS.groupText } };
     row++;
-    kv('Overhead (% of Factory Selling Price)', c.overheadPct != null ? `${c.overheadPct}%` : '(none, 0%)');
-    kv('Factory Margin (% of Factory Selling Price)', `${c.factoryMargin}%`);
-    kv('Factory Selling Price / Serving', c.factoryPriceText);
-    kv('Company Overhead (% of Company Selling Price)', `${c.companyOverhead ?? 0}%`);
-    kv('Company Margin (% of Company Selling Price)', c.companyMargin != null ? `${c.companyMargin}%` : '');
-    kv('Company Selling Price / Serving', c.companyPriceText);
-    kv('Customer Overhead (% of Customer Selling Price)', `${c.customerOverhead ?? 0}%`);
-    kv('Customer Margin (% of Customer Selling Price)', c.customerMargin != null ? `${c.customerMargin}%` : '');
-    kv('Customer Selling Price / Serving', c.customerPriceText);
+
+    const base = `$B$${rCps}`;
+    const ceil = expr => `CEILING(ROUND(${expr},6),0.05)`;
+    const rFo = put('Overhead (% of Factory Selling Price)', c.overheadPct, { input: true, fmt: pctFmt });
+    const rFm = put('Factory Margin (% of Factory Selling Price)', c.factoryMargin, { input: true, fmt: pctFmt });
+    const fo = `$B$${rFo}`, fm = `$B$${rFm}`;
+    const fShare = `(${fo}+${fm})`;
+    const fRaw = `${base}/(1-${fShare}/100)`;
+    put('Factory Selling Price / Serving', {
+      formula: `IFERROR(IF(AND(ISNUMBER(${base}),${fShare}<100),${ceil(fRaw)},"—"),"—")`, result: dash(c.factoryPriceNum)
+    }, { fmt: moneyFmt, ...sfx });
+
+    const rCo = put('Company Overhead (% of Company Selling Price)', c.companyOverhead ?? 0, { input: true, fmt: pctFmt });
+    const rCm = put('Company Margin (% of Company Selling Price)', c.companyMargin, { input: true, fmt: pctFmt });
+    const co = `$B$${rCo}`, cm = `$B$${rCm}`;
+    const cShare = `(${co}+${cm})`;
+    const cRaw = `${fRaw}/(1-${cShare}/100)`;
+    put('Company Selling Price / Serving', {
+      formula: `IFERROR(IF(AND(ISNUMBER(${base}),${fShare}<100,ISNUMBER(${cm}),${cShare}<100),${ceil(cRaw)},"—"),"—")`, result: dash(c.companyPriceNum)
+    }, { fmt: moneyFmt, ...sfx });
+
+    const rUo = put('Customer Overhead (% of Customer Selling Price)', c.customerOverhead ?? 0, { input: true, fmt: pctFmt });
+    const rUm = put('Customer Margin (% of Customer Selling Price)', c.customerMargin, { input: true, fmt: pctFmt });
+    const uo = `$B$${rUo}`, um = `$B$${rUm}`;
+    const uShare = `(${uo}+${um})`;
+    const uRaw = `${cRaw}/(1-${uShare}/100)`;
+    put('Customer Selling Price / Serving', {
+      formula: `IFERROR(IF(AND(ISNUMBER(${base}),${fShare}<100,ISNUMBER(${cm}),${cShare}<100,ISNUMBER(${um}),${uShare}<100),${ceil(uRaw)},"—"),"—")`, result: dash(c.customerPriceNum)
+    }, { fmt: moneyFmt, ...sfx });
 
     row++;
-    ws.mergeCells(row, 1, row, 2);
+    ws.mergeCells(row, 1, row, 3);
     const noteCell = ws.getCell(row, 1);
     noteCell.value = 'Costs are calculated from weight × the ingredient\'s Price/kg in the library (always stored in Thai Baht). Selling Price figures round up to the nearest 0.05 of the selected currency.';
     noteCell.font = { italic: true, size: 9, color: { argb: XL_COLORS.dim } };
     noteCell.alignment = { wrapText: true };
+    ws.getRow(row).height = 26;
   }
+  addInputLegend(ws, 3);
 }
 
+// "4. Ingredients" -- the Part/Sub-part tree. Weights, Yield % and the
+// Part's own Yield % are the inputs; each Part's Formula (g) is the sum of
+// its children, Prepare (g) divides by the Yields exactly like
+// partPrepareWeight/computePrepareWeight (an ingredient's Prepare also
+// carries every ancestor Part's Yield), and the % columns and totals are
+// formulas too.
 function buildIngredientsSheet(wb, r){
   const ws = wb.addWorksheet('4. Ingredients');
   ws.columns = [
@@ -376,20 +481,26 @@ function buildIngredientsSheet(wb, r){
   headerRow.height = 28;
 
   const totalWeight = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
-  const namedParts = (r.parts || []).filter(part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== ''));
+  const partHasNames = part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== '');
+  const namedParts = (r.parts || []).filter(partHasNames);
+  const deferred = []; // % formulas need the total row's number, known only at the end
 
-  function addPartRows(part, depth, ancestorMultiplier){
-    const namedItems = (part.items||[]).filter(item =>
-      item.kind === 'part' ? allIngredientsInPart(item).some(i => (i.name||'').trim() !== '') : (item.name||'').trim() !== ''
-    );
+  // ancestorRefs: the Yield cells of every Part above this one (nearest first)
+  // -- an ingredient's Prepare Wt divides by all of them.
+  function addPartRows(part, depth, ancestorRefs, ancestorMultiplier){
+    const isNamed = item => item.kind === 'part' ? partHasNames(item) : (item.name||'').trim() !== '';
+    const items = part.items || [];
+    const namedItems = items.filter(isNamed);
+    // Blank-named rows aren't listed, but their weight still counts toward the Part.
+    const hiddenItems = items.filter(item => !isNamed(item));
     const label = (part.name||'').trim() || 'Unnamed part';
     const partWeight = partTotalWeight(part);
     const partPct = totalWeight > 0 ? (partWeight / totalWeight * 100) : 0;
-    const ownMultiplier = computePrepareWeight(1, part.prepYieldPct);
     const py = parseFloat(part.prepYieldPct);
     const partYieldDisplay = (isFinite(py) && py > 0) ? py : 100;
 
     const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct]);
+    const pr = groupRow.number;
     groupRow.eachCell((cell, colNumber) => {
       cell.font = { bold: true, color: { argb: XL_COLORS.groupText } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
@@ -401,36 +512,88 @@ function buildIngredientsSheet(wb, r){
     groupRow.getCell(5).numFmt = '#,##0.00';
     groupRow.getCell(6).numFmt = '0.00"%"';
     groupRow.getCell(7).numFmt = '0.00"%"';
+    markInput(groupRow.getCell(2));
 
-    const childMultiplier = ancestorMultiplier * ownMultiplier;
+    const myRefs = [`$B$${pr}`, ...ancestorRefs];
+    const childMultiplier = ancestorMultiplier * computePrepareWeight(1, part.prepYieldPct);
+    const weightRefs = [], prepareTerms = [];
     namedItems.forEach(item => {
-      if(item.kind === 'part'){ addPartRows(item, depth+1, childMultiplier); return; }
+      if(item.kind === 'part'){
+        const rn = addPartRows(item, depth+1, myRefs, childMultiplier);
+        weightRefs.push(`D${rn}`);
+        prepareTerms.push(`E${rn}`);
+        return;
+      }
       const ing = item;
       const formulaWt = parseFloat(ing.weight) || 0;
+      const iy = parseFloat(ing.prepYieldPct);
       const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
-      const pctOfRecipe = totalWeight > 0 ? (formulaWt / totalWeight * 100) : 0;
       const ingRow = ws.addRow([
-        ing.name, null, (ing.note||'').trim(), formulaWt, prepareWt, parseFloat(ing.percent)||0, pctOfRecipe
+        ing.name, (isFinite(iy) && iy > 0) ? iy : null, (ing.note||'').trim(), formulaWt, 0, 0, 0
       ]);
-      ingRow.eachCell((cell, colNumber) => {
+      const rn = ingRow.number;
+      for(let c = 1; c <= 7; c++){
+        const cell = ingRow.getCell(c);
         cell.border = { bottom: xlThinBorder() };
         cell.font = { color: { argb: XL_COLORS.text } };
-        if(colNumber === 1) cell.alignment = { indent: depth+1, vertical: 'middle' };
-        else if(colNumber !== 3) cell.alignment = { horizontal: 'right', vertical: 'middle' };
-      });
+        if(c === 1) cell.alignment = { indent: depth+1, vertical: 'middle' };
+        else if(c !== 3) cell.alignment = { horizontal: 'right', vertical: 'middle' };
+      }
+      ingRow.getCell(2).numFmt = '0.00"%"';
       ingRow.getCell(4).numFmt = '#,##0.00';
       ingRow.getCell(5).numFmt = '#,##0.00';
       ingRow.getCell(6).numFmt = '0.00"%"';
       ingRow.getCell(7).numFmt = '0.00"%"';
+      markInput(ingRow.getCell(2));
+      markInput(ingRow.getCell(4));
+      weightRefs.push(`D${rn}`);
+      prepareTerms.push(`D${rn}/${xlYield(`$B$${rn}`)}`);
+      // Cached results are what the app itself shows (Excel recalculates on open).
+      ingRow.getCell(5).value = {
+        formula: `D${rn}/${[xlYield(`$B$${rn}`), ...myRefs.map(xlYield)].join('/')}`,
+        result: prepareWt
+      };
+      deferred.push(totalRowNum => {
+        ingRow.getCell(6).value = { formula: `IF(D${pr}=0,0,D${rn}/D${pr}*100)`, result: partWeight > 0 ? formulaWt / partWeight * 100 : 0 };
+        ingRow.getCell(7).value = { formula: `IF($D$${totalRowNum}=0,0,D${rn}/$D$${totalRowNum}*100)`, result: totalWeight > 0 ? formulaWt / totalWeight * 100 : 0 };
+      });
     });
+
+    // Hidden (blank-named) rows contribute as fixed amounts so the Part's figures stay equal to the app's.
+    let hiddenWt = 0;
+    hiddenItems.forEach(item => {
+      if(item.kind === 'part'){ hiddenWt += partTotalWeight(item); prepareTerms.push(String(partPrepareWeight(item))); }
+      else{
+        const w = parseFloat(item.weight) || 0;
+        hiddenWt += w;
+        prepareTerms.push(String(computePrepareWeight(w, item.prepYieldPct)));
+      }
+    });
+    groupRow.getCell(4).value = {
+      formula: `SUM(${weightRefs.join(',')})${hiddenWt > 0 ? `+${hiddenWt}` : ''}`, result: partWeight
+    };
+    groupRow.getCell(5).value = {
+      formula: `(${prepareTerms.join('+')})/${xlYield(`$B$${pr}`)}`, result: partPrepareWeight(part)
+    };
+    deferred.push(totalRowNum => {
+      groupRow.getCell(6).value = { formula: `IF($D$${totalRowNum}=0,0,D${pr}/$D$${totalRowNum}*100)`, result: partPct };
+      groupRow.getCell(7).value = { formula: `IF($D$${totalRowNum}=0,0,D${pr}/$D$${totalRowNum}*100)`, result: partPct };
+    });
+    return pr;
   }
 
   if(namedParts.length === 0){
     ws.addRow(['No ingredients']);
   } else {
-    namedParts.forEach(part => addPartRows(part, 0, 1));
+    const partRows = namedParts.map(part => addPartRows(part, 0, [], 1));
+    const hiddenTop = (r.parts || []).filter(p => !partHasNames(p)).reduce((s,p) => s + partTotalWeight(p), 0);
     const totalPrepareWeight = namedParts.reduce((s,p) => s + partPrepareWeight(p), 0);
-    const totalRow = ws.addRow(['Formula total', '', '', totalWeight, totalPrepareWeight, 100, 100]);
+    const totalRow = ws.addRow([
+      'Formula total', '', '',
+      { formula: `SUM(${partRows.map(n => `D${n}`).join(',')})${hiddenTop > 0 ? `+${hiddenTop}` : ''}`, result: totalWeight },
+      { formula: `SUM(${partRows.map(n => `E${n}`).join(',')})`, result: totalPrepareWeight },
+      100, 100
+    ]);
     totalRow.eachCell((cell, colNumber) => {
       cell.font = { bold: true, color: { argb: XL_COLORS.text } };
       cell.border = { top: { style: 'medium', color: { argb: XL_COLORS.text } } };
@@ -440,6 +603,8 @@ function buildIngredientsSheet(wb, r){
     totalRow.getCell(5).numFmt = '#,##0.00';
     totalRow.getCell(6).numFmt = '0.00"%"';
     totalRow.getCell(7).numFmt = '0.00"%"';
+    deferred.forEach(fn => fn(totalRow.number));
+    addInputLegend(ws, 7);
   }
 
   ws.views = [{ state: 'frozen', ySplit: 2 }];
@@ -554,12 +719,14 @@ export async function exportRecipeToExcel(r){
   const wb = new window.ExcelJS.Workbook();
   wb.creator = 'Forge';
   wb.created = new Date();
+  // The sheets carry live formulas -- have Excel recompute them as soon as the file opens.
+  wb.calcProperties = { fullCalcOnLoad: true };
 
   renderPrintView(r);
   await addRecipePreviewSheet(wb, document.getElementById('recipeCards'));
   buildProductDetailsSheet(wb, r);
-  buildRecipeOverviewSheet(wb, r);
-  buildCostingSheet(wb, r);
+  const overviewRefs = buildRecipeOverviewSheet(wb, r);
+  buildCostingSheet(wb, r, overviewRefs);
   buildIngredientsSheet(wb, r);
   buildProcessSheet(wb, r);
   finishRecipeWorksheets(wb);
