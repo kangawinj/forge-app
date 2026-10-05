@@ -44,21 +44,51 @@ export function tierAdjustments(extras, tierKey){
   return { fixed, pct };
 }
 
-export function calcTier({ base, fixed, oPct, mPct, step }){
+// Optional wPct = the base cost (raw material for the factory, the previous
+// tier's price for company/customer) as a share of THIS tier's selling price.
+// When given it fixes the price directly (price = C / w) and the target profit
+// becomes whatever is left, instead of being typed in:
+//   (C + F) / (1 - o - m) = C / w   =>   m = 1 - o - w * (C + F) / C
+// m must come out >= 0, otherwise that cost share plus the expenses already
+// leave no room for profit.
+export function calcTier({ base, fixed, oPct, mPct, wPct = null, step }){
   const errors = [];
   if(!isNum(base)) errors.push('ยังไม่มีต้นทุนตั้งต้น');
   else if(base < 0) errors.push('ต้นทุนตั้งต้นต้องไม่ติดลบ');
   if(!isNum(fixed) || fixed < 0) errors.push('ค่าใช้จ่ายเพิ่มเติมต้องเป็นตัวเลขที่ไม่ติดลบ');
   if(!isNum(oPct) || oPct < 0) errors.push('ค่าใช้จ่าย % ต้องเป็นตัวเลขที่ไม่ติดลบ');
-  if(!isNum(mPct) || mPct < 0) errors.push('กำไรเป้าหมาย % ต้องเป็นตัวเลขที่ไม่ติดลบ');
-  if(!errors.length && oPct + mPct >= 100) errors.push('ค่าใช้จ่าย % + กำไรเป้าหมาย % ต้องน้อยกว่า 100%');
+  let m = mPct, derivedM = false;
+  if(wPct != null){
+    if(!isNum(wPct) || wPct <= 0 || wPct >= 100){
+      errors.push('สัดส่วนต้นทุน % ของราคาขาย ต้องมากกว่า 0 และน้อยกว่า 100');
+    }else if(!errors.length){
+      if(base <= 0){
+        errors.push('ต้นทุนตั้งต้นต้องมากกว่า 0 จึงจะกำหนดเป็น % ของราคาขายได้');
+      }else{
+        m = 100 * (1 - oPct / 100 - (wPct / 100) * (base + fixed) / base);
+        derivedM = true;
+        if(m < -1e-9){
+          const maxW = (1 - oPct / 100) * base / (base + fixed) * 100;
+          errors.push(`สัดส่วนต้นทุน ${wPct}% + ค่าใช้จ่ายสูงเกินกว่าจะเหลือกำไร — สัดส่วนต้นทุนต้องไม่เกิน ${(Math.floor(maxW * 100) / 100)}% หรือลดค่าใช้จ่าย`);
+        }
+        if(m < 0) m = 0;
+      }
+    }
+  }else if(!isNum(mPct) || mPct < 0){
+    errors.push('กำไรเป้าหมาย % ต้องเป็นตัวเลขที่ไม่ติดลบ');
+  }
+  if(!errors.length && oPct + m >= 100) errors.push('ค่าใช้จ่าย % + กำไรเป้าหมาย % ต้องน้อยกว่า 100%');
   if(errors.length) return { ok: false, errors };
-  const o = oPct / 100, m = mPct / 100;
-  const raw = (base + fixed) / (1 - o - m);
+  const o = oPct / 100, mm = m / 100;
+  const raw = (base + fixed) / (1 - o - mm);
   const price = roundUpToStep(raw, step);
   const expenses = fixed + price * o;
   const profit = price - base - fixed - price * o;
-  return { ok: true, base, fixed, oPct, mPct, raw, price, expenses, profit, margin: price > 0 ? profit / price : 0 };
+  return {
+    ok: true, base, fixed, oPct, mPct: m, derivedM, wPct, raw, price, expenses, profit,
+    margin: price > 0 ? profit / price : 0,
+    baseShare: price > 0 ? base / price : 0     // base cost / price actually quoted (after rounding)
+  };
 }
 
 // scenario: { tiers: [{o, m}, {o, m}, {o, m}], extras: [...] }
@@ -76,7 +106,7 @@ export function calcChain(scenario, materialCost, step){
     if(i > 0 && !(prev && prev.ok)){
       res = { ok: false, errors: ['แก้ลำดับก่อนหน้าให้คำนวณได้ก่อน'] };
     }else{
-      res = calcTier({ base, fixed: adj.fixed, oPct: oBase + adj.pct, mPct: mBase, step });
+      res = calcTier({ base, fixed: adj.fixed, oPct: oBase + adj.pct, mPct: mBase, wPct: isNum(t.w) ? t.w : null, step });
     }
     res.key = key;
     res.oBasePct = oBase;
@@ -109,10 +139,14 @@ export function calcReverse(scenario, targetPrice, refIndex, step){
     const key = TIER_KEYS[i];
     const adj = tierAdjustments(scenario.extras, key);
     const t = scenario.tiers[i] || {};
-    const max = maxBaseCost({
-      price, fixed: adj.fixed,
-      oPct: (isNum(t.o) ? t.o : 0) + adj.pct, mPct: isNum(t.m) ? t.m : 0
-    });
+    // A tier whose cost is fixed as a share of its price (t.w) affords exactly
+    // price * w; otherwise the usual price * (1 - o - m) - F.
+    const max = (isNum(t.w) && t.w > 0 && t.w < 100)
+      ? price * t.w / 100
+      : maxBaseCost({
+          price, fixed: adj.fixed,
+          oPct: (isNum(t.o) ? t.o : 0) + adj.pct, mPct: isNum(t.m) ? t.m : 0
+        });
     if(max == null || max <= 0){
       budgets[i] = { key, ok: false, priceBudget: price, maxBase: max };
       for(let j = i - 1; j >= 0; j--) budgets[j] = { key: TIER_KEYS[j], ok: false, priceBudget: null, maxBase: null };

@@ -6187,3 +6187,7 @@
 }
 .bdp-scn-copy{grid-column:1 / -1;display:flex;gap:8px;align-items:center;flex-wrap:wrap;font-size:12px;}
 .bdp-budget-table th,.bdp-compare th{text-transform:none;letter-spacing:normal;}
+.bdp-share{display:flex;align-items:stretch;margin-top:6px;}
+.bdp-share input{border-top-right-radius:0;border-bottom-right-radius:0;min-width:0;font-size:12px;padding:6px 8px;}
+.bdp-share em{display:flex;align-items:center;padding:0 8px;border:1px solid var(--border);border-left:none;border-radius:0 10px 10px 0;background:var(--bg);font-style:normal;font-size:12px;color:var(--text-dim);}
+.bdp-tr input:disabled{background:var(--bg);color:var(--text-dim);}

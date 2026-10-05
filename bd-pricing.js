@@ -35,7 +35,7 @@ function blankScenario(name){
     id: uid(), name,
     mode: 'cost',              // 'cost' = start from cost, 'target' = start from the target price
     materialOverride: null,    // null = use the recipe's cost; a number = typed by hand
-    tiers: [{ o: 25, m: 10 }, { o: 5, m: 10 }, { o: 25, m: 10 }],   // expense % / target profit %, per tier, of THAT tier's selling price
+    tiers: [{ o: 25, m: 10, w: null }, { o: 5, m: 10, w: null }, { o: 25, m: 10, w: null }],   // expense % / target profit %, per tier, of THAT tier's selling price
     extras: [],                // { id, name, tier, unit: 'amount' | 'percent', value }
     targetPrice: null,
     targetRef: 'customer',     // which price the target means: 'company' (company -> customer) or 'customer' (customer's resale)
@@ -273,7 +273,7 @@ function renderAll(){
           <div class="bdp-table" id="bdpTable">
             <div class="bdp-tr bdp-th">
               <div>ลำดับ</div>
-              <div>ต้นทุนตั้งต้น<small>(${ws.currency === 'THB' ? '฿' : escapeHtml(ws.currency)} / Serving)</small></div>
+              <div>ต้นทุนตั้งต้น<small>(${ws.currency === 'THB' ? '฿' : escapeHtml(ws.currency)} / Serving และ % ของราคาขาย)</small></div>
               <div>ค่าใช้จ่ายเพิ่มเติม<small>(฿ / Serving)</small></div>
               <div>ค่าใช้จ่าย<small>(% ของราคาขาย)</small></div>
               <div>กำไรเป้าหมาย<small>(% ของราคาขาย)</small></div>
@@ -286,10 +286,14 @@ function renderAll(){
                 <div class="bdp-tier-name" data-label="ลำดับ"><span class="bdp-num bdp-num-sm">${TIER_ICONS[key]}</span> ${TIER_LABELS[key]}</div>
                 <div data-label="ต้นทุนตั้งต้น">${i === 0
                   ? fieldNum('material', 'id="bdpMaterialInput" min="0"')
-                  : `<div class="bdp-out" id="bdp-base-${i}">—</div>`}</div>
+                  : `<div class="bdp-out" id="bdp-base-${i}">—</div>`}
+                  <div class="bdp-share" title="${i === 0 ? 'ต้นทุนวัตถุดิบ' : 'ต้นทุนสินค้า (ราคาลำดับก่อนหน้า)'}เป็นกี่ % ของราคาขายลำดับนี้ — กรอกแล้วราคา = ต้นทุน ÷ % นี้ และกำไรเป้าหมายจะถูกคำนวณจากส่วนที่เหลือ (เว้นว่าง = ไม่ใช้)">
+                    ${fieldNum(`sc.tiers.${i}.w`, `value="${escapeHtml(val(sc.tiers[i].w))}" min="0" max="99.99" placeholder="% ${i === 0 ? 'วัตถุดิบ' : 'สินค้า'}"`)}<em>%</em>
+                  </div>
+                  <small class="bdp-hint" id="bdp-w-${i}"></small></div>
                 <div data-label="ค่าใช้จ่ายเพิ่มเติม (฿ / Serving)"><div class="bdp-out" id="bdp-fixed-${i}">—</div></div>
                 <div data-label="ค่าใช้จ่าย (% ของราคาขาย)">${fieldNum(`sc.tiers.${i}.o`, `value="${escapeHtml(val(sc.tiers[i].o))}" min="0" max="99"`)}<small class="bdp-hint" id="bdp-oextra-${i}"></small></div>
-                <div data-label="กำไรเป้าหมาย (% ของราคาขาย)">${fieldNum(`sc.tiers.${i}.m`, `value="${escapeHtml(val(sc.tiers[i].m))}" min="0" max="99"`)}</div>
+                <div data-label="กำไรเป้าหมาย (% ของราคาขาย)">${fieldNum(`sc.tiers.${i}.m`, `value="${escapeHtml(val(sc.tiers[i].m))}" min="0" max="99"`)}<small class="bdp-hint" id="bdp-mnote-${i}"></small></div>
                 <div data-label="ราคาขาย"><div class="bdp-out bdp-out-price" id="bdp-price-${i}">—</div><small class="bdp-hint" id="bdp-raw-${i}"></small></div>
                 <div data-label="ค่าใช้จ่ายจริง (฿ / Serving)"><div class="bdp-out" id="bdp-exp-${i}">—</div></div>
                 <div data-label="กำไรจริง"><div class="bdp-out" id="bdp-profit-${i}">—</div><small class="bdp-hint" id="bdp-margin-${i}"></small></div>
@@ -471,6 +475,11 @@ function refresh(opts = {}){
     setText(`bdp-exp-${i}`, t.ok ? money(t.expenses) : '—');
     setText(`bdp-profit-${i}`, t.ok ? money(t.profit) : '—');
     setText(`bdp-margin-${i}`, t.ok ? `${pctText(t.margin)} (เป้า ${t.mPct}%)` : '');
+    const wSet = isNum(sc.tiers[i].w);
+    const mInput = document.querySelector(`[data-bd="sc.tiers.${i}.m"]`);
+    if(mInput) mInput.disabled = wSet;
+    setText(`bdp-mnote-${i}`, wSet ? (t.ok ? `คำนวณจากสัดส่วนต้นทุน = ${+t.mPct.toFixed(2)}%` : 'ใช้สัดส่วนต้นทุน % แทน') : '');
+    setText(`bdp-w-${i}`, wSet && t.ok ? `จริงหลังปัด ${+(t.baseShare * 100).toFixed(2)}%` : '');
     const err = document.getElementById(`bdp-err-${i}`);
     if(err){ err.textContent = t.ok ? '' : t.errors.join(' • '); err.style.display = t.ok ? 'none' : ''; }
     document.querySelector(`.bdp-tr[data-tier="${i}"]`)?.classList.toggle('bdp-tr-bad', !t.ok);
@@ -716,7 +725,8 @@ function renderDetailModal(){
           <tr><th>C ต้นทุนตั้งต้น</th><td>${money(t.base)}${i > 0 ? ` <small>(= ราคาขายลำดับ${TIER_LABELS[TIER_KEYS[i - 1]]})</small>` : ''}</td></tr>
           <tr><th>F ค่าใช้จ่ายเพิ่มเติม (จำนวนเงิน)</th><td>${money(t.fixed)}</td></tr>
           <tr><th>o ค่าใช้จ่าย % ของราคาขาย</th><td>${+o.toFixed(4)}%${t.oExtraPct ? ` (พื้นฐาน ${t.oBasePct}% + รายการเพิ่มเติม ${+t.oExtraPct.toFixed(4)}%)` : ''}</td></tr>
-          <tr><th>m กำไรเป้าหมาย % ของราคาขาย</th><td>${m}%</td></tr>
+          ${t.wPct != null ? `<tr><th>w ต้นทุนเป็น % ของราคาขาย (กำหนดเอง)</th><td>${t.wPct}% → ราคา = C ÷ w</td></tr>` : ''}
+          <tr><th>m กำไรเป้าหมาย % ของราคาขาย</th><td>${+(+m).toFixed(4)}%${t.derivedM ? ' <small>(คำนวณ: m = 1 − o − w × (C + F) ÷ C)</small>' : ''}</td></tr>
           <tr><th>ราคาขายก่อนปัด = (C + F) ÷ (1 − o − m)</th><td>(${t.base.toFixed(4)} + ${t.fixed.toFixed(4)}) ÷ (1 − ${(o / 100).toFixed(4)} − ${(m / 100).toFixed(4)}) = <b>${t.raw.toFixed(6)}</b></td></tr>
           <tr><th>ราคาขายหลังปัด</th><td><b>${money(t.price)}</b></td></tr>
           <tr><th>ค่าใช้จ่ายจริง = F + ราคา × o</th><td>${t.fixed.toFixed(4)} + ${t.price.toFixed(2)} × ${(o / 100).toFixed(4)} = ${money(t.expenses)}</td></tr>
