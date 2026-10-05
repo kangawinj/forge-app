@@ -100,6 +100,7 @@
     <button class="nav-tab" id="btnOpenTrials">Test Results</button>
     <button class="nav-tab" id="btnOpenSampleSubmissionsTab">Sample Submissions</button>
     <button class="nav-tab" id="btnOpenRefLists">Reference Lists</button>
+    <button class="nav-tab" id="btnOpenBdPricing" style="display:none;">BD Pricing</button>
   </div>
   <div class="navbar-right">
     <div class="navbar-online-users" id="navbarOnlineUsers"></div>
@@ -437,6 +438,16 @@
         <button class="btn btn-sm" id="btnCancelProjMuQuickEdit">Cancel</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div class="modal-overlay" id="bdModalOverlay">
+  <div class="modal" id="bdModal" style="max-width:860px;">
+    <div class="modal-header">
+      <div class="modal-title" id="bdModalTitle"></div>
+      <button class="icon-btn" id="btnCloseBdModal" title="Close">✕</button>
+    </div>
+    <div class="modal-body" id="bdModalBody"></div>
   </div>
 </div>
 

@@ -68,7 +68,7 @@ function addSectionTitleBar(ws, title, colSpan){
 // so multi-Part compounding matches exactly. Pulled out as a pure function
 // (no DOM reads) so both the Overview and Costing sheets can share one
 // computation instead of each re-deriving it their own way.
-function computeRecipeOverviewData(r){
+export function computeRecipeOverviewData(r){
   const allIngredients = allIngredientsInRecipe(r);
   const prepareWeightByIng = new Map();
   (r.parts || []).forEach(part => collectIngredientsWithPrepareWeight(part).forEach(({ ing, prepareWt }) => prepareWeightByIng.set(ing, prepareWt)));

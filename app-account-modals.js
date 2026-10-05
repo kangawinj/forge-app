@@ -54,6 +54,10 @@ function userAdminRowHtml(item, isPendingSection){
           <input type="checkbox" data-role="toggle-see-all-projects" data-uid="${escapeHtml(item.id)}" ${item.canSeeAllProjects ? 'checked' : ''}>
           <b>Can see all Projects</b>
         </label>
+        <label class="user-admin-permission-toggle">
+          <input type="checkbox" data-role="toggle-bd-pricing" data-uid="${escapeHtml(item.id)}" ${item.bdPricingAccess ? 'checked' : ''}>
+          <b>BD Pricing Workspace</b>
+        </label>
         ${MODULE_PERMISSIONS.map(m => `
           <label class="user-admin-permission-toggle">
             <input type="checkbox" data-role="toggle-permission" data-uid="${escapeHtml(item.id)}" data-module="${m.key}" ${userModulePermissions(item)[m.key] ? 'checked' : ''}>
@@ -87,6 +91,13 @@ function renderUserAdminLists(){
     cb.addEventListener('change', () => {
       const checked = cb.checked;
       setDoc(doc(userApprovalsCol, cb.dataset.uid), { permissions: { [cb.dataset.module]: checked } }, { merge: true })
+        .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
+    });
+  });
+  document.querySelectorAll('#userAdminModalOverlay [data-role="toggle-bd-pricing"]').forEach(cb => {
+    cb.addEventListener('change', () => {
+      const checked = cb.checked;
+      setDoc(doc(userApprovalsCol, cb.dataset.uid), { bdPricingAccess: checked }, { merge: true })
         .catch(err => { alert('Failed to update: ' + err.message); cb.checked = !checked; });
     });
   });

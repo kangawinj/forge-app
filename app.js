@@ -81,6 +81,7 @@ import {
   blankProduct, scheduleProjectSave, PROJECT_STATUS_LABELS, getRequirements, quickAddCalendarPlan,
   projectWhoMenuOpen, closeProjectWhoMenu, certificateSummaryText
 } from './projects.js';
+import { mountBdPricingView, resetBdPricingState } from './bd-pricing.js';
 import {
   recipes, currentId, unlockedRecipeId, recipesLoaded, unsubscribeRecipes,
   RECIPE_DIFF_FIELDS, attachRecipesListener,
@@ -117,7 +118,7 @@ export {
   findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
-  isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch, canSeeAllProjects,
+  isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch, canSeeAllProjects, canAccessBdPricing,
   openMaterialDetail, setCompareSeriesPrefilter, productList, hasModuleAccess, compositionSummaryText,
   autoGrowTextarea, FOOD_ALLERGEN_COLUMNS, certificateSummaryText
 };
@@ -152,6 +153,8 @@ export const projectsCol = collection(db, "projects");
 // "projectsByStatus" doc (monthColumnCount) for Projects by Status' List
 // view month-comparison columns.
 export const appSettingsCol = collection(db, "appSettings");
+// BD Pricing Workspace proposals (bd-pricing.js) -- one doc per saved proposal.
+export const bdProposalsCol = collection(db, "bdProposals");
 export const trialsCol = collection(db, "trials");
 // One doc per Recipe Series (id = seriesId), holding whichever Trials were
 // last picked in that series' "Compare Trials" view -- see compare.js --
@@ -315,6 +318,17 @@ function hasModuleAccess(key){
 // ADMIN_EMAIL get the same "see every project regardless of name match"
 // behavior ADMIN_EMAIL already had, without making them a full admin.
 let myCanSeeAllProjects = false;
+// BD Pricing Workspace access (per request: only Yano and the admin for now,
+// the admin can open it up to others later from Manage Users). The admin is
+// always in; Yano is recognised by the login email's name part (firestore.rules
+// uses the very same test, so the screen and the data agree); anyone else needs
+// the admin to tick "BD Pricing" on their Manage Users row (bdPricingAccess on
+// their userApprovals doc, like canSeeAllProjects above).
+let myBdPricingAccess = false;
+function canAccessBdPricing(){
+  const localPart = (currentUser?.email || '').split('@')[0].toLowerCase();
+  return isCurrentUserAdmin() || myBdPricingAccess || localPart.includes('yano');
+}
 function canSeeAllProjects(){
   return isCurrentUserAdmin() || myCanSeeAllProjects;
 }
@@ -489,6 +503,8 @@ function renderApp(){
     const btn = document.getElementById(m.navBtnId);
     if(btn) btn.style.display = hasModuleAccess(m.key) ? '' : 'none';
   });
+  const bdBtn = document.getElementById('btnOpenBdPricing');
+  if(bdBtn) bdBtn.style.display = canAccessBdPricing() ? '' : 'none';
 }
 
 function goToAuth(){
@@ -722,6 +738,14 @@ function initAuthConfirmModal(){
   });
 }
 
+function initBdPricingView(){
+  document.getElementById('btnOpenBdPricing').addEventListener('click', () => guardNavigation(() => {
+    mainFeatureView = 'bdPricing';
+    renderMain();
+    renderSidebar();
+  }));
+}
+
 function initRefListsView(){
   document.getElementById('btnOpenRefLists').addEventListener('click', () => guardNavigation(() => {
     mainFeatureView = 'refLists';
@@ -790,7 +814,7 @@ function initCompareView(){
 // recipe (e.g. the Ingredient Library button) leaves currentId untouched,
 // so closing the feature naturally resumes that recipe instead of bouncing
 // to home.
-export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'productList' | 'sampleSubmissions' | 'refLists' | 'projects' | 'trials'
+export let mainFeatureView = null; // null | 'recipesList' | 'compare' | 'materials' | 'productList' | 'sampleSubmissions' | 'refLists' | 'projects' | 'trials' | 'bdPricing'
 // Lets a split module (e.g. projects.js's own nav-button wiring) change
 // mainFeatureView from outside app.js — a plain `mainFeatureView = ...`
 // assignment in an importing module isn't possible, since ES modules
@@ -831,6 +855,7 @@ function restoreLastView(){
   const isRecipesView = view === 'recipesList' || view === 'compare' || (view === null && !!last.currentId);
   if(isRecipesView && !hasModuleAccess('recipes')) return;
   if(view && MODULE_PERMISSIONS.some(m => m.key === view) && !hasModuleAccess(view)) return;
+  if(view === 'bdPricing' && !canAccessBdPricing()) return;
   mainFeatureView = view;
   if(last.currentId) openRecipe(last.currentId);
 }
@@ -1050,7 +1075,8 @@ function initSampleSubmissionsView(){
 const FEATURE_VIEW_BUTTON_IDS = {
   compare: 'btnCompare', materials: 'btnOpenMaterialLibSidebar', productList: 'btnOpenProductsTab',
   sampleSubmissions: 'btnOpenSampleSubmissionsTab',
-  refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials'
+  refLists: 'btnOpenRefLists', projects: 'btnOpenProjects', trials: 'btnOpenTrials',
+  bdPricing: 'btnOpenBdPricing'
 };
 
 
@@ -1336,6 +1362,7 @@ const FEATURE_VIEW_MOUNTERS = {
   refLists: mountRefListsView,
   projects: mountProjectsView,
   trials: mountTrialsView,
+  bdPricing: mountBdPricingView,
   seriesMigration: mountSeriesMigrationView
 };
 
@@ -1524,6 +1551,7 @@ initCompareView();
 initVersionsModal();
 initVersionPreviewModal();
 initRefListsView();
+initBdPricingView();
 initMaterialLibrary();
 initProductsView();
 initSampleSubmissionsView();
@@ -1673,6 +1701,7 @@ onAuthStateChanged(auth, user => {
       myApprovalStatus = 'exempt';
       myModulePermissions = null;
       myCanSeeAllProjects = false;
+      myBdPricingAccess = false;
       unlockAppAfterApproval();
     }else if(!unsubscribeMyApproval){
       unsubscribeMyApproval = onSnapshot(doc(userApprovalsCol, user.uid), snap => {
@@ -1691,6 +1720,7 @@ onAuthStateChanged(auth, user => {
         myApprovalStatus = data ? data.status : 'pending';
         myModulePermissions = userModulePermissions(data);
         myCanSeeAllProjects = data?.canSeeAllProjects === true;
+        myBdPricingAccess = data?.bdPricingAccess === true;
         if(myApprovalStatus === 'approved'){
           unlockAppAfterApproval();
           // Covers the admin revoking a module while this person is
@@ -1722,6 +1752,7 @@ onAuthStateChanged(auth, user => {
     myApprovalStatus = null;
     myModulePermissions = null;
     myCanSeeAllProjects = false;
+    myBdPricingAccess = false;
     if(unsubscribeMyApproval){ unsubscribeMyApproval(); unsubscribeMyApproval = null; }
     resetRecipesState();
     resetMaterialsState();
@@ -1729,6 +1760,7 @@ onAuthStateChanged(auth, user => {
     resetSampleSubmissionsState();
     resetRefListsState();
     resetProjectsState();
+    resetBdPricingState();
     resetTrialsState();
     if(unsubscribeLoginEvents){ unsubscribeLoginEvents(); unsubscribeLoginEvents = null; }
     if(unsubscribeActivityEvents){ unsubscribeActivityEvents(); unsubscribeActivityEvents = null; }
