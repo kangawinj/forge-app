@@ -434,6 +434,37 @@ export function findPartByName(parts, name){
   return null;
 }
 
+// A Process Component whose name matches a Part (or a single ingredient)
+// always takes that item's CURRENT weight from the ingredient tree -- null
+// when the name matches nothing (or several same-named ingredients), in which
+// case the Component keeps its own typed weight.
+export function componentSourceWeight(r, name){
+  name = (name || '').trim();
+  if(!name) return null;
+  const part = findPartByName(r.parts, name);
+  if(part) return partTotalWeight(part);
+  const same = allIngredientsInRecipe(r).filter(i => (i.name || '').trim() === name);
+  return same.length === 1 ? (parseFloat(same[0].weight) || 0) : null;
+}
+// Brings every Process's Component weights (and the auto % that follows from
+// them) in line with the ingredient tree. Returns true when anything changed.
+export function syncProcessComponentWeights(r){
+  let changed = false;
+  (r.processes || []).forEach(p => {
+    const comps = p.components || [];
+    comps.forEach(c => {
+      const w = componentSourceWeight(r, c.name);
+      if(w != null && round2(w) !== c.weight){ c.weight = round2(w); changed = true; }
+    });
+    const total = comps.reduce((s, c) => s + (parseFloat(c.weight) || 0), 0);
+    comps.forEach(c => {
+      const pct = total > 0 ? round2((parseFloat(c.weight) || 0) / total * 100) : 0;
+      if(c.percent !== pct){ c.percent = pct; changed = true; }
+    });
+  });
+  return changed;
+}
+
 // Scales every ingredient under a Part (including ones nested inside its
 // Sub-parts) by the same factor, so weights change but every ratio between
 // them — and so every %-of-parent at every level — doesn't.

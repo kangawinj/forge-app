@@ -6196,3 +6196,4 @@
 .process-steps-list .step-body textarea{min-height:0;height:32px;padding:6px 12px;resize:none;overflow:hidden;line-height:1.35;}
 .process-steps-list .step-controls{flex-direction:row;gap:0;padding-top:0;}
 .process-steps-list .step-controls .icon-btn{padding:4px;}
+.process-comp-table .comp-wt-linked{background:var(--bg);color:var(--text-dim);cursor:default;}

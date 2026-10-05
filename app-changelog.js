@@ -730,6 +730,7 @@ export const CHANGELOG = [
   { version: "3.0.688", date: "2026-10-05", note: "Process Steps: step rows are now compact — each step is one line high (growing only if the text needs more), with the up/down/delete buttons beside it instead of stacked" },
   { version: "3.0.689", date: "2026-10-05", note: "Export Excel, 5. Process Steps: the ingredient lists under each Part component now link to the 4. Ingredients sheet (name, weight, %), and a component's weight follows its Part/ingredient there while it still matches; Range, Total and % are formulas too" },
   { version: "3.0.690", date: "2026-10-05", note: "Export Excel, 5. Process Steps: a component's weight now always follows the 4. Ingredients sheet when its name matches a Part (or a single ingredient), even if a different weight was typed in the app" },
+  { version: "3.0.691", date: "2026-10-05", note: "Process Steps: a Component whose name matches a Part or ingredient now always shows that item's current weight from the ingredient list (the weight box is locked and updates live as ingredient weights change; % and Total follow). Free-typed Components keep their own weight" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

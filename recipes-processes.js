@@ -6,7 +6,7 @@
 import { escapeHtml, icon, uid, resizeImageFile } from './app.js';
 import {
   partTotalWeight, allIngredientsInPart, findPartByName, collectPartsFlat,
-  collectIngredientsFlat, round2, formatWeight
+  collectIngredientsFlat, round2, formatWeight, componentSourceWeight, syncProcessComponentWeights
 } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, same pattern proven
 // throughout this session's other splits: every cross-call below happens
@@ -15,7 +15,9 @@ import { scheduleSave } from './recipes.js';
 
 /* ---------- Process Steps (grouped: a process title + its own numbered steps) ---------- */
 export function renderProcesses(r){
+  syncProcessComponentWeights(r); // Component weights follow the ingredient tree
   const list = document.getElementById('processesList');
+  if(!list) return;
   list.innerHTML = '';
 
   r.processes.forEach((proc, pIdx) => {
@@ -394,6 +396,13 @@ export function renderProcesses(r){
         pctDisplays.push(pctDisplay);
         nameInput.value = comp.name || '';
         wtInput.value = comp.weight ?? 0;
+        // A Component that is a Part / ingredient of this recipe always shows that item's
+        // current weight from the ingredient list, so it can't be typed over here.
+        if(componentSourceWeight(r, comp.name) != null){
+          wtInput.readOnly = true;
+          wtInput.classList.add('comp-wt-linked');
+          wtInput.title = 'Follows the weight in the ingredient list';
+        }
         tolInput.value = comp.tolerance ?? 0;
 
         function updateRange(){
@@ -404,6 +413,11 @@ export function renderProcesses(r){
         updateRange();
 
         nameInput.addEventListener('input', e => { comp.name = e.target.value; scheduleSave(); });
+        // Once the name is finished, re-resolve it: a name that matches a Part/ingredient takes its weight.
+        nameInput.addEventListener('change', () => {
+          if(syncProcessComponentWeights(r)){ renderComponentRows(); scheduleSave(); }
+          else if(componentSourceWeight(r, comp.name) != null || wtInput.readOnly){ renderComponentRows(); }
+        });
         wtInput.addEventListener('input', e => { comp.weight = parseFloat(e.target.value) || 0; updateRange(); recalcAllPercents(); scheduleSave(); });
         tolInput.addEventListener('input', e => { comp.tolerance = parseFloat(e.target.value) || 0; updateRange(); scheduleSave(); });
         tr.querySelector('.icon-btn').addEventListener('click', () => {

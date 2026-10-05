@@ -40,7 +40,7 @@ import {
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
   allIngredientsInRecipe, collectIngredientsWithPrepareWeight,
   scaleIngredientsInPart, siblingsWeightExcluding, isPartOrDescendant,
-  round2, round4, formatWeight, overheadMultiplierFromPct, overheadPctFromMultiplier } from './recipes-data.js';
+  round2, round4, formatWeight, syncProcessComponentWeights, overheadMultiplierFromPct, overheadPctFromMultiplier } from './recipes-data.js';
 import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
   pushVersionCheckpoint, scheduleVersionCheckpoint, cancelVersionCheckpoint
@@ -1499,6 +1499,9 @@ function refreshDisplays(r){
   if(batchEl) batchEl.textContent = formatWeight(totalWeight);
 
   partDisplayUpdaters.forEach(fn => fn());
+
+  // Process Components follow the ingredient weights -- redraw them only when one actually moved.
+  if(syncProcessComponentWeights(r)) renderProcesses(r);
 
   updateGrandTotal(r);
   updateTreeRoot(r);
