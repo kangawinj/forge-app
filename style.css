@@ -6220,7 +6220,7 @@
   }
   .part-header > .part-name{max-width:none;min-width:0;width:100%;}
   .part-header > .part-ing-count{overflow:hidden;min-width:0;width:0;padding:0;margin:0;}   /* its track is 0 wide here -- keeps every later cell in its own column */
-  .ing-edit-row > .ing-note{grid-column:3 / 5;min-width:0;width:100%;}
+  .ing-edit-row > .ing-note-wrap{grid-column:3 / 5;min-width:0;}
   .ing-edit-row > .ing-name-wrap{min-width:0;}
   .part-header > .part-yield-chip{margin-left:0;justify-self:end;}
   .ing-edit-row .row-value-col, .part-header .row-value-col{min-width:0;}
@@ -6246,3 +6246,17 @@
 .row-menu-item.danger:hover:not(:disabled){background:var(--danger-light);}
 .row-menu-sep{height:1px;background:var(--border);margin:6px 4px;}
 @media (pointer:coarse){ .row-menu-item{min-height:44px;} .row-menu-btn{min-width:44px;min-height:44px;} }
+
+/* Ingredient Note: a button; the field opens in place, the text then shows under the name after the code */
+.ing-edit-row .ing-note-wrap{position:relative;display:flex;align-items:center;flex:1 1 60px;min-width:60px;}
+.ing-note-btn{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px dashed var(--border);border-radius:10px;background:#fff;color:var(--text-dim);font:inherit;font-size:12px;cursor:pointer;white-space:nowrap;}
+.ing-note-btn:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-light);}
+.ing-note-btn:focus-visible{outline:2px solid var(--primary);}
+.ing-note-btn.has-note{border-style:solid;border-color:var(--accent);color:var(--accent);}
+.ing-note-btn:disabled{opacity:.6;cursor:default;}
+.ing-note-wrap .ing-note{display:none;}
+.ing-note-wrap.editing .ing-note{display:block;position:absolute;left:0;top:50%;transform:translateY(-50%);width:min(300px,70vw);z-index:8;box-shadow:0 8px 24px rgba(12,24,48,.2);border-color:var(--primary);}
+.ing-note-wrap.editing .ing-note-btn{visibility:hidden;}
+.ing-hint .ing-hint-sep{margin:0 6px;color:var(--text-dim);font-family:inherit;font-weight:400;}
+.ing-hint .ing-hint-note{font-family:inherit;font-weight:400;color:var(--text);overflow-wrap:anywhere;}
+@media (pointer:coarse){ .ing-note-btn{min-height:44px;} }

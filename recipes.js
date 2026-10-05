@@ -2278,7 +2278,10 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
             <input type="text" class="ing-name" placeholder="Search the library or type a new ingredient name" autocomplete="off">
             <div class="ing-suggestions"></div>
           </div>
-          <input type="text" class="ing-note" placeholder="Note">
+          <div class="ing-note-wrap">
+            <button type="button" class="ing-note-btn" title="Add note" aria-label="Add note">${icon('file-text', 14)}<span>Note</span></button>
+            <input type="text" class="ing-note" placeholder="Type a note, then press Enter" aria-label="Note">
+          </div>
           <div class="row-value-col row-value-prepare" title="Prepare (gross) weight = Formula weight ÷ (this ingredient's own Yield, from the Ingredient Library, ÷ 100) ÷ (every ancestor Part's own Yield ÷ 100) — calculated automatically, not editable per ingredient">
             <span class="ing-prepare-display"></span>
           </div>
@@ -2303,6 +2306,8 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       const pctDisplay = branch.querySelector('.ing-pct-display');
       const wtInput = branch.querySelector('.ing-wt');
       const noteInput = branch.querySelector('.ing-note');
+      const noteWrap = branch.querySelector('.ing-note-wrap');
+      const noteBtn = branch.querySelector('.ing-note-btn');
       const delBtn = branch.querySelector('.icon-btn');
       const prepareDisplay = branch.querySelector('.ing-prepare-display');
 
@@ -2399,6 +2404,38 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
       }
       updatePrepareDisplay();
 
+      // The line under the name: the library code (or the not-in-library warning),
+      // then the note typed through the Note button, right after it.
+      let hintBase = { text: '', cls: 'ing-hint' };
+      function renderHint(){
+        const note = (ing.note || '').trim();
+        hintEl.className = hintBase.cls;
+        hintEl.textContent = '';
+        if(hintBase.text){
+          const s = document.createElement('span');
+          s.textContent = hintBase.text;
+          hintEl.appendChild(s);
+        }
+        if(note){
+          if(hintBase.text){
+            const sep = document.createElement('span');
+            sep.className = 'ing-hint-sep';
+            sep.textContent = '·';
+            hintEl.appendChild(sep);
+          }
+          const n = document.createElement('span');
+          n.className = 'ing-hint-note';
+          n.textContent = note;
+          hintEl.appendChild(n);
+        }
+      }
+      function refreshNoteBtn(){
+        const has = !!(ing.note || '').trim();
+        noteBtn.classList.toggle('has-note', has);
+        noteBtn.title = has ? 'Edit note' : 'Add note';
+        noteBtn.setAttribute('aria-label', has ? 'Edit note' : 'Add note');
+      }
+
       function syncMaterialLink(){
         const matched = findMaterialByLabel(nameInput.value);
         ing.materialId = matched ? matched.id : null;
@@ -2408,21 +2445,21 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
         if(matched){
           nameInput.classList.add('ing-linked');
           nameInput.title = materialTooltip(matched);
-          hintEl.textContent = matched.vendorCode ? `Code: ${matched.vendorCode}` : '';
-          hintEl.className = 'ing-hint ing-hint-code';
+          hintBase = { text: matched.vendorCode ? `Code: ${matched.vendorCode}` : '', cls: 'ing-hint ing-hint-code' };
         }else{
           nameInput.title = '';
           if(nameInput.value.trim()){
             nameInput.classList.add('invalid');
-            hintEl.textContent = 'This ingredient is not in the library — open "Ingredient Library" above to add it before entering a weight';
-            hintEl.className = 'ing-hint hint-block';
+            hintBase = { text: 'This ingredient is not in the library — open "Ingredient Library" above to add it before entering a weight', cls: 'ing-hint hint-block' };
           }else{
-            hintEl.textContent = 'Select an ingredient from the library first before entering a weight';
-            hintEl.className = 'ing-hint';
+            hintBase = { text: 'Select an ingredient from the library first before entering a weight', cls: 'ing-hint' };
           }
         }
+        renderHint();
         renderIngSubsToggle(subsEl, ing, matched, noteInput, () => {
           updatePrepareDisplay();
+          renderHint();         // a picked variant fills the note
+          refreshNoteBtn();
           refreshDisplays(r);
         });
       }
@@ -2482,7 +2519,32 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
         suggestBox.innerHTML = '';
         suggestBox.classList.remove('open');
       });
-      noteInput.addEventListener('input', e => { ing.note = e.target.value; scheduleSave(); });
+      // Note: a button; click it to open the field, Enter / leaving it keeps the text
+      // (shown under the name after the code), Esc puts back what was there.
+      let noteBefore = '';
+      function openNote(){
+        if(noteWrap.classList.contains('editing')) return;
+        noteBefore = ing.note || '';
+        noteWrap.classList.add('editing');
+        noteInput.value = noteBefore;
+        noteInput.focus();
+        noteInput.select();
+      }
+      function closeNote(keep){
+        if(!noteWrap.classList.contains('editing')) return;
+        noteWrap.classList.remove('editing');
+        if(!keep){ ing.note = noteBefore; noteInput.value = noteBefore; scheduleSave(); }
+        renderHint();
+        refreshNoteBtn();
+      }
+      noteBtn.addEventListener('click', openNote);
+      noteInput.addEventListener('input', e => { ing.note = e.target.value; renderHint(); scheduleSave(); });
+      noteInput.addEventListener('keydown', e => {
+        if(e.key === 'Enter'){ e.preventDefault(); closeNote(true); noteBtn.focus(); }
+        else if(e.key === 'Escape'){ e.preventDefault(); e.stopPropagation(); closeNote(false); noteBtn.focus(); }
+      });
+      noteInput.addEventListener('blur', () => closeNote(true));
+      refreshNoteBtn();
 
       wtInput.addEventListener('input', e => {
         ing.weight = parseFloat(e.target.value) || 0;

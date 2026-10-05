@@ -736,6 +736,7 @@ export const CHANGELOG = [
   { version: "3.0.694", date: "2026-10-05", note: "Components and Process: the classic inline tree is the default again, and its columns now line up -- Prepare WT., Formula WT., % and the delete button (plus Yield on parts) sit in the same fixed columns on every Part header and every ingredient row, whatever the nesting depth, at every screen width. The tree table is still available through the Tree table switch" },
   { version: "3.0.695", date: "2026-10-05", note: "Components and Process: removed the new tree table / Tree table switch and the extra Components & Process header; the original Formula Total tree with Total Recipe Weight and Scale Recipe To is back as it was, with the aligned Prepare / Formula / % / delete columns kept" },
   { version: "3.0.696", date: "2026-10-05", note: "Formula tree: the red X on every Part and ingredient row is now a three-dot (...) menu with Move up, Move down and Delete (Delete part still asks for confirmation)" },
+  { version: "3.0.697", date: "2026-10-05", note: "Formula tree: each ingredient's Note is now a Note button -- click it to open a field and type (Enter or clicking away keeps it, Esc cancels); the note then shows under the ingredient name right after its code (e.g. Code: V1 · use cold, sieved), or on its own when there is no code" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
