@@ -666,14 +666,11 @@ function buildProcessSheet(wb, r, ingRows){
       });
       const compRows = []; // main (non-sub-list) rows -- what Total and % are made of
       const allNamed = allIngredientsInRecipe(r);
-      components.forEach((c, cIdx) => {
-        const wt = parseFloat(c.weight) || 0;
-        const tol = parseFloat(c.tolerance) || 0;
+      // A component's weight always follows the Ingredients sheet when its name
+      // matches a Part (or a single ingredient); only free-typed names keep their own weight.
+      const resolved = components.map(c => {
         const name = (c.name || '').trim();
         const matchedPart = findPartByName(r.parts, name);
-        // A component's weight is a typed snapshot. Where it still equals the
-        // Part's / ingredient's current weight, point it at the Ingredients
-        // sheet so it follows; a deliberately different weight stays as typed.
         let wtRef = null, wtNow = null;
         if(matchedPart){
           wtRef = linkRef(ingRows && ingRows.part, matchedPart, 'D'); wtNow = partTotalWeight(matchedPart);
@@ -681,14 +678,19 @@ function buildProcessSheet(wb, r, ingRows){
           const same = allNamed.filter(i => (i.name || '').trim() === name);
           if(same.length === 1){ wtRef = linkRef(ingRows && ingRows.ing, same[0], 'D'); wtNow = parseFloat(same[0].weight) || 0; }
         }
-        const linked = wtRef && Math.abs(wtNow - wt) < 0.006;
+        return { matchedPart, wtRef, wt: wtRef ? wtNow : (parseFloat(c.weight) || 0) };
+      });
+      const compTotal = resolved.reduce((s, x) => s + x.wt, 0);
+      components.forEach((c, cIdx) => {
+        const { matchedPart, wtRef, wt } = resolved[cIdx];
+        const tol = parseFloat(c.tolerance) || 0;
         const rn = row;
         setRow([
           cIdx+1, c.name||'',
-          linked ? { formula: wtRef, result: wtNow } : wt,
+          wtRef ? { formula: wtRef, result: wt } : wt,
           tol,
           { formula: `TEXT(C${rn}-D${rn},"0.00")&"-"&TEXT(C${rn}+D${rn},"0.00")&" g"`, result: `${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g` },
-          parseFloat(c.percent)||0
+          compTotal > 0 ? wt / compTotal * 100 : 0
         ], r2 => {
           r2.getCell(3).numFmt = '#,##0.00';
           r2.getCell(4).numFmt = '"±"0.##;-"±"0.##;';
@@ -721,9 +723,9 @@ function buildProcessSheet(wb, r, ingRows){
       const refsOf = col => compRows.map(x => `${col}${x.rn}`).join(',');
       setRow([
         '', 'Total',
-        { formula: `SUM(${refsOf('C')})`, result: components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0) },
+        { formula: `SUM(${refsOf('C')})`, result: compTotal },
         '', '',
-        { formula: `SUM(${refsOf('F')})`, result: components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0) }
+        { formula: `SUM(${refsOf('F')})`, result: compTotal > 0 ? 100 : 0 }
       ], r2 => {
         r2.eachCell(cell => { cell.font = { bold: true }; cell.border = { top: xlThinBorder() }; });
         r2.getCell(3).numFmt = '#,##0.00';
@@ -731,7 +733,7 @@ function buildProcessSheet(wb, r, ingRows){
       });
       // % = each weight / this table's total, like the live table (needs the total's row number).
       compRows.forEach(x => {
-        ws.getCell(x.rn, 6).value = { formula: `IF($C$${totalRn}=0,0,C${x.rn}/$C$${totalRn}*100)`, result: parseFloat(x.c.percent)||0 };
+        ws.getCell(x.rn, 6).value = { formula: `IF($C$${totalRn}=0,0,C${x.rn}/$C$${totalRn}*100)`, result: compTotal > 0 ? x.wt / compTotal * 100 : 0 };
       });
     }
 
