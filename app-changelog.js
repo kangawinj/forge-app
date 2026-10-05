@@ -728,6 +728,7 @@ export const CHANGELOG = [
   { version: "3.0.686", date: "2026-10-05", note: "Export Excel: sheets 2 Recipe Overview, 3 Costing and 4 Ingredients now contain live formulas (yellow cells are inputs) — change a weight, yield, Price/kg, exchange rate, Overhead or Margin % and the percentages, costs, totals and Factory/Company/Customer prices recalculate" },
   { version: "3.0.687", date: "2026-10-05", note: "Export Excel, 5. Process Steps: process titles are no longer cut off (the title row now really spans the full width), and each step's number and text sit flush left, starting in the first columns" },
   { version: "3.0.688", date: "2026-10-05", note: "Process Steps: step rows are now compact — each step is one line high (growing only if the text needs more), with the up/down/delete buttons beside it instead of stacked" },
+  { version: "3.0.689", date: "2026-10-05", note: "Export Excel, 5. Process Steps: the ingredient lists under each Part component now link to the 4. Ingredients sheet (name, weight, %), and a component's weight follows its Part/ingredient there while it still matches; Range, Total and % are formulas too" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

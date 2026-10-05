@@ -484,6 +484,7 @@ function buildIngredientsSheet(wb, r){
   const partHasNames = part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== '');
   const namedParts = (r.parts || []).filter(partHasNames);
   const deferred = []; // % formulas need the total row's number, known only at the end
+  const rowOf = { ing: new Map(), part: new Map() }; // recipe object -> its row here (the Process sheet links to these)
 
   // ancestorRefs: the Yield cells of every Part above this one (nearest first)
   // -- an ingredient's Prepare Wt divides by all of them.
@@ -501,6 +502,7 @@ function buildIngredientsSheet(wb, r){
 
     const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct]);
     const pr = groupRow.number;
+    rowOf.part.set(part, pr);
     groupRow.eachCell((cell, colNumber) => {
       cell.font = { bold: true, color: { argb: XL_COLORS.groupText } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
@@ -532,6 +534,7 @@ function buildIngredientsSheet(wb, r){
         ing.name, (isFinite(iy) && iy > 0) ? iy : null, (ing.note||'').trim(), formulaWt, 0, 0, 0
       ]);
       const rn = ingRow.number;
+      rowOf.ing.set(ing, rn);
       for(let c = 1; c <= 7; c++){
         const cell = ingRow.getCell(c);
         cell.border = { bottom: xlThinBorder() };
@@ -608,9 +611,15 @@ function buildIngredientsSheet(wb, r){
   }
 
   ws.views = [{ state: 'frozen', ySplit: 2 }];
+  return rowOf;
 }
 
-function buildProcessSheet(wb, r){
+// ingRows: where each Part/ingredient sits on the "4. Ingredients" sheet, so
+// the Components tables here can point at those cells -- change a weight
+// there and the matching figures on this sheet follow.
+function buildProcessSheet(wb, r, ingRows){
+  const ING = "'4. Ingredients'!";
+  const linkRef = (map, obj, col) => (ingRows && map.has(obj)) ? `${ING}${col}${map.get(obj)}` : null;
   const ws = wb.addWorksheet('5. Process Steps');
   ws.columns = [{ width: 6 }, { width: 34 }, { width: 16 }, { width: 12 }, { width: 18 }, { width: 12 }];
   addSectionTitleBar(ws, '5. Process Steps', 6);
@@ -655,18 +664,51 @@ function buildProcessSheet(wb, r){
           cell.border = { bottom: xlThinBorder() };
         });
       });
+      const compRows = []; // main (non-sub-list) rows -- what Total and % are made of
+      const allNamed = allIngredientsInRecipe(r);
       components.forEach((c, cIdx) => {
         const wt = parseFloat(c.weight) || 0;
         const tol = parseFloat(c.tolerance) || 0;
-        setRow([cIdx+1, c.name||'', wt, tol ? `±${tol}` : '', `${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g`, parseFloat(c.percent)||0], r2 => {
+        const name = (c.name || '').trim();
+        const matchedPart = findPartByName(r.parts, name);
+        // A component's weight is a typed snapshot. Where it still equals the
+        // Part's / ingredient's current weight, point it at the Ingredients
+        // sheet so it follows; a deliberately different weight stays as typed.
+        let wtRef = null, wtNow = null;
+        if(matchedPart){
+          wtRef = linkRef(ingRows && ingRows.part, matchedPart, 'D'); wtNow = partTotalWeight(matchedPart);
+        } else if(name){
+          const same = allNamed.filter(i => (i.name || '').trim() === name);
+          if(same.length === 1){ wtRef = linkRef(ingRows && ingRows.ing, same[0], 'D'); wtNow = parseFloat(same[0].weight) || 0; }
+        }
+        const linked = wtRef && Math.abs(wtNow - wt) < 0.006;
+        const rn = row;
+        setRow([
+          cIdx+1, c.name||'',
+          linked ? { formula: wtRef, result: wtNow } : wt,
+          tol,
+          { formula: `TEXT(C${rn}-D${rn},"0.00")&"-"&TEXT(C${rn}+D${rn},"0.00")&" g"`, result: `${(wt-tol).toFixed(2)}-${(wt+tol).toFixed(2)} g` },
+          parseFloat(c.percent)||0
+        ], r2 => {
           r2.getCell(3).numFmt = '#,##0.00';
+          r2.getCell(4).numFmt = '"±"0.##;-"±"0.##;';
           r2.getCell(6).numFmt = '0.00"%"';
+          r2.getCell(1).alignment = { horizontal: 'left' };
         });
+        compRows.push({ rn, c, wt });
 
-        const matchedPart = findPartByName(r.parts, (c.name || '').trim());
         const innerIngredients = matchedPart ? allIngredientsInPart(matchedPart).filter(i => (i.name||'').trim() !== '') : [];
         innerIngredients.forEach(ing => {
-          setRow(['', ing.name, parseFloat(ing.weight)||0, '', '', parseFloat(ing.percent)||0], r2 => {
+          const nameRef = linkRef(ingRows && ingRows.ing, ing, 'A');
+          const wRef = linkRef(ingRows && ingRows.ing, ing, 'D');
+          const pRef = linkRef(ingRows && ingRows.ing, ing, 'F');
+          setRow([
+            '',
+            nameRef ? { formula: nameRef, result: ing.name } : ing.name,
+            wRef ? { formula: wRef, result: parseFloat(ing.weight)||0 } : (parseFloat(ing.weight)||0),
+            '', '',
+            pRef ? { formula: pRef, result: parseFloat(ing.percent)||0 } : (parseFloat(ing.percent)||0)
+          ], r2 => {
             const nameCell = r2.getCell(2);
             nameCell.font = { italic: true, color: { argb: XL_COLORS.dim } };
             nameCell.alignment = { indent: 1 };
@@ -675,10 +717,21 @@ function buildProcessSheet(wb, r){
           });
         });
       });
-      setRow(['', 'Total', components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0), '', '', components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0)], r2 => {
+      const totalRn = row;
+      const refsOf = col => compRows.map(x => `${col}${x.rn}`).join(',');
+      setRow([
+        '', 'Total',
+        { formula: `SUM(${refsOf('C')})`, result: components.reduce((s,c)=>s+(parseFloat(c.weight)||0),0) },
+        '', '',
+        { formula: `SUM(${refsOf('F')})`, result: components.reduce((s,c)=>s+(parseFloat(c.percent)||0),0) }
+      ], r2 => {
         r2.eachCell(cell => { cell.font = { bold: true }; cell.border = { top: xlThinBorder() }; });
         r2.getCell(3).numFmt = '#,##0.00';
         r2.getCell(6).numFmt = '0.00"%"';
+      });
+      // % = each weight / this table's total, like the live table (needs the total's row number).
+      compRows.forEach(x => {
+        ws.getCell(x.rn, 6).value = { formula: `IF($C$${totalRn}=0,0,C${x.rn}/$C$${totalRn}*100)`, result: parseFloat(x.c.percent)||0 };
       });
     }
 
@@ -736,8 +789,8 @@ export async function exportRecipeToExcel(r){
   buildProductDetailsSheet(wb, r);
   const overviewRefs = buildRecipeOverviewSheet(wb, r);
   buildCostingSheet(wb, r, overviewRefs);
-  buildIngredientsSheet(wb, r);
-  buildProcessSheet(wb, r);
+  const ingredientRows = buildIngredientsSheet(wb, r);
+  buildProcessSheet(wb, r, ingredientRows);
   finishRecipeWorksheets(wb);
 
   const buffer = await wb.xlsx.writeBuffer();
