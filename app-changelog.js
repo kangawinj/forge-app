@@ -726,6 +726,7 @@ export const CHANGELOG = [
   { version: "3.0.684", date: "2026-10-05", note: "Recipe Costing: new recipes now start with Factory Overhead 30% / Margin 10%, Company Overhead 10% / Margin 10% and Customer Overhead 55% / Margin 10% (a cost of 10 gives 16.70 / 20.85 / 59.55). Existing recipes keep whatever they already have" },
   { version: "3.0.685", date: "2026-10-05", note: "BD Pricing Workspace: a new workspace now starts with the same values as a new recipe's Costing card -- Factory Overhead 30% / Margin 10%, Company 10% / 10%, Customer 55% / 10% (cost 10 gives 16.70 / 20.90 / 59.75 after each step's price is rounded up). Workspaces already in progress or saved keep their own values" },
   { version: "3.0.686", date: "2026-10-05", note: "Export Excel: sheets 2 Recipe Overview, 3 Costing and 4 Ingredients now contain live formulas (yellow cells are inputs) — change a weight, yield, Price/kg, exchange rate, Overhead or Margin % and the percentages, costs, totals and Factory/Company/Customer prices recalculate" },
+  { version: "3.0.687", date: "2026-10-05", note: "Export Excel, 5. Process Steps: process titles are no longer cut off (the title row now really spans the full width), and each step's number and text sit flush left, starting in the first columns" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

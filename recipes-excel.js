@@ -636,7 +636,8 @@ function buildProcessSheet(wb, r){
   }
 
   list.forEach(p => {
-    ws.mergeCells(row, 1, row, 6);
+    // Merge AFTER the values are set -- Row.values rebuilds the row's cells and drops a merge made before it.
+    const titleRow = row;
     setRow([p.title || 'Untitled process'], r2 => {
       r2.height = 22;
       const cell = r2.getCell(1);
@@ -644,6 +645,7 @@ function buildProcessSheet(wb, r){
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
       cell.alignment = { vertical: 'middle', indent: 1 };
     });
+    ws.mergeCells(titleRow, 1, titleRow, 6);
 
     const components = p.components || [];
     if(components.length){
@@ -698,12 +700,19 @@ function buildProcessSheet(wb, r){
     setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
     const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
     if(steps.length){
+      // Step number in column A, text from column B across to F, both left-aligned.
       steps.forEach((s, idx) => {
-        ws.mergeCells(row, 3, row, 6);
-        setRow(['', `${idx+1}.`, s]);
+        const stepRow = row;
+        setRow([`${idx+1}.`, s], r2 => {
+          r2.getCell(1).alignment = { horizontal: 'left', vertical: 'top' };
+          r2.getCell(2).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
+        });
+        ws.mergeCells(stepRow, 2, stepRow, 6);
       });
     } else {
+      const noStepsRow = row;
       setRow(['', 'No steps yet']);
+      ws.mergeCells(noStepsRow, 2, noStepsRow, 6);
     }
 
     row++; // blank separator row between processes
