@@ -484,6 +484,7 @@ function buildIngredientsSheet(wb, r){
   const partHasNames = part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== '');
   const namedParts = (r.parts || []).filter(partHasNames);
   const deferred = []; // % formulas need the total row's number, known only at the end
+  let maxOutline = 0;
   const rowOf = { ing: new Map(), part: new Map() }; // recipe object -> its row here (the Process sheet links to these)
 
   // ancestorRefs: the Yield cells of every Part above this one (nearest first)
@@ -503,6 +504,8 @@ function buildIngredientsSheet(wb, r){
     const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct]);
     const pr = groupRow.number;
     rowOf.part.set(part, pr);
+    groupRow.outlineLevel = Math.min(depth, 7);   // Excel outline: a Part folds under its parent, like a pivot table
+    maxOutline = Math.max(maxOutline, groupRow.outlineLevel);
     groupRow.eachCell((cell, colNumber) => {
       cell.font = { bold: true, color: { argb: XL_COLORS.groupText } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
@@ -535,6 +538,8 @@ function buildIngredientsSheet(wb, r){
       ]);
       const rn = ingRow.number;
       rowOf.ing.set(ing, rn);
+      ingRow.outlineLevel = Math.min(depth + 1, 7);
+      maxOutline = Math.max(maxOutline, ingRow.outlineLevel);
       for(let c = 1; c <= 7; c++){
         const cell = ingRow.getCell(c);
         cell.border = { bottom: xlThinBorder() };
@@ -610,6 +615,9 @@ function buildIngredientsSheet(wb, r){
     addInputLegend(ws, 7);
   }
 
+  // The +/- fold buttons sit on the Part row above its contents (summary row on top), the way a pivot table does.
+  ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
+  ws.properties.outlineLevelRow = maxOutline;
   ws.views = [{ state: 'frozen', ySplit: 2 }];
   return rowOf;
 }
