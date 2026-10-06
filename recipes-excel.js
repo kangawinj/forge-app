@@ -468,11 +468,11 @@ function buildCostingSheet(wb, r, ovRefs){
 function buildIngredientsSheet(wb, r){
   const ws = wb.addWorksheet('4. Ingredients');
   ws.columns = [
-    { width: 40 }, { width: 10 }, { width: 26 }, { width: 14 }, { width: 14 }, { width: 12 }, { width: 14 }
+    { width: 40 }, { width: 10 }, { width: 26 }, { width: 14 }, { width: 14 }, { width: 12 }, { width: 14 }, { width: 14 }, { width: 14 }
   ];
-  addSectionTitleBar(ws, '4. Ingredients (Parts & Sub-parts)', 7);
+  addSectionTitleBar(ws, '4. Ingredients (Parts & Sub-parts)', 9);
 
-  const headerRow = ws.addRow(['Ingredient', 'Yield', 'Prep / Note', 'Formula (g)', 'Prepare (g)', '% of Part', '% of Recipe']);
+  const headerRow = ws.addRow(['Ingredient', 'Yield', 'Prep / Note', 'Formula (g)', 'Prepare (g)', '% of Part', '% of Recipe', 'Price / kg (฿)', 'Cost (฿)']);
   headerRow.eachCell(cell => {
     cell.font = { bold: true, color: { argb: XL_COLORS.headerText } };
     cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.headerFill } };
@@ -484,7 +484,7 @@ function buildIngredientsSheet(wb, r){
   const partHasNames = part => allIngredientsInPart(part).some(i => (i.name||'').trim() !== '');
   const namedParts = (r.parts || []).filter(partHasNames);
   const deferred = []; // % formulas need the total row's number, known only at the end
-  let maxOutline = 0;
+  const costOf = new Map(); // row number -> cost (number) or null when nothing under it has a price
   const rowOf = { ing: new Map(), part: new Map() }; // recipe object -> its row here (the Process sheet links to these)
 
   // ancestorRefs: the Yield cells of every Part above this one (nearest first)
@@ -501,46 +501,49 @@ function buildIngredientsSheet(wb, r){
     const py = parseFloat(part.prepYieldPct);
     const partYieldDisplay = (isFinite(py) && py > 0) ? py : 100;
 
-    const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct]);
+    const groupRow = ws.addRow([label, partYieldDisplay, '', partWeight, partPrepareWeight(part), partPct, partPct, null, null]);
     const pr = groupRow.number;
     rowOf.part.set(part, pr);
-    groupRow.outlineLevel = Math.min(depth, 7);   // Excel outline: a Part folds under its parent, like a pivot table
-    maxOutline = Math.max(maxOutline, groupRow.outlineLevel);
-    groupRow.eachCell((cell, colNumber) => {
+    for(let colNumber = 1; colNumber <= 9; colNumber++){
+      const cell = groupRow.getCell(colNumber);
       cell.font = { bold: true, color: { argb: XL_COLORS.groupText } };
       cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
       cell.border = { bottom: xlThinBorder() };
       cell.alignment = colNumber === 1 ? { indent: depth, vertical: 'middle' } : { horizontal: 'right', vertical: 'middle' };
-    });
+    }
     groupRow.getCell(2).numFmt = '0.00"%"';
     groupRow.getCell(4).numFmt = '#,##0.00';
     groupRow.getCell(5).numFmt = '#,##0.00';
     groupRow.getCell(6).numFmt = '0.00"%"';
     groupRow.getCell(7).numFmt = '0.00"%"';
+    groupRow.getCell(9).numFmt = '#,##0.00';
     markInput(groupRow.getCell(2));
 
     const myRefs = [`$B$${pr}`, ...ancestorRefs];
     const childMultiplier = ancestorMultiplier * computePrepareWeight(1, part.prepYieldPct);
-    const weightRefs = [], prepareTerms = [];
+    const weightRefs = [], prepareTerms = [], costRefs = [];
     namedItems.forEach(item => {
       if(item.kind === 'part'){
         const rn = addPartRows(item, depth+1, myRefs, childMultiplier);
         weightRefs.push(`D${rn}`);
         prepareTerms.push(`E${rn}`);
+        costRefs.push(`I${rn}`);
         return;
       }
       const ing = item;
       const formulaWt = parseFloat(ing.weight) || 0;
       const iy = parseFloat(ing.prepYieldPct);
       const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
+      // Price / kg comes from the Ingredient Library (always Thai Baht), the same figure the app's cost uses.
+      const mat = ing.materialId ? ingredientMaster.find(m => m.id === ing.materialId) : null;
+      const priceNum = mat && mat.price !== '' && mat.price != null ? parseFloat(mat.price) : NaN;
+      const price = isFinite(priceNum) ? priceNum : null;
       const ingRow = ws.addRow([
-        ing.name, (isFinite(iy) && iy > 0) ? iy : null, (ing.note||'').trim(), formulaWt, 0, 0, 0
+        ing.name, (isFinite(iy) && iy > 0) ? iy : null, (ing.note||'').trim(), formulaWt, 0, 0, 0, price, null
       ]);
       const rn = ingRow.number;
       rowOf.ing.set(ing, rn);
-      ingRow.outlineLevel = Math.min(depth + 1, 7);
-      maxOutline = Math.max(maxOutline, ingRow.outlineLevel);
-      for(let c = 1; c <= 7; c++){
+      for(let c = 1; c <= 9; c++){
         const cell = ingRow.getCell(c);
         cell.border = { bottom: xlThinBorder() };
         cell.font = { color: { argb: XL_COLORS.text } };
@@ -552,10 +555,18 @@ function buildIngredientsSheet(wb, r){
       ingRow.getCell(5).numFmt = '#,##0.00';
       ingRow.getCell(6).numFmt = '0.00"%"';
       ingRow.getCell(7).numFmt = '0.00"%"';
+      ingRow.getCell(8).numFmt = '#,##0.00';
+      ingRow.getCell(9).numFmt = '#,##0.00';
       markInput(ingRow.getCell(2));
       markInput(ingRow.getCell(4));
+      markInput(ingRow.getCell(8));
       weightRefs.push(`D${rn}`);
+      costRefs.push(`I${rn}`);
       prepareTerms.push(`D${rn}/${xlYield(`$B$${rn}`)}`);
+      // Cost = Prepare (gross) weight x Price/kg, like the Overview sheet.
+      const ingCost = price != null ? prepareWt / 1000 * price : null;
+      costOf.set(rn, ingCost);
+      ingRow.getCell(9).value = { formula: `IF(ISNUMBER(H${rn}),E${rn}/1000*H${rn},"")`, result: ingCost != null ? ingCost : '' };
       // Cached results are what the app itself shows (Excel recalculates on open).
       ingRow.getCell(5).value = {
         formula: `D${rn}/${[xlYield(`$B$${rn}`), ...myRefs.map(xlYield)].join('/')}`,
@@ -583,6 +594,10 @@ function buildIngredientsSheet(wb, r){
     groupRow.getCell(5).value = {
       formula: `(${prepareTerms.join('+')})/${xlYield(`$B$${pr}`)}`, result: partPrepareWeight(part)
     };
+    const costVals = costRefs.map(ref => costOf.get(+ref.slice(1))).filter(v => v != null);
+    const partCost = costVals.length ? costVals.reduce((s, v) => s + v, 0) : null;
+    costOf.set(pr, partCost);
+    groupRow.getCell(9).value = { formula: `IF(COUNT(${costRefs.join(',')})=0,"",SUM(${costRefs.join(',')}))`, result: partCost != null ? partCost : '' };
     deferred.push(totalRowNum => {
       groupRow.getCell(6).value = { formula: `IF($D$${totalRowNum}=0,0,D${pr}/$D$${totalRowNum}*100)`, result: partPct };
       groupRow.getCell(7).value = { formula: `IF($D$${totalRowNum}=0,0,D${pr}/$D$${totalRowNum}*100)`, result: partPct };
@@ -600,24 +615,24 @@ function buildIngredientsSheet(wb, r){
       'Formula total', '', '',
       { formula: `SUM(${partRows.map(n => `D${n}`).join(',')})${hiddenTop > 0 ? `+${hiddenTop}` : ''}`, result: totalWeight },
       { formula: `SUM(${partRows.map(n => `E${n}`).join(',')})`, result: totalPrepareWeight },
-      100, 100
+      100, 100, null,
+      { formula: `IF(COUNT(${partRows.map(n => `I${n}`).join(',')})=0,"",SUM(${partRows.map(n => `I${n}`).join(',')}))`, result: (() => { const v = partRows.map(n => costOf.get(n)).filter(x => x != null); return v.length ? v.reduce((s, x) => s + x, 0) : ''; })() }
     ]);
-    totalRow.eachCell((cell, colNumber) => {
+    for(let colNumber = 1; colNumber <= 9; colNumber++){
+      const cell = totalRow.getCell(colNumber);
       cell.font = { bold: true, color: { argb: XL_COLORS.text } };
       cell.border = { top: { style: 'medium', color: { argb: XL_COLORS.text } } };
       if(colNumber > 1) cell.alignment = { horizontal: 'right' };
-    });
+    }
     totalRow.getCell(4).numFmt = '#,##0.00';
     totalRow.getCell(5).numFmt = '#,##0.00';
     totalRow.getCell(6).numFmt = '0.00"%"';
     totalRow.getCell(7).numFmt = '0.00"%"';
+    totalRow.getCell(9).numFmt = '#,##0.00';
     deferred.forEach(fn => fn(totalRow.number));
-    addInputLegend(ws, 7);
+    addInputLegend(ws, 9);
   }
 
-  // The +/- fold buttons sit on the Part row above its contents (summary row on top), the way a pivot table does.
-  ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
-  ws.properties.outlineLevelRow = maxOutline;
   ws.views = [{ state: 'frozen', ySplit: 2 }];
   return rowOf;
 }
@@ -813,13 +828,6 @@ export async function exportRecipeToExcel(r){
   const ingredientRows = buildIngredientsSheet(wb, r);
   buildProcessSheet(wb, r, ingredientRows);
   finishRecipeWorksheets(wb);
-  // ExcelJS writes <pageSetUpPr> (fit to page) BEFORE <outlinePr> inside <sheetPr>, but the file format
-  // wants outlinePr first -- Excel then rejects the sheet ("XML error ... repaired"). The Ingredients
-  // sheet needs the outline, so it prints at a fixed scale instead of "fit to 1 page wide".
-  const ingSheet = wb.getWorksheet('4. Ingredients');
-  if(ingSheet){
-    ingSheet.pageSetup = { ...ingSheet.pageSetup, fitToPage: false, fitToWidth: undefined, fitToHeight: undefined, scale: 72 };
-  }
   stripNonFiniteNumbers(wb);
 
   const buffer = await wb.xlsx.writeBuffer();
