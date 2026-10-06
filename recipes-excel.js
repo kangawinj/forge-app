@@ -813,6 +813,13 @@ export async function exportRecipeToExcel(r){
   const ingredientRows = buildIngredientsSheet(wb, r);
   buildProcessSheet(wb, r, ingredientRows);
   finishRecipeWorksheets(wb);
+  // ExcelJS writes <pageSetUpPr> (fit to page) BEFORE <outlinePr> inside <sheetPr>, but the file format
+  // wants outlinePr first -- Excel then rejects the sheet ("XML error ... repaired"). The Ingredients
+  // sheet needs the outline, so it prints at a fixed scale instead of "fit to 1 page wide".
+  const ingSheet = wb.getWorksheet('4. Ingredients');
+  if(ingSheet){
+    ingSheet.pageSetup = { ...ingSheet.pageSetup, fitToPage: false, fitToWidth: undefined, fitToHeight: undefined, scale: 72 };
+  }
   stripNonFiniteNumbers(wb);
 
   const buffer = await wb.xlsx.writeBuffer();

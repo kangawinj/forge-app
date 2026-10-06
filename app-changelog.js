@@ -739,6 +739,7 @@ export const CHANGELOG = [
   { version: "3.0.697", date: "2026-10-05", note: "Formula tree: each ingredient's Note is now a Note button -- click it to open a field and type (Enter or clicking away keeps it, Esc cancels); the note then shows under the ingredient name right after its code (e.g. Code: V1 · use cold, sieved), or on its own when there is no code" },
   { version: "3.0.698", date: "2026-10-06", note: "Export Excel, 4. Ingredients: Parts, Sub-parts and ingredients are grouped as an Excel outline, so each Part row has a +/- button (and 1/2/3 level buttons at the top-left) to fold or unfold what is inside it, like a pivot table" },
   { version: "3.0.699", date: "2026-10-06", note: "Export Excel: fixed \"We found a problem with some content\" when opening the file -- a recipe with no Exchange Rate typed wrote an invalid number (NaN) into the Costing sheet; blank rates are now left empty, and any other invalid number is blanked before the file is written" },
+  { version: "3.0.700", date: "2026-10-06", note: "Export Excel: fixed the repair prompt on the 4. Ingredients sheet (\"XML error\") -- the fold/unfold outline settings were written in an order Excel rejects; that sheet now prints at a fixed scale instead of fit-to-width so the outline works" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
