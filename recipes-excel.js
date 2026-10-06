@@ -20,7 +20,7 @@
    own top-of-file comment for the overall file split. */
 import { addRecipePreviewSheet } from './recipe-excel-preview.js';
 import { finishRecipeWorksheets } from './excel-layout.js';
-import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredientMaster } from './app.js';
+import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredientMaster, findMaterialByLabel } from './app.js';
 import {
   fullCode, recipeProductTypeCode, findProjectForRecipe, allIngredientsInRecipe,
   allIngredientsInPart, partTotalWeight, formatWeight, collectIngredientsWithPrepareWeight,
@@ -68,6 +68,10 @@ function addSectionTitleBar(ws, title, colSpan){
 // so multi-Part compounding matches exactly. Pulled out as a pure function
 // (no DOM reads) so both the Overview and Costing sheets can share one
 // computation instead of each re-deriving it their own way.
+function libraryEntryFor(ing){
+  return (ing.materialId ? ingredientMaster.find(m => m.id === ing.materialId) : null) || findMaterialByLabel(ing.name || '') || null;
+}
+
 export function computeRecipeOverviewData(r){
   const allIngredients = allIngredientsInRecipe(r);
   const prepareWeightByIng = new Map();
@@ -78,7 +82,8 @@ export function computeRecipeOverviewData(r){
   named.forEach(i => {
     const key = i.name.trim().toLowerCase() + '|' + (i.note || '').trim().toLowerCase();
     if(!groups.has(key)){
-      const material = i.materialId ? ingredientMaster.find(m => m.id === i.materialId) : null;
+      // Linked by id; an ingredient that only matches a library entry by its name still picks up that entry.
+      const material = libraryEntryFor(i);
       const pricePerKg = material && material.price !== '' && material.price != null ? parseFloat(material.price) : null;
       groups.set(key, {
         name: i.name.trim(), note: i.note || '', pct: 0, wt: 0, prepareWt: 0,
@@ -535,7 +540,7 @@ function buildIngredientsSheet(wb, r){
       const iy = parseFloat(ing.prepYieldPct);
       const prepareWt = computePrepareWeight(formulaWt, ing.prepYieldPct) * childMultiplier;
       // Price / kg comes from the Ingredient Library (always Thai Baht), the same figure the app's cost uses.
-      const mat = ing.materialId ? ingredientMaster.find(m => m.id === ing.materialId) : null;
+      const mat = libraryEntryFor(ing);
       const priceNum = mat && mat.price !== '' && mat.price != null ? parseFloat(mat.price) : NaN;
       const price = isFinite(priceNum) ? priceNum : null;
       const ingRow = ws.addRow([
