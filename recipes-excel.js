@@ -152,7 +152,7 @@ function computeCostingData(r, ov){
   const customerPrice = factoryPriceFromShares(companyPrice, customerOverhead, customerMargin);
 
   return {
-    pricingCurrency, exchangeRateVal: rateAvailable ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
+    pricingCurrency, exchangeRateVal: (rateAvailable && isFinite(exchangeRateVal) && exchangeRateVal > 0) ? exchangeRateVal : null, exchangeRateDate: r.exchangeRateDate || '',
     servingSize,
     costPerServing: money(costPerServing), costPer100: money(costPer100), costPerKg: money(costPerKg), costSuffix,
     costPerServingNum: moneyNum(costPerServing), costPer100Num: moneyNum(costPer100), costPerKgNum: moneyNum(costPerKg),
@@ -371,7 +371,7 @@ function buildCostingSheet(wb, r, ovRefs){
     lc.value = label;
     lc.font = { bold: true, color: { argb: XL_COLORS.text } };
     const vc = ws.getCell(rn, 2);
-    vc.value = value === undefined ? null : value;
+    vc.value = (value === undefined || (typeof value === 'number' && !isFinite(value))) ? null : value;
     vc.alignment = { horizontal: align };
     if(fmt) vc.numFmt = fmt;
     if(input) markInput(vc);
@@ -782,6 +782,17 @@ function buildProcessSheet(wb, r, ingRows){
   });
 }
 
+// A NaN / Infinity in a cell is written as <v>NaN</v>, which Excel reports as "a problem with some
+// content" and offers to repair -- blank such cells (and formula results) instead.
+function stripNonFiniteNumbers(wb){
+  const bad = v => typeof v === 'number' && !isFinite(v);
+  wb.worksheets.forEach(ws => ws.eachRow({ includeEmpty: false }, row => row.eachCell({ includeEmpty: false }, cell => {
+    const v = cell.value;
+    if(bad(v)) cell.value = null;
+    else if(v && typeof v === 'object' && v.formula !== undefined && bad(v.result)) cell.value = { formula: v.formula, result: '' };
+  })));
+}
+
 export async function exportRecipeToExcel(r){
   if(!window.ExcelJS){
     alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
@@ -802,6 +813,7 @@ export async function exportRecipeToExcel(r){
   const ingredientRows = buildIngredientsSheet(wb, r);
   buildProcessSheet(wb, r, ingredientRows);
   finishRecipeWorksheets(wb);
+  stripNonFiniteNumbers(wb);
 
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
