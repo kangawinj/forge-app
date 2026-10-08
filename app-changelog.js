@@ -742,6 +742,7 @@ export const CHANGELOG = [
   { version: "3.0.700", date: "2026-10-06", note: "Export Excel: fixed the repair prompt on the 4. Ingredients sheet (\"XML error\") -- the fold/unfold outline settings were written in an order Excel rejects; that sheet now prints at a fixed scale instead of fit-to-width so the outline works" },
   { version: "3.0.701", date: "2026-10-06", note: "Export Excel, 4. Ingredients: removed the +/- fold buttons (and the fixed print scale that went with them); added Price / kg (฿) from the Ingredient Library and Cost (฿) = Prepare weight x Price/kg for every ingredient, summed up on each Part and in the total (matches the Recipe Overview total; Price / kg is a yellow input you can change)" },
   { version: "3.0.702", date: "2026-10-06", note: "Export Excel: an ingredient that matches an Ingredient Library entry by its name (but has no saved link to it) now also gets that entry's Price/kg, brand/vendor and cost in the Recipe Overview and Ingredients sheets" },
+  { version: "3.0.703", date: "2026-10-08", note: "Preview / Print: in the Components and Process ingredient table the Prepare (g) column now comes before Formula (g)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
