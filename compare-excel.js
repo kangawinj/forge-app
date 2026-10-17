@@ -388,7 +388,14 @@ export async function exportCompareToExcel(d){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `${d.title}`.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  // File name: what is being compared + the product name(s) + the download date, e.g.
+  // "Compare Trials - AU26-BRE05 Shrimp stick katsu with Tartar Sauce 2026-10-17.xlsx"
+  const now = new Date();
+  const pad = n => String(n).padStart(2, '0');
+  const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const names = [...new Set(recipes.map(r => (r.name || '').trim()).filter(Boolean))].join(' + ');
+  const shortNames = names.length > 90 ? names.slice(0, 87) + '...' : names;
+  a.download = [d.title, shortNames, dateStr].filter(Boolean).join(' ').replace(/\s*—\s*/g, ' - ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
   document.body.appendChild(a);
   a.click();
   a.remove();

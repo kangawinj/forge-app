@@ -749,6 +749,7 @@ export const CHANGELOG = [
   { version: "3.0.707", date: "2026-10-17", note: "Compare Export Excel: a section hidden with its eye button (Compare Costing, Compare Process Steps) is no longer included in the exported file" },
   { version: "3.0.708", date: "2026-10-17", note: "Compare Export Excel: Parts you have folded on the Compare page (Ingredients and Costing) also open folded in the Excel file -- their ingredient rows start hidden behind the + button, Part totals still showing" },
   { version: "3.0.709", date: "2026-10-17", note: "Compare Export Excel: the Overview sheet is merged into the Ingredients sheet -- recipe name/code/date/weight/description/note sit on top, the Part-grouped ingredient table below it, on one sheet" },
+  { version: "3.0.710", date: "2026-10-17", note: "Compare Export Excel: the downloaded file is now named with the product name(s) being compared and the download date (e.g. Compare Trials - AU26-BRE05 Shrimp stick katsu with Tartar Sauce 2026-10-17.xlsx)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
