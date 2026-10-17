@@ -1,10 +1,10 @@
 /* ---------- Export Excel for Compare Recipes / Compare Trials ----------
    Builds a workbook from what the Compare page is showing right now (the
    selected recipes, "show codes"/"also show weight" choices, Part grouping):
-     1. Overview        -- name, code, date, total weight, customer ... per recipe
-     2. Ingredients     -- % of recipe (and g) per recipe, grouped by Part / Sub-part
-     3. Costing         -- weight x library Price/kg per recipe, same grouping (skipped when its eye is off)
-     4. Process Steps   -- every recipe's processes side by side (skipped when its eye is off)
+     1. Ingredients     -- recipe info (name, code, date, total weight, customer, note ...)
+                           on top, then % of recipe (and g) per recipe grouped by Part / Sub-part
+     2. Costing         -- weight x library Price/kg per recipe, same grouping (skipped when its eye is off)
+     3. Process Steps   -- every recipe's processes side by side (skipped when its eye is off)
    Ingredients and Costing use Excel's own row outline, so every Part row has a
    +/- button to fold or unfold what is inside it (and 1 2 3 level buttons for
    the whole sheet), like a pivot table. Those two sheets deliberately don't use
@@ -45,7 +45,11 @@ function noteRow(ws, text, span){
   const cell = ws.getCell(2, 1);
   cell.value = text;
   cell.font = { name: FONT, italic: true, size: 9, color: { argb: C.dim } };
-  cell.alignment = { vertical: 'middle', indent: 1 };
+  cell.alignment = { vertical: 'middle', indent: 1, wrapText: true };
+  // merged cells don't auto-fit: size the row from the text and the merged width
+  let width = 0;
+  for(let c = 1; c <= span; c++) width += ws.getColumn(c).width || 9;
+  ws.getRow(2).height = Math.max(18, Math.ceil(text.length * 1.05 / Math.max(width, 20)) * 13 + 6);
 }
 const totalOf = r => allIngredientsInRecipe(r).reduce((s, i) => s + (parseFloat(i.weight) || 0), 0);
 
@@ -63,22 +67,30 @@ function styleHeaderCell(cell){
   cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
 }
 
-/* ----- 1. Overview ----- */
-function buildOverview(wb, d, recipes){
-  const ws = wb.addWorksheet('Overview');
-  ws.columns = [{ width: 24 }, ...recipes.map(() => ({ width: 42 }))];
-  titleBar(ws, d.title, recipes.length + 1);
-  const head = ws.addRow(['', ...recipes.map(r => r.name || 'Untitled recipe')]);
+/* ----- recipe info block (top of the Ingredients sheet) ----- */
+// Each recipe's value is merged across that recipe's own column(s) so the info lines up with
+// the table underneath. Merged cells don't auto-fit their height, so it is estimated from the text.
+function addInfoBlock(ws, d, recipes, per){
+  const chars = per === 1 ? 26 : 28;                   // roughly how many characters fit in one recipe's width
+  const mergeAcross = row => { if(per === 2) recipes.forEach((r, i) => ws.mergeCells(row.number, 2 + i * 2, row.number, 3 + i * 2)); };
+  const fan = vals => vals.flatMap(v => per === 2 ? [v, ''] : [v]);
+  const head = ws.addRow(['', ...fan(recipes.map(r => r.name || 'Untitled recipe'))]);
   head.eachCell((cell, c) => { if(c > 1) styleHeaderCell(cell); });
-  head.height = 28;
+  mergeAcross(head);
+  head.height = 30;
   const line = (label, fn) => {
-    const row = ws.addRow([label, ...recipes.map(fn)]);
+    const vals = recipes.map(fn);
+    const row = ws.addRow([label, ...fan(vals)]);
+    mergeAcross(row);
+    const lines = Math.max(...vals.map(v => String(v).split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / (chars * 0.9))), 0)));
+    row.height = Math.max(21, lines * 15 + 6);
     row.getCell(1).font = { name: FONT, bold: true, color: { argb: C.text } };
-    row.eachCell((cell, c) => {
+    row.getCell(1).alignment = { vertical: 'top' };
+    for(let c = 1; c <= 1 + recipes.length * per; c++){
+      const cell = row.getCell(c);
       if(c > 1){ cell.font = { name: FONT, color: { argb: C.text } }; cell.alignment = { vertical: 'top', wrapText: true }; }
       cell.border = { bottom: thin() };
-    });
-    row.getCell(1).alignment = { vertical: 'top' };
+    }
   };
   line('Code', r => fullCode(r) || '-');
   line('Date', r => r.date || '-');
@@ -91,17 +103,20 @@ function buildOverview(wb, d, recipes){
     return pts.length ? pts.map((p, i) => `${i + 1}. ${p}`).join('\n') : '-';
   });
   if(d.notes && recipes.some(r => (d.notes[r.id] || '').trim() !== '')) line('Note', r => d.notes[r.id] || '');
-  ws.views = [{ state: 'frozen', ySplit: 2, showGridLines: false }];
+  const gap = ws.addRow([]);
+  gap.height = 12;
 }
 
-/* ----- 2. Ingredients ----- */
+/* ----- 1. Ingredients (recipe info on top, then the Part-grouped table) ----- */
 function buildIngredients(wb, d, recipes){
   const ws = wb.addWorksheet('Ingredients');
   const per = d.showWeights ? 2 : 1;
   const span = 1 + recipes.length * per;
-  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: 15 })))];
-  titleBar(ws, `Compare Ingredients (% of recipe) — ${d.title}`, span);
+  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: per === 1 ? 26 : 14 })))];
+  titleBar(ws, `${d.title} — Compare Ingredients (% of recipe)`, span);
   noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part (Parts folded on the Compare page start folded). Orange rows = ingredient not used in every recipe.', span);
+
+  addInfoBlock(ws, d, recipes, per);
 
   const h1 = ws.addRow(['Ingredient', ...recipes.flatMap(r => d.showWeights ? [recipeHeader(r), ''] : [recipeHeader(r)])]);
   h1.eachCell(styleHeaderCell);
@@ -196,7 +211,8 @@ function buildIngredients(wb, d, recipes){
   ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
   ws.properties.outlineLevelRow = maxLevel;
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', scale: 70 };
-  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 2 + headerRows, showGridLines: false }];
+  // Only the ingredient-name column stays put: the recipe info above the table is too tall to freeze with a header row.
+  ws.views = [{ state: 'frozen', xSplit: 1, showGridLines: false }];
 }
 
 /* ----- 3. Costing ----- */
@@ -362,7 +378,6 @@ export async function exportCompareToExcel(d){
   const wb = new window.ExcelJS.Workbook();
   wb.creator = 'Forge';
   wb.created = new Date();
-  buildOverview(wb, d, recipes);
   buildIngredients(wb, d, recipes);
   if(d.showCosting !== false) buildCosting(wb, d, recipes);   // sections hidden with their eye button stay out of the file
   if(d.showSteps !== false) buildSteps(wb, d, recipes);
