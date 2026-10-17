@@ -3,8 +3,8 @@
    selected recipes, "show codes"/"also show weight" choices, Part grouping):
      1. Overview        -- name, code, date, total weight, customer ... per recipe
      2. Ingredients     -- % of recipe (and g) per recipe, grouped by Part / Sub-part
-     3. Costing         -- weight x library Price/kg per recipe, same grouping
-     4. Process Steps   -- every recipe's processes side by side
+     3. Costing         -- weight x library Price/kg per recipe, same grouping (skipped when its eye is off)
+     4. Process Steps   -- every recipe's processes side by side (skipped when its eye is off)
    Ingredients and Costing use Excel's own row outline, so every Part row has a
    +/- button to fold or unfold what is inside it (and 1 2 3 level buttons for
    the whole sheet), like a pivot table. Those two sheets deliberately don't use
@@ -340,8 +340,8 @@ export async function exportCompareToExcel(d){
   wb.created = new Date();
   buildOverview(wb, d, recipes);
   buildIngredients(wb, d, recipes);
-  buildCosting(wb, d, recipes);
-  buildSteps(wb, d, recipes);
+  if(d.showCosting !== false) buildCosting(wb, d, recipes);   // sections hidden with their eye button stay out of the file
+  if(d.showSteps !== false) buildSteps(wb, d, recipes);
   stripNonFinite(wb);
 
   const buffer = await wb.xlsx.writeBuffer();

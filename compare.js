@@ -610,6 +610,7 @@ function renderCompareContent(){
 
   compareExportSnapshot = {
     ids, selected, rows, partSections, showWeights, priceOf,
+    showCosting: compareShowCosting, showSteps: compareShowSteps,   // the eye toggles: a hidden section isn't exported
     labelOf: row => showCodes ? row.label : stripIngredientCode(row.label),
     notes: compareSeriesPrefilter ? { ...compareNotes } : {},
     title: compareSeriesPrefilter
