@@ -45,7 +45,7 @@ import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
   pushVersionCheckpoint, scheduleVersionCheckpoint, cancelVersionCheckpoint
 } from './recipes-versions.js';
-import { renderDescPoints, renderDescPhotos, wireRecipeTranslateButton, renderPrintView } from './recipes-print.js';
+import { renderDescPoints, renderCookingGuideline, renderDescPhotos, wireRecipeTranslateButton, renderPrintView } from './recipes-print.js';
 import { exportRecipeToExcel } from './recipes-excel.js';
 // Circular import back to trials.js -- safe, same pattern already proven by
 // trials-summary.js/trials-wizard.js importing `trials` back from here in
@@ -686,6 +686,11 @@ export function renderRecipeEditor(r){
           <input type="file" id="descPhotoInput" accept="image/*">
         </div>
         <div class="field">
+          <label>Cooking Guideline</label>
+          <div class="desc-points-list" id="cookingGuidelineList"></div>
+          <button class="btn btn-sm add-row-btn" type="button" id="btnAddCookingStep">+ Add Step</button>
+        </div>
+        <div class="field">
           <label>Note</label>
           <div class="mu-field-with-translate" style="width:auto;">
             <textarea id="f-note" rows="2" placeholder="Anything else worth noting about this recipe"></textarea>
@@ -997,6 +1002,7 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
   renderDescPoints(r);
+  renderCookingGuideline(r);
   renderDescPhotos(r);
   document.getElementById('f-samplePreparedBy').value = r.samplePreparedBy || '';
   document.getElementById('f-samplePreparedBy').addEventListener('input', e => {
@@ -1061,6 +1067,13 @@ export function renderRecipeEditor(r){
     r.descPhotos.push(await resizeImageFile(file, 500));
     renderDescPhotos(r);
     scheduleSave();
+  });
+  document.getElementById('btnAddCookingStep').addEventListener('click', () => {
+    r.cookingGuideline.push('');
+    renderCookingGuideline(r);
+    scheduleSave();
+    const tas = document.querySelectorAll('#cookingGuidelineList textarea');
+    if(tas.length) tas[tas.length - 1].focus();
   });
   document.getElementById('btnAddDescPoint').addEventListener('click', () => {
     r.description.push('');

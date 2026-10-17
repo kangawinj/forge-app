@@ -50,6 +50,7 @@ export function blankRecipe(){
     destinationCountry: "",
     salesRep: "",
     description: [],
+    cookingGuideline: [],
     descPhotos: [],
     samplePreparedBy: "",
     note: "",
@@ -178,6 +179,8 @@ export function migrateRecipe(r){
   if(!Array.isArray(r.description)){
     r.description = (r.description || '').trim() ? [r.description] : [];
   }
+  // Cooking Guideline: an ordered list of steps (how to cook / serve this product)
+  if(!Array.isArray(r.cookingGuideline)) r.cookingGuideline = [];
   if(!Array.isArray(r.descPhotos)) r.descPhotos = [];
   if(r.customerName === undefined) r.customerName = '';
   if(r.destinationCountry === undefined) r.destinationCountry = '';
@@ -348,6 +351,16 @@ export function descriptionListHtml(r){
   return `
     <div class="ci-row"><b>Description:</b></div>
     <ol class="ci-desc-list">${points.map(p => `<li>${escapeHtml(p)}</li>`).join('')}</ol>
+  `;
+}
+
+// The Cooking Guideline steps as a numbered list -- nothing at all when none were typed.
+export function cookingGuidelineHtml(r){
+  const steps = (r.cookingGuideline || []).filter(s => (s||'').trim() !== '');
+  if(steps.length === 0) return '';
+  return `
+    <div class="ci-row"><b>Cooking Guideline:</b></div>
+    <ol class="ci-desc-list">${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>
   `;
 }
 

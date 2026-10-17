@@ -5,7 +5,7 @@ import {
   escapeHtml, icon, uid, wireModalOverlayClose, renderMain,
   readOnlyIngredientTreeHtml, readOnlyProcessesHtml
 } from './app.js';
-import { migrateRecipe, allIngredientsInRecipe, formatWeight, descriptionListHtml } from './recipes-data.js';
+import { migrateRecipe, allIngredientsInRecipe, formatWeight, descriptionListHtml, cookingGuidelineHtml } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
 // own comment on this same pattern (all cross-calls below happen inside
 // event handlers, never at module-evaluation time).
@@ -22,6 +22,7 @@ export function snapshotRecipeCore(r){
     code: r.code,
     date: r.date,
     description: JSON.parse(JSON.stringify(r.description)),
+    cookingGuideline: JSON.parse(JSON.stringify(r.cookingGuideline || [])),
     batchWeight: r.batchWeight,
     parts: JSON.parse(JSON.stringify(r.parts)),
     processes: JSON.parse(JSON.stringify(r.processes)),
@@ -117,6 +118,7 @@ export function openVersionPreview(r, v){
       <div class="ci-row"><b>Date:</b> ${escapeHtml(snap.date || '-')}</div>
       <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>
       ${descriptionListHtml(snap)}
+      ${cookingGuidelineHtml(snap)}
     </div>
     <div class="overview-title" style="margin-top:16px;">Ingredients</div>
     ${readOnlyIngredientTreeHtml(snap.parts, totalWt)}

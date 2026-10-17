@@ -7,7 +7,7 @@ import {
 } from './app.js';
 import {
   allIngredientsInPart, allIngredientsInRecipe, partTotalWeight, formatWeight,
-  fullCode, recipeProductTypeCode, findProjectForRecipe, descriptionListHtml
+  fullCode, recipeProductTypeCode, findProjectForRecipe, descriptionListHtml, cookingGuidelineHtml
 } from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
 // own comment on this same pattern.
@@ -80,6 +80,38 @@ export function renderDescPoints(r){
     row.querySelector('[data-role="delete-desc-point"]').addEventListener('click', () => {
       r.description.splice(idx, 1);
       renderDescPoints(r);
+      scheduleSave();
+    });
+    list.appendChild(row);
+  });
+}
+
+// Cooking Guideline -- the recipe's own ordered list of cooking / serving steps (Product Details).
+export function renderCookingGuideline(r){
+  const list = document.getElementById('cookingGuidelineList');
+  if(!list) return;
+  if(!Array.isArray(r.cookingGuideline)) r.cookingGuideline = [];
+  list.innerHTML = '';
+  r.cookingGuideline.forEach((step, idx) => {
+    const row = document.createElement('div');
+    row.className = 'desc-point-row';
+    row.innerHTML = `
+      <span class="step-badge">${idx+1}</span>
+      <div class="desc-point-body">
+        <div class="mu-field-with-translate" style="width:auto;">
+          <textarea rows="2" placeholder="e.g. Deep fry at 170 C for 3 minutes from frozen..."></textarea>
+          <button type="button" class="mu-translate-btn" title="Translate (Thai ⇄ English)">${icon('globe', 14)}</button>
+        </div>
+      </div>
+      <button class="icon-btn" title="Delete this step" data-role="delete-cooking-step">${icon('x')}</button>
+    `;
+    const ta = row.querySelector('textarea');
+    ta.value = step;
+    ta.addEventListener('input', e => { r.cookingGuideline[idx] = e.target.value; scheduleSave(); });
+    wireRecipeTranslateButton(row.querySelector('.mu-field-with-translate'));
+    row.querySelector('[data-role="delete-cooking-step"]').addEventListener('click', () => {
+      r.cookingGuideline.splice(idx, 1);
+      renderCookingGuideline(r);
       scheduleSave();
     });
     list.appendChild(row);
@@ -222,6 +254,7 @@ export function renderPrintView(r){
       ${(r.samplePreparedBy||'').trim() ? `<div class="ci-row"><b>Sample Prepared By:</b> ${escapeHtml(r.samplePreparedBy)}</div>` : ''}
       ${link ? `<div class="ci-row"><b>Project:</b> ${escapeHtml(link.project.name || 'Untitled project')}</div>${linkedProjectInfoHtml(link)}` : ''}
       ${descriptionListHtml(r)}
+      ${cookingGuidelineHtml(r)}
       ${photosHtml}
       ${(r.note||'').trim() ? `<div class="ci-row"><b>Note:</b></div><div class="material-detail-notes">${escapeHtml(r.note)}</div>` : ''}
       <div class="ci-row"><b>Total weight:</b> ${formatWeight(totalWt)}</div>

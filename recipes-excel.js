@@ -228,6 +228,19 @@ function buildProductDetailsSheet(wb, r){
     row++;
   }
 
+  const cookSteps = (r.cookingGuideline || []).filter(s => (s||'').trim() !== '');
+  if(cookSteps.length){
+    row++;
+    ws.getCell(row, 1).value = 'Cooking Guideline';
+    ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
+    row++;
+    cookSteps.forEach((s, i) => {
+      ws.getCell(row, 2).value = `${i + 1}. ${s}`;
+      ws.getCell(row, 2).alignment = { wrapText: true, vertical: 'top' };
+      row++;
+    });
+  }
+
   if((r.descPhotos || []).length){
     kv('Photos', `${r.descPhotos.length} photo(s) attached — view in app`);
   }
