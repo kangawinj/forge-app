@@ -396,14 +396,17 @@ export async function exportCompareToExcel(d){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  // File name: what is being compared + the product name(s) + the download date, e.g.
-  // "Compare Trials - AU26-BRE05 Shrimp stick katsu with Tartar Sauce 2026-10-17.xlsx"
+  // File name: what is being compared + the product name (once, even when the recipes share it --
+  // a trailing "(05D)" style suffix is ignored for that) + every compared code in brackets + the
+  // download date, e.g. "Compare Trials - AU26-BRE05 Shrimp stick katsu with Tartar Sauce
+  // (AU26-BRE05-T01, AU26-BRE05-T07, AU26-BRE05-T08) 2026-10-17.xlsx"
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
   const dateStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const names = [...new Set(recipes.map(r => (r.name || '').trim()).filter(Boolean))].join(' + ');
+  const names = [...new Set(recipes.map(r => (r.name || '').replace(/\s*\([^()]*\)\s*$/, '').trim()).filter(Boolean))].join(' + ');
   const shortNames = names.length > 90 ? names.slice(0, 87) + '...' : names;
-  a.download = [d.title, shortNames, dateStr].filter(Boolean).join(' ').replace(/\s*—\s*/g, ' - ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  const codes = [...new Set(recipes.map(r => fullCode(r)).filter(Boolean))].join(', ');
+  a.download = [d.title, shortNames, codes ? `(${codes})` : '', dateStr].filter(Boolean).join(' ').replace(/\s*—\s*/g, ' - ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
   document.body.appendChild(a);
   a.click();
   a.remove();
