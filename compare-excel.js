@@ -20,6 +20,16 @@ const FONT = 'Leelawadee UI';
 const thin = () => ({ style: 'thin', color: { argb: C.border } });
 const fill = argb => ({ type: 'pattern', pattern: 'solid', fgColor: { argb } });
 const MAX_LEVEL = 7;
+// ExcelJS's Row.collapsed is read-only and derived from the outline level (it would flag every deepest
+// row), but Excel needs the "collapsed" mark on the SUMMARY row of a folded group to draw its button as
+// "+". So every row gets an explicit value: false, except the group rows that start folded.
+function markFolded(row){ Object.defineProperty(row, 'collapsed', { get: () => true, configurable: true }); }
+function clearCollapsedMarks(ws, foldedRows){
+  ws.eachRow(row => {
+    if(foldedRows.has(row.number)) return;
+    Object.defineProperty(row, 'collapsed', { get: () => false, configurable: true });
+  });
+}
 
 function titleBar(ws, text, span){
   ws.mergeCells(1, 1, 1, span);
@@ -91,7 +101,7 @@ function buildIngredients(wb, d, recipes){
   const span = 1 + recipes.length * per;
   ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: 15 })))];
   titleBar(ws, `Compare Ingredients (% of recipe) — ${d.title}`, span);
-  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part. Orange rows = ingredient not used in every recipe.', span);
+  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part (Parts folded on the Compare page start folded). Orange rows = ingredient not used in every recipe.', span);
 
   const h1 = ws.addRow(['Ingredient', ...recipes.flatMap(r => d.showWeights ? [recipeHeader(r), ''] : [recipeHeader(r)])]);
   h1.eachCell(styleHeaderCell);
@@ -104,6 +114,7 @@ function buildIngredients(wb, d, recipes){
   }
   const headerRows = d.showWeights ? 2 : 1;
   let maxLevel = 0;
+  const foldedRows = new Set();
   const level = (row, n) => { row.outlineLevel = Math.min(n, MAX_LEVEL); maxLevel = Math.max(maxLevel, row.outlineLevel); };
 
   function totals(section){
@@ -114,10 +125,15 @@ function buildIngredients(wb, d, recipes){
     return t;
   }
 
-  function addSection(section, depth){
+  // A Part folded on the Compare page opens folded in the file too: its group row is marked
+  // collapsed and everything inside it (nested Parts included) is hidden until the + is clicked.
+  function addSection(section, depth, hiddenBy){
     const t = totals(section);
+    const folded = !!(d.collapsed && d.collapsed[section.path]);
     const group = ws.addRow([section.label, ...recipes.flatMap(r => d.showWeights ? [t[r.id].pct, t[r.id].wt] : [t[r.id].pct])]);
     level(group, depth);
+    if(hiddenBy) group.hidden = true;
+    if(folded){ markFolded(group); foldedRows.add(group.number); }
     for(let c = 1; c <= span; c++){
       const cell = group.getCell(c);
       cell.font = { name: FONT, bold: true, color: { argb: C.groupText } };
@@ -136,6 +152,7 @@ function buildIngredients(wb, d, recipes){
       });
       const ingRow = ws.addRow([d.labelOf(row), ...cells]);
       level(ingRow, depth + 1);
+      if(hiddenBy || folded) ingRow.hidden = true;
       for(let c = 1; c <= span; c++){
         const cell = ingRow.getCell(c);
         cell.font = { name: FONT, color: { argb: C.text } };
@@ -163,9 +180,9 @@ function buildIngredients(wb, d, recipes){
         });
       }
     });
-    (section.subSections || []).forEach(sub => addSection(sub, depth + 1));
+    (section.subSections || []).forEach(sub => addSection(sub, depth + 1, hiddenBy || folded));
   }
-  d.partSections.forEach(section => addSection(section, 0));
+  d.partSections.forEach(section => addSection(section, 0, false));
 
   const total = ws.addRow(['Recipe total', ...recipes.flatMap(r => { const w = totalOf(r); return d.showWeights ? [w > 0 ? 100 : 0, w] : [w > 0 ? 100 : 0]; })]);
   for(let c = 1; c <= span; c++){
@@ -175,6 +192,7 @@ function buildIngredients(wb, d, recipes){
     cell.alignment = c === 1 ? { vertical: 'middle' } : { horizontal: 'right', vertical: 'middle' };
     if(c > 1) cell.numFmt = (d.showWeights && c % 2 === 1) ? '#,##0.00' : '0.00"%"';
   }
+  clearCollapsedMarks(ws, foldedRows);
   ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
   ws.properties.outlineLevelRow = maxLevel;
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', scale: 70 };
@@ -187,11 +205,12 @@ function buildCosting(wb, d, recipes){
   const span = 1 + recipes.length;
   ws.columns = [{ width: 46 }, ...recipes.map(() => ({ width: 20 }))];
   titleBar(ws, `Compare Costing (weight × Price/kg from the Ingredient Library) — ${d.title}`, span);
-  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part. * = a total that leaves out ingredients with no price on file.', span);
+  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part (Parts folded on the Compare page start folded). * = a total that leaves out ingredients with no price on file.', span);
   const h = ws.addRow(['Ingredient', ...recipes.map(recipeHeader)]);
   h.eachCell(styleHeaderCell);
   h.height = 34;
   let maxLevel = 0, anyUnpriced = false;
+  const foldedRows = new Set();
   const level = (row, n) => { row.outlineLevel = Math.min(n, MAX_LEVEL); maxLevel = Math.max(maxLevel, row.outlineLevel); };
   const baht = '"฿"#,##0.00';
 
@@ -210,9 +229,12 @@ function buildCosting(wb, d, recipes){
     (section.subSections || []).forEach(sub => { const s = costs(sub); recipes.forEach(r => { t[r.id].cost += s[r.id].cost; t[r.id].unpriced = t[r.id].unpriced || s[r.id].unpriced; }); });
     return t;
   }
-  function addSection(section, depth){
+  function addSection(section, depth, hiddenBy){
     const t = costs(section);
+    const folded = !!(d.collapsed && d.collapsed['cost:' + section.path]);   // Costing keeps its own fold state
     const group = ws.addRow([section.label, ...recipes.map(() => null)]);
+    if(hiddenBy) group.hidden = true;
+    if(folded){ markFolded(group); foldedRows.add(group.number); }
     // numbers with a trailing * when something under the Part has no price
     recipes.forEach((r, i) => {
       const cell = group.getCell(2 + i);
@@ -237,6 +259,7 @@ function buildCosting(wb, d, recipes){
       });
       const ingRow = ws.addRow([d.labelOf(row), ...cells]);
       level(ingRow, depth + 1);
+      if(hiddenBy || folded) ingRow.hidden = true;
       for(let c = 1; c <= span; c++){
         const cell = ingRow.getCell(c);
         cell.font = { name: FONT, color: { argb: C.text } };
@@ -248,9 +271,9 @@ function buildCosting(wb, d, recipes){
         }
       }
     });
-    (section.subSections || []).forEach(sub => addSection(sub, depth + 1));
+    (section.subSections || []).forEach(sub => addSection(sub, depth + 1, hiddenBy || folded));
   }
-  d.partSections.forEach(section => addSection(section, 0));
+  d.partSections.forEach(section => addSection(section, 0, false));
 
   // Grand totals over the whole recipe (same figures the page shows).
   const totalCost = {}, unpricedAll = {};
@@ -279,6 +302,7 @@ function buildCosting(wb, d, recipes){
       }
     }
   });
+  clearCollapsedMarks(ws, foldedRows);
   ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
   ws.properties.outlineLevelRow = maxLevel;
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', scale: 70 };
