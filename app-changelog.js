@@ -751,6 +751,7 @@ export const CHANGELOG = [
   { version: "3.0.709", date: "2026-10-17", note: "Compare Export Excel: the Overview sheet is merged into the Ingredients sheet -- recipe name/code/date/weight/description/note sit on top, the Part-grouped ingredient table below it, on one sheet" },
   { version: "3.0.710", date: "2026-10-17", note: "Compare Export Excel: the downloaded file is now named with the product name(s) being compared and the download date (e.g. Compare Trials - AU26-BRE05 Shrimp stick katsu with Tartar Sauce 2026-10-17.xlsx)" },
   { version: "3.0.711", date: "2026-10-17", note: "Compare Recipes: new Saved comparisons bar -- pick a saved comparison to load its recipes and options (named comparisons saved from this page, plus each series' Compare Trials set), Save comparison (name it, as many as you like, shared with the team, asks before replacing a same-named one) and Delete" },
+  { version: "3.0.712", date: "2026-10-17", note: "Recipe Product Details: the linked project's Certificate in the Requirements box showed \"[object Object]\" -- it now shows the ticked certificates (Halal, HACCP ...) and is left out when none are ticked" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

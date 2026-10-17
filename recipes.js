@@ -26,7 +26,7 @@ import {
   renderMain,
   requestAuthConfirm, DELETE_APPROVER_EMAIL, approverRecipesCol,
   snapshotMainFields, blankProduct, scheduleProjectSave,
-  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements,
+  findMaterialByLabel, materialLabel, formatMoq, resizeImageFile, wireModalOverlayClose, getRequirements, certificateSummaryText,
   computePrepareWeight, isValidYieldPct, partPrepareWeight,
   setCompareSeriesPrefilter, moveToTrash
 } from './app.js';
@@ -170,6 +170,8 @@ export function linkedProjectInfoHtml(link){
   const innerPacking = project.innerPackQty ? `${escapeHtml(project.innerPackQty)} ${escapeHtml(project.innerPackWeightUnit || '')}/${escapeHtml(project.innerPackUnit || '')}` : '';
   const outerPacking = project.outerPackQty ? `${escapeHtml(project.outerPackQty)} ${escapeHtml(project.outerPackUnit || '')}/${escapeHtml(project.outerPackContainerUnit || '')}` : '';
   const moq = project.moqQty ? `${escapeHtml(project.moqQty)} ${escapeHtml(project.moqUnit || '')}` : '';
+  // Certificate is a checklist object now (Halal / HACCP ... / Other) -- shown as its ticked labels.
+  const certText = certificateSummaryText(req.certificate);
 
   const shortReqFacts = [
     portionWeight ? `<div class="ci-row"><b>Portion Weight:</b> ${portionWeight}</div>` : '',
@@ -178,7 +180,7 @@ export function linkedProjectInfoHtml(link){
     moq ? `<div class="ci-row"><b>MOQ:</b> ${moq}</div>` : '',
     req.storageCondition ? `<div class="ci-row"><b>Storage Condition:</b> ${escapeHtml(req.storageCondition)}</div>` : '',
     req.shelfLife ? `<div class="ci-row"><b>Shelf Life:</b> ${escapeHtml(req.shelfLife)}</div>` : '',
-    req.certificate ? `<div class="ci-row"><b>Certificate:</b> ${escapeHtml(req.certificate)}</div>` : ''
+    certText ? `<div class="ci-row"><b>Certificate:</b> ${escapeHtml(certText)}</div>` : ''
   ].filter(Boolean).join('');
 
   const longReqBlocks = [
