@@ -753,6 +753,7 @@ export const CHANGELOG = [
   { version: "3.0.711", date: "2026-10-17", note: "Compare Recipes: new Saved comparisons bar -- pick a saved comparison to load its recipes and options (named comparisons saved from this page, plus each series' Compare Trials set), Save comparison (name it, as many as you like, shared with the team, asks before replacing a same-named one) and Delete" },
   { version: "3.0.712", date: "2026-10-17", note: "Recipe Product Details: the linked project's Certificate in the Requirements box showed \"[object Object]\" -- it now shows the ticked certificates (Halal, HACCP ...) and is left out when none are ticked" },
   { version: "3.0.713", date: "2026-10-17", note: "Recipe Product Details: new Cooking Guideline -- an ordered list of cooking / serving steps typed on the recipe itself (+ Add Step, delete per step, translate button); it shows in Preview, Print, the Excel export (Product Details) and Version history, and is carried along by Duplicate / New Trial" },
+  { version: "3.0.714", date: "2026-10-17", note: "Recipe Cooking Guideline: pick a Cooking Method from Reference Lists (dropdown) -- its saved steps fill in as an editable starting point; the method name shows in Preview, Print, Excel and Version history" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

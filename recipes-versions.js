@@ -22,6 +22,7 @@ export function snapshotRecipeCore(r){
     code: r.code,
     date: r.date,
     description: JSON.parse(JSON.stringify(r.description)),
+    cookingMethod: r.cookingMethod || '',
     cookingGuideline: JSON.parse(JSON.stringify(r.cookingGuideline || [])),
     batchWeight: r.batchWeight,
     parts: JSON.parse(JSON.stringify(r.parts)),

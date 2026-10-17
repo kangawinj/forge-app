@@ -687,6 +687,7 @@ export function renderRecipeEditor(r){
         </div>
         <div class="field">
           <label>Cooking Guideline</label>
+          <input type="text" id="f-cookingMethod" list="cookingMethodDatalist" placeholder="Pick a Cooking Method (Reference Lists) to fill in its steps below" style="margin-bottom:6px;">
           <div class="desc-points-list" id="cookingGuidelineList"></div>
           <button class="btn btn-sm add-row-btn" type="button" id="btnAddCookingStep">+ Add Step</button>
         </div>
@@ -1002,6 +1003,8 @@ export function renderRecipeEditor(r){
     scheduleSave();
   });
   renderDescPoints(r);
+  const cookingMethodInput = document.getElementById('f-cookingMethod');
+  cookingMethodInput.value = r.cookingMethod || '';
   renderCookingGuideline(r);
   renderDescPhotos(r);
   document.getElementById('f-samplePreparedBy').value = r.samplePreparedBy || '';
@@ -1066,6 +1069,20 @@ export function renderRecipeEditor(r){
     if(!file || r.descPhotos.length >= 3) return;
     r.descPhotos.push(await resizeImageFile(file, 500));
     renderDescPhotos(r);
+    scheduleSave();
+  });
+  // Picking a Cooking Method that has Steps on file (Reference Lists) pulls them in as a
+  // starting point -- same autofill as Projects/Trials -- still a plain editable list after.
+  cookingMethodInput.addEventListener('change', e => {
+    r.cookingMethod = e.target.value.trim();
+    const match = metaLists.cookingMethods.find(m => metaItemName(m) === r.cookingMethod);
+    if(match && (match.steps || []).length){
+      const hasTyped = r.cookingGuideline.some(s => (s||'').trim() !== '');
+      if(!hasTyped || confirm('Replace the current steps with the steps of "' + r.cookingMethod + '" from Reference Lists?')){
+        r.cookingGuideline = [...match.steps];
+        renderCookingGuideline(r);
+      }
+    }
     scheduleSave();
   });
   document.getElementById('btnAddCookingStep').addEventListener('click', () => {

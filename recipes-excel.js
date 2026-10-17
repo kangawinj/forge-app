@@ -229,9 +229,9 @@ function buildProductDetailsSheet(wb, r){
   }
 
   const cookSteps = (r.cookingGuideline || []).filter(s => (s||'').trim() !== '');
-  if(cookSteps.length){
+  if(cookSteps.length || (r.cookingMethod || '').trim()){
     row++;
-    ws.getCell(row, 1).value = 'Cooking Guideline';
+    ws.getCell(row, 1).value = (r.cookingMethod || '').trim() ? `Cooking Guideline — ${r.cookingMethod.trim()}` : 'Cooking Guideline';
     ws.getCell(row, 1).font = { bold: true, color: { argb: XL_COLORS.text } };
     row++;
     cookSteps.forEach((s, i) => {
