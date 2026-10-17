@@ -5,6 +5,7 @@ import {
 } from './app.js';
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { partIngredients, partSubParts, seriesKeyDisplay } from './recipes-data.js';
+import { exportCompareToExcel } from './compare-excel.js';
 
 let compareShowCodes = true;
 let compareShowWeights = false;
@@ -36,6 +37,8 @@ let comparePartCollapsed = {};
 // module-level object). Only persisted, alongside the picked recipes and
 // toggles, when "Save Compare Trials" is clicked -- see compareSetsCol.
 let compareNotes = {};
+// What the page is showing right now, rebuilt by every renderCompareContent() -- the Export Excel button reads it.
+let compareExportSnapshot = null;
 
 // Set by Recipe Detail's "Compare Trials" button just before switching to
 // this view (via app.js's shared re-export hub, same pattern
@@ -102,6 +105,7 @@ export function mountCompareView(){
       <div class="toolbar">
         ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnCompareShowAll">Show All Recipes</button>` : ''}
         ${compareSeriesPrefilter ? `<button class="btn btn-sm" id="btnSaveCompareSet">${icon('save', 14)} Save Compare Trials</button>` : ''}
+        <button class="btn" id="btnExportCompareExcel">${icon('download')} Export Excel</button>
         <button class="btn" id="btnPrintCompare">${icon('printer')} Print</button>
       </div>
     </div>
@@ -134,6 +138,10 @@ export function mountCompareView(){
     };
     window.addEventListener('afterprint', restoreTitle);
     window.print();
+  });
+  document.getElementById('btnExportCompareExcel').addEventListener('click', async () => {
+    if(!compareExportSnapshot){ alert('Select at least 2 recipes to compare before exporting.'); return; }
+    await exportCompareToExcel(compareExportSnapshot);
   });
   document.getElementById('btnCompareShowAll')?.addEventListener('click', () => {
     compareSeriesPrefilter = null;
@@ -291,6 +299,7 @@ function renderCompareContent(){
   const showCodes = compareShowCodes;
   const showWeights = compareShowWeights;
 
+  compareExportSnapshot = null;
   if(selected.length < 2){
     content.innerHTML = '<div class="compare-empty">Select at least 2 recipes to compare</div>';
     return;
@@ -598,6 +607,15 @@ function renderCompareContent(){
     const p = parseFloat(m.price);
     return isNaN(p) ? null : p;
   }
+
+  compareExportSnapshot = {
+    ids, selected, rows, partSections, showWeights, priceOf,
+    labelOf: row => showCodes ? row.label : stripIngredientCode(row.label),
+    notes: compareSeriesPrefilter ? { ...compareNotes } : {},
+    title: compareSeriesPrefilter
+      ? `Compare Trials — ${seriesKeyDisplay(compareSeriesPrefilter.seriesKey, selected[0])}`
+      : 'Compare Recipes'
+  };
 
   const costRows = rows.map(row => {
     const price = priceOf(row.label);

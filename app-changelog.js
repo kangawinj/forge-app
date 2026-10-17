@@ -745,6 +745,7 @@ export const CHANGELOG = [
   { version: "3.0.703", date: "2026-10-08", note: "Preview / Print: in the Components and Process ingredient table the Prepare (g) column now comes before Formula (g)" },
   { version: "3.0.704", date: "2026-10-17", note: "Recipes list and sidebar: the group (Product Type / Series) holding the recipe you currently have open can now be collapsed -- it used to pop open again right after every click" },
   { version: "3.0.705", date: "2026-10-17", note: "Compare Recipes / Compare Trials: each Recipe slot now has a delete (trash) button -- it removes that recipe from the comparison (extra empty slots beyond the first two disappear and the rest are renumbered)" },
+  { version: "3.0.706", date: "2026-10-17", note: "Compare Recipes / Compare Trials: new Export Excel button -- Overview, Ingredients (% and optional g, grouped by Part), Costing and Process Steps sheets; on Ingredients and Costing every Part row has a +/- button (and 1 2 3 level buttons) to fold or unfold its ingredients like a pivot table" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
