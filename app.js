@@ -93,7 +93,7 @@ import {
   renderRecipeEditor
 } from './recipes.js';
 import {
-  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
+  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml, cookingGuidelineHtml,
   yearPrefix, suggestNextRecipeSeq, blankPart, migrateRecipe, saveRecipeToCloud,
   recomputeFromWeights, allIngredientsInPart, allIngredientsInRecipe, formatWeight,
   partTotalWeight
@@ -115,7 +115,7 @@ import {
 export {
   metaLists, metaItemName, projects, guardNavigation, migrateTrialsFromRecipes,
   ingredientMaster, productTypeCode, recipes, currentId, recipesLoaded,
-  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml,
+  findProjectForRecipe, fullCode, recipeDisplayLabel, descriptionListHtml, cookingGuidelineHtml,
   blankProduct, scheduleProjectSave, recomputeFromWeights, allIngredientsInPart,
   allIngredientsInRecipe, formatWeight, PROJECT_STATUS_LABELS, getRequirements,
   isCurrentUserAdmin, isMyProject, projectMatchesName, myLinkedName, namesMatch, canSeeAllProjects, canAccessBdPricing,

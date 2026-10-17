@@ -102,6 +102,14 @@ function addInfoBlock(ws, d, recipes, per){
     const pts = (r.description || []).filter(p => (p || '').trim() !== '');
     return pts.length ? pts.map((p, i) => `${i + 1}. ${p}`).join('\n') : '-';
   });
+  if(recipes.some(r => (r.cookingGuideline || []).some(s => (s || '').trim() !== '') || (r.cookingMethod || '').trim())){
+    line('Cooking Guideline', r => {
+      const steps = (r.cookingGuideline || []).filter(s => (s || '').trim() !== '');
+      const head = (r.cookingMethod || '').trim();
+      const body = steps.map((s, i) => `${i + 1}. ${s}`).join('\n');
+      return [head, body].filter(Boolean).join('\n') || '-';
+    });
+  }
   if(d.notes && recipes.some(r => (d.notes[r.id] || '').trim() !== '')) line('Note', r => d.notes[r.id] || '');
   const gap = ws.addRow([]);
   gap.height = 12;

@@ -1,6 +1,6 @@
 import {
   recipes, escapeHtml, icon, recipeDisplayLabel, fullCode, allIngredientsInRecipe,
-  formatWeight, descriptionListHtml, findMaterialByLabel, openMaterialDetail,
+  formatWeight, descriptionListHtml, cookingGuidelineHtml, findMaterialByLabel, openMaterialDetail,
   playContentTransition, compareSetsCol, currentUser, uid
 } from './app.js';
 import { doc, getDoc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -424,6 +424,7 @@ function renderCompareContent(){
         ${r.destinationCountry ? `<div class="ci-row"><b>Destination country:</b> ${escapeHtml(r.destinationCountry)}</div>` : ''}
         ${r.salesRep ? `<div class="ci-row"><b>Sales rep:</b> ${escapeHtml(r.salesRep)}</div>` : ''}
         ${descriptionListHtml(r)}
+        ${cookingGuidelineHtml(r)}
         ${compareSeriesPrefilter ? `
           <div class="ci-row" style="margin-top:8px;">
             <label style="display:block;font-weight:600;margin-bottom:4px;">Note:</label>
