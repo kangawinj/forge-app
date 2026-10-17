@@ -63,6 +63,8 @@ let sidebarExpandedCategories = new Set();
 // level deeper (only Series-enabled recipes ever get this second level;
 // legacy recipes render as flat items exactly as before this existed).
 let sidebarExpandedSeries = new Set();
+let sidebarAutoExpandedFor = null;   // id of the recipe whose group was last auto-opened
+let recipesListAutoExpandedFor = null;
 
 // Groups a flat recipe list into "entries" -- either a bare legacy recipe,
 // or one collapsed Series entry per distinct seriesId holding every Trial
@@ -101,8 +103,11 @@ export function renderSidebarRecipeCards(container, query){
   // The currently open recipe's own category (and Series sub-group, if
   // any) always shows expanded, so switching to it (from a link elsewhere,
   // or reopening the app) never leaves it hidden behind a collapsed group.
+  // Done once per opened recipe -- re-adding it on every render meant the group of the
+  // recipe you are looking at could never be collapsed (the click removed it, the redraw put it back).
   const current = recipes.find(r => r.id === currentId);
-  if(current){
+  if(current && sidebarAutoExpandedFor !== current.id){
+    sidebarAutoExpandedFor = current.id;
     sidebarExpandedCategories.add((current.productType||'').trim() || 'Uncategorized');
     if(current.seriesId) sidebarExpandedSeries.add(current.seriesId);
   }
@@ -216,7 +221,8 @@ let recipesListExpandedSeries = new Set();
 function renderCategoryRecipeList(container, category){
   if(!container) return;
   const current = recipes.find(r => r.id === currentId);
-  if(current && current.seriesId && ((current.productType||'').trim() || 'Uncategorized') === category){
+  if(current && current.seriesId && recipesListAutoExpandedFor !== current.id && ((current.productType||'').trim() || 'Uncategorized') === category){
+    recipesListAutoExpandedFor = current.id;
     recipesListExpandedSeries.add(current.seriesId);
   }
   const categoryRecipes = recipes.filter(r => ((r.productType||'').trim() || 'Uncategorized') === category);
@@ -259,6 +265,7 @@ export function mountRecipesListView(){
   main.classList.remove('main-wide', 'trials-a4-width');
   recipesListCategoryFilter = null;
   recipesListExpandedSeries = new Set();
+  recipesListAutoExpandedFor = null;   // a fresh visit opens the current recipe's group once again
   main.innerHTML = `
     <div class="main-header">
       <div class="section-title-display">${icon('file-text', 24)} Recipes</div>
