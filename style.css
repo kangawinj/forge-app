@@ -6260,3 +6260,10 @@
 .ing-hint .ing-hint-sep{margin:0 6px;color:var(--text-dim);font-family:inherit;font-weight:400;}
 .ing-hint .ing-hint-note{font-family:inherit;font-weight:400;color:var(--text);overflow-wrap:anywhere;}
 @media (pointer:coarse){ .ing-note-btn{min-height:44px;} }
+.compare-picker-head{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-bottom:6px;}
+.compare-picker-head label{margin:0 !important;}
+.compare-picker-remove{display:inline-flex;align-items:center;justify-content:center;width:28px;height:28px;border:none;background:none;border-radius:8px;color:var(--text-dim);cursor:pointer;padding:0;}
+.compare-picker-remove:hover{background:var(--danger-light);color:var(--danger);}
+.compare-picker-remove:focus-visible{outline:2px solid var(--primary);}
+@media (pointer:coarse){ .compare-picker-remove{width:44px;height:44px;} }
+@media print{ .compare-picker-remove{display:none !important;} }

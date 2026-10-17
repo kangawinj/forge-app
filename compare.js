@@ -63,7 +63,10 @@ function gridColsStyle(n){
 function pickerColHtml(slotIdx, optionsHtml){
   return `
     <div class="compare-picker-col">
-      <label>Recipe ${slotIdx+1}</label>
+      <div class="compare-picker-head">
+        <label>Recipe ${slotIdx+1}</label>
+        <button type="button" class="compare-picker-remove" title="Remove this recipe from the comparison" aria-label="Remove Recipe ${slotIdx+1} from the comparison">${icon('trash-2', 14)}</button>
+      </div>
       <select class="compare-select" data-slot="${slotIdx}">
         <option value="">— Not selected —</option>
         ${optionsHtml}
@@ -138,6 +141,29 @@ export function mountCompareView(){
   });
   document.querySelectorAll('.compare-select').forEach(sel => {
     sel.addEventListener('change', renderCompareContent);
+  });
+  // The trash button beside each "Recipe N": clears that recipe from the comparison. Beyond the
+  // first two slots the empty picker is dropped as well (the rest are renumbered); the first two stay as blanks.
+  document.getElementById('comparePickers').addEventListener('click', e => {
+    const btn = e.target.closest('.compare-picker-remove');
+    if(!btn) return;
+    const pickers = document.getElementById('comparePickers');
+    const col = btn.closest('.compare-picker-col');
+    const cols = [...pickers.querySelectorAll('.compare-picker-col')];
+    if(cols.length > 2){
+      col.remove();
+      const left = [...pickers.querySelectorAll('.compare-picker-col')];
+      left.forEach((c, i) => {
+        c.querySelector('label').textContent = `Recipe ${i + 1}`;
+        c.querySelector('.compare-select').dataset.slot = i;
+        c.querySelector('.compare-picker-remove').setAttribute('aria-label', `Remove Recipe ${i + 1} from the comparison`);
+      });
+      pickers.setAttribute('style', gridColsStyle(left.length));
+      updateAddSlotBtnVisibility();
+    }else{
+      col.querySelector('.compare-select').value = '';
+    }
+    renderCompareContent();
   });
 
   function updateAddSlotBtnVisibility(){
