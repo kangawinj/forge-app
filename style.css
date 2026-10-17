@@ -6267,3 +6267,9 @@
 .compare-picker-remove:focus-visible{outline:2px solid var(--primary);}
 @media (pointer:coarse){ .compare-picker-remove{width:44px;height:44px;} }
 @media print{ .compare-picker-remove{display:none !important;} }
+.compare-saved-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px 10px;margin-bottom:14px;padding:10px 12px;background:var(--bg);border-radius:var(--radius);}
+.compare-saved-bar label{margin:0;font-size:12px;font-weight:600;color:var(--text-dim);white-space:nowrap;}
+.compare-saved-bar select{flex:1 1 280px;max-width:520px;padding:8px 10px;border:1px solid var(--border);border-radius:var(--radius);font:inherit;font-size:13px;background:#fff;}
+.compare-saved-bar .btn{display:inline-flex;align-items:center;gap:6px;}
+.compare-saved-bar .btn:disabled{opacity:.5;cursor:not-allowed;}
+@media print{ .compare-saved-bar{display:none !important;} }

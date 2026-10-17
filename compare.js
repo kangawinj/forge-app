@@ -1,9 +1,9 @@
 import {
   recipes, escapeHtml, icon, recipeDisplayLabel, fullCode, allIngredientsInRecipe,
   formatWeight, descriptionListHtml, findMaterialByLabel, openMaterialDetail,
-  playContentTransition, compareSetsCol, currentUser
+  playContentTransition, compareSetsCol, currentUser, uid
 } from './app.js';
-import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import { doc, getDoc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { partIngredients, partSubParts, seriesKeyDisplay } from './recipes-data.js';
 import { exportCompareToExcel } from './compare-excel.js';
 
@@ -110,6 +110,13 @@ export function mountCompareView(){
       </div>
     </div>
     <div class="card compare-root-card">
+      ${compareSeriesPrefilter ? '' : `
+      <div class="compare-saved-bar">
+        <label for="compareSavedSelect">Saved comparisons</label>
+        <select id="compareSavedSelect"><option value="">— Choose a saved comparison —</option></select>
+        <button type="button" class="btn btn-sm" id="btnSaveComparison">${icon('save', 14)} Save comparison</button>
+        <button type="button" class="btn btn-sm btn-danger" id="btnDeleteComparison" disabled>${icon('trash-2', 14)} Delete</button>
+      </div>`}
       <div class="compare-pickers" id="comparePickers" style="${gridColsStyle(startSlots)}"><div class="compare-info-spacer"></div>${pickersHtml}</div>
       <button class="btn btn-sm" type="button" id="btnAddCompareSlot" style="margin-top:10px;">+ Add Recipe</button>
       <div id="compareContent"></div>
@@ -211,9 +218,13 @@ export function mountCompareView(){
       snap = await getDoc(doc(compareSetsCol, compareSeriesPrefilter.seriesId));
     } catch(err) { return; } // offline/permission hiccup -- just stay on the blank picker
     if(!snap.exists()) return;
-    const saved = snap.data();
+    applySavedSet(snap.data());
+  }
+  // Puts a saved set's recipes into the pickers and restores its toggles -- shared by the
+  // per-series Compare Trials restore above and the "Saved comparisons" list below.
+  function applySavedSet(saved){
     const ids = (saved.recipeIds || []).filter(id => candidates.some(r => r.id === id));
-    if(ids.length === 0) return;
+    if(ids.length === 0) return false;
     let selects = [...document.querySelectorAll('.compare-select')];
     while(selects.length < ids.length){
       const sel = addSlot();
@@ -232,7 +243,99 @@ export function mountCompareView(){
     compareCostGroupByPart = saved.costGroupByPart !== false;
     compareNotes = { ...(saved.notes || {}) };
     renderCompareContent();
+    return true;
   }
+
+  // ---- "Saved comparisons" (Compare Recipes only) ----
+  // Two kinds live in the shared compareSets collection: named comparisons saved from this page
+  // (kind: 'custom', any number) and the one-per-series set saved from Compare Trials.
+  let savedSets = [];
+  const savedSel = document.getElementById('compareSavedSelect');
+  function updateSavedButtons(){
+    const del = document.getElementById('btnDeleteComparison');
+    if(!del) return;
+    const cur = savedSets.find(s => s.id === savedSel.value);
+    del.disabled = !cur || !cur.custom;
+    del.title = cur && !cur.custom ? "This is a series' Compare Trials set -- save over it from that series' Compare Trials page" : '';
+  }
+  async function refreshSavedSets(selectId){
+    if(!savedSel) return;
+    let snap;
+    try { snap = await getDocs(compareSetsCol); } catch(err){ return; }   // offline / no access: leave the list as is
+    savedSets = [];
+    snap.forEach(d => {
+      const data = d.data();
+      if(data.kind === 'custom'){
+        savedSets.push({ id: d.id, custom: true, label: data.name || 'Untitled comparison', data });
+      }else if(data.seriesId){
+        const first = recipes.find(r => r.seriesId === data.seriesId);
+        const alive = (data.recipeIds || []).some(id => recipes.some(r => r.id === id));
+        if(first && alive) savedSets.push({ id: d.id, custom: false, label: `${first.name || 'Untitled recipe'} · ${seriesKeyDisplay(first.seriesKey, first)}`, data });
+      }
+    });
+    const byLabel = (a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' });
+    const mine = savedSets.filter(s => s.custom).sort(byLabel);
+    const series = savedSets.filter(s => !s.custom).sort(byLabel);
+    const opt = s => `<option value="${escapeHtml(s.id)}">${escapeHtml(s.label)}</option>`;
+    savedSel.innerHTML = '<option value="">— Choose a saved comparison —</option>' +
+      (mine.length ? `<optgroup label="Saved comparisons">${mine.map(opt).join('')}</optgroup>` : '') +
+      (series.length ? `<optgroup label="From Compare Trials (one per series)">${series.map(opt).join('')}</optgroup>` : '');
+    if(selectId && savedSets.some(s => s.id === selectId)) savedSel.value = selectId;
+    updateSavedButtons();
+  }
+  savedSel?.addEventListener('change', () => {
+    updateSavedButtons();
+    const set = savedSets.find(s => s.id === savedSel.value);
+    if(!set) return;
+    if(!applySavedSet(set.data)) alert('The recipes in this saved comparison no longer exist.');
+  });
+  document.getElementById('btnSaveComparison')?.addEventListener('click', async e => {
+    const btn = e.currentTarget;
+    const picked = [...document.querySelectorAll('.compare-select')].map(sel => sel.value).filter(Boolean);
+    if(picked.length < 2){ alert('Pick at least 2 recipes before saving a comparison.'); return; }
+    const cur = savedSets.find(s => s.id === savedSel.value);
+    const pad = n => String(n).padStart(2, '0');
+    const now = new Date();
+    const today = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
+    const guess = [...new Set(picked.map(id => (recipes.find(r => r.id === id)?.name || '').trim()).filter(Boolean))].join(' + ').slice(0, 60);
+    const name = (prompt('Name this comparison:', cur && cur.custom ? cur.label : `${guess} ${today}`.trim()) || '').trim();
+    if(!name) return;
+    const same = savedSets.find(s => s.custom && s.label.toLowerCase() === name.toLowerCase());
+    if(same && !confirm(`A saved comparison named "${same.label}" already exists. Replace it?`)) return;
+    const id = same ? same.id : uid();
+    const original = btn.innerHTML;
+    try {
+      await setDoc(doc(compareSetsCol, id), {
+        kind: 'custom',
+        name,
+        recipeIds: picked,
+        showCodes: compareShowCodes,
+        showWeights: compareShowWeights,
+        showCosting: compareShowCosting,
+        showSteps: compareShowSteps,
+        groupByPart: compareGroupByPart,
+        costGroupByPart: compareCostGroupByPart,
+        savedAt: Date.now(),
+        savedBy: currentUser?.email || '',
+      });
+      btn.innerHTML = `${icon('check', 14)} Saved`;
+      await refreshSavedSets(id);
+    } catch(err){
+      btn.innerHTML = `${icon('save', 14)} Save failed`;
+    }
+    setTimeout(() => { btn.innerHTML = original; }, 1800);
+  });
+  document.getElementById('btnDeleteComparison')?.addEventListener('click', async () => {
+    const cur = savedSets.find(s => s.id === savedSel.value);
+    if(!cur || !cur.custom) return;
+    if(!confirm(`Delete the saved comparison "${cur.label}"? This can't be undone.`)) return;
+    try {
+      await deleteDoc(doc(compareSetsCol, cur.id));
+      await refreshSavedSets('');
+    } catch(err){
+      alert('Could not delete the saved comparison.');
+    }
+  });
   document.getElementById('btnSaveCompareSet')?.addEventListener('click', async e => {
     const btn = e.currentTarget;
     const ids = [...document.querySelectorAll('.compare-select')].map(sel => sel.value).filter(Boolean);
@@ -260,6 +363,7 @@ export function mountCompareView(){
 
   renderCompareContent();
   loadSavedCompareSet();
+  refreshSavedSets();
   playContentTransition(main);
 }
 
