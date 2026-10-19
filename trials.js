@@ -194,6 +194,7 @@ export function mountTrialsView(){
     trialEditingId = t.id;
     trialExpandedIds.add(t.id);
     renderTrialsList();
+    document.querySelector(`.part-block[data-trial-id="${t.id}"]`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
   });
 
   renderTrialsList();
@@ -217,7 +218,9 @@ export function renderTrialsList(){
   // editing an OLDER test's Note today bumps its updatedAt past a newer
   // test nobody's touched since). Falls back to updatedAt only to break
   // ties between same-date (or both-blank-date) tests.
-  const sorted = [...trials].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
+  // Tests with no Tested date yet (a brand-new "Untitled test" still being filled in) come first,
+  // so a just-added test shows at the very top instead of sinking below the dated project groups.
+  const sorted = [...trials].sort((a,b) => (a.testDate ? 1 : 0) - (b.testDate ? 1 : 0) || (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
   if(trialsViewMode === 'table'){
     renderTrialsSummaryTable(container, sorted);
     renderEvaluationWizard();
