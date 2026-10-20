@@ -6287,3 +6287,40 @@
   @media (max-width:700px){ .trial-project-summary-grid{grid-template-columns:repeat(2,1fr);} }
   .trial-participants-list .trial-string-list-row{flex:1 0 220px;width:auto;}
   .trial-participants-list .trial-string-list-row input{flex:1;width:auto;min-width:90px;}
+
+  /* ---- Test Results readability pass (screen only; print keeps its own rules above) ---- */
+  @media screen{
+    /* Row header: the title block always keeps room to read (it used to be squeezed to a sliver
+       with the action buttons crowding it); the buttons drop to their own line when they don't fit,
+       with Delete pushed to the far end so it is never next to the everyday actions. */
+    .part-header:has(> .trial-row-actions){flex-wrap:wrap;row-gap:10px;}
+    .part-header > .trial-row-title-block{flex:1 1 260px;min-width:min(100%,260px);}
+    .part-header > .trial-row-actions{flex:1 1 auto;justify-content:flex-start;}
+    .trial-row-actions [data-role="delete-trial"]{margin-left:auto;}
+    .trial-row-date{font-size:16px;}
+    .trial-row-products{font-size:13px;}
+    /* Read-only values read as values, not as disabled fields. */
+    .part-block[data-trial-id] input[readonly],
+    .part-block[data-trial-id] textarea[readonly]{color:var(--text);}
+    /* Section headings inside Part 2 (Cooking Method, Products Being Compared, Sensory Evaluation, Note). */
+    .trial-part2-box > .field > label{font-size:13px;font-weight:700;color:var(--primary-dark);margin-bottom:8px;}
+    /* The Code is what tells same-named samples apart -- lead with it. */
+    .teval-print-hide-scores .compare-th-name{font-weight:500;color:var(--text-dim);font-size:12px;}
+    .teval-print-hide-scores .compare-th-code{font-weight:700;color:var(--primary-dark);font-size:14px;}
+    .trial-cards-grid .proj-ref-image-caption{overflow-wrap:anywhere;font-size:11px;}
+    .trial-cards-grid .ci-name + .ci-row{font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:8px;}
+    .trial-cards-grid .ci-name + .ci-row b{font-weight:500;color:var(--text-dim);}
+    .trial-cards-grid .ci-name span{font-size:12px;}
+    .teval-row-type-label{font-size:12px;padding-right:10px;}
+    /* Test Result: the chosen verdict is colored and bold, the others stay quiet. */
+    .trial-testresult-radio-label{color:var(--text-dim);}
+    .trial-testresult-radio-label:has(input:checked){font-weight:600;color:var(--text);}
+    .trial-testresult-radio-label:has(input[value="Accepted"]:checked){color:var(--ok);}
+    .trial-testresult-radio-label:has(input[value="Not accepted"]:checked){color:var(--danger);}
+    .trial-testresult-radio-label:has(input[value="Needs Revision"]:checked){color:#b85a0f;}
+  }
+  @media screen and (max-width:700px){
+    /* Phone / narrow: comfortable touch targets on the row actions, evenly sized. */
+    .trial-row-actions .btn{min-height:38px;padding-left:12px;padding-right:12px;font-size:13px;}
+    .trial-project-summary-grid{gap:8px 12px;}
+  }
