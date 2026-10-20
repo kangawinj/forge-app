@@ -35,7 +35,7 @@ import {
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
 } from './trials-data.js';
 import { renderEvaluationWizard, openEvalWizard } from './trials-wizard.js';
-import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel } from './trials-summary.js';
+import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel, exportTrialToExcel } from './trials-summary.js';
 import {
   renderTrialShareModal, renderShareResponsePreviewModal, openTrialShareModal,
   loadSharePendingCounts, trialSharePendingCounts, deleteTrialShareArtifacts
@@ -651,6 +651,7 @@ export function renderTrialsList(){
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-share">${icon('share-2')} Share External Evaluation${trialSharePendingCounts[t.id] ? `<span class="trial-share-pending-badge" title="${trialSharePendingCounts[t.id]} guest response${trialSharePendingCounts[t.id] === 1 ? '' : 's'} waiting for a decision">${trialSharePendingCounts[t.id]}</span>` : ''}</button>` : ''}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
+            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="export-trial-excel">${icon('download')} Export Excel</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>` : ''}
           </div>
@@ -823,6 +824,10 @@ export function renderTrialsList(){
 
     block.querySelector('[data-role="open-trial-share"]')?.addEventListener('click', async () => {
       await openTrialShareModal(id);
+    });
+
+    block.querySelector('[data-role="export-trial-excel"]')?.addEventListener('click', () => {
+      exportTrialToExcel(t);
     });
 
     block.querySelector('[data-role="print-trial"]')?.addEventListener('click', () => {
