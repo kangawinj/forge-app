@@ -303,7 +303,7 @@ export function summarizeTrialProduct(t, criteria, p){
   const improvements = criteria
     .map(c => ({ label: c.label, suggestion: improvementFieldValue(pd, c.id), note: (improveNotes[c.id] || '').trim() }))
     .filter(x => x.suggestion);
-  return { label: p.label, verdict, comments, improvements };
+  return { label: p.label, verdict, comments, improvements, reference: !!pd.referenceSample };
 }
 // Read-only overview -- one row per test (already sorted most-recently-
 // updated first by the caller), grouped by linked Project -- Project/PD

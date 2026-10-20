@@ -56,11 +56,11 @@ function renderTrialSummaryModal(){
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
-        const { label, verdict, comments, improvements } = summarizeTrialProduct(t, criteria, p);
+        const { label, verdict, comments, improvements, reference } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
             <div class="trial-summary-product-head">
-              <div class="trial-summary-product-name">${escapeHtml(label)}</div>
+              <div class="trial-summary-product-name">${escapeHtml(label)}${reference ? ' <span class="trial-ref-sample-badge">Reference sample</span>' : ''}</div>
               ${verdict
                 ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[verdict] || ''}">${escapeHtml(verdict)}</span>`
                 : '<span class="overview-empty">Not yet evaluated</span>'}
@@ -160,7 +160,7 @@ function buildTrialsSummarySheet(wb, groups){
       } else {
         products.forEach((pr, pi) => {
           if(pi > 0) runs.push({ text: '\n', font: { size: 4 } });
-          runs.push({ text: pr.label, font: { bold: true, size: 12, color: { argb: XL_COLORS.text } } });
+          runs.push({ text: pr.reference ? `${pr.label} (Reference sample)` : pr.label, font: { bold: true, size: 12, color: { argb: XL_COLORS.text } } });
           if(pr.verdict){
             const vColor = pr.verdict === 'Accepted' ? XL_COLORS.ok : pr.verdict === 'Not accepted' ? XL_COLORS.danger : XL_COLORS.accent;
             runs.push({ text: '  [' + pr.verdict + ']\n', font: { bold: true, size: 10, color: { argb: vColor } } });
@@ -260,7 +260,7 @@ export function renderTrialsSummaryTable(container, sortedTrials){
                   ${products.length === 0 ? '<span class="overview-empty">No products</span>' : products.map(pr => `
                     <div class="trial-table-summary-product">
                       <div class="trial-table-summary-head">
-                        <b>${escapeHtml(pr.label)}</b>
+                        <b>${escapeHtml(pr.label)}</b>${pr.reference ? ' <span class="trial-ref-sample-badge">Reference sample</span>' : ''}
                         ${pr.verdict ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[pr.verdict] || ''}">${escapeHtml(pr.verdict)}</span>` : '<span class="overview-empty">Not yet evaluated</span>'}
                       </div>
                       ${pr.comments.length ? `
