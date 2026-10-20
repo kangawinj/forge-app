@@ -757,6 +757,7 @@ export const CHANGELOG = [
   { version: "3.0.715", date: "2026-10-17", note: "Compare Recipes / Compare Trials: each recipe card now shows its Cooking Guideline (method + numbered steps), and Export Excel adds a Cooking Guideline row to the recipe info block" },
   { version: "3.0.716", date: "2026-10-17", note: "Compare Excel file name: a shared product name appears once (a trailing (05D)-style suffix is ignored) followed by every compared recipe code in brackets, then the date" },
   { version: "3.0.717", date: "2026-10-19", note: "Test Results: a newly added test (no Tested date yet) now shows at the very top of the list and scrolls into view, instead of landing under the last project group" },
+  { version: "3.0.718", date: "2026-10-20", note: "Test Results: removed the \"Continue Development?\" row from Improvement Guidelines; Summary Test / Summary Table now list every product in the test (no longer only the ones marked Continue)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

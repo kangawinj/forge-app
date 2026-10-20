@@ -623,31 +623,6 @@ export function renderTrialsList(){
         </div>
       `;
     })();
-    // One decision per product -- separate from Test Result (which is a
-    // per-evaluator sensory verdict) -- for whoever reviews the
-    // Improvement Guidelines above to say whether this specific sample is
-    // still worth carrying forward. Only "Continue" gets a product into
-    // the Summary Test / Summary Table (see summarizeTrialProduct) --
-    // "Discontinue" and not-yet-decided both stay out, so a page that's
-    // meant to be a quick read doesn't keep showing samples nobody's
-    // pursuing any more.
-    const continueDevRowHtml = `
-      <tr>
-        <td colspan="2"><b>Continue Development?</b></td>
-        ${evalTargets.map((p, i) => {
-          const pd = getTrialProductData(mt, p.id);
-          const val = pd.continueDevelopment || '';
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
-            <div class="trial-continue-dev-row">
-              <button type="button" class="btn btn-sm trial-continue-dev-btn trial-continue-dev-yes${val === 'continue' ? ' selected' : ''}" data-role="continue-dev" data-product-id="${escapeHtml(p.id)}" data-value="continue" ${isEditing ? '' : 'disabled'}>${icon('check', 12)} Continue</button>
-              <button type="button" class="btn btn-sm trial-continue-dev-btn trial-continue-dev-no${val === 'discontinue' ? ' selected' : ''}" data-role="continue-dev" data-product-id="${escapeHtml(p.id)}" data-value="discontinue" ${isEditing ? '' : 'disabled'}>${icon('x', 12)} Discontinue</button>
-            </div>
-          </td>`;
-        }).join('')}
-        <td class="recipe-boundary"></td>
-      </tr>
-    `;
-
     // Leading 220px (140+80) matches the product-card grid's own 220px
     // spacer (see productCardsGrid above), and the trailing 180px matches
     // that same grid's own trailing 180px placeholder column -- with both
@@ -778,7 +753,7 @@ export function renderTrialsList(){
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th><th></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
-                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${continueDevRowHtml}</tbody>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>
               <div class="trial-scrollbar-proxy"><div class="trial-scrollbar-proxy-inner"></div></div>
@@ -1113,14 +1088,6 @@ export function renderTrialsList(){
       });
     });
     block.querySelectorAll('.mu-field-with-translate').forEach(wireTrialTranslateButton);
-    block.querySelectorAll('[data-role="continue-dev"]').forEach(btn => {
-      btn.addEventListener('click', () => {
-        const pd = getTrialProductData(t, btn.dataset.productId);
-        pd.continueDevelopment = pd.continueDevelopment === btn.dataset.value ? '' : btn.dataset.value;
-        scheduleTrialSave(t);
-        renderTrialsList();
-      });
-    });
     block.querySelectorAll('.trial-criteria-label-input').forEach(input => {
       input.addEventListener('change', () => {
         const criteria = getEvaluationCriteria(t);

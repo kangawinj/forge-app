@@ -28,12 +28,7 @@ function renderTrialSummaryModal(){
   if(!trialSummaryId){ existing?.remove(); return; }
   const t = trials.find(x => x.id === trialSummaryId);
   if(!t){ trialSummaryId = null; existing?.remove(); return; }
-  // Only a product explicitly marked "Continue Development" (see the new
-  // row at the bottom of Improvement Guidelines) belongs here -- per
-  // request, a sample nobody's decided to carry forward (or one flagged
-  // Discontinue) shouldn't keep showing up on a page meant for a quick
-  // read of where things stand.
-  const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
+  const evalTargets = trialEvalTargets(t);
   const criteria = getEvaluationCriteria(t);
 
   const overlay = existing || document.createElement('div');
@@ -60,7 +55,7 @@ function renderTrialSummaryModal(){
         <div class="eval-wizard-title">Forge · Test Summary</div>
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
-      ${evalTargets.length === 0 ? '<div class="overview-empty">No products marked "Continue Development" yet — mark one in Improvement Guidelines to see it here</div>' : evalTargets.map(p => {
+      ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
         const { label, verdict, comments, improvements } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
@@ -156,12 +151,12 @@ function buildTrialsSummarySheet(wb, groups){
     const startRow = ws.rowCount + 1;
     g.trials.forEach((t, i) => {
       const criteria = getEvaluationCriteria(t);
-      const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
+      const evalTargets = trialEvalTargets(t);
       const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
 
       const runs = [];
       if(!products.length){
-        runs.push({ text: 'No products marked "Continue Development"', font: { italic: true, size: 11, color: { argb: XL_COLORS.dim } } });
+        runs.push({ text: 'No products', font: { italic: true, size: 11, color: { argb: XL_COLORS.dim } } });
       } else {
         products.forEach((pr, pi) => {
           if(pi > 0) runs.push({ text: '\n', font: { size: 4 } });
@@ -249,11 +244,7 @@ export function renderTrialsSummaryTable(container, sortedTrials){
           const linkedProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
           return g.trials.map((t, i) => {
             const criteria = getEvaluationCriteria(t);
-            // Only products marked "Continue Development" (see the new row
-            // at the bottom of Improvement Guidelines) -- same rule as the
-            // Summary Test modal, so the two never disagree about what
-            // counts as "worth showing on a summary".
-            const evalTargets = trialEvalTargets(t).filter(p => getTrialProductData(t, p.id).continueDevelopment === 'continue');
+            const evalTargets = trialEvalTargets(t);
             const products = evalTargets.map(p => summarizeTrialProduct(t, criteria, p));
             return `
               <tr>
@@ -266,7 +257,7 @@ export function renderTrialsSummaryTable(container, sortedTrials){
                 ` : ''}
                 <td class="trial-table-summary-date-cell">${t.testDate ? escapeHtml(formatDateLong(t.testDate)) : 'No test date'}</td>
                 <td>
-                  ${products.length === 0 ? '<span class="overview-empty">No products marked "Continue Development"</span>' : products.map(pr => `
+                  ${products.length === 0 ? '<span class="overview-empty">No products</span>' : products.map(pr => `
                     <div class="trial-table-summary-product">
                       <div class="trial-table-summary-head">
                         <b>${escapeHtml(pr.label)}</b>
