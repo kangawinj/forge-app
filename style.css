@@ -6324,3 +6324,17 @@
     .trial-row-actions .btn{min-height:38px;padding-left:12px;padding-right:12px;font-size:13px;}
     .trial-project-summary-grid{gap:8px 12px;}
   }
+
+  /* Sensory Evaluation table: the Criteria + row-type columns stay pinned to the left while the product
+     columns scroll sideways (widths match the <colgroup>: 140px + 80px). Screen only. */
+  @media screen{
+    .teval-print-hide-scores .teval-sticky-1,
+    .teval-print-hide-scores .teval-sticky-2,
+    .teval-print-hide-scores td.teval-row-type-label{position:sticky;z-index:2;background:var(--bg);}
+    .teval-print-hide-scores .teval-sticky-1{left:0;}
+    .teval-print-hide-scores .teval-sticky-2,
+    .teval-print-hide-scores td.teval-row-type-label{left:140px;box-shadow:6px 0 6px -6px rgba(12,24,48,.22);}
+    .teval-print-hide-scores .teval-sticky-wide{box-shadow:6px 0 6px -6px rgba(12,24,48,.22);}
+    .teval-print-hide-scores thead .teval-sticky-1,
+    .teval-print-hide-scores thead .teval-sticky-2{z-index:3;}
+  }

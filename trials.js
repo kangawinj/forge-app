@@ -474,7 +474,7 @@ export function renderTrialsList(){
       // <tr>s means the browser's own table layout keeps everything
       // correctly aligned regardless of how tall any one field grows.
       const criteriaNameCell = `
-        <td rowspan="2">${isEditing
+        <td rowspan="2" class="teval-sticky-1">${isEditing
           ? `<div style="display:flex;align-items:center;gap:6px;">
               <div style="display:flex;flex-direction:column;">
                 <button type="button" class="icon-btn" data-role="move-trial-criteria-up" data-criteria-id="${escapeHtml(c.id)}" title="Move up" ${ci === 0 ? 'disabled' : ''}>${icon('chevron-up', 12)}</button>
@@ -569,7 +569,7 @@ export function renderTrialsList(){
     // pd.evaluations[email].testResult.
     const testResultRowHtml = `
       <tr>
-        <td colspan="2"><b>Test Result</b></td>
+        <td colspan="2" class="teval-sticky-1 teval-sticky-wide"><b>Test Result</b></td>
         ${evalTargets.map((p, i) => {
           const pd = getTrialProductData(mt, p.id);
           const mine = currentUser?.email ? getMyEvaluation(pd) : null;
@@ -755,7 +755,7 @@ export function renderTrialsList(){
               <div class="trial-eval-scroll" style="overflow-x:auto;">
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
-                  <thead><tr><th>Criteria</th><th></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
+                  <thead><tr><th class="teval-sticky-1">Criteria</th><th class="teval-sticky-2"></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
                   <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>

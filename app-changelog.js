@@ -765,6 +765,7 @@ export const CHANGELOG = [
   { version: "3.0.723", date: "2026-10-20", note: "Test Results: new Export Excel button on each test row -- one sheet with Part 1 (project, date, location, participants), Part 2 (cooking method + steps), each product's test result, reference-sample flag, comments and improvement lines, and the test note" },
   { version: "3.0.724", date: "2026-10-20", note: "Test Results Export Excel now follows the page layout: Part 1 / Part 2, the Products Being Compared cards as columns with their photos, the Sensory Evaluation table (Comment + Improvement Guidelines per criteria, Note column, Test Result row), evaluator Comments with photos, and the Note" },
   { version: "3.0.725", date: "2026-10-20", note: "Test Results readability pass: the row header keeps room for the title and drops its buttons to their own line (Delete at the far end, larger touch targets on phones); read-only fields use full-contrast text; section headings (Cooking Method, Products Being Compared, Sensory Evaluation) are bold; product Codes lead in the cards and table headers so same-named samples are easy to tell apart; the chosen Test Result is colored (green / red / orange)" },
+  { version: "3.0.726", date: "2026-10-20", note: "Test Results: in the Sensory Evaluation table the Criteria and Comment / Improvement Guidelines columns now stay pinned on the left while the product columns scroll sideways" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
