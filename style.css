@@ -6338,3 +6338,10 @@
     .teval-print-hide-scores thead .teval-sticky-1,
     .teval-print-hide-scores thead .teval-sticky-2{z-index:3;}
   }
+
+  /* "Keep as reference sample" is a tick in the Test Result list, same look as the radios above it. */
+  @media screen{
+    .trial-ref-sample-label{margin-top:4px;padding-top:6px;border-top:1px dashed var(--border);}
+    .trial-testresult-radio-label:has(input[data-role="ref-sample"]:checked){color:#b85a0f;}
+    .trial-ref-sample-label input{accent-color:var(--accent);}
+  }

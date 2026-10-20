@@ -584,8 +584,11 @@ export function renderTrialsList(){
                   <input type="radio" name="teval-testresult-${escapeHtml(t.id)}-${escapeHtml(p.id)}" data-role="teval-testresult" data-product-id="${escapeHtml(p.id)}" value="${escapeHtml(o)}" ${mine?.testResult === o ? 'checked' : ''} ${mine ? '' : 'disabled'}>
                   ${o}
                 </label>
-              `).join('')}</div>
-            <button type="button" class="btn btn-sm trial-ref-sample-btn${pd.referenceSample ? ' selected' : ''}" data-role="ref-sample" data-product-id="${escapeHtml(p.id)}" title="${pd.referenceSample ? 'Click to unmark' : 'Keep this sample as a reference sample'}">${icon(pd.referenceSample ? 'check' : 'plus', 14)} ${pd.referenceSample ? 'Kept as reference sample' : 'Keep as reference sample'}</button>
+              `).join('')}
+              <label class="trial-testresult-radio-label trial-ref-sample-label" title="Keep this sample as a reference sample">
+                <input type="checkbox" data-role="ref-sample" data-product-id="${escapeHtml(p.id)}" ${pd.referenceSample ? 'checked' : ''}>
+                Keep as reference sample
+              </label></div>
           </td>`;
         }).join('')}
         <td class="recipe-boundary"></td>
