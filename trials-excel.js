@@ -67,16 +67,21 @@ export async function exportTrialToExcel(t){
   // fits them to their content itself; only merged-value rows and photo rows are sized here.
   const linesFor = (text, width) => String(text || '').split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / Math.max(8, width * 1.05))), 0);
 
-  // Pin a photo to a cell by its two corners (as fractions of the column width / row height) rather than
-  // by a pixel size, so it can never spill out of the cell whatever the display scaling or Excel version.
+  // Pin a photo inside its cell: both corners are given as EMU offsets from the cell's own top-left
+  // (nativeColOff / nativeRowOff, 9525 EMU per px), so the picture is centered, keeps its aspect ratio
+  // and can never spill out of the cell whatever the display scaling.
   const placeImage = (rowNumber, rowHeightPt, col0, img) => {
+    const EMU = 9525;
     const colPx = Math.round((ws.getColumn(col0 + 1).width || PROD_W) * 7 + 5);
     const rowPx = rowHeightPt / 0.75;
-    const pad = 0.04;
-    const wFrac = Math.min(0.92, img.width / colPx);
-    const hFrac = Math.min(0.92, img.height / rowPx);
+    const w = Math.min(img.width, colPx - 6), h = Math.min(img.height, rowPx - 6);
+    const x0 = Math.max(2, Math.floor((colPx - w) / 2)), y0 = Math.max(2, Math.floor((rowPx - h) / 2));
     const id = wb.addImage({ base64: img.base64, extension: 'jpeg' });
-    ws.addImage(id, { tl: { col: col0 + pad, row: rowNumber - 1 + pad }, br: { col: col0 + pad + wFrac, row: rowNumber - 1 + pad + hFrac }, editAs: 'oneCell' });
+    ws.addImage(id, {
+      tl: { nativeCol: col0, nativeColOff: x0 * EMU, nativeRow: rowNumber - 1, nativeRowOff: y0 * EMU },
+      br: { nativeCol: col0, nativeColOff: Math.floor(x0 + w) * EMU, nativeRow: rowNumber - 1, nativeRowOff: Math.floor(y0 + h) * EMU },
+      editAs: 'oneCell'
+    });
   };
 
   const dateText = mt.testDate ? formatDateLong(mt.testDate) : 'No test date';
