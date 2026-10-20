@@ -772,6 +772,7 @@ export const CHANGELOG = [
   { version: "3.0.730", date: "2026-10-20", note: "Test Results Export Excel: photos keep their proportions again and sit centered in their cells (placed by exact offsets inside the cell instead of fractions that squeezed them)" },
   { version: "3.0.731", date: "2026-10-20", note: "Test Results: each project heading now has an Export Excel button that puts every test of that project into one file -- one sheet per test, the most recent Tested date as the leftmost sheet" },
   { version: "3.0.732", date: "2026-10-20", note: "Test Results: the Sensory Evaluation page is now sized like paper -- A4 portrait width with one or two samples, A4 landscape width from three samples up -- with the product columns sharing the width evenly (scrolls sideways beyond that instead of crowding)" },
+  { version: "3.0.733", date: "2026-10-20", note: "Test Results Sensory Evaluation: wider columns -- product columns at least 240px and the Note column 300px (a long note in the old 180px column stretched the whole row); the table grows past A4 and scrolls sideways when there are several samples" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

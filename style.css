@@ -6356,3 +6356,9 @@
   @media screen{
     .trial-eval-scroll .teval-print-hide-scores{width:var(--teval-paper-w);min-width:var(--teval-paper-w);}
   }
+
+  /* The Note column: 180px on paper (print), a roomy 300px on screen (see TRIAL_NOTE_W in trials.js). */
+  .teval-print-hide-scores col.teval-col-note{width:180px;}
+  @media screen{
+    .teval-print-hide-scores col.teval-col-note{width:300px;}
+  }

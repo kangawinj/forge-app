@@ -405,13 +405,14 @@ export function renderTrialsList(){
     // table's own scrollLeft -- see the "trial-cards-scroll"/
     // "trial-eval-scroll" sync wiring further down -- so the table's
     // scrollbar is the only one you ever interact with, moving both.
-    // On screen the Sensory Evaluation "page" is paper-sized: A4 portrait (794px at 96dpi) while there are only
-    // one or two samples, A4 landscape (1123px) from three up. The product columns share what is left after the
-    // 220px label columns and the 180px Note column, never narrower than 150px (a long list of samples just
-    // scrolls sideways instead of crowding).
+    // On screen the Sensory Evaluation "page" is at least paper-sized: A4 portrait (794px at 96dpi) with one or two
+    // samples, A4 landscape (1123px) from three up. Product columns are never narrower than 240px and the Note
+    // column is a roomy 300px (long notes used to wrap in a narrow column and stretch the whole row), so with
+    // several samples the table simply grows past the paper width and scrolls sideways instead of crowding.
+    const TRIAL_NOTE_W = 300;
     const TRIAL_PAPER_W = combinedCount <= 2 ? 794 : 1123;
-    const TRIAL_PRODUCT_COL_WIDTH = combinedCount ? Math.max(150, Math.floor((TRIAL_PAPER_W - 400) / combinedCount)) : 220;
-    const TRIAL_TABLE_W = 400 + TRIAL_PRODUCT_COL_WIDTH * Math.max(1, combinedCount);
+    const TRIAL_PRODUCT_COL_WIDTH = combinedCount ? Math.max(240, Math.floor((TRIAL_PAPER_W - 220 - TRIAL_NOTE_W) / combinedCount)) : 240;
+    const TRIAL_TABLE_W = Math.max(TRIAL_PAPER_W, 220 + TRIAL_PRODUCT_COL_WIDTH * Math.max(1, combinedCount) + TRIAL_NOTE_W);
     // Print needs the OPPOSITE of the screen fix above: a physical page
     // can't horizontal-scroll, so per-product columns have to shrink to
     // fit it instead of staying a fixed 220px (which, printed, ran off the
@@ -425,7 +426,7 @@ export function renderTrialsList(){
     const PRINT_CONTENT_WIDTH_PX = 1047;
     const printProductColWidth = Math.round((PRINT_CONTENT_WIDTH_PX - 400) / Math.max(1, combinedCount || 1));
     const productCardsGrid = productCardsHtml
-      ? `<div class="trial-cards-scroll" style="overflow-x:hidden;"><div class="compare-info-grid gap-via-margin trial-cards-grid" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) 180px;--teval-grid-print:220px repeat(${combinedCount},${printProductColWidth}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
+      ? `<div class="trial-cards-scroll" style="overflow-x:hidden;"><div class="compare-info-grid gap-via-margin trial-cards-grid" style="grid-template-columns:220px repeat(${combinedCount},${TRIAL_PRODUCT_COL_WIDTH}px) ${TRIAL_NOTE_W}px;--teval-grid-print:220px repeat(${combinedCount},${printProductColWidth}px) 180px;width:max-content;min-width:100%;"><div class="compare-info-spacer"></div>${productCardsHtml}</div></div>`
       : '<div class="overview-empty">No products added yet</div>';
 
     // Each row's score is per-product (columns matching the product cards
@@ -645,7 +646,7 @@ export function renderTrialsList(){
     // the Comment/Improvement Guidelines row label -- Test Result/Continue
     // Development span both with colspan="2", having no need for that
     // second column themselves.)
-    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${`<col class="teval-col-product" style="width:${TRIAL_PRODUCT_COL_WIDTH}px;--teval-col-w-print:${printProductColWidth}px;">`.repeat(evalTargets.length)}<col style="width:180px;"></colgroup>`;
+    const trialColgroup = `<colgroup><col style="width:140px;"><col style="width:80px;">${`<col class="teval-col-product" style="width:${TRIAL_PRODUCT_COL_WIDTH}px;--teval-col-w-print:${printProductColWidth}px;">`.repeat(evalTargets.length)}<col class="teval-col-note"></colgroup>`;
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-trial-id="${escapeHtml(t.id)}">
