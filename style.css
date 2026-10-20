@@ -6362,3 +6362,17 @@
   @media screen{
     .teval-print-hide-scores col.teval-col-note{width:300px;}
   }
+
+  /* Sensory Evaluation zoom (see applyTrialEvalZoom in trials.js): the table and the product cards above it scale together. */
+  .teval-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px;}
+  .teval-head > label{margin:0;}
+  .trial-part2-box .teval-head > label{font-size:13px;font-weight:700;color:var(--primary-dark);}
+  .teval-zoom-bar{display:flex;align-items:center;gap:6px;}
+  .teval-zoom-bar .btn{min-width:34px;justify-content:center;}
+  .teval-zoom-bar .btn.active{background:var(--primary-dark);border-color:var(--primary-dark);color:#fff;}
+  .teval-zoom-pct{min-width:44px;text-align:center;font-size:12px;color:var(--text-dim);}
+  @media screen{
+    .trial-eval-scroll .teval-print-hide-scores,
+    .trial-cards-grid{zoom:var(--teval-zoom,1);}
+  }
+  @media print{ .teval-zoom-bar{display:none !important;} }

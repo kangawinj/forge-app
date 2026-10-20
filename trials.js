@@ -51,6 +51,9 @@ let trialEditingId = null;
 // first -- see renderTrialsSummaryTable). Kept as its own toggle rather
 // than replacing the list outright, since the table has none of the
 // list's own actions.
+// Zoom of each test's Sensory Evaluation table (+ the product cards above it, which share its columns):
+// { zoom: 0.3-1.5, fit: true to shrink the whole table to the available width }, kept per test for the session.
+const trialEvalZoomState = {};
 let trialsViewMode = 'list';
 let unsubscribeTrials = null;
 let trialsLoaded = false;
@@ -760,9 +763,17 @@ export function renderTrialsList(){
               ` : ''}
             </div>
             <div class="field">
-              <label>Sensory Evaluation</label>
+              <div class="teval-head">
+                <label>Sensory Evaluation</label>
+                ${evalTargets.length ? `<div class="teval-zoom-bar" role="group" aria-label="Zoom the table">
+                  <button type="button" class="btn btn-sm" data-role="teval-zoom-out" title="Zoom out">−</button>
+                  <span class="teval-zoom-pct">100%</span>
+                  <button type="button" class="btn btn-sm" data-role="teval-zoom-in" title="Zoom in">+</button>
+                  <button type="button" class="btn btn-sm" data-role="teval-zoom-fit" title="Fit the whole table to the screen width">Fit</button>
+                </div>` : ''}
+              </div>
               ${evalTargets.length ? `
-              <div class="trial-eval-scroll" style="overflow-x:auto;--teval-paper-w:${TRIAL_TABLE_W}px;">
+              <div class="trial-eval-scroll" style="overflow-x:auto;--teval-paper-w:${TRIAL_TABLE_W}px;" data-paper-w="${TRIAL_TABLE_W}">
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th class="teval-sticky-1">Criteria</th><th class="teval-sticky-2"></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
@@ -1074,6 +1085,37 @@ export function renderTrialsList(){
           proxy.scrollLeft = evalScroll.scrollLeft;
         });
         proxy.addEventListener('scroll', () => { evalScroll.scrollLeft = proxy.scrollLeft; });
+
+        // Zoom out / in (or Fit the whole table to the width) -- screen only, via the --teval-zoom CSS variable.
+        const zs = trialEvalZoomState[id] || (trialEvalZoomState[id] = { zoom: 1, fit: false });
+        const zoomBar = block.querySelector('.teval-zoom-bar');
+        const applyTrialEvalZoom = () => {
+          const paperW = parseFloat(evalScroll.dataset.paperW) || 0;
+          let scale = zs.zoom;
+          if(zs.fit && paperW && evalScroll.clientWidth > 0) scale = Math.min(1, evalScroll.clientWidth / paperW);
+          scale = Math.max(0.3, Math.min(1.5, scale));
+          block.style.setProperty('--teval-zoom', String(scale));
+          if(zoomBar){
+            zoomBar.querySelector('.teval-zoom-pct').textContent = Math.round(scale * 100) + '%';
+            zoomBar.querySelector('[data-role="teval-zoom-fit"]').classList.toggle('active', zs.fit);
+          }
+          syncTrialScrollbarProxy();
+        };
+        zoomBar?.addEventListener('click', e => {
+          const btn = e.target.closest('[data-role]');
+          if(!btn) return;
+          const current = parseFloat(block.style.getPropertyValue('--teval-zoom')) || 1;
+          if(btn.dataset.role === 'teval-zoom-fit'){
+            zs.fit = !zs.fit;
+            if(!zs.fit) zs.zoom = 1;
+          } else {
+            zs.fit = false;
+            zs.zoom = Math.round((current + (btn.dataset.role === 'teval-zoom-in' ? 0.1 : -0.1)) * 10) / 10;
+          }
+          applyTrialEvalZoom();
+        });
+        registerTrialScrollbarProxySync(applyTrialEvalZoom);
+        applyTrialEvalZoom();
       }
     }
 
