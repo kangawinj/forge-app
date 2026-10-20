@@ -760,6 +760,7 @@ export const CHANGELOG = [
   { version: "3.0.718", date: "2026-10-20", note: "Test Results: removed the \"Continue Development?\" row from Improvement Guidelines; Summary Test / Summary Table now list every product in the test (no longer only the ones marked Continue)" },
   { version: "3.0.719", date: "2026-10-20", note: "Test Results: new \"Reference Sample\" row under Test Result -- a per-product button to keep a sample as a reference sample; it shows as a Reference sample badge in Summary Test, Summary Table and the summary Excel export" },
   { version: "3.0.720", date: "2026-10-20", note: "Test Results: the Keep as reference sample button now sits inside the Test Result row (under the Accepted / Not accepted / Needs Revision choices) instead of its own row" },
+  { version: "3.0.721", date: "2026-10-20", note: "Test Results: Keep as reference sample button is now orange -- light orange when not kept, solid orange when kept" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
