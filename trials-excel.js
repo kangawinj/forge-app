@@ -8,6 +8,8 @@ import {
   normalizeTrialPhotos, sensoryFieldValue, improvementFieldValue, combinedVerdict,
   TRIAL_TEST_RESULT_OPTIONS, shortEvaluatorName
 } from './trials-data.js';
+// Circular import back to core trials.js -- safe, only read inside the export functions.
+import { trials } from './trials.js';
 
 const argb = hex => 'FF' + hex.replace('#', '').toUpperCase();
 const C = {
@@ -44,11 +46,8 @@ function prepareImage(dataUrl){
   });
 }
 
-export async function exportTrialToExcel(t){
-  if(!window.ExcelJS){
-    alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
-    return;
-  }
+// Builds one Test Result worksheet for trial `t` inside workbook `wb`.
+async function buildTrialSheet(wb, t, sheetName){
   const mt = migrateTrial(t);
   const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
   const criteria = getEvaluationCriteria(mt);
@@ -57,10 +56,7 @@ export async function exportTrialToExcel(t){
   const lastCol = 2 + n + 1; // A criteria, B row type, one column per product, then Note
   const PROD_W = 34;
 
-  const wb = new window.ExcelJS.Workbook();
-  wb.creator = 'Forge';
-  wb.created = new Date();
-  const ws = wb.addWorksheet('Test Result');
+  const ws = wb.addWorksheet(sheetName);
   ws.columns = [{ width: 24 }, { width: 22 }, ...Array.from({ length: n }, () => ({ width: PROD_W })), { width: PROD_W }];
   const colWidth = c => (ws.getColumn(c).width || 10);
   // Rows whose cells are not merged (product columns, sensory table, Test Result) get no explicit height, so Excel
@@ -322,15 +318,58 @@ export async function exportTrialToExcel(t){
 
   gap();
   kv('Note', (mt.note || '').trim());
+}
 
+function newWorkbook(){
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+  return wb;
+}
+function excelReady(){
+  if(window.ExcelJS) return true;
+  alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
+  return false;
+}
+async function downloadWorkbook(wb, fileName){
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = [`Test Result - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.download = fileName.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
   document.body.appendChild(a);
   a.click();
   a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
+
+export async function exportTrialToExcel(t){
+  if(!excelReady()) return;
+  const mt = migrateTrial(t);
+  const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
+  const wb = newWorkbook();
+  await buildTrialSheet(wb, t, 'Test Result');
+  await downloadWorkbook(wb, [`Test Result - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' '));
+}
+
+// Every test of one project in a single file: one sheet per test, the most recent Tested date first
+// (leftmost tab), tests with no date last.
+export async function exportProjectTrialsToExcel(projectId){
+  if(!excelReady()) return;
+  const project = projects.find(p => p.id === projectId);
+  const list = trials.filter(t => t.linkedProjectId === projectId)
+    .sort((a, b) => (a.testDate ? 0 : 1) - (b.testDate ? 0 : 1) || (b.testDate || '').localeCompare(a.testDate || '') || ((b.updatedAt || 0) - (a.updatedAt || 0)));
+  if(!list.length){ alert('This project has no tests yet.'); return; }
+  const wb = newWorkbook();
+  const used = new Set();
+  for(const t of list){
+    const base = (t.testDate ? formatDateLong(t.testDate) : 'No test date').replace(/[\[\]:*?\/\\]/g, '-').slice(0, 26);
+    let name = base, k = 2;
+    while(used.has(name.toLowerCase())) name = `${base} (${k++})`;
+    used.add(name.toLowerCase());
+    await buildTrialSheet(wb, t, name);
+  }
+  const stamp = new Date().toISOString().slice(0, 10);
+  await downloadWorkbook(wb, `Test Results - ${project?.name || 'Project'} ${stamp}`);
 }

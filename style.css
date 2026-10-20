@@ -6345,3 +6345,9 @@
     .trial-testresult-radio-label:has(input[data-role="ref-sample"]:checked){color:#b85a0f;}
     .trial-ref-sample-label input{accent-color:var(--accent);}
   }
+
+  /* Project heading in the Test Results list: name on the left, Export Excel (all of this project's tests) on the right. */
+  @media screen{
+    .trial-project-group-header .trial-project-group-name{flex:1;min-width:0;}
+    .trial-project-export-btn{margin-left:auto;flex-shrink:0;font-weight:400;}
+  }

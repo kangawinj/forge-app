@@ -36,7 +36,7 @@ import {
 } from './trials-data.js';
 import { renderEvaluationWizard, openEvalWizard } from './trials-wizard.js';
 import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel } from './trials-summary.js';
-import { exportTrialToExcel } from './trials-excel.js';
+import { exportTrialToExcel, exportProjectTrialsToExcel } from './trials-excel.js';
 import {
   renderTrialShareModal, renderShareResponsePreviewModal, openTrialShareModal,
   loadSharePendingCounts, trialSharePendingCounts, deleteTrialShareArtifacts
@@ -781,8 +781,12 @@ export function renderTrialsList(){
       </div>
     `;
     }).join('');
-    return groupProject ? `<div class="trial-project-group-header">${icon('folder', 14)} ${escapeHtml(groupProject.name || 'Untitled project')}</div>${cardsHtml}` : cardsHtml;
+    return groupProject ? `<div class="trial-project-group-header">${icon('folder', 14)} <span class="trial-project-group-name">${escapeHtml(groupProject.name || 'Untitled project')}</span><button type="button" class="btn btn-sm trial-project-export-btn" data-role="export-project-excel" data-project-id="${escapeHtml(groupProject.id)}" title="Export every test of this project into one Excel file (newest first)">${icon('download', 14)} Export Excel</button></div>${cardsHtml}` : cardsHtml;
   }).join('');
+
+  container.querySelectorAll('[data-role="export-project-excel"]').forEach(btn => {
+    btn.addEventListener('click', () => exportProjectTrialsToExcel(btn.dataset.projectId));
+  });
 
   container.querySelectorAll('.part-block[data-trial-id]').forEach(block => {
     const id = block.dataset.trialId;

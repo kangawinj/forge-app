@@ -770,6 +770,7 @@ export const CHANGELOG = [
   { version: "3.0.728", date: "2026-10-20", note: "Test Results Export Excel: photos are now pinned inside their cells (anchored by the cell corners), so they no longer spill out of the table" },
   { version: "3.0.729", date: "2026-10-20", note: "Test Results Export Excel: row heights now fit their content (Excel auto-fits the product, Sensory Evaluation and Test Result rows instead of using a rough estimate)" },
   { version: "3.0.730", date: "2026-10-20", note: "Test Results Export Excel: photos keep their proportions again and sit centered in their cells (placed by exact offsets inside the cell instead of fractions that squeezed them)" },
+  { version: "3.0.731", date: "2026-10-20", note: "Test Results: each project heading now has an Export Excel button that puts every test of that project into one file -- one sheet per test, the most recent Tested date as the leftmost sheet" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
