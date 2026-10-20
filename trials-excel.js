@@ -63,6 +63,8 @@ export async function exportTrialToExcel(t){
   const ws = wb.addWorksheet('Test Result');
   ws.columns = [{ width: 24 }, { width: 22 }, ...Array.from({ length: n }, () => ({ width: PROD_W })), { width: PROD_W }];
   const colWidth = c => (ws.getColumn(c).width || 10);
+  // Rows whose cells are not merged (product columns, sensory table, Test Result) get no explicit height, so Excel
+  // fits them to their content itself; only merged-value rows and photo rows are sized here.
   const linesFor = (text, width) => String(text || '').split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / Math.max(8, width * 1.05))), 0);
 
   // Pin a photo to a cell by its two corners (as fractions of the column width / row height) rather than
@@ -174,7 +176,6 @@ export async function exportTrialToExcel(t){
       headRow.getCell(c).border = box();
       headRow.getCell(c).alignment = { wrapText: true, vertical: 'middle', indent: c === 1 ? 1 : 0 };
     }
-    headRow.height = Math.max(34, Math.max(...targets.map(p => linesFor(p.code ? `${p.name}\n${p.code}` : p.name, PROD_W))) * 15 + 6);
 
     ['Code', 'Date', 'Total weight', 'Customer', 'Destination', 'Project Owner', 'Stage'].forEach(field => {
       if(!info.some(x => x[field])) return;
@@ -188,7 +189,6 @@ export async function exportTrialToExcel(t){
         row.getCell(c).alignment = { wrapText: true, vertical: 'top' };
         if(c > 2) row.getCell(c).font = { size: 11, color: { argb: C.text } };
       }
-      row.height = Math.max(20, Math.max(...info.map(x => linesFor(x[field], PROD_W))) * 15 + 4);
     });
 
     // photos: one row per photo slot, each product's photo in its own column (+ a caption row)
@@ -223,7 +223,6 @@ export async function exportTrialToExcel(t){
           cap.getCell(c).font = { italic: true, size: 10, color: { argb: C.dim } };
           cap.getCell(c).alignment = { wrapText: true, vertical: 'top' };
         }
-        cap.height = Math.max(18, Math.max(...captions.map(x => linesFor(x, PROD_W))) * 13 + 4);
       }
     }
     gap();
@@ -241,7 +240,6 @@ export async function exportTrialToExcel(t){
       cell.border = box();
       cell.alignment = { wrapText: true, vertical: 'middle', indent: c === 1 ? 1 : 0 };
     }
-    th.height = Math.max(30, Math.max(...targets.map(p => linesFor(p.code ? `${p.name}\n${p.code}` : p.name, PROD_W))) * 15 + 6);
 
     const sensoryNotes = getCriteriaNotes(mt, 'criteriaNotes');
     const improveNotes = getCriteriaNotes(mt, 'criteriaImproveNotes');
@@ -253,7 +251,6 @@ export async function exportTrialToExcel(t){
         row.getCell(c).alignment = { wrapText: true, vertical: 'top' };
       }
       for(let c = 1; c <= lastCol; c++) row.getCell(c).border = box();
-      row.height = Math.max(22, Math.max(...[...values, note].map(x => linesFor(x || '-', PROD_W))) * 15 + 4);
     };
     criteria.forEach(cr => {
       const r1 = ws.addRow([cr.label, 'Comment']);
@@ -286,7 +283,6 @@ export async function exportTrialToExcel(t){
       tr.getCell(3 + i).alignment = { wrapText: true, vertical: 'top' };
     });
     for(let c = 1; c <= lastCol; c++) tr.getCell(c).border = box();
-    tr.height = (targets.some(p => getTrialProductData(mt, p.id).referenceSample) ? 4 : 3) * 15 + 6;
 
     // ---------- evaluators' Comments (+ photos) ----------
     const comments = (t.evaluatorComments && typeof t.evaluatorComments === 'object') ? t.evaluatorComments : {};

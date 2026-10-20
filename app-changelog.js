@@ -768,6 +768,7 @@ export const CHANGELOG = [
   { version: "3.0.726", date: "2026-10-20", note: "Test Results: in the Sensory Evaluation table the Criteria and Comment / Improvement Guidelines columns now stay pinned on the left while the product columns scroll sideways" },
   { version: "3.0.727", date: "2026-10-20", note: "Test Results: Keep as reference sample is now a tick under the Accepted / Not accepted / Needs Revision choices (same style) instead of a button" },
   { version: "3.0.728", date: "2026-10-20", note: "Test Results Export Excel: photos are now pinned inside their cells (anchored by the cell corners), so they no longer spill out of the table" },
+  { version: "3.0.729", date: "2026-10-20", note: "Test Results Export Excel: row heights now fit their content (Excel auto-fits the product, Sensory Evaluation and Test Result rows instead of using a rough estimate)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
