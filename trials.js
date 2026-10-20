@@ -566,20 +566,6 @@ export function renderTrialsList(){
     // Evaluation criteria above -- settable directly here (see mine below)
     // or from the "Perform Evaluation" wizard, both write the same
     // pd.evaluations[email].testResult.
-    // One toggle per product: keep this sample as a reference sample (e.g. the standard to
-    // compare future trials against). Shows as a badge in Summary Test / Summary Table.
-    const referenceSampleRowHtml = `
-      <tr>
-        <td colspan="2"><b>Reference Sample</b></td>
-        ${evalTargets.map((p, i) => {
-          const on = !!getTrialProductData(mt, p.id).referenceSample;
-          return `<td class="${i > 0 ? 'recipe-boundary' : ''}">
-            <button type="button" class="btn btn-sm trial-ref-sample-btn${on ? ' selected' : ''}" data-role="ref-sample" data-product-id="${escapeHtml(p.id)}" title="${on ? 'Click to unmark' : 'Keep this sample as a reference sample'}">${icon(on ? 'check' : 'plus', 14)} ${on ? 'Kept as reference sample' : 'Keep as reference sample'}</button>
-          </td>`;
-        }).join('')}
-        <td class="recipe-boundary"></td>
-      </tr>
-    `;
     const testResultRowHtml = `
       <tr>
         <td colspan="2"><b>Test Result</b></td>
@@ -598,6 +584,7 @@ export function renderTrialsList(){
                   ${o}
                 </label>
               `).join('')}</div>
+            <button type="button" class="btn btn-sm trial-ref-sample-btn${pd.referenceSample ? ' selected' : ''}" data-role="ref-sample" data-product-id="${escapeHtml(p.id)}" title="${pd.referenceSample ? 'Click to unmark' : 'Keep this sample as a reference sample'}">${icon(pd.referenceSample ? 'check' : 'plus', 14)} ${pd.referenceSample ? 'Kept as reference sample' : 'Keep as reference sample'}</button>
           </td>`;
         }).join('')}
         <td class="recipe-boundary"></td>
@@ -767,7 +754,7 @@ export function renderTrialsList(){
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th>Criteria</th><th></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>
-                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}${referenceSampleRowHtml}</tbody>
+                  <tbody>${fixedCriteriaRowsHtml}${testResultRowHtml}</tbody>
                 </table>
               </div>
               <div class="trial-scrollbar-proxy"><div class="trial-scrollbar-proxy-inner"></div></div>

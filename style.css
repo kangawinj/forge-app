@@ -6273,8 +6273,8 @@
 .compare-saved-bar .btn{display:inline-flex;align-items:center;gap:6px;}
 .compare-saved-bar .btn:disabled{opacity:.5;cursor:not-allowed;}
 @media print{ .compare-saved-bar{display:none !important;} }
-  /* "Reference Sample" row under Test Result (see referenceSampleRowHtml in trials.js) -- a per-product
+  /* "Keep as reference sample" button inside the Test Result cell (see testResultRowHtml in trials.js) -- a per-product
      toggle to keep a sample as a reference; shown as a badge in Summary Test / Summary Table. */
-  .trial-ref-sample-btn{display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#fff;border-color:var(--border);color:var(--text);}
+  .trial-ref-sample-btn{margin-top:8px;display:flex;align-items:center;justify-content:center;gap:6px;width:100%;background:#fff;border-color:var(--border);color:var(--text);}
   .trial-ref-sample-btn.selected{background:#16294a;border-color:#16294a;color:#fff;}
   .trial-ref-sample-badge{display:inline-block;margin-left:6px;padding:1px 8px;border-radius:999px;font-size:11px;font-weight:600;background:#e8ecf5;color:#16294a;vertical-align:middle;white-space:nowrap;}
