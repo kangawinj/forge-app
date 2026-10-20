@@ -405,7 +405,13 @@ export function renderTrialsList(){
     // table's own scrollLeft -- see the "trial-cards-scroll"/
     // "trial-eval-scroll" sync wiring further down -- so the table's
     // scrollbar is the only one you ever interact with, moving both.
-    const TRIAL_PRODUCT_COL_WIDTH = 220;
+    // On screen the Sensory Evaluation "page" is paper-sized: A4 portrait (794px at 96dpi) while there are only
+    // one or two samples, A4 landscape (1123px) from three up. The product columns share what is left after the
+    // 220px label columns and the 180px Note column, never narrower than 150px (a long list of samples just
+    // scrolls sideways instead of crowding).
+    const TRIAL_PAPER_W = combinedCount <= 2 ? 794 : 1123;
+    const TRIAL_PRODUCT_COL_WIDTH = combinedCount ? Math.max(150, Math.floor((TRIAL_PAPER_W - 400) / combinedCount)) : 220;
+    const TRIAL_TABLE_W = 400 + TRIAL_PRODUCT_COL_WIDTH * Math.max(1, combinedCount);
     // Print needs the OPPOSITE of the screen fix above: a physical page
     // can't horizontal-scroll, so per-product columns have to shrink to
     // fit it instead of staying a fixed 220px (which, printed, ran off the
@@ -755,7 +761,7 @@ export function renderTrialsList(){
             <div class="field">
               <label>Sensory Evaluation</label>
               ${evalTargets.length ? `
-              <div class="trial-eval-scroll" style="overflow-x:auto;">
+              <div class="trial-eval-scroll" style="overflow-x:auto;--teval-paper-w:${TRIAL_TABLE_W}px;">
                 <table class="compare-table teval-print-hide-scores">
                   ${trialColgroup}
                   <thead><tr><th class="teval-sticky-1">Criteria</th><th class="teval-sticky-2"></th>${evalHeaderCells}<th class="recipe-boundary">Note</th></tr></thead>

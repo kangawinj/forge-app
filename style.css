@@ -6351,3 +6351,8 @@
     .trial-project-group-header .trial-project-group-name{flex:1;min-width:0;}
     .trial-project-export-btn{margin-left:auto;flex-shrink:0;font-weight:400;}
   }
+
+  /* Sensory Evaluation sized like an A4 sheet on screen (see TRIAL_PAPER_W in trials.js); print keeps its own widths. */
+  @media screen{
+    .trial-eval-scroll .teval-print-hide-scores{width:var(--teval-paper-w);min-width:var(--teval-paper-w);}
+  }
