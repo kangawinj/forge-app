@@ -5,7 +5,7 @@
 // top-of-file comment for the overall file split.
 import { icon, escapeHtml, formatDateLong, projects } from './app.js';
 import {
-  getEvaluationCriteria, trialEvalTargets, getTrialProductData, migrateTrial,
+  getEvaluationCriteria, trialEvalTargets, getTrialProductData,
   summarizeTrialProduct, groupTrialsByProject, TRIAL_SUMMARY_VERDICT_CLASSES
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, see trials-wizard.js's
@@ -231,92 +231,6 @@ export async function exportTrialsSummaryToExcel(){
   a.download = `Test Results Summary ${new Date().toISOString().slice(0,10)}.xlsx`;
   a.click();
   URL.revokeObjectURL(url);
-}
-// One test as a single-sheet Excel file: Part 1 (project + who/when/where), Part 2 (cooking method and
-// steps), then one block per product with its verdict, reference-sample flag and the Comment /
-// Improvement lines, and the test Note at the end. Same data the Summary Test modal reads.
-export async function exportTrialToExcel(t){
-  if(!window.ExcelJS){
-    alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
-    return;
-  }
-  const mt = migrateTrial(t);
-  const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
-  const criteria = getEvaluationCriteria(t);
-  const products = trialEvalTargets(t).map(p => summarizeTrialProduct(t, criteria, p));
-
-  const wb = new window.ExcelJS.Workbook();
-  wb.creator = 'Forge';
-  wb.created = new Date();
-  const ws = wb.addWorksheet('Test Result');
-  ws.columns = [{ width: 30 }, { width: 90 }];
-  const dateText = mt.testDate ? formatDateLong(mt.testDate) : 'No test date';
-  addSectionTitleBar(ws, `Test Result — ${linkedProject?.name || 'Untitled test'} — ${dateText}`, 2);
-
-  const border = () => ({ top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() });
-  const sectionRow = text => {
-    const row = ws.addRow([text, '']);
-    ws.mergeCells(row.number, 1, row.number, 2);
-    row.getCell(1).font = { bold: true, size: 11, color: { argb: XL_COLORS.groupText } };
-    row.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
-    row.getCell(1).border = border();
-    row.height = 22;
-    row.getCell(1).alignment = { vertical: 'middle', indent: 1 };
-  };
-  const kv = (label, value, opts = {}) => {
-    const text = String(value == null || value === '' ? '-' : value);
-    const row = ws.addRow([label, text]);
-    row.getCell(1).font = { bold: true, size: 11, color: { argb: XL_COLORS.text } };
-    row.getCell(2).font = { size: 11, color: opts.color ? { argb: opts.color } : { argb: XL_COLORS.text }, bold: !!opts.bold };
-    [1, 2].forEach(c => { row.getCell(c).alignment = { wrapText: true, vertical: 'top' }; row.getCell(c).border = border(); });
-    const lines = text.split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 95)), 0);
-    row.height = Math.max(20, lines * 15 + 4);
-  };
-
-  sectionRow('Part 1');
-  kv('Project', linkedProject?.name);
-  kv('Customer', linkedProject?.customerName);
-  kv('Destination', linkedProject?.destinationCountry);
-  kv('Project Owner', linkedProject?.ownerSalesRep);
-  kv('Responsible Person (PD)', linkedProject?.responsiblePerson);
-  kv('Factory', linkedProject?.factoryName);
-  kv('Sample Prepared By', mt.samplePreparedBy);
-  kv('Test Date', mt.testDate ? dateText : '');
-  kv('Test Location', mt.testLocation);
-  const people = (mt.testParticipants || []).filter(s => (s || '').trim() !== '');
-  kv('Test Participants', people.map((s, i) => `${i + 1}. ${s}`).join('\n'));
-
-  sectionRow('Part 2');
-  kv('Cooking Method', mt.cookingMethod);
-  const cookSteps = (mt.cookingMethodSteps || []).filter(s => (s || '').trim() !== '');
-  kv('Steps', cookSteps.map((s, i) => `${i + 1}. ${s}`).join('\n'));
-
-  if(!products.length){
-    sectionRow('Products');
-    kv('Products', 'No products added yet');
-  }
-  products.forEach(pr => {
-    sectionRow(pr.reference ? `${pr.label} (Reference sample)` : pr.label);
-    const vColor = pr.verdict === 'Accepted' ? XL_COLORS.ok : pr.verdict === 'Not accepted' ? XL_COLORS.danger : pr.verdict ? XL_COLORS.accent : XL_COLORS.dim;
-    kv('Test Result', pr.verdict || 'Not yet evaluated', { bold: true, color: vColor });
-    pr.comments.forEach(x => kv(`Comment — ${x.label}`, x.note ? `${x.text}\n(${x.note})` : x.text));
-    pr.improvements.forEach(x => kv(`Improve — ${x.label}`, x.note ? `${x.suggestion}\n(${x.note})` : x.suggestion));
-  });
-
-  if((t.note || '').trim()){
-    kv('Note', t.note.trim());
-  }
-
-  const buffer = await wb.xlsx.writeBuffer();
-  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = [`Test Result - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 60000);
 }
 export function renderTrialsSummaryTable(container, sortedTrials){
   const groups = groupTrialsByProject(sortedTrials);

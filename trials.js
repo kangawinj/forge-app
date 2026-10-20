@@ -35,7 +35,8 @@ import {
   scheduleTrialSave, saveTrialToCloud, wireTrialTranslateButton, trialEvalTargets, blankTrial
 } from './trials-data.js';
 import { renderEvaluationWizard, openEvalWizard } from './trials-wizard.js';
-import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel, exportTrialToExcel } from './trials-summary.js';
+import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel } from './trials-summary.js';
+import { exportTrialToExcel } from './trials-excel.js';
 import {
   renderTrialShareModal, renderShareResponsePreviewModal, openTrialShareModal,
   loadSharePendingCounts, trialSharePendingCounts, deleteTrialShareArtifacts

@@ -763,6 +763,7 @@ export const CHANGELOG = [
   { version: "3.0.721", date: "2026-10-20", note: "Test Results: Keep as reference sample button is now orange -- light orange when not kept, solid orange when kept" },
   { version: "3.0.722", date: "2026-10-20", note: "Test Results (Part 1): symmetric layout -- Destination / Project Owner / PD / Factory are four equal centered columns, and Test Participants share the row width equally instead of bunching at the left" },
   { version: "3.0.723", date: "2026-10-20", note: "Test Results: new Export Excel button on each test row -- one sheet with Part 1 (project, date, location, participants), Part 2 (cooking method + steps), each product's test result, reference-sample flag, comments and improvement lines, and the test note" },
+  { version: "3.0.724", date: "2026-10-20", note: "Test Results Export Excel now follows the page layout: Part 1 / Part 2, the Products Being Compared cards as columns with their photos, the Sensory Evaluation table (Comment + Improvement Guidelines per criteria, Note column, Test Result row), evaluator Comments with photos, and the Note" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
