@@ -65,6 +65,18 @@ export async function exportTrialToExcel(t){
   const colWidth = c => (ws.getColumn(c).width || 10);
   const linesFor = (text, width) => String(text || '').split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / Math.max(8, width * 1.05))), 0);
 
+  // Pin a photo to a cell by its two corners (as fractions of the column width / row height) rather than
+  // by a pixel size, so it can never spill out of the cell whatever the display scaling or Excel version.
+  const placeImage = (rowNumber, rowHeightPt, col0, img) => {
+    const colPx = Math.round((ws.getColumn(col0 + 1).width || PROD_W) * 7 + 5);
+    const rowPx = rowHeightPt / 0.75;
+    const pad = 0.04;
+    const wFrac = Math.min(0.92, img.width / colPx);
+    const hFrac = Math.min(0.92, img.height / rowPx);
+    const id = wb.addImage({ base64: img.base64, extension: 'jpeg' });
+    ws.addImage(id, { tl: { col: col0 + pad, row: rowNumber - 1 + pad }, br: { col: col0 + pad + wFrac, row: rowNumber - 1 + pad + hFrac }, editAs: 'oneCell' });
+  };
+
   const dateText = mt.testDate ? formatDateLong(mt.testDate) : 'No test date';
   ws.mergeCells(1, 1, 1, lastCol);
   const title = ws.getCell(1, 1);
@@ -188,17 +200,18 @@ export async function exportTrialToExcel(t){
       row.getCell(1).font = { bold: true, size: 11, color: { argb: C.text } };
       row.getCell(1).alignment = { vertical: 'top' };
       let tallest = 0;
+      const placed = [];
       for(let i = 0; i < targets.length; i++){
         const ph = photoLists[i][k];
         if(!ph) continue;
         const img = await prepareImage(ph.dataUrl);
         if(!img) continue;
-        const id = wb.addImage({ base64: img.base64, extension: 'jpeg' });
-        ws.addImage(id, { tl: { col: 2 + i + 0.04, row: row.number - 1 + 0.05 }, ext: { width: img.width, height: img.height } });
+        placed.push({ col0: 2 + i, img });
         tallest = Math.max(tallest, img.height);
       }
       for(let c = 1; c <= lastCol; c++){ row.getCell(c).border = box(); row.getCell(c).fill = fillOf(C.card); }
-      row.height = Math.max(20, (tallest + 10) * 0.75);
+      row.height = Math.max(20, (tallest + 12) * 0.75);
+      placed.forEach(x => placeImage(row.number, row.height, x.col0, x.img));
       const captions = targets.map((p, i) => (photoLists[i][k]?.caption || '').trim());
       if(captions.some(Boolean)){
         const cap = ws.addRow(['']);
@@ -290,16 +303,17 @@ export async function exportTrialToExcel(t){
           const row = ws.addRow(['']);
           ws.mergeCells(row.number, 1, row.number, 2);
           let tallest = 0;
+          const placed = [];
           const chunk = photos.slice(s, s + n + 1);
           for(let j = 0; j < chunk.length; j++){
             const img = await prepareImage(chunk[j].dataUrl);
             if(!img) continue;
-            const id = wb.addImage({ base64: img.base64, extension: 'jpeg' });
-            ws.addImage(id, { tl: { col: 2 + j + 0.04, row: row.number - 1 + 0.05 }, ext: { width: img.width, height: img.height } });
+            placed.push({ col0: 2 + j, img });
             tallest = Math.max(tallest, img.height);
           }
           for(let c = 1; c <= lastCol; c++) row.getCell(c).border = box();
-          row.height = Math.max(20, (tallest + 10) * 0.75);
+          row.height = Math.max(20, (tallest + 12) * 0.75);
+          placed.forEach(x => placeImage(row.number, row.height, x.col0, x.img));
         }
       }
     }

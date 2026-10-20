@@ -767,6 +767,7 @@ export const CHANGELOG = [
   { version: "3.0.725", date: "2026-10-20", note: "Test Results readability pass: the row header keeps room for the title and drops its buttons to their own line (Delete at the far end, larger touch targets on phones); read-only fields use full-contrast text; section headings (Cooking Method, Products Being Compared, Sensory Evaluation) are bold; product Codes lead in the cards and table headers so same-named samples are easy to tell apart; the chosen Test Result is colored (green / red / orange)" },
   { version: "3.0.726", date: "2026-10-20", note: "Test Results: in the Sensory Evaluation table the Criteria and Comment / Improvement Guidelines columns now stay pinned on the left while the product columns scroll sideways" },
   { version: "3.0.727", date: "2026-10-20", note: "Test Results: Keep as reference sample is now a tick under the Accepted / Not accepted / Needs Revision choices (same style) instead of a button" },
+  { version: "3.0.728", date: "2026-10-20", note: "Test Results Export Excel: photos are now pinned inside their cells (anchored by the cell corners), so they no longer spill out of the table" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
