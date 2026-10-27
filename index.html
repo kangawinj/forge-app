@@ -551,6 +551,7 @@
       <p style="font-size:13px;color:var(--text-dim);margin-top:0;">Export a JSON backup of every recipe, ingredient, project, and trial in Forge, or restore/merge from a previous backup.</p>
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="btn" id="btnExportAll">Export All (JSON)</button>
+        <button class="btn" id="btnExportAllExcel" title="Every table as Excel sheets, plus all photos and files, in one ZIP">Export All (Excel + photos)</button>
         <button class="btn" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
       </div>
@@ -588,6 +589,7 @@
      Excel" workbook with real cell styling (fonts/fills/borders), which the
      older SheetJS build this replaced couldn't do. -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <!-- pdf.js (Mozilla) — pinned version, loaded as a plain global so the
      Quotation/Specification document slot's small preview (see
      renderProjectDocPreview in projects.js) can render a PDF's first page

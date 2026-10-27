@@ -23,6 +23,7 @@ import { moveToTrash, initTrashModal, purgeExpiredTrashOnLoad } from './app-tras
 // Re-exported for the same reason as `icon` above.
 export { moveToTrash };
 import { exportAll, importFromFile } from './app-backup.js';
+import { exportEverythingToExcel } from './app-export-excel.js';
 import {
   renderDashboardHome, wireDashboardHome, refreshDashboardHome, goHome,
   setHomeCalendarPanes, renderBarList, openRecipeFromDashboard, closeDashboardWhoMenus
@@ -1401,6 +1402,21 @@ export function renderMain(){
 document.getElementById('btnNew').addEventListener('click', () => guardNavigation(createNewRecipe));
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
 document.getElementById('btnExportAll').addEventListener('click', exportAll);
+document.getElementById('btnExportAllExcel').addEventListener('click', async e => {
+  const btn = e.currentTarget;
+  const html = btn.innerHTML;
+  btn.disabled = true;
+  try{
+    const res = await exportEverythingToExcel(msg => { btn.textContent = msg; });
+    if(res) alert(`Export finished: ${res.sheets} sheets, ${res.rows} rows, ${res.images} photos/files.` + (res.notes.length ? '\n\n' + res.notes.join('\n') : ''));
+  }catch(err){
+    console.error('Forge: full Excel export failed', err);
+    alert('The export failed: ' + (err.message || err));
+  }finally{
+    btn.disabled = false;
+    btn.innerHTML = html;
+  }
+});
 document.getElementById('btnImport').addEventListener('click', () => document.getElementById('importFile').click());
 document.getElementById('importFile').addEventListener('change', e => {
   if(e.target.files[0]) importFromFile(e.target.files[0]);
@@ -1522,6 +1538,7 @@ function applyStaticIcons(){
   prefixIcon('btnOpenTrash', 'trash-2');
   prefixIcon('btnSaveVersion', 'save');
   prefixIcon('btnExportAll', 'download');
+  prefixIcon('btnExportAllExcel', 'download');
   prefixIcon('btnImport', 'upload');
   prefixIcon('btnLogoutFromApp', 'log-out');
   const versionsTitle = document.querySelector('#versionsModalOverlay .modal-title');
