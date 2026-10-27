@@ -46,7 +46,7 @@ import {
   EmailAuthProvider, reauthenticateWithCredential, sendPasswordResetEmail
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 import {
-  getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot, writeBatch,
+  getFirestore, collection, doc, getDoc, setDoc, deleteDoc, onSnapshot, writeBatch,
   query, orderBy, limit, getDocs, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { mountCompareView, setCompareSeriesPrefilter } from './compare.js';
@@ -1674,6 +1674,28 @@ document.addEventListener('visibilitychange', () => {
   if(document.visibilityState === 'visible') sendPresenceHeartbeat();
 });
 
+// Admin only: the scheduled backup script on the admin's PC (scripts/Backup-Forge.ps1) records every run in
+// appSettings/backupStatus -- warn here when backups have stopped, failed, or found fewer records than last time,
+// instead of relying on a Windows toast nobody may have seen.
+async function checkBackupStatus(){
+  if(!isCurrentUserAdmin()) return;
+  try{
+    const snap = await getDoc(doc(appSettingsCol, 'backupStatus'));
+    const s = snap.exists() ? snap.data() : null;
+    const okAt = s && s.lastSuccessAt ? new Date(s.lastSuccessAt).getTime() : 0;
+    const errAt = s && s.lastErrorAt ? new Date(s.lastErrorAt).getTime() : 0;
+    const ageDays = okAt ? (Date.now() - okAt) / 86400000 : Infinity;
+    let msg = '';
+    if(!okAt) msg = 'no automatic backup has been recorded yet -- run scripts\\Backup-Forge.ps1 on your PC.';
+    else if(ageDays > 3.5) msg = `the last automatic backup was ${Math.floor(ageDays)} days ago (${new Date(okAt).toLocaleDateString()}) -- check the scheduled task on your PC.`;
+    else if(errAt > okAt) msg = `the last backup attempt failed: ${s.lastError || 'unknown error'}`;
+    else if(s.warning) msg = s.warning;
+    if(msg) showCloudError('Backup: ' + msg);
+  }catch(err){
+    console.warn('Forge: could not read the backup status', err);
+  }
+}
+
 function unlockAppAfterApproval(){
   if(!unsubscribeRecipes) attachRecipesListener();
   if(!unsubscribeMaterials) attachMaterialsListener();
@@ -1687,6 +1709,7 @@ function unlockAppAfterApproval(){
   if(!unsubscribeMyProfile) attachMyProfileListener();
   if(!unsubscribePresence) attachPresenceListeners();
   purgeExpiredTrashOnLoad();
+  checkBackupStatus();
   if(appView === 'auth' || appView === 'pending') goToApp();
 }
 
