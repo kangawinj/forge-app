@@ -3,10 +3,10 @@
 // top-of-file comment for the overall file split.
 import {
   uid, currentUser, escapeHtml, recipesCol, projects, metaLists, metaItemName, productTypeCode,
-  countryToIso2, computePrepareWeight
+  countryToIso2, computePrepareWeight, showCloudError
 } from './app.js';
 import {
-  setDoc, doc
+  setDoc, updateDoc, doc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export const PART_COUNT = 4;
@@ -80,6 +80,7 @@ export function blankRecipe(){
     customerMarginMin: 10,
     customerMarginMax: 10,
     versions: [],
+    versionsMeta: [],
     portionComponents: [],
     portionYieldPct: '',
     // Recipe Series / Trial identity -- absent (null/'') means "legacy,
@@ -189,7 +190,11 @@ export function migrateRecipe(r){
   if(r.salesRep === undefined) r.salesRep = '';
 
   if(r.yieldPct === undefined || r.yieldPct === null) r.yieldPct = '';
+  // r.versions is only the OLD embedded history (migrated out by migrateLegacyVersions below); the list shown
+  // in Version History is r.versionsMeta -- id / label / savedAt only, the snapshots live in the recipe's own
+  // `versions` subcollection so they no longer count toward the recipe document's 1 MB limit.
   if(!Array.isArray(r.versions)) r.versions = [];
+  if(!Array.isArray(r.versionsMeta)) r.versionsMeta = [];
   // Margin defaults -- only backfilled while still genuinely unset (never
   // overwrites a value the user already typed, including 0), same as every
   // other backfill in this function.
@@ -231,8 +236,82 @@ export function migrateRecipe(r){
   return r;
 }
 
-export function saveRecipeToCloud(r){
-  return setDoc(doc(recipesCol, r.id), r);
+// ---------- Version History storage ----------
+// Each saved version is its own document in recipes/{id}/versions (the recipe document only carries the small
+// versionsMeta list), so history can no longer push a recipe over Firestore's 1 MB document limit.
+export const RECIPE_VERSION_CAP = 5;
+export function recipeVersionDoc(recipeId, versionId){
+  return doc(recipesCol, recipeId, 'versions', versionId);
+}
+
+// Moves any versions still embedded in the recipe document (the old layout) into the subcollection, then
+// shrinks the recipe document. Safe to run more than once and from several places at once: version ids are
+// stable, so every write is idempotent, and the embedded copy is only dropped after every subdocument is
+// written. Resolves true when something was migrated.
+const legacyVersionMigrations = new Map();
+export function migrateLegacyVersions(r){
+  const legacy = (Array.isArray(r.versions) ? r.versions : []).filter(v => v && v.id && v.snapshot);
+  if(!legacy.length) return Promise.resolve(false);
+  if(legacyVersionMigrations.has(r.id)) return legacyVersionMigrations.get(r.id);
+  const p = (async () => {
+    for(const v of legacy){
+      await setDoc(recipeVersionDoc(r.id, v.id), { id: v.id, label: v.label || '', savedAt: v.savedAt || 0, snapshot: v.snapshot });
+    }
+    if(!Array.isArray(r.versionsMeta)) r.versionsMeta = [];
+    const have = new Set(r.versionsMeta.map(m => m.id));
+    legacy.forEach(v => { if(!have.has(v.id)) r.versionsMeta.push({ id: v.id, label: v.label || '', savedAt: v.savedAt || 0 }); });
+    r.versionsMeta.sort((a, b) => a.savedAt - b.savedAt);
+    r.versions = [];
+    // updateDoc, not setDoc: it only touches these two fields, and it works even on a document sitting at the limit
+    await updateDoc(doc(recipesCol, r.id), { versions: [], versionsMeta: r.versionsMeta });
+    return true;
+  })();
+  legacyVersionMigrations.set(r.id, p);
+  const done = () => legacyVersionMigrations.delete(r.id);
+  p.then(done, done);
+  return p;
+}
+
+// One-time sweep over every loaded recipe (run by the admin's session, see attachRecipesListener); one recipe at
+// a time so it never floods Firestore.
+let legacyVersionSweepRunning = false;
+export async function migrateAllLegacyVersions(list){
+  if(legacyVersionSweepRunning) return;
+  legacyVersionSweepRunning = true;
+  try{
+    for(const r of list){
+      if(!Array.isArray(r.versions) || r.versions.length === 0) continue;
+      try{
+        if(await migrateLegacyVersions(r)) console.info('Forge: moved version history out of recipe', r.id, r.name || '');
+      }catch(err){
+        console.error('Forge: could not migrate version history for recipe', r.id, err);
+      }
+    }
+  }finally{
+    legacyVersionSweepRunning = false;
+  }
+}
+
+// Warn well before Firestore's hard 1,048,576-byte limit rather than failing silently at it.
+const RECIPE_DOC_WARN_BYTES = 900 * 1024;
+export async function saveRecipeToCloud(r){
+  try{
+    await migrateLegacyVersions(r);
+  }catch(err){
+    // could not move the old embedded versions -- keep them in the document (the previous behaviour) instead
+    // of risking their loss, and carry on saving
+    console.error('Forge: version history migration failed, saving with embedded versions', err);
+  }
+  try{
+    const bytes = new Blob([JSON.stringify(r)]).size;
+    if(bytes > RECIPE_DOC_WARN_BYTES){
+      showCloudError(`"${r.name || 'This recipe'}" is ${Math.round(bytes / 1024)} KB -- close to Firestore's 1,024 KB limit per document. Remove large photos or trim it down, or saving will start to fail.`);
+    }
+    await setDoc(doc(recipesCol, r.id), r);
+  }catch(err){
+    console.error('Forge: saving recipe failed', err);
+    showCloudError(`Failed to save "${r.name || 'recipe'}": ${err.message}`);
+  }
 }
 
 /* A recipe's link to a Project isn't a field on the recipe itself - it's

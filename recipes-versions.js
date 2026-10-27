@@ -3,9 +3,15 @@
 // top-of-file comment for the overall file split.
 import {
   escapeHtml, icon, uid, wireModalOverlayClose, renderMain,
-  readOnlyIngredientTreeHtml, readOnlyProcessesHtml
+  readOnlyIngredientTreeHtml, readOnlyProcessesHtml, showCloudError
 } from './app.js';
-import { migrateRecipe, allIngredientsInRecipe, formatWeight, descriptionListHtml, cookingGuidelineHtml } from './recipes-data.js';
+import {
+  getDoc, setDoc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+import {
+  migrateRecipe, allIngredientsInRecipe, formatWeight, descriptionListHtml, cookingGuidelineHtml,
+  recipeVersionDoc, RECIPE_VERSION_CAP
+} from './recipes-data.js';
 // Circular import back to core recipes.js -- safe, see trials-wizard.js's
 // own comment on this same pattern (all cross-calls below happen inside
 // event handlers, never at module-evaluation time).
@@ -42,13 +48,36 @@ export function closeVersionsModal(){
   document.getElementById('versionsModalOverlay').classList.remove('open');
 }
 
+// Every saved version of a recipe: the small entries in versionsMeta (snapshot stored in the recipe's `versions`
+// subcollection) plus any not-yet-migrated embedded ones from the old layout (those still carry their snapshot).
+function versionEntries(r){
+  const meta = Array.isArray(r.versionsMeta) ? r.versionsMeta : [];
+  const have = new Set(meta.map(m => m.id));
+  const legacy = (Array.isArray(r.versions) ? r.versions : []).filter(v => v && v.id && !have.has(v.id));
+  return [...meta, ...legacy];
+}
+
+async function loadVersionSnapshot(r, entry){
+  if(entry.snapshot) return entry.snapshot;
+  const legacy = (Array.isArray(r.versions) ? r.versions : []).find(v => v.id === entry.id);
+  if(legacy && legacy.snapshot) return legacy.snapshot;
+  try{
+    const snap = await getDoc(recipeVersionDoc(r.id, entry.id));
+    return snap.exists() ? (snap.data().snapshot || null) : null;
+  }catch(err){
+    showCloudError('Failed to load that version: ' + err.message);
+    return null;
+  }
+}
+
 export function renderVersionsList(r){
   const listEl = document.getElementById('versionsList');
-  if(!Array.isArray(r.versions) || r.versions.length === 0){
+  const entries = versionEntries(r);
+  if(entries.length === 0){
     listEl.innerHTML = '<div class="overview-empty">No versions saved yet</div>';
     return;
   }
-  const sorted = [...r.versions].sort((a,b) => b.savedAt - a.savedAt);
+  const sorted = [...entries].sort((a,b) => b.savedAt - a.savedAt);
   listEl.innerHTML = sorted.map(v => `
     <div class="version-item" data-id="${escapeHtml(v.id)}">
       <div>
@@ -66,21 +95,23 @@ export function renderVersionsList(r){
   listEl.querySelectorAll('[data-role="preview-version"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.closest('.version-item').dataset.id;
-      const v = r.versions.find(x => x.id === id);
+      const v = versionEntries(r).find(x => x.id === id);
       if(v) openVersionPreview(r, v);
     });
   });
   listEl.querySelectorAll('[data-role="restore-version"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.closest('.version-item').dataset.id;
-      const v = r.versions.find(x => x.id === id);
+      const v = versionEntries(r).find(x => x.id === id);
       if(v) restoreVersion(r, v);
     });
   });
   listEl.querySelectorAll('[data-role="delete-version"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.closest('.version-item').dataset.id;
-      r.versions = r.versions.filter(x => x.id !== id);
+      r.versionsMeta = (r.versionsMeta || []).filter(x => x.id !== id);
+      r.versions = (r.versions || []).filter(x => x.id !== id);
+      deleteDoc(recipeVersionDoc(r.id, id)).catch(err => console.error('Forge: deleting version failed', err));
       renderVersionsList(r);
       performSave(r);
     });
@@ -90,9 +121,11 @@ export function renderVersionsList(r){
 // Shared by the Versions list's own Restore button and the Preview modal's
 // Restore button, so restoring a version behaves identically regardless of
 // which one the user reached it from.
-export function restoreVersion(r, v){
+export async function restoreVersion(r, v){
+  const snapshot = await loadVersionSnapshot(r, v);
+  if(!snapshot){ alert('That version could not be loaded.'); return; }
   if(!confirm(`Restore version "${v.label || 'Untitled version'}"? This overwrites the recipe's current name, description, ingredients, process steps/components, and yield (trial photos are not affected).`)) return;
-  Object.assign(r, JSON.parse(JSON.stringify(v.snapshot)));
+  Object.assign(r, JSON.parse(JSON.stringify(snapshot)));
   migrateRecipe(r);
   closeVersionPreview();
   closeVersionsModal();
@@ -105,9 +138,10 @@ export let versionPreviewContext = null;
 // Read-only look at a saved version before committing to Restore — reuses
 // the same tree/process markup as the live editor and the print view, just
 // fed from the version's frozen snapshot instead of the live recipe.
-export function openVersionPreview(r, v){
+export async function openVersionPreview(r, v){
+  const snap = await loadVersionSnapshot(r, v);
+  if(!snap){ alert('That version could not be loaded.'); return; }
   versionPreviewContext = { recipe: r, version: v };
-  const snap = v.snapshot || {};
   const totalWt = allIngredientsInRecipe(snap).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
 
   document.getElementById('versionPreviewTitle').textContent = v.label || 'Untitled version';
@@ -162,9 +196,16 @@ export function initVersionsModal(){
 // Save, the 1-minute idle auto-checkpoint, and "Save Current as Version" in
 // the modal) — same snapshot shape, same 5-version cap, one place to change.
 export function pushVersionCheckpoint(r, label){
-  if(!Array.isArray(r.versions)) r.versions = [];
-  r.versions.push({ id: uid(), label, savedAt: Date.now(), snapshot: snapshotRecipeCore(r) });
-  if(r.versions.length > 5) r.versions = r.versions.slice(r.versions.length - 5);
+  if(!Array.isArray(r.versionsMeta)) r.versionsMeta = [];
+  const entry = { id: uid(), label, savedAt: Date.now() };
+  // the snapshot is its own document in recipes/{id}/versions; only the small entry stays on the recipe
+  setDoc(recipeVersionDoc(r.id, entry.id), { ...entry, snapshot: snapshotRecipeCore(r) })
+    .catch(err => showCloudError('Failed to save the version: ' + err.message));
+  r.versionsMeta.push(entry);
+  while(r.versionsMeta.length > RECIPE_VERSION_CAP){
+    const oldest = r.versionsMeta.shift();
+    deleteDoc(recipeVersionDoc(r.id, oldest.id)).catch(err => console.error('Forge: pruning old version failed', err));
+  }
 }
 
 // Per-recipe-id pending idle-checkpoint timers for scheduleVersionCheckpoint

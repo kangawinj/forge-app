@@ -18,7 +18,7 @@
 // circularity the files above use.
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
-  logActivityEvent, diffMainFields, showCloudError, playContentTransition,
+  logActivityEvent, diffMainFields, showCloudError, isCurrentUserAdmin, playContentTransition,
   renderSidebar, formatActivityDateTime, formatDateLong, recipesCol, projects, metaLists,
   metaItemName, productTypeCode, ingredientMaster, migrateTrialsFromRecipes,
   countryToIso2, guardNavigation,
@@ -34,7 +34,7 @@ import {
   onSnapshot, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, findProjectForRecipe,
+  blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, migrateAllLegacyVersions, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, seriesKeyDisplay, recipeDisplayLabel, descriptionListHtml,
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
@@ -307,6 +307,11 @@ export function attachRecipesListener(){
     }
 
     renderSidebar();
+
+    // One-time clean-up: version history used to live inside each recipe document and pushed some of them to
+    // Firestore's 1 MB limit. The admin's session moves it to the recipe's `versions` subcollection (any
+    // user's own save does the same for the recipe being saved, see saveRecipeToCloud).
+    if(isCurrentUserAdmin()) migrateAllLegacyVersions(incoming);
   }, err => {
     console.error('Forge: recipes listener error', err);
     showCloudError('Failed to load recipe data from Firebase: ' + err.message);

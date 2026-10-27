@@ -84,7 +84,8 @@ function computeDashboardData(){
   const yields = recipes.map(r => parseFloat(r.yieldPct)).filter(v => !isNaN(v));
   const avgYield = yields.length ? yields.reduce((s,v) => s+v, 0) / yields.length : null;
 
-  const totalVersions = recipes.reduce((s,r) => s + (Array.isArray(r.versions) ? r.versions.length : 0), 0);
+  const versionCountOf = r => (Array.isArray(r.versionsMeta) ? r.versionsMeta.length : 0) + (Array.isArray(r.versions) ? r.versions.length : 0);
+  const totalVersions = recipes.reduce((s,r) => s + versionCountOf(r), 0);
 
   // Sourced from Projects (not recipes) — Destination Country now lives on
   // the Project since recipes link to a Project instead of carrying their
@@ -104,10 +105,10 @@ function computeDashboardData(){
   }, 5);
 
   const mostIterated = [...recipes]
-    .filter(r => Array.isArray(r.versions) && r.versions.length > 0)
-    .sort((a,b) => b.versions.length - a.versions.length)
+    .filter(r => versionCountOf(r) > 0)
+    .sort((a,b) => versionCountOf(b) - versionCountOf(a))
     .slice(0, 3)
-    .map(r => ({ label: recipeDisplayLabel(r), count: r.versions.length }));
+    .map(r => ({ label: recipeDisplayLabel(r), count: versionCountOf(r) }));
 
   const recentMaterials = [...ingredientMaster]
     .filter(m => m.createdAt)

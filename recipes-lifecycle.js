@@ -51,6 +51,7 @@ function buildTrialClone(r, newId, overrides){
   // its own (initially empty) free-text legacy code, and no inherited
   // photos/audit trail from the source.
   clone.versions = [];
+  clone.versionsMeta = [];
   clone.code = '';
   clone.descPhotos = [];
   clone.legacyRecipeCode = '';

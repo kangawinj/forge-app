@@ -776,6 +776,7 @@ export const CHANGELOG = [
   { version: "3.0.734", date: "2026-10-20", note: "Test Results Sensory Evaluation: new zoom controls (- / + and Fit) above the table -- zoom out to see the whole table at once, or press Fit to shrink it to the screen width; the product cards above scale with it, printing is unaffected" },
   { version: "3.0.735", date: "2026-10-27", note: "Projects by Status (List view): arrows beside the Monthly Update month picker slide the month columns one month back or forward, so earlier months can be browsed left and right (view-only, the shared starting month is unchanged)" },
   { version: "3.0.736", date: "2026-10-27", note: "Projects by Status (List view): a draggable scrollbar pinned to the bottom of the screen scrolls the month columns left and right -- the older months (up to six) wait just past the right edge so dragging reveals them" },
+  { version: "3.0.737", date: "2026-10-27", note: "Recipes: Version History snapshots now live in their own sub-documents instead of inside the recipe document, which had grown to the Firestore 1 MB limit on some recipes (Tuna Gyoza was at 1,024 KB). Existing history is moved over automatically when the admin opens the app (nothing is lost), Preview / Restore / Delete work as before, and saving now warns at 900 KB and reports a failed save instead of failing silently" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

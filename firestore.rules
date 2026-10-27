@@ -30,6 +30,11 @@ service cloud.firestore {
       allow read, create, update: if isAllowedUser();
       allow delete: if request.auth != null && isAdmin();
     }
+    // Version History snapshots, one doc per saved version, kept out of the recipe document itself so history
+    // can never push a recipe over Firestore's 1 MB document limit (see recipes-versions.js).
+    match /recipes/{recipeId}/versions/{versionId} {
+      allow read, create, update, delete: if isAllowedUser();
+    }
     // One doc per Recipe Series (see recipeSeriesCol in app.js), holding
     // the atomic Trial-number counter "+ New Trial" reads and increments
     // inside a runTransaction. Any approved user can create/update, same
