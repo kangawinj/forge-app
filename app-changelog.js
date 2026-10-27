@@ -775,6 +775,7 @@ export const CHANGELOG = [
   { version: "3.0.733", date: "2026-10-20", note: "Test Results Sensory Evaluation: wider columns -- product columns at least 240px and the Note column 300px (a long note in the old 180px column stretched the whole row); the table grows past A4 and scrolls sideways when there are several samples" },
   { version: "3.0.734", date: "2026-10-20", note: "Test Results Sensory Evaluation: new zoom controls (- / + and Fit) above the table -- zoom out to see the whole table at once, or press Fit to shrink it to the screen width; the product cards above scale with it, printing is unaffected" },
   { version: "3.0.735", date: "2026-10-27", note: "Projects by Status (List view): arrows beside the Monthly Update month picker slide the month columns one month back or forward, so earlier months can be browsed left and right (view-only, the shared starting month is unchanged)" },
+  { version: "3.0.736", date: "2026-10-27", note: "Projects by Status (List view): a draggable scrollbar pinned to the bottom of the screen scrolls the month columns left and right -- the older months (up to six) wait just past the right edge so dragging reveals them" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

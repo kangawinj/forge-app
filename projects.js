@@ -1725,24 +1725,25 @@ export function renderProjectsList(){
             ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
-          <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth(projectsByStatusMonthColumnCount)}px;">
+          <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           ${projectsByStatusMonthColumnCount > 0 ? `
-          <div class="proj-gallery-list-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns(projectsByStatusMonthColumnCount))};">
+          <div class="proj-gallery-list-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
             <span></span>
             <span></span>
-            ${monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).map((m, i, arr) => `
+            ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
                   <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
                   <button type="button" class="proj-mu-expand-all" data-role="proj-mu-expand-column" data-month="${escapeHtml(m)}">${projMuExpandedMonths.has(m) ? 'Collapse all' : 'Expand all'}</button>
                 </span>
-                ${isCurrentUserAdmin() && i === arr.length - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
+                ${isCurrentUserAdmin() && i === projectsByStatusMonthColumnCount - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
               </span>
             `).join('')}
           </div>
           ` : ''}
           ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
           </div></div>
+          ${projectsByStatusMonthColumnCount > 0 ? '<div class="proj-mu-scrollbar-proxy" id="projMuScrollbarProxy" title="Drag to look at earlier months"><div id="projMuScrollbarProxyInner"></div></div>' : ''}
         ` : renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
@@ -1765,6 +1766,7 @@ export function renderProjectsList(){
     `;
     renderProjectGanttChart();
     wireProjectsByStatusCardClicks(dashboardContainer);
+    wireProjMuScrollbar(dashboardContainer);
   }
 
   if(sorted.length === 0){
@@ -3325,21 +3327,57 @@ function monthsBackFrom(monthStr, count){
 // count of 0 (the whole declaration goes invalid when it does, not just
 // that term), and 0 is this feature's own default (see
 // projectsByStatusMonthColumnCount's own comment).
-function projMuListGridColumns(count){
-  // With month columns showing, Project/PD are fixed-width (they stay
-  // pinned on the left while the month columns scroll sideways -- see
-  // .proj-mu-hscroll) and each month column keeps a readable minimum width.
-  return count > 0
-    ? `${PROJ_MU_NAME_COL_PX}px ${PROJ_MU_PD_COL_PX}px repeat(${count}, minmax(${PROJ_MU_MONTH_COL_MIN_PX}px,1fr))`
+// Month columns that are actually rendered: the ones the admin chose to show (projectsByStatusMonthColumnCount)
+// plus the older months up to the maximum, which sit past the right edge so the scrollbar (or a drag) reveals them.
+function projMuRenderedCount(){
+  return projectsByStatusMonthColumnCount > 0 ? PROJ_MU_MAX_MONTH_COLUMNS : 0;
+}
+// A month column is as wide as the room left after the Project/PD columns divided by the chosen number of
+// columns (never under 240px) -- measured against the scroll box (see .proj-mu-hscroll's container-type).
+function projMuMonthColWidth(){
+  const v = Math.max(1, projectsByStatusMonthColumnCount);
+  return `max(${PROJ_MU_MONTH_COL_MIN_PX}px, calc((100cqw - ${PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX}px - ${(v + 1) * 10}px) / ${v}))`;
+}
+function projMuListGridColumns(){
+  const n = projMuRenderedCount();
+  // With month columns showing, Project/PD are fixed-width (they stay pinned on the left while the month
+  // columns scroll sideways -- see .proj-mu-hscroll).
+  return n > 0
+    ? `${PROJ_MU_NAME_COL_PX}px ${PROJ_MU_PD_COL_PX}px repeat(${n}, ${projMuMonthColWidth()})`
     : 'minmax(140px,1fr) 110px';
 }
 const PROJ_MU_NAME_COL_PX = 220;
 const PROJ_MU_PD_COL_PX = 110;
 const PROJ_MU_MONTH_COL_MIN_PX = 240;
-// Narrowest the list may shrink to before the horizontal scrollbar takes
-// over (columns + their 10px grid gaps).
-function projMuListMinWidth(count){
-  return count > 0 ? PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX + count * PROJ_MU_MONTH_COL_MIN_PX + (count + 1) * 10 : 0;
+// Total width of the list (columns + their 10px grid gaps); anything wider than the box scrolls sideways.
+function projMuListMinWidth(){
+  const n = projMuRenderedCount();
+  return n > 0 ? `calc(${PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX}px + ${n} * ${projMuMonthColWidth()} + ${(n + 1) * 10}px)` : '0px';
+}
+// Stand-in horizontal scrollbar pinned to the bottom of the screen (the real one sits under the whole project
+// list, out of reach), kept in sync with the list so dragging either moves both; the scroll position survives
+// the re-renders that every click on this card triggers.
+let projMuScrollLeft = 0;
+function wireProjMuScrollbar(root){
+  const scroll = root.querySelector('.proj-mu-hscroll');
+  const proxy = root.querySelector('#projMuScrollbarProxy');
+  const inner = root.querySelector('#projMuScrollbarProxyInner');
+  if(!scroll || !proxy || !inner) return;
+  const sync = () => {
+    proxy.style.display = scroll.scrollWidth > scroll.clientWidth + 1 ? 'block' : 'none';
+    inner.style.width = scroll.scrollWidth + 'px';
+  };
+  scroll.addEventListener('scroll', () => { proxy.scrollLeft = scroll.scrollLeft; projMuScrollLeft = scroll.scrollLeft; });
+  proxy.addEventListener('scroll', () => { scroll.scrollLeft = proxy.scrollLeft; });
+  sync();
+  scroll.scrollLeft = projMuScrollLeft;
+  proxy.scrollLeft = scroll.scrollLeft;
+  if(typeof ResizeObserver !== 'undefined'){
+    const ro = new ResizeObserver(sync);
+    ro.observe(scroll);
+    const grid = scroll.firstElementChild;
+    if(grid) ro.observe(grid);
+  }
 }
 // Several monthlySummaries entries can share one month (logged twice, or
 // moved into a month that already had its own entry via the quick-edit
@@ -3605,8 +3643,8 @@ function monthlyUpdatesSectionHtml(p, isEditing){
 function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, selectedMonth){
   if(!projectsForStatus.length) return '';
   if(viewMode === 'list'){
-    const months = monthsBackFrom(selectedMonth, projectsByStatusMonthColumnCount);
-    const gridCols = projMuListGridColumns(months.length);
+    const months = monthsBackFrom(selectedMonth, projMuRenderedCount());
+    const gridCols = projMuListGridColumns();
     return `
       <div class="proj-gallery-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `

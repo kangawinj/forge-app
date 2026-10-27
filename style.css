@@ -6380,3 +6380,10 @@
   /* Month picker with look-back / look-forward arrows (Projects by Status, List view). */
   .proj-mu-month-step{padding:4px 8px;display:inline-flex;align-items:center;}
   .proj-mu-month-step:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* Projects by Status, List view: the month columns scroll sideways (older months sit past the right edge);
+     the real scrollbar is hidden in favour of the draggable bar pinned above the footer. */
+  .proj-mu-hscroll{container-type:inline-size;scrollbar-width:none;-ms-overflow-style:none;}
+  .proj-mu-hscroll::-webkit-scrollbar{display:none;}
+  .proj-mu-scrollbar-proxy{display:none;position:sticky;bottom:28px;height:16px;overflow-x:auto;overflow-y:hidden;background:var(--panel);z-index:5;}
+  #projMuScrollbarProxyInner{height:1px;}
