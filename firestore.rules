@@ -3,8 +3,7 @@ service cloud.firestore {
   match /databases/{database}/documents {
     // ---------- Shared helpers ----------
     function isOrgEmail() {
-      return request.auth.token.email.matches('.*@th-umios[.]com$')
-        || request.auth.token.email == 'forge-setup-test@example.com';
+      return request.auth.token.email.matches('.*@th-umios[.]com$');
     }
     // The one account that can delete recipes/materials, approve new
     // sign-ups, and reset a member's password — same person as
@@ -23,7 +22,7 @@ service cloud.firestore {
     }
     function isAllowedUser() {
       return request.auth != null && isOrgEmail()
-        && (isAdmin() || request.auth.token.email == 'forge-setup-test@example.com' || isApproved());
+        && (isAdmin() || isApproved());
     }
 
     match /recipes/{recipeId} {
@@ -207,11 +206,51 @@ service cloud.firestore {
     // step, never settable by the public create.
     match /evaluationResponses/{responseId} {
       allow get, list: if isAllowedUser();
-      allow create: if request.resource.data.linkToken is string
+      allow create: if responseId.size() == 48
+        && request.resource.data.keys().hasOnly(['linkToken','trialId','guestName','submittedAt','imported','answers',
+            'comment','photos'])
+        && request.resource.data.guestName is string && request.resource.data.guestName.size() <= 200
+        && request.resource.data.comment is string && request.resource.data.comment.size() <= 10000
+        && request.resource.data.answers is map && request.resource.data.answers.keys().size() <= 100
+        && request.resource.data.photos is list && request.resource.data.photos.size() <= 6
+        && request.resource.data.submittedAt is number
+        && request.resource.data.linkToken is string
         && exists(/databases/$(database)/documents/evaluationLinks/$(request.resource.data.linkToken))
         && get(/databases/$(database)/documents/evaluationLinks/$(request.resource.data.linkToken)).data.expiresAt > request.time.toMillis()
         && request.resource.data.imported == false;
       allow update, delete: if isAllowedUser();
+    }
+    // Shape of a draft written by the public form (submit.js): exactly these fields, text only, with size limits, so
+    // the open (no-login) write path cannot be used to store arbitrary or oversized junk. Kept in sync by hand with
+    // blankSubmission() / save() in submit.js.
+    function shortText(v) { return v is string && v.size() <= 500; }
+    function longText(v) { return v is string && v.size() <= 20000; }
+    function validSubmission(d) {
+      return d.keys().hasOnly(['submissionStatus','createdAt','updatedAt','name','status','requestDate','startDate',
+          'targetEndDate','customerName','destinationCountry','ownerSalesRep','factorySalesRep','responsiblePerson',
+          'factoryName','portionWeightQty','portionWeightUnit','portionPerUnit','innerPackQty','innerPackWeightUnit',
+          'innerPackUnit','outerPackQty','outerPackUnit','outerPackContainerUnit','moqQty','moqUnit','flavors',
+          'requirements'])
+        && d.submissionStatus == 'pending'
+        && d.createdAt is number && d.updatedAt is number
+        && shortText(d.name) && shortText(d.status) && shortText(d.requestDate) && shortText(d.startDate)
+        && shortText(d.targetEndDate) && shortText(d.customerName) && shortText(d.destinationCountry)
+        && shortText(d.ownerSalesRep) && shortText(d.factorySalesRep) && shortText(d.responsiblePerson)
+        && shortText(d.factoryName) && shortText(d.portionWeightQty) && shortText(d.portionWeightUnit)
+        && shortText(d.portionPerUnit) && shortText(d.innerPackQty) && shortText(d.innerPackWeightUnit)
+        && shortText(d.innerPackUnit) && shortText(d.outerPackQty) && shortText(d.outerPackUnit)
+        && shortText(d.outerPackContainerUnit) && shortText(d.moqQty) && shortText(d.moqUnit)
+        && d.flavors is list && d.flavors.size() <= 60
+        && d.requirements is map
+        && d.requirements.keys().hasOnly(['packagingCondition','storageCondition','shelfLife','composition','recipe',
+            'cookingCondition','note','certificate'])
+        && longText(d.requirements.packagingCondition) && longText(d.requirements.storageCondition)
+        && shortText(d.requirements.shelfLife) && longText(d.requirements.composition)
+        && longText(d.requirements.recipe) && longText(d.requirements.note) && longText(d.requirements.certificate)
+        && d.requirements.cookingCondition is map
+        && d.requirements.cookingCondition.keys().hasOnly(['method','steps'])
+        && shortText(d.requirements.cookingCondition.method)
+        && d.requirements.cookingCondition.steps is list && d.requirements.cookingCondition.steps.size() <= 60;
     }
     match /pendingSubmissions/{token} {
       // Split from a single `read` on purpose: the public page only ever
@@ -223,9 +262,9 @@ service cloud.firestore {
       // collection directly instead of going through this app's UI.
       allow get: if true;
       allow list: if isAllowedUser();
-      allow create: if request.resource.data.submissionStatus == 'pending';
+      allow create: if token.size() == 48 && validSubmission(request.resource.data);
       allow update: if isAllowedUser()
-        || (resource.data.submissionStatus == 'pending' && request.resource.data.submissionStatus == 'pending');
+        || (resource.data.submissionStatus == 'pending' && validSubmission(request.resource.data));
       // Any approved team member can delete a submission (e.g. junk/spam
       // requests) from the Reviewing Submission panel -- same access
       // level as reviewing/importing one, not restricted to the admin

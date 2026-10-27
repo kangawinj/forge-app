@@ -276,7 +276,7 @@ export const ADMIN_EMAIL = "kangawin@th-umios.com";
 // userApprovals doc must say 'approved' before they get real app access.
 // Enforced again in firestore.rules server-side (isApproved()).
 function isApprovalExempt(email){
-  return email === ADMIN_EMAIL || email === 'forge-setup-test@example.com';
+  return email === ADMIN_EMAIL;
 }
 
 // Per-user access to whole nav-level modules (Projects/Trials/Ingredients/
