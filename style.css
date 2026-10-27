@@ -6376,3 +6376,7 @@
     .trial-cards-grid{zoom:var(--teval-zoom,1);}
   }
   @media print{ .teval-zoom-bar{display:none !important;} }
+
+  /* Month picker with look-back / look-forward arrows (Projects by Status, List view). */
+  .proj-mu-month-step{padding:4px 8px;display:inline-flex;align-items:center;}
+  .proj-mu-month-step:disabled{opacity:.4;cursor:not-allowed;}

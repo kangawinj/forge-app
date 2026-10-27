@@ -1361,6 +1361,20 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       renderProjectsList();
     }
   });
+  // Arrows beside the month picker: slide the whole run of month columns one month back / forward
+  // (a view-only browse for everyone, it never changes the shared starting month the picker saves).
+  dashboardContainer.querySelectorAll('[data-role="proj-mu-month-step"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const step = parseInt(btn.dataset.step, 10);
+      const [y, m] = projectsByStatusMonth.split('-').map(Number);
+      const d = new Date(y, m - 1 + step, 1);
+      const next = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      if(next > bangkokMonthStr()) return;
+      projectsByStatusMonth = next;
+      projectsByStatusMonthIsLocal = true;
+      renderProjectsList();
+    });
+  });
   // Admin-only +/x controls for how many month columns List mode shows --
   // writes the shared setting doc; the onSnapshot listener (see
   // attachProjectsListener) picks up the change and re-renders for
@@ -1706,7 +1720,9 @@ export function renderProjectsList(){
         ${projectsByStatusViewMode === 'list' ? `
           <div class="proj-mu-month-picker">
             <label for="projectsByStatusMonthInput">Monthly Update:</label>
+            ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="-1" title="Look back one month (your own view only)">${icon('chevron-left', 14)}</button>` : ''}
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}" title="${isCurrentUserAdmin() ? 'Saved as the starting month for everyone (pick the current month to follow the calendar again)' : 'Your own view only — resets to the starting month on refresh'}">
+            ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth(projectsByStatusMonthColumnCount)}px;">
