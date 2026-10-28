@@ -3,7 +3,7 @@ import {
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
   productList, projects, hasModuleAccess, compositionSummaryText,
-  moveToTrash
+  moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import {
   onSnapshot, doc, deleteDoc
@@ -462,6 +462,7 @@ export function renderSubmissionsList(){
     });
 
     block.querySelector('[data-role="delete-submission"]').addEventListener('click', () => {
+      if(!canDeleteRecord(s)){ alert(deleteNotAllowedMessage('sample submission', s)); return; }
       if(!confirm(`Delete "${submissionLabel(s)}"? This cannot be undone.`)) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',

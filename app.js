@@ -348,6 +348,14 @@ function canSeeAllProjects(){
 function isCurrentUserAdmin(){
   return currentUser?.email === ADMIN_EMAIL;
 }
+// Deleting a Project / Test Result / Sample Submission: only the account that created it, or the admin (the same rule
+// firestore.rules enforces on the server). Older records without a createdBy can only be deleted by the admin.
+export function canDeleteRecord(record){
+  return isCurrentUserAdmin() || (!!record?.createdBy && record.createdBy === currentUser?.email);
+}
+export function deleteNotAllowedMessage(what, record){
+  return `Only the person who created this ${what}${record?.createdBy ? ' (' + record.createdBy + ')' : ''} or the admin can delete it.`;
+}
 // Case-insensitive, and tolerant of honorific/suffix differences (e.g. a
 // profile named "Yano" should still match a field typed "Yano-san") via
 // substring containment — guarded to at least 3 characters so a short

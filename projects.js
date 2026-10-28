@@ -7,7 +7,7 @@ import {
   showCloudError, trialStringListHtml, canSeeAllProjects, isCurrentUserAdmin,
   pendingSubmissionsCol, myProfile, activityEventsCol, projectMatchesName, myLinkedName, namesMatch,
   moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr,
-  wireModalOverlayClose, appSettingsCol
+  wireModalOverlayClose, appSettingsCol, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
@@ -3182,6 +3182,7 @@ export function renderProjectsList(){
       // "quick add" bucket until getOrCreateUnassignedProject re-creates
       // a fresh, empty one on next use.
       if(p.isUnassignedBucket) return;
+      if(!canDeleteRecord(p)){ alert(deleteNotAllowedMessage('project', p)); return; }
       if(!confirm(`Delete project "${p.name || 'Untitled project'}"? This removes all its products and progress logs. This cannot be undone.`)) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',

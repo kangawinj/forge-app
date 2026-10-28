@@ -21,7 +21,8 @@ import {
   allIngredientsInRecipe, formatActivityDateTime, PROJECT_STAGES, mainFeatureView,
   recipesLoaded, diffMainFields, requestAuthConfirm, resizeImageFile, formatDateLong,
   trialStringListHtml, trialsCol, showCloudError,
-  metaLists, metaItemName, getRequirements, certificateSummaryText, moveToTrash
+  metaLists, metaItemName, getRequirements, certificateSummaryText, moveToTrash,
+  canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import {
   onSnapshot, doc, deleteDoc
@@ -870,6 +871,7 @@ export function renderTrialsList(){
     });
 
     block.querySelector('[data-role="delete-trial"]')?.addEventListener('click', () => {
+      if(!canDeleteRecord(t)){ alert(deleteNotAllowedMessage('test result', t)); return; }
       if(!confirm('Delete this test result? This cannot be undone.')) return;
       requestAuthConfirm(
         'Confirm Identity to Delete',
