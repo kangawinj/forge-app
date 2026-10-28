@@ -6394,3 +6394,12 @@
     padding:12px 14px;font-size:13px;color:#4a3300;}
   .recipe-conflict-bar b{color:#3a2600;}
   .recipe-conflict-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
+
+  /* Import from Excel -- review window (app-import-excel.js) */
+  .imp-section{margin-bottom:16px;}
+  .imp-title{font-size:14px;margin-bottom:6px;}
+  .imp-item{padding:6px 8px;border:1px solid var(--border);border-radius:8px;margin-bottom:6px;font-size:13px;background:var(--panel);}
+  .imp-change{font-size:12px;color:var(--text-dim);margin-top:2px;overflow-wrap:anywhere;}
+  .imp-change code,.imp-note code{background:var(--bg);padding:0 4px;border-radius:4px;}
+  .imp-note{font-size:12px;color:var(--text-dim);margin:4px 0 8px;}
+  .imp-error{font-size:12px;color:var(--danger);margin-bottom:3px;}

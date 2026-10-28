@@ -245,6 +245,7 @@ export function buildEverything(raw, metaDoc, notes = [], onProgress = () => {})
     '`parent_key` = the id (or row number) of the nested record directly above, and `row` = the position inside its list.',
     'Recipes.lines holds the full ingredient tree: `path` is the Part / Sub-part chain, `level` its depth, `row` the order.',
     'Photos and attached files are in the images/ folder of the ZIP; the cell holds the relative path of the file.',
+    'Edits to the Materials, Products and Projects sheets can be brought back with Import (Excel) in Data Management (admin only).',
     'Dates stored as timestamps are written as yyyy-mm-dd hh:mm:ss (local time of the computer that exported).',
     'Not included: the full snapshots of Version History (only the list: Recipes.versions), the content of deleted items in the Trash,',
     'sign-in events and presence data, and passwords (Forge never stores any -- sign-in is handled by Firebase).'

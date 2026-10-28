@@ -24,6 +24,7 @@ import { moveToTrash, initTrashModal, purgeExpiredTrashOnLoad } from './app-tras
 export { moveToTrash };
 import { exportAll, importFromFile } from './app-backup.js';
 import { exportEverythingToExcel } from './app-export-excel.js';
+import { importFromExcelFile } from './app-import-excel.js';
 import {
   renderDashboardHome, wireDashboardHome, refreshDashboardHome, goHome,
   setHomeCalendarPanes, renderBarList, openRecipeFromDashboard, closeDashboardWhoMenus
@@ -1410,6 +1411,14 @@ export function renderMain(){
 document.getElementById('btnNew').addEventListener('click', () => guardNavigation(createNewRecipe));
 document.getElementById('searchInput').addEventListener('input', renderSidebar);
 document.getElementById('btnExportAll').addEventListener('click', exportAll);
+document.getElementById('btnImportExcel').addEventListener('click', () => document.getElementById('importExcelFile').click());
+document.getElementById('importExcelFile').addEventListener('change', async e => {
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file) return;
+  try{ await importFromExcelFile(file); }
+  catch(err){ console.error('Forge: Excel import failed', err); alert('The import failed: ' + (err.message || err)); }
+});
 document.getElementById('btnExportAllExcel').addEventListener('click', async e => {
   const btn = e.currentTarget;
   const html = btn.innerHTML;
@@ -1547,6 +1556,7 @@ function applyStaticIcons(){
   prefixIcon('btnSaveVersion', 'save');
   prefixIcon('btnExportAll', 'download');
   prefixIcon('btnExportAllExcel', 'download');
+  prefixIcon('btnImportExcel', 'upload');
   prefixIcon('btnImport', 'upload');
   prefixIcon('btnLogoutFromApp', 'log-out');
   const versionsTitle = document.querySelector('#versionsModalOverlay .modal-title');

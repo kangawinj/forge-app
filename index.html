@@ -552,6 +552,8 @@
       <div style="display:flex;flex-direction:column;gap:8px;">
         <button class="btn" id="btnExportAll">Export All (JSON)</button>
         <button class="btn" id="btnExportAllExcel" title="Every table as Excel sheets, plus all photos and files, in one ZIP">Export All (Excel + photos)</button>
+        <button class="btn" id="btnImportExcel" title="Admin only: bring edits to the Materials, Products and Projects sheets of that workbook back into Forge (you review every change first)">Import (Excel)</button>
+        <input type="file" id="importExcelFile" class="hidden-file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet">
         <button class="btn" id="btnImport">Import (JSON)</button>
         <input type="file" id="importFile" class="hidden-file" accept="application/json">
       </div>
