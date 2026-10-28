@@ -26,7 +26,7 @@ import {
   selectTextOnFocus, blankProduct, formatPortionWeight, formatInnerPacking, formatOuterPacking,
   formatProjectMoq, duplicateProject, saveProjectToCloud, deleteProjectFromCloud,
   scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate,
-  blankMonthlySummary, migrateMonthlySummary
+  blankMonthlySummary, migrateMonthlySummary, composeMonthlyText, monthlyLangsOf, monthlyLangTextareasHtml, readMonthlyLangs
 } from './projects-data.js';
 import { exportProjectsToExcel } from './projects-excel.js';
 import {
@@ -3083,12 +3083,13 @@ export function renderProjectsList(){
         block.querySelector('[data-role="save-monthly-summary"]')?.addEventListener('click', () => {
           const section = block.querySelector('.proj-mu-summary-section');
           const month = section.querySelector('.proj-mu-summary-draft-month').value;
-          const text = section.querySelector('.proj-mu-summary-draft-text').value.trim();
+          const langs = readMonthlyLangs(section, 'proj-mu-summary-draft');
+          const text = composeMonthlyText(langs);
           if(!/^\d{4}-\d{2}$/.test(month) || !text){
-            alert('Please pick a month and type an update.');
+            alert('Please pick a month and type an update (in at least one language).');
             return;
           }
-          const ms = blankMonthlySummary(month, text);
+          const ms = blankMonthlySummary(month, text, langs);
           if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
           p.monthlySummaries.push(ms);
           monthlySummaryAddOpen = false;
@@ -3105,7 +3106,7 @@ export function renderProjectsList(){
             const ms = (p.monthlySummaries || []).find(x => x.id === entryId);
             if(!ms) return;
             monthlySummaryEditingId = entryId;
-            monthlySummaryEditDraft = ms.text || '';
+            monthlySummaryEditDraft = monthlyLangsOf(ms);
             renderProjectsList();
           });
         });
@@ -3114,8 +3115,10 @@ export function renderProjectsList(){
           const ms = (p.monthlySummaries || []).find(x => x.id === monthlySummaryEditingId);
           if(!entry || !ms) return;
           const before = ms.text || '';
-          const after = entry.querySelector('.proj-mu-summary-edit-text').value.trim();
+          const langs = readMonthlyLangs(entry, 'proj-mu-summary-edit');
+          const after = composeMonthlyText(langs);
           ms.text = after;
+          ms.textEn = langs.En; ms.textTh = langs.Th; ms.textJa = langs.Ja;
           ms.updatedBy = currentUser?.email || '';
           ms.updatedAt = Date.now();
           monthlySummaryEditingId = null;
@@ -3437,7 +3440,7 @@ function openProjMuQuickEdit(projectId, month){
   document.getElementById('projMuQuickEditProjectName').textContent = p.name || 'Untitled project';
   document.getElementById('projMuQuickEditMonthInput').value = month;
   document.getElementById('projMuQuickEditMonthInput').max = bangkokTodayStr().slice(0,7);
-  document.getElementById('projMuQuickEditText').value = existing ? existing.text : '';
+  document.getElementById('projMuQuickEditLangs').innerHTML = monthlyLangTextareasHtml('proj-mu-quick', existing ? monthlyLangsOf(existing) : {});
   // First author + last editor, each with their date/time (per request) --
   // blank for a month with no entry yet. An entry that was never edited
   // reads the same on both lines (updatedBy only fills in on an edit).
@@ -3469,7 +3472,8 @@ function saveProjMuQuickEdit(){
     alert('Please pick a valid month.');
     return;
   }
-  const text = document.getElementById('projMuQuickEditText').value.trim();
+  const langs = readMonthlyLangs(document.getElementById('projMuQuickEditLangs'), 'proj-mu-quick');
+  const text = composeMonthlyText(langs);
   if(!Array.isArray(p.monthlySummaries)) p.monthlySummaries = [];
   // Looked up by the entry's own id (the one this popup was opened on),
   // never by month -- so changing the month field moves that SAME entry
@@ -3502,6 +3506,7 @@ function saveProjMuQuickEdit(){
     const beforeMonth = existing.month;
     existing.month = month;
     existing.text = text;
+    existing.textEn = langs.En; existing.textTh = langs.Th; existing.textJa = langs.Ja;
     existing.photos = projMuQuickEditDraftPhotos;
     existing.updatedBy = currentUser?.email || '';
     existing.updatedAt = Date.now();
@@ -3513,7 +3518,7 @@ function saveProjMuQuickEdit(){
       logActivityEvent('updated', 'project', p.name || 'Untitled project', [{ field: `Monthly Update (${formatMonthYear(month)})`, before, after: text }]);
     }
   } else if(text || projMuQuickEditDraftPhotos.length){
-    const ms = blankMonthlySummary(month, text);
+    const ms = blankMonthlySummary(month, text, langs);
     ms.photos = projMuQuickEditDraftPhotos;
     p.monthlySummaries.push(ms);
     logActivityEvent('updated', 'project', p.name || 'Untitled project', [{
@@ -3583,7 +3588,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
           </div>
           <div class="field">
             <label>Update</label>
-            <textarea class="proj-mu-summary-draft-text" placeholder="What's the progress this month?"></textarea>
+            ${monthlyLangTextareasHtml('proj-mu-summary-draft', {})}
           </div>
           <div style="display:flex;gap:8px;">
             <button class="btn btn-sm btn-primary" data-role="save-monthly-summary">${icon('save')} Save</button>
@@ -3596,7 +3601,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
         if(isEntryEditing){
           return `
             <div class="proj-mu-summary-entry" data-summary-id="${escapeHtml(ms.id)}">
-              <textarea class="proj-mu-summary-edit-text">${escapeHtml(monthlySummaryEditDraft)}</textarea>
+              ${monthlyLangTextareasHtml('proj-mu-summary-edit', (monthlySummaryEditDraft && typeof monthlySummaryEditDraft === 'object') ? monthlySummaryEditDraft : {})}
               <div style="display:flex;gap:8px;margin-top:6px;">
                 <button class="btn btn-sm btn-primary" data-role="save-monthly-summary-edit">${icon('save')} Save</button>
                 <button class="btn btn-sm proj-action-cancel" data-role="cancel-monthly-summary-edit">${icon('undo-2')} Cancel</button>

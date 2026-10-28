@@ -260,12 +260,52 @@ export function blankFlavor(){
 // be misleading). Lives in its own p.monthlySummaries array, kept
 // deliberately separate from p.monthlyUpdates -- see blankProject's own
 // comment on why.
-export function blankMonthlySummary(month, text){
+// A Monthly Update is written in three languages: English, Thai, Japanese (textEn / textTh / textJa). `text` stays as
+// the three joined into one string (blank line between them, English first), so everything that only reads `text`
+// -- the month columns, the Excel exports, the activity log -- keeps working unchanged.
+export const MONTHLY_LANGS = [
+  { key: 'En', label: 'English', placeholder: "What's the progress this month? (English)" },
+  { key: 'Th', label: 'ไทย (Thai)', placeholder: 'ความคืบหน้าเดือนนี้ (ภาษาไทย)' },
+  { key: 'Ja', label: '日本語 (Japanese)', placeholder: '今月の進捗 (日本語)' }
+];
+const THAI_CHARS = /[\u0E00-\u0E7F]/;
+const JAPANESE_CHARS = /[\u3040-\u30FF\u31F0-\u31FF\u4E00-\u9FFF\uFF66-\uFF9F]/;
+// An older entry holds all its languages in the one `text` box: split it into paragraphs (blank-line separated) and
+// file each under the script it is written in -- Thai, Japanese, otherwise English.
+export function splitMonthlyText(text){
+  const out = { En: [], Th: [], Ja: [] };
+  String(text || '').split(/\n{2,}/).forEach(block => {
+    const b = block.trim();
+    if(!b) return;
+    out[THAI_CHARS.test(b) ? 'Th' : (JAPANESE_CHARS.test(b) ? 'Ja' : 'En')].push(b);
+  });
+  return { En: out.En.join('\n\n'), Th: out.Th.join('\n\n'), Ja: out.Ja.join('\n\n') };
+}
+export function composeMonthlyText(langs){
+  return MONTHLY_LANGS.map(l => (langs[l.key] || '').trim()).filter(Boolean).join('\n\n');
+}
+export function monthlyLangsOf(ms){
+  if(ms && ('textEn' in ms || 'textTh' in ms || 'textJa' in ms)) return { En: ms.textEn || '', Th: ms.textTh || '', Ja: ms.textJa || '' };
+  return splitMonthlyText(ms?.text);
+}
+export function monthlyLangTextareasHtml(cls, values){
+  return MONTHLY_LANGS.map(l => `
+    <div class="proj-mu-lang">
+      <label class="proj-mu-lang-label">${l.label}</label>
+      <textarea class="${cls}-${l.key.toLowerCase()}" rows="3" placeholder="${escapeHtml(l.placeholder)}">${escapeHtml((values && values[l.key]) || '')}</textarea>
+    </div>`).join('');
+}
+export function readMonthlyLangs(root, cls){
+  return Object.fromEntries(MONTHLY_LANGS.map(l => [l.key, (root.querySelector(`.${cls}-${l.key.toLowerCase()}`)?.value || '').trim()]));
+}
+
+export function blankMonthlySummary(month, text, langs){
   const now = Date.now();
   return {
     id: uid(),
     month,
     text: text || '',
+    ...(langs ? { textEn: langs.En || '', textTh: langs.Th || '', textJa: langs.Ja || '' } : {}),
     photos: [],
     createdBy: currentUser?.email || '',
     createdAt: now,

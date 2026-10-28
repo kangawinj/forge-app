@@ -6403,3 +6403,8 @@
   .imp-change code,.imp-note code{background:var(--bg);padding:0 4px;border-radius:4px;}
   .imp-note{font-size:12px;color:var(--text-dim);margin:4px 0 8px;}
   .imp-error{font-size:12px;color:var(--danger);margin-bottom:3px;}
+
+  /* Monthly Update: one box per language (English / Thai / Japanese) */
+  .proj-mu-lang{margin-bottom:10px;}
+  .proj-mu-lang-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:3px;}
+  .proj-mu-lang textarea{width:100%;min-height:72px;}
