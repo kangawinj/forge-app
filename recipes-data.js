@@ -3,10 +3,10 @@
 // top-of-file comment for the overall file split.
 import {
   uid, currentUser, escapeHtml, recipesCol, projects, metaLists, metaItemName, productTypeCode,
-  countryToIso2, computePrepareWeight, showCloudError
+  countryToIso2, computePrepareWeight, showCloudError, db
 } from './app.js';
 import {
-  setDoc, updateDoc, doc
+  setDoc, updateDoc, doc, runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export const PART_COUNT = 4;
@@ -292,9 +292,51 @@ export async function migrateAllLegacyVersions(list){
   }
 }
 
+// ---------- Two people editing the same recipe ----------
+// Saving writes the whole recipe document, so without a check the person who saves last silently wipes out what the
+// other one saved in between. Each browser tab therefore remembers the updatedAt of the version it last saw / wrote
+// (serverUpdatedAt) and a save only goes through when the stored document is still that version -- otherwise saving
+// that recipe is paused and the person chooses what to do (see recipes-conflict.js).
+export const SESSION_ID = uid();                       // identifies this browser tab on every save
+const serverUpdatedAt = new Map();                     // recipe id -> updatedAt last seen on / written to the server
+const recipeConflicts = new Map();                     // recipe id -> the other person's version, while unresolved
+let recipeConflictHandler = null;
+export function setRecipeConflictHandler(fn){ recipeConflictHandler = fn; }
+export function markServerVersion(id, updatedAt){ if(id) serverUpdatedAt.set(id, updatedAt); }
+export function recipeConflictFor(id){ return recipeConflicts.get(id) || null; }
+export function clearRecipeConflict(id){ recipeConflicts.delete(id); }
+function raiseConflict(local, remote){
+  recipeConflicts.set(local.id, remote);
+  if(recipeConflictHandler) recipeConflictHandler(local, remote);
+  else showCloudError(`"${local.name || 'This recipe'}" was changed by someone else -- reload the page before editing it.`);
+}
+// Called for the recipe that is open in the editor each time Firestore reports a change to it.
+export function observeRemoteRecipe(local, incoming){
+  const known = serverUpdatedAt.get(local.id);
+  if(known === undefined){ serverUpdatedAt.set(local.id, incoming.updatedAt); return; }
+  if(incoming.updatedAt === known) return;
+  if(incoming.updatedSession === SESSION_ID){            // the echo of one of this tab's own saves
+    if(incoming.updatedAt > known) serverUpdatedAt.set(local.id, incoming.updatedAt);
+    return;
+  }
+  if(!recipeConflicts.has(local.id)) raiseConflict(local, incoming);
+}
+
+class RecipeConflictError extends Error {
+  constructor(remote){ super('RECIPE_CONFLICT'); this.remote = remote; }
+}
+
 // Warn well before Firestore's hard 1,048,576-byte limit rather than failing silently at it.
 const RECIPE_DOC_WARN_BYTES = 900 * 1024;
-export async function saveRecipeToCloud(r){
+// Saves of one recipe run one after another, so each check sees the previous save's result.
+const recipeSaveQueues = new Map();
+export function saveRecipeToCloud(r){
+  const run = (recipeSaveQueues.get(r.id) || Promise.resolve()).then(() => saveRecipeNow(r)).catch(err => console.error('Forge: save queue error', err));
+  recipeSaveQueues.set(r.id, run);
+  return run;
+}
+async function saveRecipeNow(r){
+  if(recipeConflicts.has(r.id)) return;                  // paused until the person chooses (recipes-conflict.js)
   try{
     await migrateLegacyVersions(r);
   }catch(err){
@@ -302,15 +344,33 @@ export async function saveRecipeToCloud(r){
     // of risking their loss, and carry on saving
     console.error('Forge: version history migration failed, saving with embedded versions', err);
   }
+  const ref = doc(recipesCol, r.id);
   try{
     const bytes = new Blob([JSON.stringify(r)]).size;
     if(bytes > RECIPE_DOC_WARN_BYTES){
       showCloudError(`"${r.name || 'This recipe'}" is ${Math.round(bytes / 1024)} KB -- close to Firestore's 1,024 KB limit per document. Remove large photos or trim it down, or saving will start to fail.`);
     }
-    await setDoc(doc(recipesCol, r.id), r);
+    r.updatedSession = SESSION_ID;
+    const expected = serverUpdatedAt.get(r.id);
+    await runTransaction(db, async tx => {
+      const snap = await tx.get(ref);
+      if(snap.exists() && expected !== undefined){
+        const remote = snap.data();
+        if(remote.updatedAt !== expected && remote.updatedSession !== SESSION_ID) throw new RecipeConflictError(remote);
+      }
+      tx.set(ref, r);
+    });
+    serverUpdatedAt.set(r.id, r.updatedAt);
   }catch(err){
-    console.error('Forge: saving recipe failed', err);
-    showCloudError(`Failed to save "${r.name || 'recipe'}": ${err.message}`);
+    if(err instanceof RecipeConflictError){ raiseConflict(r, err.remote); return; }
+    // e.g. no connection for the transaction: fall back to a plain write, which Firestore queues and sends later
+    try{
+      await setDoc(ref, r);
+      serverUpdatedAt.set(r.id, r.updatedAt);
+    }catch(err2){
+      console.error('Forge: saving recipe failed', err2);
+      showCloudError(`Failed to save "${r.name || 'recipe'}": ${err2.message}`);
+    }
   }
 }
 

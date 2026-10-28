@@ -195,6 +195,21 @@ export function initVersionsModal(){
 // Shared by every path that should leave a Version History entry (manual
 // Save, the 1-minute idle auto-checkpoint, and "Save Current as Version" in
 // the modal) — same snapshot shape, same 5-version cap, one place to change.
+// Same as pushVersionCheckpoint, but for a snapshot taken elsewhere (e.g. the other person's version of a recipe
+// that is about to be overwritten) instead of the recipe's current state.
+export function pushVersionFromSnapshot(r, label, snapshot, savedAt){
+  if(!Array.isArray(r.versionsMeta)) r.versionsMeta = [];
+  const entry = { id: uid(), label, savedAt: savedAt || Date.now() };
+  setDoc(recipeVersionDoc(r.id, entry.id), { ...entry, snapshot })
+    .catch(err => showCloudError('Failed to save the version: ' + err.message));
+  r.versionsMeta.push(entry);
+  r.versionsMeta.sort((a, b) => a.savedAt - b.savedAt);
+  while(r.versionsMeta.length > RECIPE_VERSION_CAP + 1){
+    const oldest = r.versionsMeta.shift();
+    deleteDoc(recipeVersionDoc(r.id, oldest.id)).catch(err => console.error('Forge: pruning old version failed', err));
+  }
+}
+
 export function pushVersionCheckpoint(r, label){
   if(!Array.isArray(r.versionsMeta)) r.versionsMeta = [];
   const entry = { id: uid(), label, savedAt: Date.now() };

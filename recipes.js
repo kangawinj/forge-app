@@ -34,7 +34,7 @@ import {
   onSnapshot, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import {
-  blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, migrateAllLegacyVersions, findProjectForRecipe,
+  blankPart, blankIngredient, blankRecipe, migrateRecipe, saveRecipeToCloud, migrateAllLegacyVersions, markServerVersion, observeRemoteRecipe, findProjectForRecipe,
   yearPrefix, recipeDestinationIso2, recipeProductTypeCode, suggestNextRecipeSeq,
   trialNoDisplay, fullCode, seriesKeyDisplay, recipeDisplayLabel, descriptionListHtml,
   recomputeFromWeights, partTotalWeight, partIngredients, partSubParts, itemWeight,
@@ -45,6 +45,7 @@ import {
   versionsModalRecipe, openVersionsModal, renderVersionsList,
   pushVersionCheckpoint, scheduleVersionCheckpoint, cancelVersionCheckpoint
 } from './recipes-versions.js';
+import './recipes-conflict.js';
 import { renderDescPoints, renderCookingGuideline, renderDescPhotos, wireRecipeTranslateButton, renderPrintView } from './recipes-print.js';
 import { exportRecipeToExcel } from './recipes-excel.js';
 // Circular import back to trials.js -- safe, same pattern already proven by
@@ -278,6 +279,12 @@ export function attachRecipesListener(){
     const previousCurrent = recipes.find(r => r.id === currentId);
     const incoming = snapshot.docs.map(d => d.data());
     incoming.forEach(r => { migrateRecipe(r); recomputeFromWeights(r); });
+    // remember which version of each recipe is on the server (the open one is checked for someone else's edit)
+    incoming.forEach(r => { if(!previousCurrent || r.id !== previousCurrent.id) markServerVersion(r.id, r.updatedAt); });
+    if(previousCurrent){
+      const sameOne = incoming.find(r => r.id === previousCurrent.id);
+      if(sameOne) observeRemoteRecipe(previousCurrent, sameOne);
+    }
 
     if(previousCurrent && incoming.some(r => r.id === currentId)){
       recipes = incoming.map(r => r.id === currentId ? previousCurrent : r);

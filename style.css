@@ -6387,3 +6387,10 @@
   .proj-mu-hscroll::-webkit-scrollbar{display:none;}
   .proj-mu-scrollbar-proxy{display:none;position:sticky;bottom:28px;height:16px;overflow-x:auto;overflow-y:hidden;background:var(--panel);z-index:5;}
   #projMuScrollbarProxyInner{height:1px;}
+
+  /* Two people editing the same recipe (see recipes-conflict.js) */
+  .recipe-conflict-bar{position:fixed;left:50%;transform:translateX(-50%);top:64px;z-index:1200;width:min(720px,calc(100vw - 24px));
+    background:#fff7e6;border:1px solid #f0b429;border-left:5px solid #e08a00;border-radius:10px;box-shadow:0 8px 28px rgba(0,0,0,.2);
+    padding:12px 14px;font-size:13px;color:#4a3300;}
+  .recipe-conflict-bar b{color:#3a2600;}
+  .recipe-conflict-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px;}
