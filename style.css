@@ -6461,3 +6461,6 @@
   .reflist-company-logo{width:44px;height:44px;border-radius:10px;background:#fff;}
   .reflist-company-logo img{object-fit:contain;padding:3px;box-sizing:border-box;}
   .reflist-company-logo-edit-preview{width:44px;height:44px;border-radius:10px;object-fit:contain;background:#fff;padding:3px;box-sizing:border-box;}
+
+  /* Company Directory: logo above, country flag below; a single one is centered on its own */
+  .reflist-leading{flex-shrink:0;width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;align-self:center;}

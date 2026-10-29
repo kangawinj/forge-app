@@ -386,17 +386,16 @@ export function renderRefListItems(){
         ${companyLogoImg ? `<button type="button" class="btn btn-sm reflist-company-logo-remove">Remove photo</button>` : ''}
       </div>
     ` : '';
-    // Company Directory's leading circle is the photo when there is one —
-    // the country flag only steps in as a fallback for a company that
-    // doesn't have a photo yet, rather than both showing side by side.
-    const companyFlagHtml = isCustomers && item.country && !(!isEditing && item.image)
-      ? countryFlagBadgeHtml(item.country)
+    // Company Directory's leading column: the logo on top and the country flag below it; when only one of
+    // the two exists it sits alone, centered in the row.
+    const companyFlagHtml = isCustomers && item.country ? countryFlagBadgeHtml(item.country) : '';
+    const companyLeadingHtml = isCustomers && (companyLogoHtml || companyFlagHtml)
+      ? `<div class="reflist-leading">${companyLogoHtml}${companyFlagHtml}</div>`
       : '';
     return `
     <div class="reflist-item" data-id="${escapeHtml(item.id)}">
-      ${companyLogoHtml}
+      ${companyLeadingHtml}
       ${isDestinations ? countryFlagBadgeHtml(item.name) : ''}
-      ${companyFlagHtml}
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}${isCustomers && !isEditing && (item.abbr || '').trim() ? ' (' + escapeHtml(item.abbr.trim()) + ')' : ''}" ${isEditing ? '' : 'readonly'}>
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
