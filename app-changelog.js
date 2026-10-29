@@ -797,6 +797,7 @@ export const CHANGELOG = [
   { version: "3.0.755", date: "2026-10-30", note: "Company Directory: company logos are now shown in a rounded-square frame (was a circle) and the whole logo is visible instead of being cropped" },
   { version: "3.0.756", date: "2026-10-30", note: "Company Directory: a company with both a logo and a country shows the logo on top and the flag below it; with only one of them, it sits centered" },
   { version: "3.0.757", date: "2026-10-30", note: "Projects by Status (List): new Export Excel button -- downloads the table as it is on screen (same columns, numbering and status groups, plus the Monthly Update columns), with No. and Product Name frozen" },
+  { version: "3.0.758", date: "2026-10-30", note: "Projects by Status Export Excel: the project photo is now placed at the left of the Product Name cell, like the thumbnail on the page" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

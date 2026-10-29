@@ -1787,12 +1787,15 @@ export function renderProjectsList(){
       let no = 0;
       const groups = projectsByStatus.map(g => ({
         label: `${g.label} (${g.count})`,
-        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p)).map(p => [
-          String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
-          p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
-          p.factoryName || '', p.overview || '',
-          ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
-        ])
+        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p)).map(p => ({
+          image: p.image || '',
+          cells: [
+            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
+            p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
+            p.factoryName || '', p.overview || '',
+            ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
+          ]
+        }))
       }));
       const stamp = new Date().toISOString().slice(0, 10);
       exportProjectsStatusTableToExcel({ title: `Projects by Status — ${formatMonthYear(projectsByStatusMonth)}`, headers, widths, groups, fileName: `Projects by Status ${stamp}` });

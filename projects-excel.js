@@ -155,7 +155,29 @@ export async function exportProjectsToExcel(projects){
 
 // Projects by Status (List view) -> Excel, laid out like the page: the Excel-tracker columns, one section row per
 // status, then the Monthly Update columns. `model` is built by projects.js from the very rows the page shows:
-//   { title, headers: [...], widths: [...], groups: [{ label, rows: [[...cells]] }] }
+//   { title, headers: [...], widths: [...], groups: [{ label, rows: [{ cells: [...], image: dataUrl|'' }] }] }
+// The project photo (if any) is placed at the left of the Product Name cell, like the thumbnail on the page.
+// A project photo as a small square JPEG (whole picture visible on white), for the Product Name cell.
+function prepareStatusPhoto(dataUrl, px){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const size = px * 2;
+      const canvas = document.createElement('canvas');
+      canvas.width = size; canvas.height = size;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, size, size);
+      const k = Math.min(size / img.naturalWidth, size / img.naturalHeight);
+      const w = img.naturalWidth * k, h = img.naturalHeight * k;
+      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
+      resolve(canvas.toDataURL('image/jpeg', 0.85));
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
 export async function exportProjectsStatusTableToExcel(model){
   if(!window.ExcelJS){
     alert('Excel export is not available right now (ExcelJS failed to load) -- check your connection and try again.');
@@ -180,6 +202,10 @@ export async function exportProjectsStatusTableToExcel(model){
   ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];     // title + header rows, and No. + Product Name, stay in view
 
   const centered = new Set([0, 2, 4, 5, 6, 7, 8, 9]);        // No., Initiated by, Target Market, Owner, PD, Date, Cooked, Factory
+  const PHOTO_PX = 34;
+  const nameWidth = model.widths[1] || 30;
+  // rough number of text lines a row needs (so the row is tall enough for the photo and its wrapped text)
+  const linesOf = (text, width) => String(text || '').split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / Math.max(6, width * 1.1))), 0);
   for(const g of model.groups){
     const bar = ws.addRow([g.label]);
     ws.mergeCells(bar.number, 1, bar.number, span);
@@ -187,13 +213,26 @@ export async function exportProjectsStatusTableToExcel(model){
     bar.getCell(1).font = { bold: true, size: 11, color: { argb: XL_COLORS.groupText } };
     bar.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
     bar.getCell(1).alignment = { vertical: 'middle', indent: 1 };
-    for(const cells of g.rows){
-      const row = ws.addRow(cells);
+    for(const item of g.rows){
+      const row = ws.addRow(item.cells);
       row.eachCell({ includeEmpty: true }, (cell, col) => {
         cell.border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
         cell.font = { size: 11, color: { argb: XL_COLORS.text }, bold: col === 2 };
-        cell.alignment = { vertical: 'top', wrapText: true, horizontal: centered.has(col - 1) ? 'center' : 'left' };
+        cell.alignment = { vertical: col === 2 ? 'middle' : 'top', wrapText: true, horizontal: centered.has(col - 1) ? 'center' : 'left', indent: col === 2 ? 4 : 0 };
       });
+      const lines = Math.max(...item.cells.map((v, i) => linesOf(v, i === 1 ? nameWidth - 6 : (model.widths[i] || 12))));
+      row.height = Math.max(PHOTO_PX * 0.75 + 8, lines * 14.5 + 6);
+      const img = item.image ? await prepareStatusPhoto(item.image, PHOTO_PX) : null;
+      if(img){
+        const EMU = 9525;
+        const yOff = Math.max(3, Math.round((row.height / 0.75 - PHOTO_PX) / 2));
+        const id = wb.addImage({ base64: img, extension: 'jpeg' });
+        ws.addImage(id, {
+          tl: { nativeCol: 1, nativeColOff: 4 * EMU, nativeRow: row.number - 1, nativeRowOff: yOff * EMU },
+          br: { nativeCol: 1, nativeColOff: (4 + PHOTO_PX) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + PHOTO_PX) * EMU },
+          editAs: 'oneCell'
+        });
+      }
     }
   }
   const buffer = await wb.xlsx.writeBuffer();
