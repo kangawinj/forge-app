@@ -3316,7 +3316,7 @@ export function wireWhereLocationPicker(whereInput, locationSelect){
     const company = companyName ? metaLists.customers.find(c => metaItemName(c) === companyName) : null;
     const locations = company?.locations || [];
     if(locations.length){
-      locationSelect.innerHTML = `<option value="">- Select location -</option>${locations.map(loc => `<option value="${escapeHtml(loc)}">${escapeHtml(loc)}</option>`).join('')}`;
+      locationSelect.innerHTML = `<option value="">- Select location -</option>${locations.map((loc, i) => `<option value="${escapeHtml(loc)}" title="${escapeHtml((company.locationAddresses || [])[i] || '')}">${escapeHtml(loc)}</option>`).join('')}`;
       locationSelect.style.display = '';
       locationSelect.dataset.companyName = companyName;
     }else{

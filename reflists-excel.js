@@ -44,7 +44,7 @@ const SHEETS = [
   {
     title: 'Company Directory', key: 'customers',
     columns: [{ header: 'Name', width: 26 }, { header: 'Abbreviation', width: 14 }, { header: 'Country', width: 16 }, { header: 'Locations', width: 30 }],
-    row: item => [metaItemName(item), item.abbr || '', item.country || '', (item.locations || []).join(', ')]
+    row: item => [metaItemName(item), item.abbr || '', item.country || '', (item.locations || []).map((loc, i) => { const a = (item.locationAddresses || [])[i]; return a ? `${loc} - ${a}` : loc; }).join('; ')]
   },
   {
     title: 'Contact Directory', key: 'salesReps',

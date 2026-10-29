@@ -26,6 +26,8 @@ let refListEditingCustomerImage = null;
 // needs somewhere to hold the in-progress array instead of re-reading it
 // fresh from item.locations, which would just show the last-saved state.
 let refListEditingLocations = [];
+// the address of each location above, same order (item.locationAddresses)
+let refListEditingLocationAddrs = [];
 let refListEditingSteps = [];
 // Evaluation Criteria's optional Sub-items (e.g. "Taste" -> Sweetness/
 // Salty/Sour) — same staged live add/remove list as Steps above, so a
@@ -385,12 +387,24 @@ export function renderRefListItems(){
         ${isCustomers && isEditing ? `
           <div class="reflist-locations-edit">
             <label class="reflist-locations-label">Locations (optional)</label>
-            ${trialStringListHtml(refListEditingLocations, true, 'reflist-location-input', 'company-location', 'e.g. Office, Kitchen, Factory 1')}
+            ${refListEditingLocations.map((name, idx) => `
+              <div class="reflist-location-edit-row">
+                <span class="trial-string-list-num">${idx + 1}.</span>
+                <div class="reflist-location-fields">
+                  <input type="text" class="reflist-location-input" value="${escapeHtml(name)}" placeholder="e.g. Office, Kitchen, Factory 1">
+                  <textarea class="reflist-location-address-input" rows="2" placeholder="Address of this location (optional)">${escapeHtml(refListEditingLocationAddrs[idx] || '')}</textarea>
+                </div>
+                <button type="button" class="icon-btn" data-role="remove-company-location" data-idx="${idx}" title="Remove">${icon('x')}</button>
+              </div>`).join('')}
+            <button type="button" class="btn btn-sm add-row-btn" data-role="add-company-location">+ Add</button>
           </div>
         ` : ''}
         ${isCustomers && !isEditing && (item.locations || []).length ? `
           <div class="reflist-company-locations">
-            ${item.locations.map(loc => `<span class="reflist-location-chip">${escapeHtml(loc)}</span>`).join('')}
+            ${item.locations.map((loc, i) => {
+              const addr = (item.locationAddresses || [])[i] || '';
+              return `<div class="reflist-location-item"><span class="reflist-location-chip">${escapeHtml(loc)}</span>${addr ? `<span class="reflist-location-address">${escapeHtml(addr)}</span>` : ''}</div>`;
+            }).join('')}
           </div>
         ` : ''}
         ${companyLogoEditHtml}
@@ -459,6 +473,7 @@ export function renderRefListItems(){
       const editingItem = metaLists[refListActiveTab].find(x => x.id === refListEditingId);
       refListEditingCustomerImage = editingItem ? (editingItem.image || '') : '';
       refListEditingLocations = editingItem ? [...(editingItem.locations || [])] : [];
+      refListEditingLocationAddrs = editingItem ? (editingItem.locations || []).map((_, i) => (editingItem.locationAddresses || [])[i] || '') : [];
       refListEditingSteps = editingItem ? [...(editingItem.steps || [])] : [];
       refListEditingSubs = editingItem ? [...(editingItem.subs || [])] : [];
       refListEditingNote = editingItem ? (editingItem.note || '') : '';
@@ -482,9 +497,13 @@ export function renderRefListItems(){
     // refListEditingLocations to be fully up to date — its change-event
     // sync (below) can miss the very last keystroke if Enter triggers this
     // save before a location input's blur fires.
-    const newLocations = isCustomers
-      ? [...row.querySelectorAll('.reflist-location-input')].map(el => el.value.trim()).filter(Boolean)
+    const locationPairs = isCustomers
+      ? [...row.querySelectorAll('.reflist-location-edit-row')]
+          .map(r => ({ name: r.querySelector('.reflist-location-input').value.trim(), addr: r.querySelector('.reflist-location-address-input').value.trim() }))
+          .filter(p => p.name)
       : undefined;
+    const newLocations = isCustomers ? locationPairs.map(p => p.name) : undefined;
+    const newLocationAddrs = isCustomers ? locationPairs.map(p => p.addr) : undefined;
     const newContact = isContacts ? {
       contactType: row.querySelector('.reflist-contact-type-input').value.trim(),
       company: row.querySelector('.reflist-contact-company-input').value.trim(),
@@ -512,10 +531,11 @@ export function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isCustomers ? { country: newCountry, abbr: newAbbr, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : (isCookingMethods ? { steps: newSteps, note: newNote } : (isEvaluationCriteria ? { subs: newSubs } : {}))));
+    const extra = isCustomers ? { country: newCountry, abbr: newAbbr, image: refListEditingCustomerImage, locations: newLocations, locationAddresses: newLocationAddrs } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : (isCookingMethods ? { steps: newSteps, note: newNote } : (isEvaluationCriteria ? { subs: newSubs } : {}))));
     const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
     const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
-    const locationsUnchanged = !isCustomers || JSON.stringify(newLocations) === JSON.stringify(item.locations || []);
+    const locationsUnchanged = !isCustomers || (JSON.stringify(newLocations) === JSON.stringify(item.locations || [])
+      && JSON.stringify(newLocationAddrs) === JSON.stringify((item.locations || []).map((_, i) => (item.locationAddresses || [])[i] || '')));
     const stepsUnchanged = !isCookingMethods || JSON.stringify(newSteps) === JSON.stringify(item.steps || []);
     const noteUnchanged = !isCookingMethods || newNote === (item.note || '');
     const subsUnchanged = !isEvaluationCriteria || JSON.stringify(newSubs) === JSON.stringify(item.subs || []);
@@ -551,14 +571,19 @@ export function renderRefListItems(){
   // wiring shape as Trial Results' Test Participants/Cooking Method.
   container.querySelector('[data-role="add-company-location"]')?.addEventListener('click', () => {
     refListEditingLocations.push('');
+    refListEditingLocationAddrs.push('');
     renderRefListItems();
   });
   container.querySelectorAll('[data-role="remove-company-location"]').forEach(btn => {
     btn.addEventListener('click', () => {
       const idx = parseInt(btn.dataset.idx, 10);
       refListEditingLocations.splice(idx, 1);
+      refListEditingLocationAddrs.splice(idx, 1);
       renderRefListItems();
     });
+  });
+  container.querySelectorAll('.reflist-location-address-input').forEach((inp, idx) => {
+    inp.addEventListener('change', () => { refListEditingLocationAddrs[idx] = inp.value.trim(); });
   });
   container.querySelectorAll('.reflist-location-input').forEach((inp, idx) => {
     inp.addEventListener('change', () => { refListEditingLocations[idx] = inp.value.trim(); });
