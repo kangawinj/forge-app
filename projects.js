@@ -1745,7 +1745,7 @@ export function renderProjectsList(){
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
-            ${PROJ_XL_COLS.map(c => `<span class="pl-head">${c.label}</span>`).join('')}
+            ${PROJ_XL_COLS.map(c => `<span class="pl-head${c.sticky ? ' pl-sticky pl-sticky-' + c.sticky : ''}">${c.label}</span>`).join('')}
             ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
@@ -3364,9 +3364,9 @@ function monthsBackFrom(monthStr, count){
 // Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
-  { label: 'No.', w: 46 }, { label: 'Initiated by', w: 96 }, { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 },
-  { label: 'Owner', w: 96 }, { label: 'MHT Owner (PD)', w: 100 }, { label: 'Product Name', w: 230 }, { label: 'Date Received', w: 100 },
-  { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
+  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name' }, { label: 'Initiated by', w: 96 },
+  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Owner', w: 96 }, { label: 'MHT Owner (PD)', w: 100 },
+  { label: 'Date Received', w: 100 }, { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
 ];
 const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);
 function cookedOptionsHtml(selected){
@@ -3700,13 +3700,8 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
           <div class="proj-gallery-list-item proj-xl-row" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
-            <span class="pl-cell pl-center pl-hide-sm pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.initiatedBy || '')}</span>
-            <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
-            <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>
-            <span class="pl-cell pl-center">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
-            <button type="button" class="proj-gallery-list-identity pl-cell pl-name" data-gallery-project-id="${escapeHtml(p.id)}">
+            <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
+            <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
                 ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
                 : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
@@ -3714,6 +3709,11 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
               </span>
             </button>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.initiatedBy || '')}</span>
+            <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
+            <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>
+            <span class="pl-cell pl-center">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
             <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(formatXlDate(p.requestDate))}</span>
             <span class="pl-cell pl-center pl-hide-sm pl-cooked" title="${escapeHtml(COOKED_LABELS[p.cookedStatus]?.title || '')}">${COOKED_LABELS[p.cookedStatus]?.symbol || ''}</span>
             <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.factoryName || '')}</span>

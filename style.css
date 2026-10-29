@@ -6420,3 +6420,13 @@
     .proj-xl-row > .pl-hide-sm{display:none;}
     .proj-xl-header{display:none;}
   }
+
+  /* Excel-style frozen panes: No. and Product Name stay at the left while the rest of the row scrolls sideways */
+  .proj-mu-hscroll .pl-sticky{position:sticky;z-index:2;}
+  .proj-mu-hscroll .proj-xl-header .pl-sticky{z-index:3;}
+  .proj-mu-hscroll .pl-sticky-no{left:0;}
+  .proj-mu-hscroll .pl-sticky-name{left:46px;box-shadow:6px 0 6px -6px rgba(12,24,48,.28);}
+  .proj-mu-hscroll .proj-xl-row > .pl-sticky-name{left:45px;}
+  @media (max-width:700px){
+    .proj-mu-hscroll .pl-sticky{position:static;box-shadow:none;}
+  }
