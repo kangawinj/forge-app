@@ -1789,6 +1789,9 @@ export function renderProjectsList(){
         label: `${g.label} (${g.count})`,
         rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p)).map(p => ({
           image: p.image || '',
+          // photos attached to each month's update (images only), keyed by the column they belong to
+          monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
+            .filter(a => a && typeof a.dataUrl === 'string' && a.dataUrl.startsWith('data:image')).map(a => a.dataUrl)])),
           cells: [
             String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
             p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',

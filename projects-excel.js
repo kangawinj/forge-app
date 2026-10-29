@@ -155,7 +155,8 @@ export async function exportProjectsToExcel(projects){
 
 // Projects by Status (List view) -> Excel, laid out like the page: the Excel-tracker columns, one section row per
 // status, then the Monthly Update columns. `model` is built by projects.js from the very rows the page shows:
-//   { title, headers: [...], widths: [...], groups: [{ label, rows: [{ cells: [...], image: dataUrl|'' }] }] }
+//   { title, headers: [...], widths: [...], groups: [{ label, rows: [{ cells: [...], image: dataUrl|'', monthPhotos: { columnIndex: [dataUrl, ...] } }] }] }
+// monthPhotos are the photos attached to a Monthly Update; they sit as small thumbnails along the bottom of that month's cell.
 // The project photo (if any) is placed at the left of the Product Name cell, like the thumbnail on the page.
 // A project photo as a small square JPEG (whole picture visible on white), for the Product Name cell.
 function prepareStatusPhoto(dataUrl, px){
@@ -203,6 +204,7 @@ export async function exportProjectsStatusTableToExcel(model){
 
   const centered = new Set([0, 2, 4, 5, 6, 7, 8, 9]);        // No., Initiated by, Target Market, Owner, PD, Date, Cooked, Factory
   const PHOTO_PX = 34;
+  const THUMB_PX = 44;
   const nameWidth = model.widths[1] || 30;
   // rough number of text lines a row needs (so the row is tall enough for the photo and its wrapped text)
   const linesOf = (text, width) => String(text || '').split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / Math.max(6, width * 1.1))), 0);
@@ -221,7 +223,9 @@ export async function exportProjectsStatusTableToExcel(model){
         cell.alignment = { vertical: col === 2 ? 'middle' : 'top', wrapText: true, horizontal: centered.has(col - 1) ? 'center' : 'left', indent: col === 2 ? 4 : 0 };
       });
       const lines = Math.max(...item.cells.map((v, i) => linesOf(v, i === 1 ? nameWidth - 6 : (model.widths[i] || 12))));
-      row.height = Math.max(PHOTO_PX * 0.75 + 8, lines * 14.5 + 6);
+      const monthPhotoCols = Object.keys(item.monthPhotos || {}).filter(c => (item.monthPhotos[c] || []).length);
+      // a strip for the month photos is reserved under the text of the tallest cell
+      row.height = Math.max(PHOTO_PX * 0.75 + 8, lines * 14.5 + 6) + (monthPhotoCols.length ? THUMB_PX * 0.75 + 8 : 0);
       const img = item.image ? await prepareStatusPhoto(item.image, PHOTO_PX) : null;
       if(img){
         const EMU = 9525;
@@ -232,6 +236,25 @@ export async function exportProjectsStatusTableToExcel(model){
           br: { nativeCol: 1, nativeColOff: (4 + PHOTO_PX) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + PHOTO_PX) * EMU },
           editAs: 'oneCell'
         });
+      }
+      // photos of the Monthly Updates: a row of small thumbnails at the bottom of each month cell
+      for(const col of monthPhotoCols){
+        const rowPx = row.height / 0.75;
+        const yOff = Math.round(rowPx - THUMB_PX - 4);
+        let k = 0;
+        for(const dataUrl of item.monthPhotos[col].slice(0, 6)){
+          const thumb = await prepareStatusPhoto(dataUrl, THUMB_PX);
+          if(!thumb) continue;
+          const EMU = 9525;
+          const xOff = 4 + k * (THUMB_PX + 4);
+          const id = wb.addImage({ base64: thumb, extension: 'jpeg' });
+          ws.addImage(id, {
+            tl: { nativeCol: Number(col), nativeColOff: xOff * EMU, nativeRow: row.number - 1, nativeRowOff: yOff * EMU },
+            br: { nativeCol: Number(col), nativeColOff: (xOff + THUMB_PX) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + THUMB_PX) * EMU },
+            editAs: 'oneCell'
+          });
+          k++;
+        }
       }
     }
   }
