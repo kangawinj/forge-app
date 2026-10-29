@@ -6439,3 +6439,14 @@
   .reflist-company-locations{flex-direction:column;align-items:flex-start;gap:5px;}
   .reflist-location-item{display:flex;align-items:baseline;flex-wrap:wrap;gap:4px 8px;}
   .reflist-location-address{font-size:12px;color:var(--text-dim);white-space:pre-line;}
+
+  /* Company Directory, editing a company: every block shares the same left and right edges (the width of the
+     Abbreviation box), and each location is a card with its number on the left and the remove button on the right. */
+  .reflist-locations-edit{padding:0;margin-top:10px;}
+  .reflist-location-edit-row{display:grid;grid-template-columns:1fr auto;grid-template-areas:"num remove" "fields fields";
+    align-items:center;gap:6px 8px;margin-bottom:10px;padding:8px 10px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);}
+  .reflist-location-edit-row .trial-string-list-num{grid-area:num;width:auto;text-align:left;padding:0;font-size:12px;font-weight:700;color:var(--text-dim);}
+  .reflist-location-edit-row > .icon-btn{grid-area:remove;justify-self:end;}
+  .reflist-location-edit-row .reflist-location-fields{grid-area:fields;}
+  .reflist-locations-edit .add-row-btn{display:block;width:100%;text-align:center;border-style:dashed;}
+  .reflist-company-logo-edit{justify-content:center;margin-top:10px;}
