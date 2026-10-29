@@ -6473,3 +6473,8 @@
   .presence-pop-name{font-weight:700;color:var(--primary-dark);margin-bottom:4px;}
   .presence-pop-line{line-height:1.4;overflow-wrap:anywhere;}
   .presence-pop-dim{color:var(--text-dim);font-size:12px;}
+
+  /* Projects by Status: "Expand all" sits at the right end of the month header, on the same line as the title */
+  .proj-mu-cell-header-main{flex:1;flex-direction:row;align-items:center;justify-content:space-between;gap:8px;}
+  .proj-mu-cell-header-main > span:first-child{min-width:0;}
+  .proj-mu-expand-all{flex-shrink:0;white-space:nowrap;}
