@@ -1773,10 +1773,6 @@ export function renderProjectsList(){
         </div>
         ${renderResponsibleBarList(projectsByResponsible)}
       </div>
-      <div class="dash-card" style="margin-bottom:16px;">
-        <div class="dash-card-title">Products by stage</div>
-        ${renderBarList(productsByStage)}
-      </div>
       <div class="dash-card" style="margin-bottom:16px;" id="projectGanttChart"></div>
     `;
     renderProjectGanttChart();
