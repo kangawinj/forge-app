@@ -3386,7 +3386,7 @@ function monthsBackFrom(monthStr, count){
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
   { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name' }, { label: 'Initiated by', w: 96 },
-  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Owner', w: 96 }, { label: 'MHT Owner (PD)', w: 100 },
+  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Owner', w: 96 }, { label: 'PD-Owner', w: 100 },
   { label: 'Date Received', w: 100 }, { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
 ];
 const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);

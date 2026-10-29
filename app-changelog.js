@@ -801,6 +801,7 @@ export const CHANGELOG = [
   { version: "3.0.759", date: "2026-10-30", note: "Projects by Status Export Excel: the photos attached to a Monthly Update now come with it -- small thumbnails along the bottom of that month's cell (up to 6 per month)" },
   { version: "3.0.760", date: "2026-10-30", note: "Top bar: click the avatar of anyone who is online to see what they are doing right now -- the page and the name of the item they have open, and whether they are viewing or editing it (recipes, projects, test results), how long, and whether Forge is in a background tab. Only the page and item name are shared, never what is typed. Everyone needs to reload once for their own activity to show" },
   { version: "3.0.761", date: "2026-10-30", note: "Projects by Status (List): the Expand all / Collapse all button of each month column now sits at the right end of the month heading, on the same line as the title" },
+  { version: "3.0.762", date: "2026-10-30", note: "Projects by Status (List): the MHT Owner (PD) column is now called PD-Owner (also in its Excel export)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
