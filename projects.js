@@ -293,6 +293,9 @@ async function importSubmission(){
   setVal('newProjFactoryRep', data.factorySalesRep);
   setVal('newProjResponsible', data.responsiblePerson);
   setVal('newProjFactory', data.factoryName);
+  setVal('newProjInitiatedBy', data.initiatedBy);
+  setVal('newProjCooked', data.cookedStatus);
+  setVal('newProjOverview', data.overview);
   setVal('newProjPortionQty', data.portionWeightQty);
   setVal('newProjPortionUnit', data.portionWeightUnit);
   setVal('newProjPortionPerUnit', data.portionPerUnit);
@@ -994,6 +997,18 @@ function renderNewProjectPanel(){
             <label>Factory</label>
             <input type="text" id="newProjFactory" list="customerDatalist" placeholder="e.g. Rayong Plant 2">
           </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Initiated by</label>
+            <input type="text" id="newProjInitiatedBy" placeholder="e.g. UHQ">
+          </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Cooked</label>
+            <select id="newProjCooked"><option value="">-</option><option value="done">&#9675; Cooked</option><option value="partial">&#9651; Partly</option><option value="none">&ndash; Not yet</option></select>
+          </div>
+        </div>
+        <div class="field" style="margin-top:12px;margin-bottom:0;">
+          <label>Overview</label>
+          <textarea id="newProjOverview" rows="3" placeholder="Short description of the product (shown in the Overview column of Projects by Status)"></textarea>
         </div>
       </div>
       <div class="requirements-box">
@@ -1282,6 +1297,9 @@ function renderNewProjectPanel(){
     p.factorySalesRep = document.getElementById('newProjFactoryRep').value.trim();
     p.responsiblePerson = document.getElementById('newProjResponsible').value.trim();
     p.factoryName = document.getElementById('newProjFactory').value.trim();
+    p.initiatedBy = document.getElementById('newProjInitiatedBy').value.trim();
+    p.cookedStatus = document.getElementById('newProjCooked').value;
+    p.overview = document.getElementById('newProjOverview').value.trim();
     p.portionWeightQty = document.getElementById('newProjPortionQty').value.trim();
     p.portionWeightUnit = document.getElementById('newProjPortionUnit').value.trim();
     p.portionPerUnit = document.getElementById('newProjPortionPerUnit').value.trim();
@@ -1647,7 +1665,7 @@ export function renderProjectsList(){
     if(!searchQuery) return true;
     const haystack = [
       p.name, p.customerName, p.destinationCountry, p.ownerSalesRep,
-      p.factorySalesRep, p.responsiblePerson, p.factoryName,
+      p.factorySalesRep, p.responsiblePerson, p.factoryName, p.initiatedBy, p.overview,
       p.status || PROJECT_STATUSES[0]
     ].filter(Boolean).join(' ').toLowerCase();
     return haystack.includes(searchQuery);
@@ -1726,10 +1744,8 @@ export function renderProjectsList(){
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
-          ${projectsByStatusMonthColumnCount > 0 ? `
-          <div class="proj-gallery-list-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
-            <span></span>
-            <span></span>
+          <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
+            ${PROJ_XL_COLS.map(c => `<span class="pl-head">${c.label}</span>`).join('')}
             ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
@@ -1740,10 +1756,9 @@ export function renderProjectsList(){
               </span>
             `).join('')}
           </div>
-          ` : ''}
           ${renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
           </div></div>
-          ${projectsByStatusMonthColumnCount > 0 ? '<div class="proj-mu-scrollbar-proxy" id="projMuScrollbarProxy" title="Drag to look at earlier months"><div id="projMuScrollbarProxyInner"></div></div>' : ''}
+          <div class="proj-mu-scrollbar-proxy" id="projMuScrollbarProxy" title="Drag to scroll the table sideways"><div id="projMuScrollbarProxyInner"></div></div>
         ` : renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
@@ -2258,6 +2273,18 @@ export function renderProjectsList(){
                     <label>Factory</label>
                     <input type="text" class="proj-factory" list="customerDatalist" ${ro} value="${escapeHtml(p.factoryName)}" placeholder="e.g. Rayong Plant 2">
                   </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Initiated by</label>
+                    <input type="text" class="proj-initiated-by" ${ro} value="${escapeHtml(p.initiatedBy || '')}" placeholder="e.g. UHQ">
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Cooked</label>
+                    <select class="proj-cooked" ${isEditing ? '' : 'disabled'}>${cookedOptionsHtml(p.cookedStatus)}</select>
+                  </div>
+                </div>
+                <div class="field" style="margin-top:12px;margin-bottom:0;">
+                  <label>Overview</label>
+                  <textarea class="proj-overview" rows="3" ${ro} placeholder="Short description of the product (shown in the Overview column of Projects by Status)">${escapeHtml(p.overview || '')}</textarea>
                 </div>
               </div>
               <div class="requirements-box">
@@ -2770,6 +2797,9 @@ export function renderProjectsList(){
         p.factorySalesRep = block.querySelector('.proj-factory-rep').value.trim();
         p.responsiblePerson = block.querySelector('.proj-responsible').value.trim();
         p.factoryName = block.querySelector('.proj-factory').value.trim();
+        p.initiatedBy = block.querySelector('.proj-initiated-by').value.trim();
+        p.cookedStatus = block.querySelector('.proj-cooked').value;
+        p.overview = block.querySelector('.proj-overview').value.trim();
         p.portionWeightQty = block.querySelector('.proj-portion-qty').value.trim();
         p.portionWeightUnit = block.querySelector('.proj-portion-unit').value.trim();
         p.portionPerUnit = block.querySelector('.proj-portion-per-unit').value.trim();
@@ -3331,32 +3361,47 @@ function monthsBackFrom(monthStr, count){
 // count of 0 (the whole declaration goes invalid when it does, not just
 // that term), and 0 is this feature's own default (see
 // projectsByStatusMonthColumnCount's own comment).
+// Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
+// Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
+const PROJ_XL_COLS = [
+  { label: 'No.', w: 46 }, { label: 'Initiated by', w: 96 }, { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 },
+  { label: 'Owner', w: 96 }, { label: 'MHT Owner (PD)', w: 100 }, { label: 'Product Name', w: 230 }, { label: 'Date Received', w: 100 },
+  { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
+];
+const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);
+function cookedOptionsHtml(selected){
+  return [['', '-'], ['done', '\u25CB Cooked'], ['partial', '\u25B3 Partly'], ['none', '\u2013 Not yet']]
+    .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
+const COOKED_LABELS = {
+  done:    { symbol: '\u25CB', title: 'Cooked' },
+  partial: { symbol: '\u25B3', title: 'Partly cooked' },
+  none:    { symbol: '\u2013', title: 'Not cooked yet' }
+};
+let projXlRowNo = 0;
+function formatXlDate(iso){
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso || '');
+  return m ? `${m[3]}/${m[2]}/${m[1]}` : (iso || '');
+}
 // Month columns that are actually rendered: the ones the admin chose to show (projectsByStatusMonthColumnCount)
 // plus the older months up to the maximum, which sit past the right edge so the scrollbar (or a drag) reveals them.
 function projMuRenderedCount(){
   return projectsByStatusMonthColumnCount > 0 ? PROJ_MU_MAX_MONTH_COLUMNS : 0;
 }
-// A month column is as wide as the room left after the Project/PD columns divided by the chosen number of
-// columns (never under 240px) -- measured against the scroll box (see .proj-mu-hscroll's container-type).
+// A month column is at least PROJ_MU_MONTH_COL_MIN_PX wide, or as wide as the room left of the fixed columns allows.
 function projMuMonthColWidth(){
   const v = Math.max(1, projectsByStatusMonthColumnCount);
-  return `max(${PROJ_MU_MONTH_COL_MIN_PX}px, calc((100cqw - ${PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX}px - ${(v + 1) * 10}px) / ${v}))`;
+  return `max(${PROJ_MU_MONTH_COL_MIN_PX}px, calc((100cqw - ${PROJ_XL_FIXED_PX}px) / ${v}))`;
 }
 function projMuListGridColumns(){
   const n = projMuRenderedCount();
-  // With month columns showing, Project/PD are fixed-width (they stay pinned on the left while the month
-  // columns scroll sideways -- see .proj-mu-hscroll).
-  return n > 0
-    ? `${PROJ_MU_NAME_COL_PX}px ${PROJ_MU_PD_COL_PX}px repeat(${n}, ${projMuMonthColWidth()})`
-    : 'minmax(140px,1fr) 110px';
+  return PROJ_XL_COLS.map(c => `${c.w}px`).join(' ') + (n > 0 ? ` repeat(${n}, ${projMuMonthColWidth()})` : '');
 }
-const PROJ_MU_NAME_COL_PX = 220;
-const PROJ_MU_PD_COL_PX = 110;
-const PROJ_MU_MONTH_COL_MIN_PX = 240;
-// Total width of the list (columns + their 10px grid gaps); anything wider than the box scrolls sideways.
+const PROJ_MU_MONTH_COL_MIN_PX = 280;
+// Total width of the list; anything wider than the box scrolls sideways.
 function projMuListMinWidth(){
   const n = projMuRenderedCount();
-  return n > 0 ? `calc(${PROJ_MU_NAME_COL_PX + PROJ_MU_PD_COL_PX}px + ${n} * ${projMuMonthColWidth()} + ${(n + 1) * 10}px)` : '0px';
+  return n > 0 ? `calc(${PROJ_XL_FIXED_PX}px + ${n} * ${projMuMonthColWidth()})` : `${PROJ_XL_FIXED_PX}px`;
 }
 // Stand-in horizontal scrollbar pinned to the bottom of the screen (the real one sits under the whole project
 // list, out of reach), kept in sync with the list so dragging either moves both; the scroll position survives
@@ -3652,19 +3697,27 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
     const months = monthsBackFrom(selectedMonth, projMuRenderedCount());
     const gridCols = projMuListGridColumns();
     return `
-      <div class="proj-gallery-list" style="margin-bottom:6px;">
+      <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
-            <button type="button" class="proj-gallery-list-identity" data-gallery-project-id="${escapeHtml(p.id)}">
+          <div class="proj-gallery-list-item proj-xl-row" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
+            <span class="pl-cell pl-center pl-hide-sm pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.initiatedBy || '')}</span>
+            <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
+            <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>
+            <span class="pl-cell pl-center">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
+            <button type="button" class="proj-gallery-list-identity pl-cell pl-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
                 ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
                 : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
               <span class="proj-gallery-list-name-wrap">
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
-                <span class="proj-gallery-list-details">${escapeHtml([p.destinationCountry, p.customerName, p.ownerSalesRep].filter(Boolean).join(' · ') || '-')}</span>
               </span>
             </button>
-            <span class="proj-gallery-list-pd">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(formatXlDate(p.requestDate))}</span>
+            <span class="pl-cell pl-center pl-hide-sm pl-cooked" title="${escapeHtml(COOKED_LABELS[p.cookedStatus]?.title || '')}">${COOKED_LABELS[p.cookedStatus]?.symbol || ''}</span>
+            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.factoryName || '')}</span>
+            <span class="pl-cell pl-overview pl-hide-sm">${escapeHtml(p.overview || '')}</span>
             ${months.map((m, i) => renderProjMuCell(projectMonthUpdateInfo(p, m), i === 0 ? 'selected' : 'previous', p.id, m)).join('')}
           </div>
         `).join('')}
@@ -3686,6 +3739,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
 }
 function renderStatusBarList(groups, viewMode, selectedMonth){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
+  projXlRowNo = 0;
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;

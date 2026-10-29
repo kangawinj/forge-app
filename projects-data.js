@@ -208,6 +208,11 @@ export function blankProject(){
     factorySalesRep: "",
     responsiblePerson: "",
     factoryName: "",
+    // Excel-tracker style columns of Projects by Status (List): who initiated it, whether the sample has been cooked,
+    // and a short description of the product
+    initiatedBy: "",
+    cookedStatus: "",          // "" | "done" | "partial" | "none"
+    overview: "",
     flavors: [],
     requirements: blankRequirements(),
     portionWeightQty: "",
@@ -423,6 +428,7 @@ export const PROJECT_DIFF_FIELDS = {
   name: 'Project Name', status: 'Status', requestDate: 'Request Date', startDate: 'Start Date', targetEndDate: 'Target / End Date',
   customerName: 'Customer Name', destinationCountry: 'Destination Country', ownerSalesRep: 'Project Owner', factorySalesRep: 'Factory Sales Rep',
   responsiblePerson: 'Responsible Person (PD)', factoryName: 'Factory',
+  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview',
   portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
   innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
   outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',

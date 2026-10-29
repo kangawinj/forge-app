@@ -6003,21 +6003,11 @@
 .proj-mu-quick-meta{font-size:11px;color:var(--text-dim);text-align:right;line-height:1.4;}
 .proj-mu-quick-meta b{font-weight:600;color:var(--text);}
 
-/* Projects by Status' List view scrolls sideways once there are more month
-   columns than fit (per request) -- header + every status group live in one
-   scroll box so they move together, and the Project/PD columns stay pinned
-   on the left so you still know whose row you're reading. Fixed 220px/110px
-   columns (see projMuListGridColumns) are what the 230px offset below
-   assumes (220 + 10px gap). */
+/* Projects by Status' List view scrolls sideways (the Excel-style columns plus the month columns) --
+   header + every status group live in one scroll box so they move together. */
 .proj-mu-hscroll{overflow-x:auto;}
-.proj-mu-hscroll .proj-gallery-list-identity,
-.proj-mu-hscroll .proj-gallery-list-header > span:nth-child(1){position:sticky;left:0;z-index:2;background:var(--panel);}
-.proj-mu-hscroll .proj-gallery-list-pd,
-.proj-mu-hscroll .proj-gallery-list-header > span:nth-child(2){position:sticky;left:230px;z-index:2;background:var(--panel);box-shadow:10px 0 0 var(--panel);}
 @media (max-width:700px){
   .proj-mu-hscroll-inner{min-width:0 !important;}
-  .proj-mu-hscroll .proj-gallery-list-identity,
-  .proj-mu-hscroll .proj-gallery-list-pd{position:static;box-shadow:none;}
 }
 
 /* Reference Lists' search box -- sits between Export Excel and the add row. */
@@ -6408,3 +6398,25 @@
   .proj-mu-lang{margin-bottom:10px;}
   .proj-mu-lang-label{display:block;font-size:12px;font-weight:600;color:var(--text-dim);margin-bottom:3px;}
   .proj-mu-lang textarea{width:100%;min-height:72px;}
+
+  /* Projects by Status (List): Excel-tracker look -- bordered cells, light header, short fields centered */
+  .proj-xl-header{gap:0;margin-bottom:0;}
+  .proj-xl-header .pl-head{background:#bfeff3;border:1px solid #9bc9cf;color:#0c2b30;font-size:11px;font-weight:700;text-align:center;
+    padding:8px 4px;display:flex;align-items:center;justify-content:center;line-height:1.2;}
+  .proj-xl-header .proj-mu-cell-header{background:#bfeff3;border:1px solid #9bc9cf;color:#0c2b30;padding:6px 8px;text-transform:none;letter-spacing:0;}
+  .proj-xl-row{gap:0;align-items:stretch;margin:0;}
+  .proj-xl-row > .pl-cell{border:1px solid var(--border);margin:-1px 0 0 -1px;padding:6px 6px;font-size:12px;color:var(--text);background:#fff;
+    display:flex;align-items:center;min-width:0;overflow-wrap:anywhere;line-height:1.35;}
+  .proj-xl-row > .pl-center{justify-content:center;text-align:center;}
+  .proj-xl-row > .pl-no{font-weight:600;color:var(--text-dim);}
+  .proj-xl-row > .pl-cooked{font-size:15px;}
+  .proj-xl-row > .pl-overview{align-items:flex-start;white-space:pre-line;font-size:11px;}
+  .proj-xl-row > .pl-name{font-weight:700;gap:8px;text-align:left;}
+  .proj-xl-row > .pl-name .proj-gallery-list-thumb{width:30px;height:30px;border-width:2px;}
+  .proj-xl-row > .pl-name .proj-gallery-list-name{white-space:normal;font-size:12px;font-weight:700;}
+  .proj-xl-row > .proj-mu-cell{margin:3px 6px;}
+  .proj-gallery-list.proj-xl-list{gap:0;}
+  @media (max-width:700px){
+    .proj-xl-row > .pl-hide-sm{display:none;}
+    .proj-xl-header{display:none;}
+  }
