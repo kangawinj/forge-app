@@ -379,9 +379,9 @@ export function renderRefListItems(){
       ${isDestinations ? countryFlagBadgeHtml(item.name) : ''}
       ${companyFlagHtml}
       <div class="reflist-item-main">
-        <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
+        <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}${isCustomers && !isEditing && (item.abbr || '').trim() ? ' (' + escapeHtml(item.abbr.trim()) + ')' : ''}" ${isEditing ? '' : 'readonly'}>
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
-        ${isCustomers ? `<input type="text" class="reflist-item-abbr-input" placeholder="Abbreviation (e.g. UHQ)" maxlength="20" value="${escapeHtml(item.abbr || '')}" ${isEditing ? '' : 'readonly'} title="Short name of the company -- offered in Projects as the Initiated by choices">` : ''}
+        ${isCustomers && isEditing ? `<input type="text" class="reflist-item-abbr-input" placeholder="Abbreviation (e.g. UHQ)" maxlength="20" value="${escapeHtml(item.abbr || '')}" ${isEditing ? '' : 'readonly'} title="Short name of the company -- offered in Projects as the Initiated by choices">` : ''}
         ${isCustomers && isEditing ? `
           <div class="reflist-locations-edit">
             <label class="reflist-locations-label">Locations (optional)</label>

@@ -790,6 +790,7 @@ export const CHANGELOG = [
   { version: "3.0.748", date: "2026-10-29", note: "Projects: removed the \"Products by stage\" card from the Projects page (the home dashboard keeps its own pipeline view)" },
   { version: "3.0.749", date: "2026-10-29", note: "Home dashboard: removed the Product Pipeline card" },
   { version: "3.0.750", date: "2026-10-30", note: "Company Directory: new Abbreviation field for every company (e.g. UHQ). Projects > Initiated by now suggests those abbreviations (hover a value in Projects by Status to see the full company name); typing any other text still works. The abbreviation is also in the Reference Lists Excel export" },
+  { version: "3.0.751", date: "2026-10-30", note: "Company Directory: the abbreviation is shown in brackets after the full company name (e.g. Umios asia oceania co. ltd (UMA)); companies without one show nothing extra, and the Abbreviation box only appears while editing" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
