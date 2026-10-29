@@ -793,6 +793,7 @@ export const CHANGELOG = [
   { version: "3.0.751", date: "2026-10-30", note: "Company Directory: the abbreviation is shown in brackets after the full company name (e.g. Umios asia oceania co. ltd (UMA)); companies without one show nothing extra, and the Abbreviation box only appears while editing" },
   { version: "3.0.752", date: "2026-10-30", note: "Company Directory: every location can now have its own address (a box under each location while editing; shown beside the location name otherwise, and as a hint when picking a location in Projects). The Reference Lists Excel export lists it as \"Location - address\"" },
   { version: "3.0.753", date: "2026-10-30", note: "Company Directory (editing a company): symmetric layout -- all boxes share the same left and right edges, each location is a card with its number on the left and the remove button on the right, the + Add button spans the full width and the photo controls are centered" },
+  { version: "3.0.754", date: "2026-10-30", note: "Company Directory: click a company logo to see it enlarged (click anywhere or press Esc to close)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

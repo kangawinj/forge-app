@@ -244,6 +244,23 @@ export function mountRefListsView(){
 // change" check in saveEdit all stay in sync with each other.
 const CONTACT_EXTRA_FIELDS = ['contactType', 'company', 'country', 'jobTitle', 'department', 'email', 'phone'];
 
+function openLogoLightbox(src, caption){
+  document.getElementById('logoLightbox')?.remove();
+  const box = document.createElement('div');
+  box.id = 'logoLightbox';
+  box.className = 'logo-lightbox';
+  box.innerHTML = `
+    <div class="logo-lightbox-card">
+      <img src="${escapeHtml(src)}" alt="${escapeHtml(caption)}">
+      ${caption ? `<div class="logo-lightbox-caption">${escapeHtml(caption)}</div>` : ''}
+    </div>`;
+  const close = () => { box.remove(); document.removeEventListener('keydown', onKey); };
+  const onKey = e => { if(e.key === 'Escape') close(); };
+  box.addEventListener('click', close);
+  document.addEventListener('keydown', onKey);
+  document.body.appendChild(box);
+}
+
 export function renderRefListItems(){
   const container = document.getElementById('refListItems');
   if(!container) return;
@@ -430,6 +447,16 @@ export function renderRefListItems(){
       nameInput.addEventListener('input', () => { badge.textContent = productTypeCode(nameInput.value) || '—'; });
     });
   }
+
+  // Click a company's logo to see it large (click anywhere or press Esc to close)
+  container.querySelectorAll('.reflist-company-logo img, .reflist-company-logo-edit-preview').forEach(img => {
+    img.style.cursor = 'zoom-in';
+    img.addEventListener('click', () => {
+      const id = img.closest('.reflist-item')?.dataset.id;
+      const company = metaLists.customers.find(c => c.id === id);
+      openLogoLightbox(img.src, company ? metaItemName(company) : '');
+    });
+  });
 
   container.querySelectorAll('.reflist-flag-img').forEach(img => {
     img.addEventListener('error', () => {

@@ -6450,3 +6450,9 @@
   .reflist-location-edit-row .reflist-location-fields{grid-area:fields;}
   .reflist-locations-edit .add-row-btn{display:block;width:100%;text-align:center;border-style:dashed;}
   .reflist-company-logo-edit{justify-content:center;margin-top:10px;}
+
+  /* Company logo shown large (Company Directory) */
+  .logo-lightbox{position:fixed;inset:0;z-index:2000;background:rgba(12,24,48,.72);display:flex;align-items:center;justify-content:center;cursor:zoom-out;padding:24px;}
+  .logo-lightbox-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:min(90vw,520px);text-align:center;}
+  .logo-lightbox-card img{display:block;margin:0 auto;max-width:100%;max-height:min(70vh,420px);min-width:200px;object-fit:contain;}
+  .logo-lightbox-caption{margin-top:12px;font-weight:600;color:var(--text);}
