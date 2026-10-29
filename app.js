@@ -5,6 +5,7 @@
 import { initializeApp, deleteApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
 import { APP_VERSION, renderFooter } from './app-changelog.js';
 import { icon } from './app-icons.js';
+import { computeMyActivity } from './app-presence-activity.js';
 // Re-exported: `icon` used to be declared directly in this file, so every
 // other module in the app already imports it from './app.js' -- moving it
 // to app-icons.js must not change that public surface.
@@ -1658,18 +1659,33 @@ function attachMyProfileListener(){
 // becomes visible again (a backgrounded tab's timers can be throttled or
 // paused by the browser, so a tab switch back is worth an immediate
 // refresh rather than waiting for the next scheduled tick).
+// What this person is doing (page, open item, viewing / editing) travels with every heartbeat; `activitySince` is when
+// it last changed, so the popup can say "for 3 min". A cheap local check every few seconds sends it right away on a change.
+let lastActivityKey = '';
+let activitySince = Date.now();
 function sendPresenceHeartbeat(){
   if(!currentUser) return;
-  setDoc(doc(presenceCol, currentUser.uid), { email: currentUser.email, lastSeen: Date.now() }, { merge: true })
+  const activity = computeMyActivity();
+  const key = JSON.stringify(activity);
+  if(key !== lastActivityKey){ lastActivityKey = key; activitySince = Date.now(); }
+  setDoc(doc(presenceCol, currentUser.uid), { email: currentUser.email, lastSeen: Date.now(), activity, activitySince }, { merge: true })
     .catch(err => console.error('Forge: presence heartbeat failed', err));
+}
+let presenceActivityInterval = null;
+function checkPresenceActivityChange(){
+  if(!currentUser) return;
+  if(JSON.stringify(computeMyActivity()) !== lastActivityKey) sendPresenceHeartbeat();
 }
 function attachPresenceListeners(){
   sendPresenceHeartbeat();
   if(!presenceHeartbeatInterval) presenceHeartbeatInterval = setInterval(sendPresenceHeartbeat, PRESENCE_HEARTBEAT_MS);
+  if(!presenceActivityInterval) presenceActivityInterval = setInterval(checkPresenceActivityChange, 4000);
   if(!presenceRenderInterval) presenceRenderInterval = setInterval(renderOnlineUsers, 15000);
   unsubscribePresence = onSnapshot(presenceCol, snap => {
     presenceList = snap.docs.map(d => ({ uid: d.id, ...d.data() }));
     renderOnlineUsers();
+    const open = document.getElementById('presencePopup');
+    if(open && presencePopupUid) open.innerHTML = presencePopupHtml(presencePopupUid);
   }, err => console.error('Forge: presence listener error', err));
   unsubscribeAllUserProfiles = onSnapshot(userProfilesCol, snap => {
     const next = {};
@@ -1696,7 +1712,7 @@ function renderOnlineUsers(){
     const { name, initials } = accountDisplayFromEmail(p.email);
     const displayName = profile.displayName || name;
     return `
-      <div class="navbar-online-avatar" title="${escapeHtml(displayName)} — Online">
+      <div class="navbar-online-avatar navbar-online-clickable" data-uid="${escapeHtml(p.uid)}" title="${escapeHtml(displayName)} — click to see what they are doing">
         ${profile.photoImage
           ? `<img src="${escapeHtml(profile.photoImage)}" alt="">`
           : `<span>${escapeHtml(initials)}</span>`}
@@ -1706,8 +1722,56 @@ function renderOnlineUsers(){
   }).join('') + (extra > 0 ? `<div class="navbar-online-avatar navbar-online-more" title="${extra} more online">+${extra}</div>` : '');
 }
 document.addEventListener('visibilitychange', () => {
-  if(document.visibilityState === 'visible') sendPresenceHeartbeat();
+  sendPresenceHeartbeat();          // also tells the others when this tab goes to the background
 });
+
+// Click an avatar in the top bar -> a small popup with what that person is doing right now.
+let presencePopupUid = null;
+function ago(ms){
+  const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+  if(s < 60) return 'just now';
+  const m = Math.round(s / 60);
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)} h ${m % 60} min`;
+}
+function presencePopupHtml(uid){
+  const p = presenceList.find(x => x.uid === uid);
+  if(!p || (p.lastSeen || 0) <= Date.now() - PRESENCE_STALE_MS) return '<div class="presence-pop-name">Offline</div><div class="presence-pop-line">This person is not online any more.</div>';
+  const profile = allUserProfiles[uid] || {};
+  const { name } = accountDisplayFromEmail(p.email);
+  const a = p.activity;
+  const who = `<div class="presence-pop-name">${escapeHtml(profile.displayName || name)}</div>`;
+  if(!a) return who + '<div class="presence-pop-line">Online (no activity details yet -- they need to reload Forge).</div>';
+  const since = p.activitySince ? ` <span class="presence-pop-dim">&middot; ${escapeHtml(ago(p.activitySince))}</span>` : '';
+  const away = a.away ? '<div class="presence-pop-line presence-pop-dim">Forge is open in a background tab.</div>' : '';
+  const what = a.item
+    ? `<div class="presence-pop-line"><b>${a.mode === 'editing' ? 'Editing' : 'Viewing'}</b> ${escapeHtml(a.page)}: ${escapeHtml(a.item)}${since}</div>`
+    : `<div class="presence-pop-line"><b>${a.page === 'Home' ? 'On the' : 'In'}</b> ${escapeHtml(a.page)}${since}</div>`;
+  return who + what + away;
+}
+function closePresencePopup(){
+  document.getElementById('presencePopup')?.remove();
+  presencePopupUid = null;
+}
+function openPresencePopup(avatarEl){
+  const uid = avatarEl.dataset.uid;
+  if(presencePopupUid === uid){ closePresencePopup(); return; }
+  closePresencePopup();
+  presencePopupUid = uid;
+  const pop = document.createElement('div');
+  pop.id = 'presencePopup';
+  pop.className = 'presence-pop';
+  pop.innerHTML = presencePopupHtml(uid);
+  document.body.appendChild(pop);
+  const r = avatarEl.getBoundingClientRect();
+  pop.style.top = `${Math.round(r.bottom + 8)}px`;
+  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, Math.round(r.left + r.width / 2 - pop.offsetWidth / 2)))}px`;
+}
+document.addEventListener('click', e => {
+  const avatar = e.target.closest?.('.navbar-online-clickable');
+  if(avatar){ openPresencePopup(avatar); return; }
+  if(!e.target.closest?.('#presencePopup')) closePresencePopup();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closePresencePopup(); });
 
 // Admin only: the scheduled backup script on the admin's PC (scripts/Backup-Forge.ps1) records every run in
 // appSettings/backupStatus -- warn here when backups have stopped, failed, or found fewer records than last time,
@@ -1827,6 +1891,7 @@ onAuthStateChanged(auth, user => {
     if(unsubscribePresence){ unsubscribePresence(); unsubscribePresence = null; }
     if(unsubscribeAllUserProfiles){ unsubscribeAllUserProfiles(); unsubscribeAllUserProfiles = null; }
     if(presenceHeartbeatInterval){ clearInterval(presenceHeartbeatInterval); presenceHeartbeatInterval = null; }
+    if(presenceActivityInterval){ clearInterval(presenceActivityInterval); presenceActivityInterval = null; }
     if(presenceRenderInterval){ clearInterval(presenceRenderInterval); presenceRenderInterval = null; }
     presenceList = [];
     allUserProfiles = {};

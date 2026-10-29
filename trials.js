@@ -1395,4 +1395,19 @@ export function resetTrialsState(){
   trials = [];
 }
 
+// For the "what is this person doing" popup on the top-bar avatars: the test being edited, else the last one expanded.
+export function presenceTrialActivity(){
+  const find = id => trials.find(x => x.id === id);
+  if(trialEditingId){
+    const t = find(trialEditingId);
+    if(t) return { item: trialLabel(t), mode: 'editing' };
+  }
+  const ids = [...trialExpandedIds];
+  for(let i = ids.length - 1; i >= 0; i--){
+    const t = find(ids[i]);
+    if(t) return { item: trialLabel(t), mode: 'viewing' };
+  }
+  return null;
+}
+
 export { trials, trialExpandedIds, unsubscribeTrials, attachTrialsListener };

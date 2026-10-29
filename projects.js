@@ -3850,6 +3850,21 @@ export function closeProjectWhoMenu(){
 // app-dashboard.js already import these from projects.js and that public
 // surface shouldn't change just because the split moved where each name
 // is actually declared.
+// For the "what is this person doing" popup on the top-bar avatars: the project being edited, else the last one expanded.
+export function presenceProjectActivity(){
+  const find = id => projects.find(x => x.id === id);
+  if(projectEditingId){
+    const p = find(projectEditingId);
+    if(p) return { item: p.name || 'Untitled project', mode: 'editing' };
+  }
+  const ids = [...projectExpandedIds];
+  for(let i = ids.length - 1; i >= 0; i--){
+    const p = find(ids[i]);
+    if(p) return { item: p.name || 'Untitled project', mode: 'viewing' };
+  }
+  return null;
+}
+
 export {
   projectExpandedIds, unsubscribeProjects, openProjectFilterMenuKey, activeProjScrollbarProxySync,
   PROJECT_STATUS_LABELS, getRequirements, projectWhoMenuOpen, migrateMonthlyUpdate, muPlanSummaryLine,

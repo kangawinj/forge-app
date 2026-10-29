@@ -799,6 +799,7 @@ export const CHANGELOG = [
   { version: "3.0.757", date: "2026-10-30", note: "Projects by Status (List): new Export Excel button -- downloads the table as it is on screen (same columns, numbering and status groups, plus the Monthly Update columns), with No. and Product Name frozen" },
   { version: "3.0.758", date: "2026-10-30", note: "Projects by Status Export Excel: the project photo is now placed at the left of the Product Name cell, like the thumbnail on the page" },
   { version: "3.0.759", date: "2026-10-30", note: "Projects by Status Export Excel: the photos attached to a Monthly Update now come with it -- small thumbnails along the bottom of that month's cell (up to 6 per month)" },
+  { version: "3.0.760", date: "2026-10-30", note: "Top bar: click the avatar of anyone who is online to see what they are doing right now -- the page and the name of the item they have open, and whether they are viewing or editing it (recipes, projects, test results), how long, and whether Forge is in a background tab. Only the page and item name are shared, never what is typed. Everyone needs to reload once for their own activity to show" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

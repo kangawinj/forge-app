@@ -6464,3 +6464,12 @@
 
   /* Company Directory: logo above, country flag below; a single one is centered on its own */
   .reflist-leading{flex-shrink:0;width:44px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;align-self:center;}
+
+  /* Top-bar avatars are clickable: a small popup says what that person is doing */
+  .navbar-online-clickable{cursor:pointer;}
+  .navbar-online-clickable:hover{filter:brightness(1.08);}
+  .presence-pop{position:fixed;z-index:1500;min-width:200px;max-width:320px;background:#fff;border:1px solid var(--border);
+    border-radius:12px;box-shadow:0 10px 30px rgba(12,24,48,.22);padding:10px 14px;font-size:13px;color:var(--text);}
+  .presence-pop-name{font-weight:700;color:var(--primary-dark);margin-bottom:4px;}
+  .presence-pop-line{line-height:1.4;overflow-wrap:anywhere;}
+  .presence-pop-dim{color:var(--text-dim);font-size:12px;}
