@@ -618,11 +618,6 @@ export function renderDashboardHome(){
         ${activeProjectsTableHtml}
       </div>
 
-      <div class="dash-card" style="margin-bottom:14px;">
-        <div class="dash-card-title">Product Pipeline</div>
-        ${pipelineHtml}
-      </div>
-
       <div class="dash-metrics">
         ${metrics.map(m => `
           <div class="dash-metric">
