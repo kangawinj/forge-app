@@ -152,3 +152,58 @@ export async function exportProjectsToExcel(projects){
   a.click();
   URL.revokeObjectURL(url);
 }
+
+// Projects by Status (List view) -> Excel, laid out like the page: the Excel-tracker columns, one section row per
+// status, then the Monthly Update columns. `model` is built by projects.js from the very rows the page shows:
+//   { title, headers: [...], widths: [...], groups: [{ label, rows: [[...cells]] }] }
+export async function exportProjectsStatusTableToExcel(model){
+  if(!window.ExcelJS){
+    alert('Excel export is not available right now (ExcelJS failed to load) -- check your connection and try again.');
+    return;
+  }
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+  const ws = wb.addWorksheet('Projects by Status');
+  ws.columns = model.widths.map(w => ({ width: w }));
+  const span = model.headers.length;
+  addSectionTitleBar(ws, model.title, span);
+
+  const head = ws.addRow(model.headers);
+  head.height = 32;
+  head.eachCell(cell => {
+    cell.font = { bold: true, size: 11, color: { argb: xlArgb('#0c2b30') } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: xlArgb('#bfeff3') } };
+    cell.border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
+    cell.alignment = { vertical: 'middle', horizontal: 'center', wrapText: true };
+  });
+  ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];     // title + header rows, and No. + Product Name, stay in view
+
+  const centered = new Set([0, 2, 4, 5, 6, 7, 8, 9]);        // No., Initiated by, Target Market, Owner, PD, Date, Cooked, Factory
+  for(const g of model.groups){
+    const bar = ws.addRow([g.label]);
+    ws.mergeCells(bar.number, 1, bar.number, span);
+    bar.height = 22;
+    bar.getCell(1).font = { bold: true, size: 11, color: { argb: XL_COLORS.groupText } };
+    bar.getCell(1).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: XL_COLORS.groupFill } };
+    bar.getCell(1).alignment = { vertical: 'middle', indent: 1 };
+    for(const cells of g.rows){
+      const row = ws.addRow(cells);
+      row.eachCell({ includeEmpty: true }, (cell, col) => {
+        cell.border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
+        cell.font = { size: 11, color: { argb: XL_COLORS.text }, bold: col === 2 };
+        cell.alignment = { vertical: 'top', wrapText: true, horizontal: centered.has(col - 1) ? 'center' : 'left' };
+      });
+    }
+  }
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (model.fileName || 'Projects by Status').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}

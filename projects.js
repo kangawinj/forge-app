@@ -28,7 +28,7 @@ import {
   scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate,
   blankMonthlySummary, migrateMonthlySummary, composeMonthlyText, monthlyLangsOf, monthlyLangTextareasHtml, readMonthlyLangs
 } from './projects-data.js';
-import { exportProjectsToExcel } from './projects-excel.js';
+import { exportProjectsToExcel, exportProjectsStatusTableToExcel } from './projects-excel.js';
 import {
   attachPendingSubmissionsListener, toggleSharePanel, renderSharePanel,
   togglePendingSubmissionsPanel, reviewingSubmission, readSubmissionReviewForm,
@@ -1742,6 +1742,7 @@ export function renderProjectsList(){
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}" title="${isCurrentUserAdmin() ? 'Saved as the starting month for everyone (pick the current month to follow the calendar again)' : 'Your own view only — resets to the starting month on refresh'}">
             ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
+            <button type="button" class="btn btn-sm" id="btnExportProjectsStatusExcel" style="margin-left:auto;" title="Download this table (all status groups and month columns) as an Excel file">${icon('download', 14)} Export Excel</button>
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
@@ -1778,6 +1779,24 @@ export function renderProjectsList(){
     renderProjectGanttChart();
     wireProjectsByStatusCardClicks(dashboardContainer);
     wireProjMuScrollbar(dashboardContainer);
+    // Export Excel: the same rows, in the same order and numbering, as the table on the page
+    dashboardContainer.querySelector('#btnExportProjectsStatusExcel')?.addEventListener('click', () => {
+      const months = monthsBackFrom(projectsByStatusMonth, projMuRenderedCount());
+      const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)}`)];
+      const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
+      let no = 0;
+      const groups = projectsByStatus.map(g => ({
+        label: `${g.label} (${g.count})`,
+        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p)).map(p => [
+          String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
+          p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
+          p.factoryName || '', p.overview || '',
+          ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
+        ])
+      }));
+      const stamp = new Date().toISOString().slice(0, 10);
+      exportProjectsStatusTableToExcel({ title: `Projects by Status — ${formatMonthYear(projectsByStatusMonth)}`, headers, widths, groups, fileName: `Projects by Status ${stamp}` });
+    });
   }
 
   if(sorted.length === 0){
