@@ -999,7 +999,7 @@ function renderNewProjectPanel(){
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Initiated by</label>
-            <input type="text" id="newProjInitiatedBy" placeholder="e.g. UHQ">
+            <input type="text" id="newProjInitiatedBy" list="initiatedByDatalist" placeholder="Pick a company abbreviation, e.g. UHQ">
           </div>
           <div class="field" style="margin-bottom:0;">
             <label>Cooked</label>
@@ -2271,7 +2271,7 @@ export function renderProjectsList(){
                   </div>
                   <div class="field" style="margin-bottom:0;">
                     <label>Initiated by</label>
-                    <input type="text" class="proj-initiated-by" ${ro} value="${escapeHtml(p.initiatedBy || '')}" placeholder="e.g. UHQ">
+                    <input type="text" class="proj-initiated-by" list="initiatedByDatalist" ${ro} value="${escapeHtml(p.initiatedBy || '')}" placeholder="Pick a company abbreviation, e.g. UHQ">
                   </div>
                   <div class="field" style="margin-bottom:0;">
                     <label>Cooked</label>
@@ -3365,6 +3365,13 @@ const PROJ_XL_COLS = [
   { label: 'Date Received', w: 100 }, { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
 ];
 const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);
+// the company a short name stands for (from Reference Lists > Company Directory), for the tooltip
+function initiatedByFullName(abbr){
+  const a = String(abbr || '').trim().toLowerCase();
+  if(!a) return '';
+  const c = metaLists.customers.find(x => (x.abbr || '').trim().toLowerCase() === a);
+  return c ? metaItemName(c) : '';
+}
 function cookedOptionsHtml(selected){
   return [['', '-'], ['done', '\u25CB Cooked'], ['partial', '\u25B3 Partly'], ['none', '\u2013 Not yet']]
     .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -3705,7 +3712,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
               </span>
             </button>
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.initiatedBy || '')}</span>
+            <span class="pl-cell pl-center pl-hide-sm" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
             <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
             <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
             <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>

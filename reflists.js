@@ -74,6 +74,7 @@ export function mountRefListsView(){
       <div class="reflist-add-row" id="refListAddRow">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
         <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
+        <input type="text" id="refListNewAbbrInput" placeholder="Abbreviation (e.g. UHQ)" maxlength="20" style="display:none;max-width:170px;">
         <input type="file" id="refListNewImageInput" accept="image/*" style="display:none;max-width:160px;">
         <img id="refListNewImagePreview" src="" alt="" style="display:none;width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid var(--border);">
         <button type="button" class="btn btn-sm" id="refListNewImageRemove" style="display:none;">Remove</button>
@@ -99,6 +100,7 @@ export function mountRefListsView(){
     document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
     document.getElementById('refListSearchRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
+    document.getElementById('refListNewAbbrInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     const isCustomersTab = refListActiveTab === 'customers';
     document.getElementById('refListNewImageInput').style.display = isCustomersTab ? '' : 'none';
     document.getElementById('refListNewImagePreview').style.display = (isCustomersTab && refListNewCustomerImage) ? '' : 'none';
@@ -145,7 +147,12 @@ export function mountRefListsView(){
         alert(`"${country}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
         return;
       }
-      extra = { country, image: refListNewCustomerImage };
+      const abbr = document.getElementById('refListNewAbbrInput').value.trim();
+      if(abbr && metaLists.customers.some(c => (c.abbr || '').toLowerCase() === abbr.toLowerCase())){
+        alert(`The abbreviation "${abbr}" is already used by another company.`);
+        return;
+      }
+      extra = { country, image: refListNewCustomerImage, abbr };
     }else if(refListActiveTab === 'productTypes'){
       const code = productTypeCode(input.value);
       if(metaLists.productTypes.some(item => (item.code || '') === code)){
@@ -167,6 +174,7 @@ export function mountRefListsView(){
     addMetaListValue(refListActiveTab, input.value, extra);
     input.value = '';
     countryInput.value = '';
+    document.getElementById('refListNewAbbrInput').value = '';
     refListNewCustomerImage = '';
     document.getElementById('refListNewImageInput').value = '';
     document.getElementById('refListNewImagePreview').src = '';
@@ -373,6 +381,7 @@ export function renderRefListItems(){
       <div class="reflist-item-main">
         <input type="text" class="reflist-item-name-input" value="${escapeHtml(item.name)}" ${isEditing ? '' : 'readonly'}>
         ${isCustomers ? `<input type="text" class="reflist-item-country-input" list="destinationDatalist" placeholder="Country (optional)" value="${escapeHtml(item.country || '')}" ${isEditing ? '' : 'readonly'}>` : ''}
+        ${isCustomers ? `<input type="text" class="reflist-item-abbr-input" placeholder="Abbreviation (e.g. UHQ)" maxlength="20" value="${escapeHtml(item.abbr || '')}" ${isEditing ? '' : 'readonly'} title="Short name of the company -- offered in Projects as the Initiated by choices">` : ''}
         ${isCustomers && isEditing ? `
           <div class="reflist-locations-edit">
             <label class="reflist-locations-label">Locations (optional)</label>
@@ -464,6 +473,11 @@ export function renderRefListItems(){
     const item = metaLists[refListActiveTab].find(x => x.id === id);
     const newVal = row.querySelector('.reflist-item-name-input').value.trim();
     const newCountry = isCustomers ? row.querySelector('.reflist-item-country-input').value.trim() : undefined;
+    const newAbbr = isCustomers ? row.querySelector('.reflist-item-abbr-input').value.trim() : undefined;
+    if(isCustomers && newAbbr && metaLists.customers.some(c => c.id !== id && (c.abbr || '').toLowerCase() === newAbbr.toLowerCase())){
+      alert(`The abbreviation "${newAbbr}" is already used by another company.`);
+      return; // stay in edit mode so it can be fixed
+    }
     // Read straight from the row's own DOM rather than trusting
     // refListEditingLocations to be fully up to date — its change-event
     // sync (below) can miss the very last keystroke if Enter triggers this
@@ -498,14 +512,14 @@ export function renderRefListItems(){
       alert(`The first 3 letters of "${newVal}" give the code "${newCode}", which is already used by another product type. Please use a different name.`);
       return; // stay in edit mode so the name can be fixed
     }
-    const extra = isCustomers ? { country: newCountry, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : (isCookingMethods ? { steps: newSteps, note: newNote } : (isEvaluationCriteria ? { subs: newSubs } : {}))));
+    const extra = isCustomers ? { country: newCountry, abbr: newAbbr, image: refListEditingCustomerImage, locations: newLocations } : (isProductTypes ? { code: newCode } : (isContacts ? newContact : (isCookingMethods ? { steps: newSteps, note: newNote } : (isEvaluationCriteria ? { subs: newSubs } : {}))));
     const contactUnchanged = !isContacts || CONTACT_EXTRA_FIELDS.every(f => newContact[f] === (item[f] || ''));
     const imageUnchanged = !isCustomers || refListEditingCustomerImage === (item.image || '');
     const locationsUnchanged = !isCustomers || JSON.stringify(newLocations) === JSON.stringify(item.locations || []);
     const stepsUnchanged = !isCookingMethods || JSON.stringify(newSteps) === JSON.stringify(item.steps || []);
     const noteUnchanged = !isCookingMethods || newNote === (item.note || '');
     const subsUnchanged = !isEvaluationCriteria || JSON.stringify(newSubs) === JSON.stringify(item.subs || []);
-    if(!newVal || (newVal === item.name && (!isCustomers || newCountry === (item.country || '')) && imageUnchanged && contactUnchanged && locationsUnchanged && stepsUnchanged && noteUnchanged && subsUnchanged)){
+    if(!newVal || (newVal === item.name && (!isCustomers || (newCountry === (item.country || '') && newAbbr === (item.abbr || ''))) && imageUnchanged && contactUnchanged && locationsUnchanged && stepsUnchanged && noteUnchanged && subsUnchanged)){
       refListEditingId = null; refListEditingCustomerImage = null; refListEditingLocations = []; refListEditingSteps = []; refListEditingSubs = []; refListEditingNote = ''; refListEditingNoteAdded = false; renderRefListItems(); return;
     }
     if(!renameMetaListItem(refListActiveTab, id, newVal, extra)){
@@ -779,6 +793,14 @@ function renderMetaDatalists(){
     if(!el) return;
     el.innerHTML = metaLists[key].map(item => `<option value="${escapeHtml(metaItemName(item))}"></option>`).join('');
   });
+  // Initiated by (Projects): the companies' short names, with the full company name as the hint
+  const initiated = document.getElementById('initiatedByDatalist');
+  if(initiated){
+    initiated.innerHTML = metaLists.customers
+      .filter(c => (c.abbr || '').trim())
+      .sort((a, b) => a.abbr.localeCompare(b.abbr))
+      .map(c => `<option value="${escapeHtml(c.abbr)}">${escapeHtml(metaItemName(c))}</option>`).join('');
+  }
 }
 
 let unsubscribeMetaLists = null;

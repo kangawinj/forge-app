@@ -43,8 +43,8 @@ function activityText(item){
 const SHEETS = [
   {
     title: 'Company Directory', key: 'customers',
-    columns: [{ header: 'Name', width: 26 }, { header: 'Country', width: 16 }, { header: 'Locations', width: 30 }],
-    row: item => [metaItemName(item), item.country || '', (item.locations || []).join(', ')]
+    columns: [{ header: 'Name', width: 26 }, { header: 'Abbreviation', width: 14 }, { header: 'Country', width: 16 }, { header: 'Locations', width: 30 }],
+    row: item => [metaItemName(item), item.abbr || '', item.country || '', (item.locations || []).join(', ')]
   },
   {
     title: 'Contact Directory', key: 'salesReps',
