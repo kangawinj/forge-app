@@ -78,7 +78,7 @@ export function mountRefListsView(){
         <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
         <input type="text" id="refListNewAbbrInput" placeholder="Abbreviation (e.g. UHQ)" maxlength="20" style="display:none;max-width:170px;">
         <input type="file" id="refListNewImageInput" accept="image/*" style="display:none;max-width:160px;">
-        <img id="refListNewImagePreview" src="" alt="" style="display:none;width:32px;height:32px;object-fit:cover;border-radius:50%;border:1px solid var(--border);">
+        <img id="refListNewImagePreview" src="" alt="" style="display:none;width:40px;height:40px;object-fit:contain;background:#fff;border-radius:10px;border:1px solid var(--border);">
         <button type="button" class="btn btn-sm" id="refListNewImageRemove" style="display:none;">Remove</button>
         <span class="reflist-code-preview" id="refListCodePreview" style="display:none;">Code: <b id="refListCodePreviewValue">—</b></span>
         <button class="btn btn-primary btn-sm" id="btnRefListAdd">+ Add</button>

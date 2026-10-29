@@ -6456,3 +6456,8 @@
   .logo-lightbox-card{background:#fff;border-radius:16px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.4);max-width:min(90vw,520px);text-align:center;}
   .logo-lightbox-card img{display:block;margin:0 auto;max-width:100%;max-height:min(70vh,420px);min-width:200px;object-fit:contain;}
   .logo-lightbox-caption{margin-top:12px;font-weight:600;color:var(--text);}
+
+  /* Company logos: rounded square frame (not a circle); the whole logo is shown, never cropped */
+  .reflist-company-logo{width:44px;height:44px;border-radius:10px;background:#fff;}
+  .reflist-company-logo img{object-fit:contain;padding:3px;box-sizing:border-box;}
+  .reflist-company-logo-edit-preview{width:44px;height:44px;border-radius:10px;object-fit:contain;background:#fff;padding:3px;box-sizing:border-box;}
