@@ -394,9 +394,14 @@ export async function exportTrialSummaryToExcel(t){
   title.alignment = { vertical: 'middle', indent: 1 };
   ws.getRow(1).height = 26;
 
+  // the detail rows get explicit heights so the project photo beside them can be anchored to exact row boundaries
+  const kvRowPx = [];
   const kv = (label, value) => {
     if(!String(value || '').trim()) return;
     const row = ws.addRow([label, value]);
+    const lines = String(value).split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 95)), 0);
+    row.height = Math.max(21, lines * 16 + 5);
+    kvRowPx.push(row.height / 0.75);
     ws.mergeCells(row.number, 2, row.number, 3);
     row.getCell(1).font = { bold: true, color: { argb: C.dim } };
     row.getCell(1).fill = fillOf(C.card);
@@ -416,12 +421,17 @@ export async function exportTrialSummaryToExcel(t){
   // project photo, top right, beside the details
   const photo = linkedProject?.image ? await prepareImage(linkedProject.image) : null;
   if(photo){
-    const EMU = 9525, colPx = Math.round(24 * 7 + 5);
+    // photo is scaled to at most 84px tall; its bottom-right corner is expressed as (row, offset in that row) by walking
+    // the detail rows' own heights, so it fills exactly that span without being squeezed into one row
+    const EMU = 9525;
+    const k = Math.min(1, 84 / photo.height);
+    const w = Math.round(photo.width * k), h = Math.round(photo.height * k);
     const id = wb.addImage({ base64: photo.base64, extension: 'jpeg' });
-    const w = Math.min(photo.width, colPx - 6), h = Math.min(photo.height, 110);
+    let remaining = 3 + h, rowIdx = 0;
+    while(remaining > (kvRowPx[rowIdx] || 20)){ remaining -= (kvRowPx[rowIdx] || 20); rowIdx++; }
     ws.addImage(id, {
       tl: { nativeCol: 2, nativeColOff: 3 * EMU, nativeRow: 1, nativeRowOff: 3 * EMU },
-      br: { nativeCol: 2, nativeColOff: (3 + w) * EMU, nativeRow: 1, nativeRowOff: (3 + h) * EMU },
+      br: { nativeCol: 2, nativeColOff: (3 + w) * EMU, nativeRow: 1 + rowIdx, nativeRowOff: Math.round(remaining) * EMU },
       editAs: 'oneCell'
     });
   }
