@@ -6,7 +6,7 @@ import { escapeHtml, formatDateLong, projects, recipes, fullCode, recipeDisplayL
 import {
   migrateTrial, getEvaluationCriteria, getCriteriaNotes, trialEvalTargets, getTrialProductData,
   normalizeTrialPhotos, sensoryFieldValue, improvementFieldValue, combinedVerdict,
-  TRIAL_TEST_RESULT_OPTIONS, shortEvaluatorName
+  TRIAL_TEST_RESULT_OPTIONS, shortEvaluatorName, summarizeTrialProduct
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, only read inside the export functions.
 import { trials } from './trials.js';
@@ -372,4 +372,101 @@ export async function exportProjectTrialsToExcel(projectId){
   }
   const stamp = new Date().toISOString().slice(0, 10);
   await downloadWorkbook(wb, `Test Results - ${project?.name || 'Project'} ${stamp}`);
+}
+
+// The Test Summary window as a sheet: test details, then one block per product (verdict, details, comments,
+// suggested improvements) and the test note -- the same content as the window itself.
+export async function exportTrialSummaryToExcel(t){
+  if(!excelReady()) return;
+  const mt = migrateTrial(t);
+  const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
+  const criteria = getEvaluationCriteria(mt);
+  const wb = newWorkbook();
+  const ws = wb.addWorksheet('Test Summary');
+  ws.columns = [{ width: 26 }, { width: 80 }, { width: 24 }];
+  const wrap = { vertical: 'top', wrapText: true };
+
+  ws.mergeCells(1, 1, 1, 3);
+  const title = ws.getCell(1, 1);
+  title.value = `Test Summary — ${linkedProject?.name || 'Untitled test'}${mt.testDate ? ' — ' + formatDateLong(mt.testDate) : ''}`;
+  title.font = { bold: true, size: 13, color: { argb: C.headerText } };
+  title.fill = fillOf(C.headerFill);
+  title.alignment = { vertical: 'middle', indent: 1 };
+  ws.getRow(1).height = 26;
+
+  const kv = (label, value) => {
+    if(!String(value || '').trim()) return;
+    const row = ws.addRow([label, value]);
+    ws.mergeCells(row.number, 2, row.number, 3);
+    row.getCell(1).font = { bold: true, color: { argb: C.dim } };
+    row.getCell(1).fill = fillOf(C.card);
+    row.getCell(1).alignment = wrap;
+    row.getCell(2).alignment = wrap;
+    row.getCell(1).border = box(); row.getCell(2).border = box(); row.getCell(3).border = box();
+  };
+  kv('Project', linkedProject?.name || '');
+  kv('Customer / Destination', [linkedProject?.customerName, linkedProject?.destinationCountry].filter(Boolean).join(' · '));
+  kv('Tested date', mt.testDate ? formatDateLong(mt.testDate) : '');
+  kv('PD / Responsible person', linkedProject?.responsiblePerson || '');
+  kv('Test location', mt.testLocation || '');
+  kv('Sample prepared by', mt.samplePreparedBy || '');
+  kv('Test participants', (mt.testParticipants || []).map(s => String(s || '').trim()).filter(Boolean).join(', '));
+  kv('Cooking method', mt.cookingMethod || '');
+
+  // project photo, top right, beside the details
+  const photo = linkedProject?.image ? await prepareImage(linkedProject.image) : null;
+  if(photo){
+    const EMU = 9525, colPx = Math.round(24 * 7 + 5);
+    const id = wb.addImage({ base64: photo.base64, extension: 'jpeg' });
+    const w = Math.min(photo.width, colPx - 6), h = Math.min(photo.height, 110);
+    ws.addImage(id, {
+      tl: { nativeCol: 2, nativeColOff: 3 * EMU, nativeRow: 1, nativeRowOff: 3 * EMU },
+      br: { nativeCol: 2, nativeColOff: (3 + w) * EMU, nativeRow: 1, nativeRowOff: (3 + h) * EMU },
+      editAs: 'oneCell'
+    });
+  }
+
+  const section = text => {
+    const row = ws.addRow([text]);
+    ws.mergeCells(row.number, 1, row.number, 3);
+    const cell = row.getCell(1);
+    cell.font = { bold: true, size: 11, color: { argb: C.groupText } };
+    cell.fill = fillOf(C.groupFill);
+    cell.border = box();
+    cell.alignment = { vertical: 'middle', indent: 1 };
+    row.height = 22;
+  };
+  const line = (label, text, note) => {
+    const row = ws.addRow([label, note ? `${text}  — ${note}` : text]);
+    ws.mergeCells(row.number, 2, row.number, 3);
+    row.getCell(1).font = { bold: true, color: { argb: C.text } };
+    row.getCell(1).alignment = wrap;
+    row.getCell(2).alignment = wrap;
+    row.getCell(1).border = box(); row.getCell(2).border = box(); row.getCell(3).border = box();
+  };
+
+  ws.addRow([]);
+  const targets = trialEvalTargets(mt);
+  if(!targets.length) ws.addRow(['No products in this test yet']);
+  for(const p of targets){
+    const { label, verdict, comments, improvements, reference } = summarizeTrialProduct(mt, criteria, p);
+    section(`${label}${reference ? '  (Reference sample)' : ''}`);
+    const vRow = ws.addRow(['Verdict', verdict || 'Not yet evaluated']);
+    ws.mergeCells(vRow.number, 2, vRow.number, 3);
+    vRow.getCell(1).font = { bold: true, color: { argb: C.text } };
+    vRow.getCell(2).font = { bold: true, color: { argb: !verdict ? C.dim : /not/i.test(verdict) ? C.danger : /revis/i.test(verdict) ? C.accent : C.ok } };
+    [1, 2, 3].forEach(c => { vRow.getCell(c).border = box(); });
+    const r = recipes.find(x => x.id === p.id);
+    const details = r
+      ? [`Code ${fullCode(r) || '-'}`, r.date ? `Date ${r.date}` : '', (() => { const w = allIngredientsInRecipe(r).reduce((s, i) => s + (parseFloat(i.weight) || 0), 0); return w ? `Total weight ${formatWeight(w)}` : ''; })(), findProjectForRecipe(r.id)?.product?.stage ? `Stage ${findProjectForRecipe(r.id).product.stage}` : ''].filter(Boolean).join(' · ')
+      : (p.code ? `Code ${p.code}` : '');
+    if(details) line('Product details', details);
+    comments.forEach((x, i) => line(i === 0 ? 'Comments' : '', `${x.label}: ${x.text}`, x.note));
+    if(improvements.length) improvements.forEach((x, i) => line(i === 0 ? 'Suggested improvements' : '', `${x.label}: ${x.suggestion}`, x.note));
+    else if(verdict) line('Suggested improvements', 'No Improvement Guidelines suggested');
+    ws.addRow([]);
+  }
+  if((mt.note || '').trim()){ section('Note'); line('', mt.note.trim()); }
+
+  await downloadWorkbook(wb, [`Test Summary - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' '));
 }

@@ -83,7 +83,7 @@ let bulkPrintSelectedIds = new Set();
 // no time -- and just the account's local-part, no @domain -- per
 // explicit request. Returns a restore function to call once printing is
 // done (afterprint).
-function setPrintDocumentTitle(pageLabel){
+export function setPrintDocumentTitle(pageLabel){
   const originalTitle = document.title;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');

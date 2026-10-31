@@ -6492,3 +6492,13 @@
   .trial-summary-chip{display:inline-block;background:var(--bg);border:1px solid var(--border);border-radius:12px;padding:1px 9px;font-size:12px;margin:0 4px 4px 0;}
   .trial-summary-product-detail{font-size:12px;color:var(--text-dim);margin:2px 0 8px;}
   @media (max-width:560px){ .trial-summary-info-grid{grid-template-columns:1fr;} }
+
+  /* Test Summary window: Export Excel / PDF buttons beside the close button */
+  .trial-summary-actions{display:flex;align-items:center;gap:8px;}
+  @media print{
+    body.printing-summary > *:not(#trialSummaryOverlay){display:none !important;}
+    body.printing-summary #trialSummaryOverlay{position:static !important;display:block !important;overflow:visible !important;padding:0 !important;height:auto !important;}
+    body.printing-summary #trialSummaryOverlay .eval-wizard-card{max-width:none !important;}
+    body.printing-summary .trial-summary-actions{display:none !important;}
+    body.printing-summary .trial-summary-product, body.printing-summary .trial-summary-info{break-inside:avoid;}
+  }

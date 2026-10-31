@@ -12,7 +12,8 @@ import {
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, see trials-wizard.js's
 // own comment on this same pattern.
-import { trials } from './trials.js';
+import { trials, setPrintDocumentTitle } from './trials.js';
+import { exportTrialSummaryToExcel } from './trials-excel.js';
 
 // Holds the trial id while the Summary Test modal is open, null when
 // closed.
@@ -94,7 +95,11 @@ function renderTrialSummaryModal(){
     <div class="eval-wizard-card">
       <div class="eval-wizard-header">
         <div class="eval-wizard-title">Forge · Test Summary</div>
-        <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
+        <div class="trial-summary-actions">
+          <button type="button" class="btn btn-sm" data-role="summary-export-excel">${icon('download', 14)} Export Excel</button>
+          <button type="button" class="btn btn-sm" data-role="summary-export-pdf">${icon('printer', 14)} PDF</button>
+          <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
+        </div>
       </div>
       ${infoHtml}
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
@@ -127,6 +132,20 @@ function renderTrialSummaryModal(){
       ` : ''}
     </div>
   `;
+  overlay.querySelector('[data-role="summary-export-excel"]')?.addEventListener('click', () => exportTrialSummaryToExcel(t));
+  // PDF = the browser's print dialog (choose "Save as PDF"); only this window's content is printed, see body.printing-summary in style.css
+  overlay.querySelector('[data-role="summary-export-pdf"]')?.addEventListener('click', () => {
+    const label = `Test Summary — ${linkedProject?.name || 'Untitled test'}${mt.testDate ? ' ' + mt.testDate : ''}`;
+    const restoreTitle = setPrintDocumentTitle(label);
+    document.body.classList.add('printing-summary');
+    const cleanup = () => {
+      window.removeEventListener('afterprint', cleanup);
+      document.body.classList.remove('printing-summary');
+      restoreTitle();
+    };
+    window.addEventListener('afterprint', cleanup);
+    window.print();
+  });
   overlay.querySelector('[data-role="summary-close"]')?.addEventListener('click', () => {
     trialSummaryId = null;
     renderTrialSummaryModal();
