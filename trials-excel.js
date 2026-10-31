@@ -46,27 +46,25 @@ function prepareImage(dataUrl){
   });
 }
 
-// Square, centre-cropped (object-fit: cover) with rounded corners -- the same look as the project photo in the Test
-// Summary window. Resolves null when the image can't load.
-function prepareSquareImage(dataUrl, size){
+// The photo exactly as it was uploaded: JPEG / PNG files go into the workbook untouched (no cropping, no re-encoding,
+// full resolution); other types (webp ...) are converted to PNG at their full size. `width` / `height` are the size to
+// show it at -- scaled to fit maxW x maxH, never enlarged. Resolves null when the image can't load.
+function prepareOriginalImage(dataUrl, maxW, maxH){
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const w = img.naturalWidth || size, h = img.naturalHeight || size;
-      const s = Math.min(w, h);
-      const px = size * 3;
+      const w = img.naturalWidth || maxW, h = img.naturalHeight || maxH;
+      const k = Math.min(maxW / w, maxH / h, 1);
+      const shown = { width: Math.max(1, Math.round(w * k)), height: Math.max(1, Math.round(h * k)) };
+      const m = /^data:image\/(jpeg|jpg|png);base64,/i.exec(dataUrl);
+      if(m){
+        resolve({ base64: dataUrl, extension: m[1].toLowerCase() === 'png' ? 'png' : 'jpeg', ...shown });
+        return;
+      }
       const canvas = document.createElement('canvas');
-      canvas.width = px; canvas.height = px;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, px, px);
-      const r = Math.round(px * 10 / 48);
-      ctx.beginPath();
-      ctx.moveTo(r, 0); ctx.arcTo(px, 0, px, px, r); ctx.arcTo(px, px, 0, px, r); ctx.arcTo(0, px, 0, 0, r); ctx.arcTo(0, 0, px, 0, r);
-      ctx.closePath();
-      ctx.clip();
-      ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, px, px);
-      resolve({ base64: canvas.toDataURL('image/jpeg', 0.9), width: size, height: size });
+      canvas.width = w; canvas.height = h;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve({ base64: canvas.toDataURL('image/png'), extension: 'png', ...shown });
     };
     img.onerror = () => resolve(null);
     img.src = dataUrl;
@@ -446,14 +444,13 @@ export async function exportTrialSummaryToExcel(t){
   kv('Cooking method', mt.cookingMethod || '');
 
   // project photo, top right, beside the details
-  const photo = linkedProject?.image ? await prepareSquareImage(linkedProject.image, 84) : null;
+  const photo = linkedProject?.image ? await prepareOriginalImage(linkedProject.image, 160, 110) : null;
   if(photo){
-    // photo is scaled to at most 84px tall; its bottom-right corner is expressed as (row, offset in that row) by walking
-    // the detail rows' own heights, so it fills exactly that span without being squeezed into one row
+    // its bottom-right corner is expressed as (row, offset in that row) by walking the detail rows' own heights, so it
+    // fills exactly that span without being squeezed into one row
     const EMU = 9525;
-    const k = Math.min(1, 84 / photo.height);
-    const w = Math.round(photo.width * k), h = Math.round(photo.height * k);
-    const id = wb.addImage({ base64: photo.base64, extension: 'jpeg' });
+    const w = photo.width, h = photo.height;
+    const id = wb.addImage({ base64: photo.base64, extension: photo.extension });
     let remaining = 3 + h, rowIdx = 0;
     while(remaining > (kvRowPx[rowIdx] || 20)){ remaining -= (kvRowPx[rowIdx] || 20); rowIdx++; }
     ws.addImage(id, {
