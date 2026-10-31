@@ -805,6 +805,7 @@ export const CHANGELOG = [
   { version: "3.0.763", date: "2026-10-31", note: "Test Summary window: a details block at the top -- the project (with its photo, customer and destination), tested date, PD / responsible person, test location, who prepared the sample, the test participants and the cooking method -- and a product details line (code, date, total weight, stage) under each product name" },
   { version: "3.0.764", date: "2026-10-31", note: "Test Summary window: new Export Excel button (details, every product with verdict, comments and suggested improvements, and the note, with the project photo) and a PDF button (opens the print dialog with only the summary on the page -- choose Save as PDF)" },
   { version: "3.0.765", date: "2026-10-31", note: "Test Summary Excel: the project photo keeps its proportions (it was squeezed into one row)" },
+  { version: "3.0.766", date: "2026-10-31", note: "Test Summary Excel: the project photo is now a rounded square cropped to fill, the same as in the Test Summary window" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -46,6 +46,33 @@ function prepareImage(dataUrl){
   });
 }
 
+// Square, centre-cropped (object-fit: cover) with rounded corners -- the same look as the project photo in the Test
+// Summary window. Resolves null when the image can't load.
+function prepareSquareImage(dataUrl, size){
+  return new Promise(resolve => {
+    const img = new Image();
+    img.onload = () => {
+      const w = img.naturalWidth || size, h = img.naturalHeight || size;
+      const s = Math.min(w, h);
+      const px = size * 3;
+      const canvas = document.createElement('canvas');
+      canvas.width = px; canvas.height = px;
+      const ctx = canvas.getContext('2d');
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, px, px);
+      const r = Math.round(px * 10 / 48);
+      ctx.beginPath();
+      ctx.moveTo(r, 0); ctx.arcTo(px, 0, px, px, r); ctx.arcTo(px, px, 0, px, r); ctx.arcTo(0, px, 0, 0, r); ctx.arcTo(0, 0, px, 0, r);
+      ctx.closePath();
+      ctx.clip();
+      ctx.drawImage(img, (w - s) / 2, (h - s) / 2, s, s, 0, 0, px, px);
+      resolve({ base64: canvas.toDataURL('image/jpeg', 0.9), width: size, height: size });
+    };
+    img.onerror = () => resolve(null);
+    img.src = dataUrl;
+  });
+}
+
 // Builds one Test Result worksheet for trial `t` inside workbook `wb`.
 async function buildTrialSheet(wb, t, sheetName){
   const mt = migrateTrial(t);
@@ -419,7 +446,7 @@ export async function exportTrialSummaryToExcel(t){
   kv('Cooking method', mt.cookingMethod || '');
 
   // project photo, top right, beside the details
-  const photo = linkedProject?.image ? await prepareImage(linkedProject.image) : null;
+  const photo = linkedProject?.image ? await prepareSquareImage(linkedProject.image, 84) : null;
   if(photo){
     // photo is scaled to at most 84px tall; its bottom-right corner is expressed as (row, offset in that row) by walking
     // the detail rows' own heights, so it fills exactly that span without being squeezed into one row
