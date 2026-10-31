@@ -3,9 +3,11 @@
 // scannable overview across every test) plus its Excel export. Split out
 // of trials.js (which grew past 2,600 lines) -- see trials.js's own
 // top-of-file comment for the overall file split.
-import { icon, escapeHtml, formatDateLong, projects } from './app.js';
 import {
-  getEvaluationCriteria, trialEvalTargets, getTrialProductData,
+  icon, escapeHtml, formatDateLong, projects, recipes, fullCode, formatWeight, allIngredientsInRecipe, findProjectForRecipe
+} from './app.js';
+import {
+  getEvaluationCriteria, trialEvalTargets, getTrialProductData, migrateTrial,
   summarizeTrialProduct, groupTrialsByProject, TRIAL_SUMMARY_VERDICT_CLASSES
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, see trials-wizard.js's
@@ -31,6 +33,45 @@ function renderTrialSummaryModal(){
   const evalTargets = trialEvalTargets(t);
   const criteria = getEvaluationCriteria(t);
 
+  // Test details shown above the products: project, tested date, who is responsible, who tasted, where / how
+  const mt = migrateTrial(t);
+  const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
+  const participants = (mt.testParticipants || []).map(s => String(s || '').trim()).filter(Boolean);
+  const infoItem = (label, value, wide) => value
+    ? `<div class="trial-summary-info-item${wide ? ' wide' : ''}"><span class="trial-summary-info-label">${label}</span><span>${value}</span></div>`
+    : '';
+  const infoHtml = `
+    <div class="trial-summary-info">
+      <div class="trial-summary-info-head">
+        ${linkedProject?.image ? `<img class="trial-summary-info-photo" src="${escapeHtml(linkedProject.image)}" alt="">` : ''}
+        <div>
+          <div class="trial-summary-info-project">${escapeHtml(linkedProject?.name || 'Test without a linked project')}</div>
+          ${linkedProject?.customerName ? `<div class="trial-summary-info-sub">${escapeHtml([linkedProject.customerName, linkedProject.destinationCountry].filter(Boolean).join(' · '))}</div>` : ''}
+        </div>
+      </div>
+      <div class="trial-summary-info-grid">
+        ${infoItem('Tested date', mt.testDate ? escapeHtml(formatDateLong(mt.testDate)) : '')}
+        ${infoItem('PD / Responsible person', escapeHtml(linkedProject?.responsiblePerson || ''))}
+        ${infoItem('Test location', escapeHtml(mt.testLocation || ''))}
+        ${infoItem('Sample prepared by', escapeHtml(mt.samplePreparedBy || ''))}
+        ${infoItem('Test participants', participants.map(n => `<span class="trial-summary-chip">${escapeHtml(n)}</span>`).join(' '), true)}
+        ${infoItem('Cooking method', escapeHtml(mt.cookingMethod || ''), true)}
+      </div>
+    </div>`;
+  // one line of product details under each product's name: recipe code / date / total weight / stage, or the typed code
+  const productDetailLine = p => {
+    const r = recipes.find(x => x.id === p.id);
+    const parts = [];
+    if(r){
+      const total = allIngredientsInRecipe(r).reduce((s, i) => s + (parseFloat(i.weight) || 0), 0);
+      const stage = findProjectForRecipe(r.id)?.product?.stage;
+      parts.push(`Code ${fullCode(r) || '-'}`, r.date ? `Date ${r.date}` : '', total ? `Total weight ${formatWeight(total)}` : '', stage ? `Stage ${stage}` : '');
+    }else if(p.code){
+      parts.push(`Code ${p.code}`);
+    }
+    return parts.filter(Boolean).join(' · ');
+  };
+
   const overlay = existing || document.createElement('div');
   overlay.id = 'trialSummaryOverlay';
   overlay.className = 'eval-wizard-overlay';
@@ -55,6 +96,7 @@ function renderTrialSummaryModal(){
         <div class="eval-wizard-title">Forge · Test Summary</div>
         <button type="button" class="eval-wizard-close" data-role="summary-close" title="Close">${icon('x')}</button>
       </div>
+      ${infoHtml}
       ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
         const { label, verdict, comments, improvements, reference } = summarizeTrialProduct(t, criteria, p);
         return `
@@ -65,6 +107,7 @@ function renderTrialSummaryModal(){
                 ? `<span class="trial-summary-verdict ${TRIAL_SUMMARY_VERDICT_CLASSES[verdict] || ''}">${escapeHtml(verdict)}</span>`
                 : '<span class="overview-empty">Not yet evaluated</span>'}
             </div>
+            ${productDetailLine(p) ? `<div class="trial-summary-product-detail">${escapeHtml(productDetailLine(p))}</div>` : ''}
             ${comments.length ? `
               <div class="trial-summary-improve-title">Comments</div>
               <ul class="trial-summary-improve-list">${comments.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.text)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
