@@ -1949,7 +1949,7 @@ export function renderProjectsList(){
             ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
-                  <span>Summary of ${escapeHtml(formatMonthYear(m))}</span>
+                  <span>Summary of ${escapeHtml(formatMonthYear(m))} (${escapeHtml(m.slice(5, 7))})</span>
                   <button type="button" class="proj-mu-expand-all" data-role="proj-mu-expand-column" data-month="${escapeHtml(m)}">${projMuExpandedMonths.has(m) ? 'Collapse all' : 'Expand all'}</button>
                 </span>
                 ${isCurrentUserAdmin() && i === projectsByStatusMonthColumnCount - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
@@ -1981,7 +1981,7 @@ export function renderProjectsList(){
     // Export Excel: the same rows, in the same order and numbering, as the table on the page
     dashboardContainer.querySelector('#btnExportProjectsStatusExcel')?.addEventListener('click', () => {
       const months = monthsBackFrom(projectsByStatusMonth, projMuRenderedCount());
-      const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)}`)];
+      const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)} (${m.slice(5, 7)})`)];
       const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       let no = 0;
       const exportList = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
