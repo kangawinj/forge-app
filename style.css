@@ -6596,3 +6596,6 @@
   /* Projects by Status (List): the heading row follows the page down (see projMuStickHeader) */
   .proj-xl-header{position:relative;z-index:5;}
   .proj-xl-header.proj-xl-header-stuck{box-shadow:0 4px 8px -4px rgba(12,24,48,.35);}
+  /* Projects by Status (List): a row marked yellow by clicking it */
+  .proj-xl-row.pl-marked > .pl-cell:not(.pl-editing){background:#fff3a6;}
+  .proj-xl-row.pl-marked > .pl-cell.pl-hl-col:not(.pl-editing){background:#ffe97a;}

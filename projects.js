@@ -750,6 +750,9 @@ function projectsByCategoryThenStatus(list){
 // seconds afterwards. Saved changes are logged like a normal project edit; Esc or clicking away leaves the cell as it was.
 // Pointing at a cell of Projects by Status (List), or editing it, tints that cell's whole row and column (and the
 // column heading) so it is easy to see which project and which field it belongs to.
+// Rows marked yellow with a single click (this browser only; click again to clear). Kept across reloads.
+const projMarkedRows = new Set((() => { try{ const a = JSON.parse(localStorage.getItem('forgeProjMarkedRows') || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } })());
+function saveProjMarkedRows(){ try{ localStorage.setItem('forgeProjMarkedRows', JSON.stringify([...projMarkedRows])); }catch(e){ /* storage blocked -- the marks just last until reload */ } }
 let projHlLock = null;   // the cell being edited keeps its highlight even when the pointer moves away
 function projHighlightClear(root){
   root.querySelectorAll('.pl-hl-row, .pl-hl-col').forEach(e => e.classList.remove('pl-hl-row', 'pl-hl-col'));
@@ -776,6 +779,17 @@ function wireProjHighlight(root){
     else projHighlightClear(root);
   });
   root.addEventListener('mouseleave', () => { if(!projHlLock) projHighlightClear(root); });
+  // one click on a row marks it yellow, another click clears it; the project name, editors, buttons and the month boxes keep their own clicks
+  root.addEventListener('click', e => {
+    const row = e.target.closest?.('.proj-xl-row');
+    if(!row || !root.contains(row)) return;
+    if(e.target.closest('button, a, input, select, textarea, label, .pl-inline, .proj-mu-cell, [data-role]')) return;
+    const id = row.querySelector('[data-gallery-project-id]')?.dataset.galleryProjectId;
+    if(!id) return;
+    if(projMarkedRows.has(id)){ projMarkedRows.delete(id); row.classList.remove('pl-marked'); }
+    else{ projMarkedRows.add(id); row.classList.add('pl-marked'); }
+    saveProjMarkedRows();
+  });
 }
 
 // A bar at the bottom of the screen with an Undo button, for 10 seconds
@@ -4118,7 +4132,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
     return `
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item proj-xl-row" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
+          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
             <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
             <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
