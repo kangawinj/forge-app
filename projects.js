@@ -744,9 +744,26 @@ function projectsByCategoryThenStatus(list){
   }).filter(c => c.count);
 }
 
-// Click a cell of Projects by Status (List) to edit it right there: a dropdown for Status / Category / Cooked, a date
-// picker for Date Received, a text box (with the same suggestion lists as the project form) for the rest. A change is
-// saved straight away and logged like a normal project edit; Esc or clicking away without a change leaves it as it was.
+// Double-click a cell of Projects by Status (List) to edit it right there: a dropdown for Status / Category / Cooked, a
+// date picker for Date Received, a text box (with the same suggestion lists as the project form) for the rest. Against
+// accidental edits, a change is only saved after the person types their password again, and an Undo bar stays for 10
+// seconds afterwards. Saved changes are logged like a normal project edit; Esc or clicking away leaves the cell as it was.
+// A bar at the bottom of the screen with an Undo button, for 10 seconds
+let projUndoTimer = null;
+function showProjUndoToast(message, onUndo){
+  document.getElementById('projUndoToast')?.remove();
+  clearTimeout(projUndoTimer);
+  const bar = document.createElement('div');
+  bar.id = 'projUndoToast';
+  bar.className = 'proj-undo-toast';
+  bar.innerHTML = `<span class="proj-undo-msg"></span><button type="button" class="proj-undo-btn">Undo</button><button type="button" class="proj-undo-close" title="Dismiss">&times;</button>`;
+  bar.querySelector('.proj-undo-msg').textContent = message;
+  const close = () => { clearTimeout(projUndoTimer); bar.remove(); };
+  bar.querySelector('.proj-undo-btn').addEventListener('click', () => { close(); onUndo(); });
+  bar.querySelector('.proj-undo-close').addEventListener('click', close);
+  document.body.appendChild(bar);
+  projUndoTimer = setTimeout(close, 10000);
+}
 const PROJ_CELL_EDITORS = {
   status:             { kind: 'select', options: () => PROJECT_STATUSES.map(s => [s, s]) },
   category:           { kind: 'select', options: () => [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])] },
@@ -797,11 +814,30 @@ function startProjCellEdit(cell){
     if(cfg.kind === 'text' || cfg.kind === 'area') v = v.trim();
     const was = field === 'status' ? (p.status || PROJECT_STATUSES[0]) : current;
     if(v === was){ cell.classList.remove('pl-editing'); cell.innerHTML = original; return; }
-    const before = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
-    p[field] = v;
-    scheduleProjectSave(p);
-    logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(before, p, PROJECT_DIFF_FIELDS));
-    renderProjectsList();
+    const label = PROJECT_DIFF_FIELDS[field] || field;
+    const shown = val => {
+      if(cfg.kind === 'select'){ const o = cfg.options().find(x => x[0] === val); return o ? o[1] : (val || '(blank)'); }
+      return val || '(blank)';
+    };
+    const oldRaw = p[field];
+    const apply = () => {
+      const before = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
+      p[field] = v;
+      scheduleProjectSave(p);
+      logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(before, p, PROJECT_DIFF_FIELDS));
+      showProjUndoToast(`${label} of "${p.name || 'Untitled project'}": ${shown(was)} \u2192 ${shown(v)}`, () => {
+        const before2 = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
+        p[field] = oldRaw === undefined ? '' : oldRaw;
+        scheduleProjectSave(p);
+        logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(before2, p, PROJECT_DIFF_FIELDS));
+        renderProjectsList();
+      });
+      renderProjectsList();
+    };
+    // the cell shows its old value until the password is accepted; closing the password window leaves it that way
+    cell.classList.remove('pl-editing');
+    cell.innerHTML = original;
+    requestAuthConfirm('Confirm edit', `Change ${label} of "${p.name || 'Untitled project'}" from ${shown(was)} to ${shown(v)}? Enter your password to save.`, apply);
   };
   if(cfg.kind === 'select'){
     ctl.addEventListener('change', commit);
@@ -1603,7 +1639,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
     });
   });
   dashboardContainer.querySelectorAll('.pl-editable[data-edit-field]').forEach(cell => {
-    cell.addEventListener('click', () => startProjCellEdit(cell));
+    cell.addEventListener('dblclick', () => startProjCellEdit(cell));
   });
   dashboardContainer.querySelector('[data-role="proj-clear-col-filters"]')?.addEventListener('click', () => {
     projColFilters.clear();
@@ -2005,7 +2041,8 @@ export function renderProjectsList(){
             return chip('all', 'All', visibleProjects.length, !catSet)
               + PROJECT_CATEGORIES.map(c => chip(c.key, c.label, counts.get(c.key) || 0, only(c.key))).join('')
               + (counts.get('') ? chip('none', 'Not set', counts.get(''), only('')) : '')
-              + (projColFilters.size ? ' <button type="button" class="btn btn-sm" data-role="proj-clear-col-filters" title="Remove every column filter">Clear all filters</button>' : '');
+              + (projColFilters.size ? ' <button type="button" class="btn btn-sm" data-role="proj-clear-col-filters" title="Remove every column filter">Clear all filters</button>' : '')
+              + (projectsByStatusViewMode === 'list' ? '<span class="proj-edit-hint">Double-click a cell to edit it (your password is asked to confirm)</span>' : '');
           })()}
         </div>
         ${projectsByStatusViewMode === 'list' ? `

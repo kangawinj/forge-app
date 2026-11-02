@@ -6550,3 +6550,12 @@
   .proj-xl-row > .pl-editing{padding:3px;background:#fff;box-shadow:inset 0 0 0 2px var(--primary);align-items:stretch;}
   .pl-inline{width:100%;min-width:0;font:inherit;font-size:12px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);}
   textarea.pl-inline{resize:vertical;min-height:80px;line-height:1.4;}
+
+  /* Projects by Status (List): hint + the Undo bar after an in-place edit */
+  .proj-edit-hint{margin-left:auto;font-size:11px;color:var(--text-dim);}
+  .proj-undo-toast{position:fixed;left:50%;bottom:44px;transform:translateX(-50%);z-index:1800;display:flex;align-items:center;gap:12px;max-width:min(92vw,640px);
+    background:var(--primary-dark);color:#fff;border-radius:10px;padding:10px 14px;font-size:13px;box-shadow:0 8px 24px rgba(12,24,48,.35);}
+  .proj-undo-msg{overflow-wrap:anywhere;}
+  .proj-undo-btn{background:#fff;color:var(--primary-dark);border:none;border-radius:6px;padding:4px 12px;font-weight:700;cursor:pointer;flex-shrink:0;}
+  .proj-undo-close{background:transparent;border:none;color:#fff;font-size:18px;line-height:1;cursor:pointer;flex-shrink:0;}
+  @media print{ .proj-undo-toast{display:none !important;} }
