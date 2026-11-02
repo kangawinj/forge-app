@@ -812,6 +812,7 @@ export const CHANGELOG = [
   { version: "3.0.770", date: "2026-11-02", note: "Test Result Excel (single test and whole project): photos are placed with an absolute size so they keep their proportions in Excel, same fix as the Test Summary Excel" },
   { version: "3.0.771", date: "2026-11-02", note: "Projects: new Category field -- International / Domestic / Checking / Long time (project form, new-project form). Left on Auto it is worked out from Target Market (Thailand = Domestic, other countries = International; Checking and Long time are picked by hand). Projects by Status (Grid and List) has a Category filter with counts, a Category column in the List, and the Excel export follows the filter and includes the column" },
   { version: "3.0.772", date: "2026-11-02", note: "Projects by Status (List): every column heading has a filter arrow (tick which values to show, like Excel) and a Clear all filters button; the Category column also lets you choose the order -- use the arrows to list e.g. Long time or Checking first (remembered on this browser). Grid view, the Excel export and the status counts follow the filters and the order" },
+  { version: "3.0.773", date: "2026-11-02", note: "Projects by Status: the column filters are remembered across reloads (on this browser), like the Category order" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -669,7 +669,24 @@ let responsibleStatusFilters = new Set();
 let projectsByStatusViewMode = 'grid';
 // Column filters of Projects by Status (the little arrow in each column heading, like Excel): column key -> the set of
 // values that stay visible ('' stands for a blank cell); no entry = that column is not filtered.
+const PROJ_COL_VALUE_KEYS = { name: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
 const projColFilters = new Map();
+// ... remembered across reloads on this browser only (localStorage), like the Category order below
+const PROJ_COL_FILTERS_KEY = 'forgeProjColFilters';
+function saveProjColFilters(){
+  try{
+    if(projColFilters.size) localStorage.setItem(PROJ_COL_FILTERS_KEY, JSON.stringify(Object.fromEntries([...projColFilters].map(([k, s]) => [k, [...s]]))));
+    else localStorage.removeItem(PROJ_COL_FILTERS_KEY);
+  }catch(e){ /* storage unavailable -- filters only last until reload */ }
+}
+try{
+  const saved = JSON.parse(localStorage.getItem(PROJ_COL_FILTERS_KEY) || 'null');
+  if(saved && typeof saved === 'object'){
+    Object.entries(saved).forEach(([k, vals]) => {
+      if(k in PROJ_COL_VALUE_KEYS && Array.isArray(vals) && vals.length) projColFilters.set(k, new Set(vals.map(v => String(v))));
+    });
+  }
+}catch(e){ /* unreadable -- start unfiltered */ }
 // The order the Category column lists its projects in (Category heading > arrows). Only used once changed; kept per
 // browser in localStorage, never shared with other people.
 const PROJ_CAT_ORDER_KEY = 'forgeProjCategoryOrder';
@@ -766,7 +783,7 @@ function openProjColFilter(btn, colKey){
     renderProjectsList();
   };
   pop.addEventListener('click', e => {
-    if(e.target.closest('[data-pcf-select-all]')){ projColFilters.delete(colKey); refresh(); return; }
+    if(e.target.closest('[data-pcf-select-all]')){ projColFilters.delete(colKey); saveProjColFilters(); refresh(); return; }
     if(e.target.closest('[data-pcf-reset-order]')){ projCatOrder = PROJ_CAT_DEFAULT_ORDER.slice(); projCatOrderCustom = false; saveProjCatOrder(); refresh(); return; }
     const mv = e.target.closest('[data-pcf-move]');
     if(mv && !mv.disabled){
@@ -785,6 +802,7 @@ function openProjColFilter(btn, colKey){
     if(cb.checked) current.add(cb.dataset.pcfValue); else current.delete(cb.dataset.pcfValue);
     if(!current.size){ cb.checked = true; return; }   // at least one value must stay shown
     if(all.every(v => current.has(v))) projColFilters.delete(colKey); else projColFilters.set(colKey, current);
+    saveProjColFilters();
     refresh();
   });
 }
@@ -1498,11 +1516,13 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       const v = btn.dataset.projCategory;
       if(v === 'all') projColFilters.delete('category');
       else projColFilters.set('category', new Set([v === 'none' ? '' : v]));
+      saveProjColFilters();
       renderProjectsList();
     });
   });
   dashboardContainer.querySelector('[data-role="proj-clear-col-filters"]')?.addEventListener('click', () => {
     projColFilters.clear();
+    saveProjColFilters();
     renderProjectsList();
   });
   dashboardContainer.querySelectorAll('[data-proj-col]').forEach(btn => {
