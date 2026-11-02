@@ -73,6 +73,32 @@ export function mountRefListsView(){
       <div class="reflist-search-row" id="refListSearchRow">
         <input type="search" id="refListSearchInput" placeholder="Search this list..." autocomplete="off">
       </div>
+      <div class="reflist-company-form" id="refListCompanyForm" style="display:none;">
+        <div class="rcf-head"><span class="rcf-title">New company</span><span class="rcf-sub">Only the name is required -- fill in the rest if you have it.</span></div>
+        <div class="rcf-body">
+          <div class="rcf-logo">
+            <div class="rcf-logo-box" id="rcfLogoBox"><span class="rcf-logo-empty">Logo</span></div>
+            <label class="btn btn-sm rcf-upload">Upload logo<input type="file" id="rcfLogoInput" accept="image/*" hidden></label>
+            <button type="button" class="btn btn-sm" id="rcfLogoRemove" style="display:none;">Remove</button>
+          </div>
+          <div class="rcf-fields">
+            <div class="field"><label for="rcfName">Company name <span class="rcf-req">*</span></label><input type="text" id="rcfName" placeholder="Full company name" autocomplete="off"></div>
+            <div class="field"><label for="rcfAbbr">Abbreviation</label><input type="text" id="rcfAbbr" maxlength="20" placeholder="e.g. UHQ" autocomplete="off"></div>
+            <div class="field"><label for="rcfCountry">Country</label>
+              <div class="rcf-country"><input type="text" id="rcfCountry" list="destinationDatalist" placeholder="Pick from Destination Countries" autocomplete="off"><span class="rcf-flag" id="rcfFlag"></span></div>
+            </div>
+          </div>
+        </div>
+        <div class="rcf-locations">
+          <label class="rcf-loc-label">Locations (optional) -- offices, kitchens, factories</label>
+          <div id="rcfLocList"></div>
+          <button type="button" class="btn btn-sm add-row-btn" id="rcfAddLoc">+ Add location</button>
+        </div>
+        <div class="rcf-actions">
+          <button type="button" class="btn btn-sm" id="rcfClear">Clear</button>
+          <button type="button" class="btn btn-primary btn-sm" id="rcfSubmit">+ Add company</button>
+        </div>
+      </div>
       <div class="reflist-add-row" id="refListAddRow">
         <input type="text" id="refListNewInput" placeholder="Add a new entry...">
         <input type="text" id="refListNewCountryInput" list="destinationDatalist" placeholder="Country (optional)" style="display:none;max-width:180px;">
@@ -99,7 +125,8 @@ export function mountRefListsView(){
   const updateAddRowFields = () => {
     // Trial Code Format is a static reference page, not an editable list —
     // there's nothing to add, so the whole add-row hides for that tab.
-    document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
+    document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens' || refListActiveTab === 'customers') ? 'none' : '';
+    document.getElementById('refListCompanyForm').style.display = refListActiveTab === 'customers' ? '' : 'none';
     document.getElementById('refListSearchRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     document.getElementById('refListNewAbbrInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
@@ -187,6 +214,69 @@ export function mountRefListsView(){
     renderRefListItems();
   };
   document.getElementById('btnRefListAdd').addEventListener('click', addNewEntry);
+
+  // ---- "New company" section (Company Directory) ----
+  let rcfLogo = '';
+  const rcfLocRow = (name = '', addr = '') => {
+    const row = document.createElement('div');
+    row.className = 'rcf-loc-row';
+    row.innerHTML = `<input type="text" class="rcf-loc-name" placeholder="e.g. Office, Kitchen, Factory 1" autocomplete="off"><textarea class="rcf-loc-addr" rows="2" placeholder="Address of this location (optional)"></textarea><button type="button" class="icon-btn" title="Remove">${icon('x')}</button>`;
+    row.querySelector('.rcf-loc-name').value = name;
+    row.querySelector('.rcf-loc-addr').value = addr;
+    row.querySelector('.icon-btn').addEventListener('click', () => row.remove());
+    return row;
+  };
+  const rcfSetLogo = dataUrl => {
+    rcfLogo = dataUrl || '';
+    const box = document.getElementById('rcfLogoBox');
+    box.innerHTML = rcfLogo ? `<img src="${escapeHtml(rcfLogo)}" alt="">` : '<span class="rcf-logo-empty">Logo</span>';
+    document.getElementById('rcfLogoRemove').style.display = rcfLogo ? '' : 'none';
+    if(!rcfLogo) document.getElementById('rcfLogoInput').value = '';
+  };
+  const rcfReset = () => {
+    ['rcfName', 'rcfAbbr', 'rcfCountry'].forEach(id => { document.getElementById(id).value = ''; });
+    document.getElementById('rcfFlag').innerHTML = '';
+    document.getElementById('rcfLocList').innerHTML = '';
+    rcfSetLogo('');
+  };
+  document.getElementById('rcfAddLoc').addEventListener('click', () => {
+    const row = rcfLocRow();
+    document.getElementById('rcfLocList').appendChild(row);
+    row.querySelector('.rcf-loc-name').focus();
+  });
+  document.getElementById('rcfLogoInput').addEventListener('change', async e => {
+    const file = e.target.files[0];
+    if(!file) return;
+    try{ rcfSetLogo(await resizeImageFile(file, 200)); }
+    catch(err){ alert(err.message || 'Could not read that image file'); }
+  });
+  document.getElementById('rcfLogoRemove').addEventListener('click', () => rcfSetLogo(''));
+  document.getElementById('rcfCountry').addEventListener('input', e => {
+    const c = e.target.value.trim();
+    document.getElementById('rcfFlag').innerHTML = c && metaLists.destinationCountries.some(x => metaItemName(x) === c) ? countryFlagBadgeHtml(c) : '';
+  });
+  document.getElementById('rcfClear').addEventListener('click', rcfReset);
+  document.getElementById('rcfSubmit').addEventListener('click', () => {
+    const name = document.getElementById('rcfName').value.trim();
+    if(!name){ alert('Please enter the company name.'); document.getElementById('rcfName').focus(); return; }
+    if(metaLists.customers.some(c => metaItemName(c) === name)){ alert(`"${name}" is already in the Company Directory.`); return; }
+    const country = document.getElementById('rcfCountry').value.trim();
+    if(country && !metaLists.destinationCountries.some(item => metaItemName(item) === country)){
+      alert(`"${country}" is not in Destination Countries yet. Please add it there first, then pick it here.`);
+      return;
+    }
+    const abbr = document.getElementById('rcfAbbr').value.trim();
+    if(abbr && metaLists.customers.some(c => (c.abbr || '').toLowerCase() === abbr.toLowerCase())){
+      alert(`The abbreviation "${abbr}" is already used by another company.`);
+      return;
+    }
+    const pairs = [...document.querySelectorAll('#rcfLocList .rcf-loc-row')]
+      .map(r => ({ name: r.querySelector('.rcf-loc-name').value.trim(), addr: r.querySelector('.rcf-loc-addr').value.trim() }))
+      .filter(p => p.name);
+    addMetaListValue('customers', name, { country, image: rcfLogo, abbr, locations: pairs.map(p => p.name), locationAddresses: pairs.map(p => p.addr) });
+    rcfReset();
+    renderRefListItems();
+  });
   document.getElementById('btnExportRefListsExcel').addEventListener('click', () => exportRefListsToExcel(metaLists));
   document.getElementById('refListNewImageInput').addEventListener('change', async e => {
     const file = e.target.files[0];
