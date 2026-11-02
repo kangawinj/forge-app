@@ -3691,7 +3691,9 @@ function projectMonthUpdateInfo(p, monthStr){
   const latest = latestMonthlySummaryForMonth(p, monthStr);
   if(!latest) return null;
   return {
-    text: latest.text || '-',
+    // the Monthly Update cells (and their Excel export) show the English version only; Thai / Japanese stay in the
+    // project's own Monthly Updates and the quick-edit window
+    text: (monthlyLangsOf(latest).En || '').trim() || '-',
     recordedAt: latest.updatedAt || latest.createdAt,
     createdBy: latest.updatedBy || latest.createdBy || '',
     photos: latest.photos || []
