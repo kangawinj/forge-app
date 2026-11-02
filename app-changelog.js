@@ -818,6 +818,7 @@ export const CHANGELOG = [
   { version: "3.0.776", date: "2026-11-02", note: "Projects by Status (List): fixed the column headings being shifted -- Product Name sat 46px to the right of where it belongs and covered the Status heading" },
   { version: "3.0.777", date: "2026-11-02", note: "Projects by Status (List): the Monthly Update columns show the English text only, and so does the Excel export (Thai and Japanese stay in each project and in the quick-edit window). A month with no English text shows a dash" },
   { version: "3.0.778", date: "2026-11-02", note: "Projects by Status (List): the month headings show the month number in brackets, e.g. Summary of July 2026 (07) -- also in the Excel export" },
+  { version: "3.0.779", date: "2026-11-02", note: "Projects by Status (List): click a cell to edit it right there -- dropdowns for Status, Category and Cooked, a date picker for Date Received, text boxes with the usual suggestions for Initiated by, Customer, Target Market, Owner, PD-Owner, Factory and Overview. A change is saved straight away and logged like a normal project edit; Esc cancels. Product Name still opens the project" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

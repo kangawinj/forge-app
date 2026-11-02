@@ -6543,3 +6543,10 @@
   .proj-cat-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--primary-dark);color:#fff;
     font-size:13px;font-weight:700;padding:7px 12px;border-radius:8px;margin:6px 0 8px;position:sticky;left:0;}
   .proj-cat-heading-count{background:rgba(255,255,255,.2);border-radius:10px;padding:0 9px;font-size:12px;font-weight:600;}
+
+  /* Projects by Status (List): click a cell to edit it in place */
+  .proj-xl-row > .pl-editable{cursor:pointer;}
+  .proj-xl-row > .pl-editable:hover{background:#f1f9fb;box-shadow:inset 0 0 0 1px #9bc9cf;}
+  .proj-xl-row > .pl-editing{padding:3px;background:#fff;box-shadow:inset 0 0 0 2px var(--primary);align-items:stretch;}
+  .pl-inline{width:100%;min-width:0;font:inherit;font-size:12px;padding:3px 5px;border:1px solid var(--border);border-radius:4px;background:#fff;color:var(--text);}
+  textarea.pl-inline{resize:vertical;min-height:80px;line-height:1.4;}

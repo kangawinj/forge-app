@@ -744,6 +744,77 @@ function projectsByCategoryThenStatus(list){
   }).filter(c => c.count);
 }
 
+// Click a cell of Projects by Status (List) to edit it right there: a dropdown for Status / Category / Cooked, a date
+// picker for Date Received, a text box (with the same suggestion lists as the project form) for the rest. A change is
+// saved straight away and logged like a normal project edit; Esc or clicking away without a change leaves it as it was.
+const PROJ_CELL_EDITORS = {
+  status:             { kind: 'select', options: () => PROJECT_STATUSES.map(s => [s, s]) },
+  category:           { kind: 'select', options: () => [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])] },
+  cookedStatus:       { kind: 'select', options: () => [['', '-'], ['done', '\u25CB Cooked'], ['partial', '\u25B3 Partly'], ['none', '\u2013 Not yet']] },
+  requestDate:        { kind: 'date' },
+  initiatedBy:        { kind: 'text', list: 'initiatedByDatalist' },
+  customerName:       { kind: 'text', list: 'customerDatalist' },
+  destinationCountry: { kind: 'text', list: 'destinationDatalist' },
+  ownerSalesRep:      { kind: 'text', list: 'salesRepDatalist' },
+  responsiblePerson:  { kind: 'text', list: 'salesRepDatalist' },
+  factoryName:        { kind: 'text', list: 'customerDatalist' },
+  overview:           { kind: 'area' }
+};
+function startProjCellEdit(cell){
+  if(cell.querySelector('.pl-inline')) return;
+  const field = cell.dataset.editField;
+  const cfg = PROJ_CELL_EDITORS[field];
+  const p = projects.find(x => x.id === cell.dataset.projectId);
+  if(!cfg || !p || p.isUnassignedBucket) return;
+  if(projectEditingId === p.id){ alert('This project is open for editing below -- save or cancel that first.'); return; }
+  const current = String(p[field] || '');
+  let ctl;
+  if(cfg.kind === 'select'){
+    ctl = document.createElement('select');
+    cfg.options().forEach(([v, l]) => { const o = document.createElement('option'); o.value = v; o.textContent = l; if(v === (field === 'status' ? (p.status || PROJECT_STATUSES[0]) : current)) o.selected = true; ctl.appendChild(o); });
+  }else if(cfg.kind === 'area'){
+    ctl = document.createElement('textarea'); ctl.rows = 5; ctl.value = current;
+  }else{
+    ctl = document.createElement('input');
+    ctl.type = cfg.kind === 'date' ? 'date' : 'text';
+    if(cfg.list) ctl.setAttribute('list', cfg.list);
+    ctl.value = current;
+  }
+  ctl.className = 'pl-inline';
+  const original = cell.innerHTML;
+  cell.innerHTML = '';
+  cell.classList.add('pl-editing');
+  cell.appendChild(ctl);
+  ctl.focus();
+  if(ctl.select && cfg.kind !== 'select') ctl.select();
+  if(cfg.kind === 'select' && ctl.showPicker){ try{ ctl.showPicker(); }catch(e){ /* needs a user gesture; the click is one, but not every browser allows it */ } }
+  let finished = false;
+  const cancel = () => { if(finished) return; finished = true; cell.classList.remove('pl-editing'); cell.innerHTML = original; };
+  const commit = () => {
+    if(finished) return;
+    finished = true;
+    let v = ctl.value;
+    if(cfg.kind === 'text' || cfg.kind === 'area') v = v.trim();
+    const was = field === 'status' ? (p.status || PROJECT_STATUSES[0]) : current;
+    if(v === was){ cell.classList.remove('pl-editing'); cell.innerHTML = original; return; }
+    const before = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
+    p[field] = v;
+    scheduleProjectSave(p);
+    logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(before, p, PROJECT_DIFF_FIELDS));
+    renderProjectsList();
+  };
+  if(cfg.kind === 'select'){
+    ctl.addEventListener('change', commit);
+    ctl.addEventListener('blur', () => setTimeout(cancel, 150));
+  }else{
+    ctl.addEventListener('blur', commit);
+  }
+  ctl.addEventListener('keydown', e => {
+    if(e.key === 'Escape'){ e.preventDefault(); cancel(); }
+    else if(e.key === 'Enter' && cfg.kind !== 'area'){ e.preventDefault(); commit(); }
+  });
+}
+
 function projColFilterPopHtml(colKey){
   const counts = new Map();
   projects.filter(isProjectCurrentlyVisible).forEach(p => { const v = PROJ_COL_VALUE[colKey](p); counts.set(v, (counts.get(v) || 0) + 1); });
@@ -1530,6 +1601,9 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       saveProjColFilters();
       renderProjectsList();
     });
+  });
+  dashboardContainer.querySelectorAll('.pl-editable[data-edit-field]').forEach(cell => {
+    cell.addEventListener('click', () => startProjCellEdit(cell));
   });
   dashboardContainer.querySelector('[data-role="proj-clear-col-filters"]')?.addEventListener('click', () => {
     projColFilters.clear();
@@ -3946,17 +4020,17 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
               </span>
             </button>
-            <span class="pl-cell pl-center">${statusPillHtml(p.status)}</span>
-            <span class="pl-cell pl-center pl-hide-sm" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
-            <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
-            <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
-            ${(() => { const c = projectCategoryOf(p); return `<span class="pl-cell pl-center pl-hide-sm${c.auto ? ' pl-cat-auto' : ''}" title="${c.auto && c.label ? 'Worked out from Target Market -- pick a Category on the project to set it yourself' : ''}">${escapeHtml(c.label)}</span>`; })()}
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>
-            <span class="pl-cell pl-center">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(formatXlDate(p.requestDate))}</span>
-            <span class="pl-cell pl-center pl-hide-sm pl-cooked" title="${escapeHtml(COOKED_LABELS[p.cookedStatus]?.title || '')}">${COOKED_LABELS[p.cookedStatus]?.symbol || ''}</span>
-            <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.factoryName || '')}</span>
-            <span class="pl-cell pl-overview pl-hide-sm">${escapeHtml(p.overview || '')}</span>
+            <span class="pl-cell pl-center pl-editable" data-edit-field="status" data-project-id="${escapeHtml(p.id)}">${statusPillHtml(p.status)}</span>
+            <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="initiatedBy" data-project-id="${escapeHtml(p.id)}" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
+            <span class="pl-cell pl-editable" data-edit-field="customerName" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.customerName || '')}</span>
+            <span class="pl-cell pl-center pl-editable" data-edit-field="destinationCountry" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.destinationCountry || '')}</span>
+            ${(() => { const c = projectCategoryOf(p); return `<span class="pl-cell pl-center pl-hide-sm pl-editable${c.auto ? ' pl-cat-auto' : ''}" data-edit-field="category" data-project-id="${escapeHtml(p.id)}" title="${c.auto && c.label ? 'Worked out from Target Market -- pick a Category on the project to set it yourself' : ''}">${escapeHtml(c.label)}</span>`; })()}
+            <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="ownerSalesRep" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.ownerSalesRep || '')}</span>
+            <span class="pl-cell pl-center pl-editable" data-edit-field="responsiblePerson" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
+            <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="requestDate" data-project-id="${escapeHtml(p.id)}">${escapeHtml(formatXlDate(p.requestDate))}</span>
+            <span class="pl-cell pl-center pl-hide-sm pl-cooked pl-editable" data-edit-field="cookedStatus" data-project-id="${escapeHtml(p.id)}" title="${escapeHtml(COOKED_LABELS[p.cookedStatus]?.title || '')}">${COOKED_LABELS[p.cookedStatus]?.symbol || ''}</span>
+            <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="factoryName" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.factoryName || '')}</span>
+            <span class="pl-cell pl-overview pl-hide-sm pl-editable" data-edit-field="overview" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.overview || '')}</span>
             ${months.map((m, i) => renderProjMuCell(projectMonthUpdateInfo(p, m), i === 0 ? 'selected' : 'previous', p.id, m)).join('')}
           </div>
         `).join('')}
