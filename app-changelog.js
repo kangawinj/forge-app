@@ -822,6 +822,7 @@ export const CHANGELOG = [
   { version: "3.0.780", date: "2026-11-02", note: "Projects by Status (List): editing a cell in place is now safer -- double-click to start (a single click no longer does), the person types their password again to confirm each change, and an Undo bar stays for 10 seconds afterwards (Undo restores the old value and is logged as another edit)" },
   { version: "3.0.781", date: "2026-11-02", note: "Reference Lists > Company Directory: the one-line add bar is replaced by a New company section -- name (required), abbreviation, country with its flag, a logo with preview, and any number of locations with their addresses -- then + Add company. It also warns about a duplicate name or abbreviation" },
   { version: "3.0.782", date: "2026-11-02", note: "Projects by Status (List): pointing at a cell, or editing it, highlights its whole row and column (and the column heading)" },
+  { version: "3.0.783", date: "2026-11-02", note: "Projects by Status (List) > Export Excel: the file now has a Summary column for every month that has any Summary (newest first, no gaps), not just the months shown on the page" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

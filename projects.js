@@ -2126,11 +2126,14 @@ export function renderProjectsList(){
     wireProjMuScrollbar(dashboardContainer);
     // Export Excel: the same rows, in the same order and numbering, as the table on the page
     dashboardContainer.querySelector('#btnExportProjectsStatusExcel')?.addEventListener('click', () => {
-      const months = monthsBackFrom(projectsByStatusMonth, projMuRenderedCount());
-      const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)} (${m.slice(5, 7)})`)];
-      const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       let no = 0;
       const exportList = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
+      // every month that has a Summary for any exported project, newest first, with no gaps between the newest and the oldest
+      const withData = [...new Set(exportList.flatMap(p => (p.monthlySummaries || []).map(ms => migrateMonthlySummary(ms).month)))]
+        .filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
+      const months = withData.length ? monthsBackFrom(withData[0], monthsBetween(withData[withData.length - 1], withData[0]) + 1) : monthsBackFrom(projectsByStatusMonth, projMuRenderedCount());
+      const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)} (${m.slice(5, 7)})`)];
+      const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       const groups = projectsByCategoryThenStatus(exportList).map(c => ({
         label: `${c.heading} (${c.count})`,
         rows: c.statusGroups.flatMap(g => g.list).map(p => ({
@@ -3723,6 +3726,10 @@ export function muRecipeOptionsHtml(selectedId){
 // projectsByStatusMonthColumnCount's own comment). Powers Projects by
 // Status' List view's month-comparison columns, whose count an admin can
 // grow/shrink via the header row's +/x controls.
+function monthsBetween(oldStr, newStr){
+  const [y1, m1] = oldStr.split('-').map(Number), [y2, m2] = newStr.split('-').map(Number);
+  return (y2 - y1) * 12 + (m2 - m1);
+}
 function monthsBackFrom(monthStr, count){
   const months = [];
   for(let i = 0; i < count; i++) months.push(i === 0 ? monthStr : previousMonthStr(months[months.length - 1]));
