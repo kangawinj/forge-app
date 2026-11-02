@@ -1736,7 +1736,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
   // Removing a column is admin-only (the button is only rendered for them
   // too, this is just a second guard) and asks first (per request) -- it's a
   // shared setting, so it hides that month's column for everyone.
-  dashboardContainer.querySelector('[data-role="remove-proj-mu-month-column"]')?.addEventListener('click', () => {
+  dashboardContainer.querySelectorAll('[data-role="remove-proj-mu-month-column"]').forEach(btn => btn.addEventListener('click', () => {
     if(!isCurrentUserAdmin()) return;
     const lastMonth = monthsBackFrom(projectsByStatusMonth, projectsByStatusMonthColumnCount).pop();
     if(!confirm(`Remove the "Summary of ${formatMonthYear(lastMonth)}" column?
@@ -1745,7 +1745,7 @@ This hides it for everyone. No Monthly Update data is deleted — you can add th
     const next = Math.max(projectsByStatusMonthColumnCount - 1, PROJ_MU_DEFAULT_MONTH_COLUMNS);
     setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
       .catch(err => alert('Failed to update: ' + err.message));
-  });
+  }));
   // "See more" -- only shown on a cell whose text is actually clamped
   // (scrollHeight taller than the clamped box), checked after insertion
   // since that can't be known from the text alone without measuring the
@@ -2087,6 +2087,7 @@ export function renderProjectsList(){
             <input type="month" id="projectsByStatusMonthInput" value="${escapeHtml(projectsByStatusMonth)}" max="${escapeHtml(bangkokTodayStr().slice(0,7))}" title="${isCurrentUserAdmin() ? 'Saved as the starting month for everyone (pick the current month to follow the calendar again)' : 'Your own view only — resets to the starting month on refresh'}">
             ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
+            ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount > PROJ_MU_DEFAULT_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="remove-proj-mu-month-column" title="Remove the last month column (hides it for everyone; no data is deleted)">${icon('x', 12)} Remove last column</button>` : ''}
             <button type="button" class="btn btn-sm" id="btnExportProjectsStatusExcel" style="margin-left:auto;" title="Download this table (all status groups and month columns) as an Excel file">${icon('download', 14)} Export Excel</button>
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
