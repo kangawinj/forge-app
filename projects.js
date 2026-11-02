@@ -748,6 +748,36 @@ function projectsByCategoryThenStatus(list){
 // date picker for Date Received, a text box (with the same suggestion lists as the project form) for the rest. Against
 // accidental edits, a change is only saved after the person types their password again, and an Undo bar stays for 10
 // seconds afterwards. Saved changes are logged like a normal project edit; Esc or clicking away leaves the cell as it was.
+// Pointing at a cell of Projects by Status (List), or editing it, tints that cell's whole row and column (and the
+// column heading) so it is easy to see which project and which field it belongs to.
+let projHlLock = null;   // the cell being edited keeps its highlight even when the pointer moves away
+function projHighlightClear(root){
+  root.querySelectorAll('.pl-hl-row, .pl-hl-col').forEach(e => e.classList.remove('pl-hl-row', 'pl-hl-col'));
+}
+function projHighlightCell(root, cell){
+  const row = cell.closest('.proj-xl-row');
+  if(!row || !root.contains(row)) return;
+  let c = cell;
+  while(c.parentElement && c.parentElement !== row) c = c.parentElement;
+  const idx = [...row.children].indexOf(c);
+  if(idx < 0) return;
+  projHighlightClear(root);
+  row.classList.add('pl-hl-row');
+  root.querySelectorAll('.proj-xl-row').forEach(r => r.children[idx]?.classList.add('pl-hl-col'));
+  root.querySelector('.proj-xl-header')?.children[idx]?.classList.add('pl-hl-col');
+}
+function wireProjHighlight(root){
+  if(root.dataset.hlWired) return;   // the card is rebuilt on every render, the container itself is not
+  root.dataset.hlWired = '1';
+  root.addEventListener('mouseover', e => {
+    if(projHlLock) return;
+    const row = e.target.closest?.('.proj-xl-row');
+    if(row) projHighlightCell(root, e.target);
+    else projHighlightClear(root);
+  });
+  root.addEventListener('mouseleave', () => { if(!projHlLock) projHighlightClear(root); });
+}
+
 // A bar at the bottom of the screen with an Undo button, for 10 seconds
 let projUndoTimer = null;
 function showProjUndoToast(message, onUndo){
@@ -798,22 +828,25 @@ function startProjCellEdit(cell){
     ctl.value = current;
   }
   ctl.className = 'pl-inline';
+  const hlRoot = cell.closest('#projectsDashboard');
   const original = cell.innerHTML;
   cell.innerHTML = '';
   cell.classList.add('pl-editing');
   cell.appendChild(ctl);
+  if(hlRoot){ projHighlightCell(hlRoot, cell); projHlLock = cell; }
   ctl.focus();
   if(ctl.select && cfg.kind !== 'select') ctl.select();
   if(cfg.kind === 'select' && ctl.showPicker){ try{ ctl.showPicker(); }catch(e){ /* needs a user gesture; the click is one, but not every browser allows it */ } }
   let finished = false;
-  const cancel = () => { if(finished) return; finished = true; cell.classList.remove('pl-editing'); cell.innerHTML = original; };
+  const unlock = () => { if(projHlLock === cell){ projHlLock = null; if(hlRoot) projHighlightClear(hlRoot); } };
+  const cancel = () => { if(finished) return; finished = true; unlock(); cell.classList.remove('pl-editing'); cell.innerHTML = original; };
   const commit = () => {
     if(finished) return;
     finished = true;
     let v = ctl.value;
     if(cfg.kind === 'text' || cfg.kind === 'area') v = v.trim();
     const was = field === 'status' ? (p.status || PROJECT_STATUSES[0]) : current;
-    if(v === was){ cell.classList.remove('pl-editing'); cell.innerHTML = original; return; }
+    if(v === was){ unlock(); cell.classList.remove('pl-editing'); cell.innerHTML = original; return; }
     const label = PROJECT_DIFF_FIELDS[field] || field;
     const shown = val => {
       if(cfg.kind === 'select'){ const o = cfg.options().find(x => x[0] === val); return o ? o[1] : (val || '(blank)'); }
@@ -835,6 +868,7 @@ function startProjCellEdit(cell){
       renderProjectsList();
     };
     // the cell shows its old value until the password is accepted; closing the password window leaves it that way
+    unlock();
     cell.classList.remove('pl-editing');
     cell.innerHTML = original;
     requestAuthConfirm('Confirm edit', `Change ${label} of "${p.name || 'Untitled project'}" from ${shown(was)} to ${shown(v)}? Enter your password to save.`, apply);
@@ -1638,6 +1672,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       renderProjectsList();
     });
   });
+  wireProjHighlight(dashboardContainer);
   dashboardContainer.querySelectorAll('.pl-editable[data-edit-field]').forEach(cell => {
     cell.addEventListener('dblclick', () => startProjCellEdit(cell));
   });

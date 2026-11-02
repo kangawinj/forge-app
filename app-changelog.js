@@ -821,6 +821,7 @@ export const CHANGELOG = [
   { version: "3.0.779", date: "2026-11-02", note: "Projects by Status (List): click a cell to edit it right there -- dropdowns for Status, Category and Cooked, a date picker for Date Received, text boxes with the usual suggestions for Initiated by, Customer, Target Market, Owner, PD-Owner, Factory and Overview. A change is saved straight away and logged like a normal project edit; Esc cancels. Product Name still opens the project" },
   { version: "3.0.780", date: "2026-11-02", note: "Projects by Status (List): editing a cell in place is now safer -- double-click to start (a single click no longer does), the person types their password again to confirm each change, and an Undo bar stays for 10 seconds afterwards (Undo restores the old value and is logged as another edit)" },
   { version: "3.0.781", date: "2026-11-02", note: "Reference Lists > Company Directory: the one-line add bar is replaced by a New company section -- name (required), abbreviation, country with its flag, a logo with preview, and any number of locations with their addresses -- then + Add company. It also warns about a duplicate name or abbreviation" },
+  { version: "3.0.782", date: "2026-11-02", note: "Projects by Status (List): pointing at a cell, or editing it, highlights its whole row and column (and the column heading)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

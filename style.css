@@ -6585,3 +6585,11 @@
   .rcf-loc-addr{flex:1;min-width:0;resize:vertical;}
   .rcf-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--border);}
   @media (max-width:560px){ .rcf-fields{grid-template-columns:1fr;} .rcf-loc-row{flex-wrap:wrap;} .rcf-loc-name{flex:1 1 100%;max-width:none;} }
+
+  /* Projects by Status (List): the row + column of the cell being pointed at / edited */
+  .proj-xl-row.pl-hl-row > .pl-cell{background:#e6f3f6;}
+  .proj-xl-row > .pl-cell.pl-hl-col{background:#eef8fa;}
+  .proj-xl-row.pl-hl-row > .pl-cell.pl-hl-col{background:#d3ecf1;}
+  .proj-xl-header > .pl-head.pl-hl-col, .proj-xl-header > .proj-mu-cell-header.pl-hl-col{background:#8fd3dc;}
+  .proj-xl-row.pl-hl-row > .proj-mu-cell, .proj-xl-row > .proj-mu-cell.pl-hl-col{box-shadow:inset 0 0 0 2px #9bc9cf;}
+  .proj-xl-row .pl-cell.pl-editing{background:#fff;}
