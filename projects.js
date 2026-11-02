@@ -1000,6 +1000,8 @@ let projectsByStatusMonthIsLocal = false;
 // below), same "admin decides, everyone sees the result" shape as
 // MODULE_PERMISSIONS in app.js.
 let projectsByStatusMonthColumnCount = 0;
+// months an admin hid with the x on a column heading (shared setting; no Monthly Update data is deleted)
+let projectsByStatusHiddenMonths = new Set();
 const PROJ_MU_DEFAULT_MONTH_COLUMNS = 0;
 const PROJ_MU_MAX_MONTH_COLUMNS = 6;
 let unsubscribeProjectsByStatusSettings = null;
@@ -1733,6 +1735,20 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
     setDoc(doc(appSettingsCol, 'projectsByStatus'), { monthColumnCount: next }, { merge: true })
       .catch(err => alert('Failed to update: ' + err.message));
   });
+  dashboardContainer.querySelectorAll('[data-role="hide-proj-mu-month"]').forEach(btn => btn.addEventListener('click', () => {
+    if(!isCurrentUserAdmin()) return;
+    const m = btn.dataset.month;
+    if(!confirm(`Remove the "Summary of ${formatMonthYear(m)}" column?
+
+This hides it for everyone. No Monthly Update data is deleted -- you can bring it back with "Show removed columns".`)) return;
+    setDoc(doc(appSettingsCol, 'projectsByStatus'), { hiddenMonths: [...projectsByStatusHiddenMonths, m] }, { merge: true })
+      .catch(err => alert('Failed to update: ' + err.message));
+  }));
+  dashboardContainer.querySelector('[data-role="show-hidden-proj-mu-months"]')?.addEventListener('click', () => {
+    if(!isCurrentUserAdmin()) return;
+    setDoc(doc(appSettingsCol, 'projectsByStatus'), { hiddenMonths: [] }, { merge: true })
+      .catch(err => alert('Failed to update: ' + err.message));
+  });
   // Removing a column is admin-only (the button is only rendered for them
   // too, this is just a second guard) and asks first (per request) -- it's a
   // shared setting, so it hides that month's column for everyone.
@@ -2088,18 +2104,19 @@ export function renderProjectsList(){
             ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount > PROJ_MU_DEFAULT_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="remove-proj-mu-month-column" title="Remove the last month column (hides it for everyone; no data is deleted)">${icon('x', 12)} Remove last column</button>` : ''}
+            ${isCurrentUserAdmin() && projectsByStatusHiddenMonths.size ? `<button type="button" class="btn btn-sm" data-role="show-hidden-proj-mu-months" title="Bring back the month columns that were removed">Show removed columns (${projectsByStatusHiddenMonths.size})</button>` : ''}
             <button type="button" class="btn btn-sm" id="btnExportProjectsStatusExcel" style="margin-left:auto;" title="Download this table (all status groups and month columns) as an Excel file">${icon('download', 14)} Export Excel</button>
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
             ${PROJ_XL_COLS.map(c => `<span class="pl-head${c.sticky ? ' pl-sticky pl-sticky-' + c.sticky : ''}"><span class="pl-head-label">${c.label}</span>${c.key ? `<button type="button" class="pl-filter-btn${projColFilters.has(c.key) || (c.key === 'category' && projCatOrderCustom) ? ' active' : ''}" data-proj-col="${c.key}" title="Filter / order this column">&#9662;</button>` : ''}</span>`).join('')}
-            ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
+            ${projMuMonths(projectsByStatusMonth).map(m => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
                   <span>Summary of ${escapeHtml(formatMonthYear(m))} (${escapeHtml(m.slice(5, 7))})</span>
                   <button type="button" class="proj-mu-expand-all" data-role="proj-mu-expand-column" data-month="${escapeHtml(m)}">${projMuExpandedMonths.has(m) ? 'Collapse all' : 'Expand all'}</button>
                 </span>
-                ${isCurrentUserAdmin() && i === projectsByStatusMonthColumnCount - 1 ? `<button type="button" class="icon-btn" data-role="remove-proj-mu-month-column" title="Remove this column">${icon('x', 11)}</button>` : ''}
+                ${isCurrentUserAdmin() ? `<button type="button" class="icon-btn" data-role="hide-proj-mu-month" data-month="${escapeHtml(m)}" title="Remove this column (hides it for everyone; no data is deleted)">${icon('x', 11)}</button>` : ''}
               </span>
             `).join('')}
           </div>
@@ -2132,7 +2149,7 @@ export function renderProjectsList(){
       // every month that has a Summary for any exported project, newest first, with no gaps between the newest and the oldest
       const withData = [...new Set(exportList.flatMap(p => (p.monthlySummaries || []).map(ms => migrateMonthlySummary(ms).month)))]
         .filter(m => /^\d{4}-\d{2}$/.test(m)).sort().reverse();
-      const months = withData.length ? monthsBackFrom(withData[0], monthsBetween(withData[withData.length - 1], withData[0]) + 1) : monthsBackFrom(projectsByStatusMonth, projMuRenderedCount());
+      const months = withData.length ? monthsBackFrom(withData[0], monthsBetween(withData[withData.length - 1], withData[0]) + 1) : projMuMonths(projectsByStatusMonth);
       const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)} (${m.slice(5, 7)})`)];
       const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       const groups = projectsByCategoryThenStatus(exportList).map(c => ({
@@ -3652,6 +3669,7 @@ export function attachProjectsListener(){
     unsubscribeProjectsByStatusSettings = onSnapshot(doc(appSettingsCol, 'projectsByStatus'), snap => {
       const data = snap.data();
       projectsByStatusMonthColumnCount = Math.min(Math.max(Number(data?.monthColumnCount) || PROJ_MU_DEFAULT_MONTH_COLUMNS, PROJ_MU_DEFAULT_MONTH_COLUMNS), PROJ_MU_MAX_MONTH_COLUMNS);
+      projectsByStatusHiddenMonths = new Set((Array.isArray(data?.hiddenMonths) ? data.hiddenMonths : []).filter(m => /^\d{4}-\d{2}$/.test(m)));
       projectsByStatusSharedStartMonth = /^\d{4}-\d{2}$/.test(data?.startMonth || '') ? data.startMonth : '';
       if(!projectsByStatusMonthIsLocal) projectsByStatusMonth = projectsByStatusSharedStartMonth || bangkokMonthStr();
       if(mainFeatureView === 'projects') renderProjectsList();
@@ -3774,22 +3792,26 @@ function formatXlDate(iso){
 }
 // Month columns that are actually rendered: the ones the admin chose to show (projectsByStatusMonthColumnCount)
 // plus the older months up to the maximum, which sit past the right edge so the scrollbar (or a drag) reveals them.
+// the month columns actually drawn: the rendered months minus the ones an admin hid
+function projMuMonths(selectedMonth){
+  return monthsBackFrom(selectedMonth, projMuRenderedCount()).filter(m => !projectsByStatusHiddenMonths.has(m));
+}
 function projMuRenderedCount(){
   return projectsByStatusMonthColumnCount > 0 ? PROJ_MU_MAX_MONTH_COLUMNS : 0;
 }
 // A month column is at least PROJ_MU_MONTH_COL_MIN_PX wide, or as wide as the room left of the fixed columns allows.
 function projMuMonthColWidth(){
-  const v = Math.max(1, projectsByStatusMonthColumnCount);
+  const v = Math.max(1, Math.min(projectsByStatusMonthColumnCount, projMuMonths(projectsByStatusMonth).length));
   return `max(${PROJ_MU_MONTH_COL_MIN_PX}px, calc((100cqw - ${PROJ_XL_FIXED_PX}px) / ${v}))`;
 }
 function projMuListGridColumns(){
-  const n = projMuRenderedCount();
+  const n = projMuMonths(projectsByStatusMonth).length;
   return PROJ_XL_COLS.map(c => `${c.w}px`).join(' ') + (n > 0 ? ` repeat(${n}, ${projMuMonthColWidth()})` : '');
 }
 const PROJ_MU_MONTH_COL_MIN_PX = 280;
 // Total width of the list; anything wider than the box scrolls sideways.
 function projMuListMinWidth(){
-  const n = projMuRenderedCount();
+  const n = projMuMonths(projectsByStatusMonth).length;
   return n > 0 ? `calc(${PROJ_XL_FIXED_PX}px + ${n} * ${projMuMonthColWidth()})` : `${PROJ_XL_FIXED_PX}px`;
 }
 // Stand-in horizontal scrollbar pinned to the bottom of the screen (the real one sits under the whole project
@@ -4085,7 +4107,7 @@ function monthlyUpdatesSectionHtml(p, isEditing){
 function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, selectedMonth){
   if(!projectsForStatus.length) return '';
   if(viewMode === 'list'){
-    const months = monthsBackFrom(selectedMonth, projMuRenderedCount());
+    const months = projMuMonths(selectedMonth);
     const gridCols = projMuListGridColumns();
     return `
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
@@ -4111,7 +4133,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
             <span class="pl-cell pl-center pl-hide-sm pl-cooked pl-editable" data-edit-field="cookedStatus" data-project-id="${escapeHtml(p.id)}" title="${escapeHtml(COOKED_LABELS[p.cookedStatus]?.title || '')}">${COOKED_LABELS[p.cookedStatus]?.symbol || ''}</span>
             <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="factoryName" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.factoryName || '')}</span>
             <span class="pl-cell pl-overview pl-hide-sm pl-editable" data-edit-field="overview" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.overview || '')}</span>
-            ${months.map((m, i) => renderProjMuCell(projectMonthUpdateInfo(p, m), i === 0 ? 'selected' : 'previous', p.id, m)).join('')}
+            ${months.map(m => renderProjMuCell(projectMonthUpdateInfo(p, m), m === selectedMonth ? 'selected' : 'previous', p.id, m)).join('')}
           </div>
         `).join('')}
       </div>
@@ -4193,6 +4215,7 @@ export function resetProjectsState(){
   if(unsubscribeProjects){ unsubscribeProjects(); unsubscribeProjects = null; }
   if(unsubscribeProjectsByStatusSettings){ unsubscribeProjectsByStatusSettings(); unsubscribeProjectsByStatusSettings = null; }
   projectsByStatusMonthColumnCount = PROJ_MU_DEFAULT_MONTH_COLUMNS;
+  projectsByStatusHiddenMonths = new Set();
   projectsByStatusSharedStartMonth = '';
   projectsByStatusMonthIsLocal = false;
   projectsByStatusMonth = null;
