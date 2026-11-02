@@ -727,12 +727,22 @@ function projectMatchesCategoryFilter(p){
   }
   return true;
 }
-// Within a status group, projects follow the chosen category order (stable: ties keep their usual order)
-function sortProjectsByCategoryOrder(list){
-  if(!projCatOrderCustom) return list;
-  const rank = p => projCatOrder.indexOf(projectCategoryOf(p).key);
-  return list.map((p, i) => [p, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(x => x[0]);
+// Heading of a category section in Projects by Status ("International project" ... "Not set")
+function projCatHeading(key){
+  return key ? `${PROJECT_CATEGORIES.find(c => c.key === key)?.label || key} project` : 'Not set';
 }
+// Projects (already visible + passing the column filters) grouped Category first, then Status, in the chosen category order:
+// [{ key, heading, statusGroups: [{ label: status, list: [project] }] }] -- empty categories / statuses left out
+function projectsByCategoryThenStatus(list){
+  return projCatOrder.map(key => {
+    const inCat = list.filter(p => projectCategoryOf(p).key === key);
+    return {
+      key, heading: projCatHeading(key), count: inCat.length,
+      statusGroups: PROJECT_STATUSES.map(s => ({ label: s, list: inCat.filter(p => (p.status || PROJECT_STATUSES[0]) === s) })).filter(g => g.list.length)
+    };
+  }).filter(c => c.count);
+}
+
 function projColFilterPopHtml(colKey){
   const counts = new Map();
   projects.filter(isProjectCurrentlyVisible).forEach(p => { const v = PROJ_COL_VALUE[colKey](p); counts.set(v, (counts.get(v) || 0) + 1); });
@@ -749,7 +759,7 @@ function projColFilterPopHtml(colKey){
   const isCat = colKey === 'category';
   return `
     <div class="pcf-title">${escapeHtml(col?.label || '')}</div>
-    ${isCat ? `<div class="pcf-hint">Tick what to show. Use the arrows to choose which category is listed first.${projCatOrderCustom ? ' <button type="button" class="pcf-link" data-pcf-reset-order>Reset order</button>' : ''}</div>` : ''}
+    ${isCat ? `<div class="pcf-hint">Tick what to show. Use the arrows to choose which category section comes first.${projCatOrderCustom ? ' <button type="button" class="pcf-link" data-pcf-reset-order>Reset order</button>' : ''}</div>` : ''}
     <div class="pcf-actions"><button type="button" class="pcf-link" data-pcf-select-all>${set ? 'Show all' : 'All shown'}</button></div>
     <div class="pcf-list">
       ${values.map((v, i) => `
@@ -1973,9 +1983,10 @@ export function renderProjectsList(){
       const headers = [...PROJ_XL_COLS.map(c => c.label), ...months.map(m => `Summary of ${formatMonthYear(m)}`)];
       const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       let no = 0;
-      const groups = projectsByStatus.map(g => ({
-        label: `${g.label} (${g.count})`,
-        rows: sortProjectsByCategoryOrder(projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p))).map(p => ({
+      const exportList = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
+      const groups = projectsByCategoryThenStatus(exportList).flatMap(c => c.statusGroups.map(g => ({
+        label: `${c.heading} · ${g.label} (${g.list.length})`,
+        rows: g.list.map(p => ({
           image: p.image || '',
           // photos attached to each month's update (images only), keyed by the column they belong to
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
@@ -1987,7 +1998,7 @@ export function renderProjectsList(){
             ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
           ]
         }))
-      }));
+      })));
       const stamp = new Date().toISOString().slice(0, 10);
       exportProjectsStatusTableToExcel({ title: `Projects by Status — ${formatMonthYear(projectsByStatusMonth)}`, headers, widths, groups, fileName: `Projects by Status ${stamp}` });
     });
@@ -3964,20 +3975,26 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
 function renderStatusBarList(groups, viewMode, selectedMonth){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
   projXlRowNo = 0;
-  const max = Math.max(...groups.map(g => g.count));
-  return groups.map(g => {
-    const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const projectsForStatus = sortProjectsByCategoryOrder(projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)));
-    const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode, selectedMonth);
+  // Category first (in the order chosen under the Category column heading), then the status groups inside each
+  const sections = projectsByCategoryThenStatus(projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)));
+  return sections.map(c => {
+    const max = Math.max(...c.statusGroups.map(g => g.list.length));
     return `
-      <div class="dash-status-group">
-        <button type="button" class="dash-bar-item dash-bar-item-clickable" data-status-filter="${escapeHtml(g.label)}" title="Filter the projects table to ${escapeHtml(g.label)}">
-          <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
-          <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${color};"></div></div>
-        </button>
-        ${photosHtml}
-      </div>
-    `;
+      <div class="proj-cat-section" data-proj-cat-section="${escapeHtml(c.key)}">
+        <div class="proj-cat-heading"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></div>
+        ${c.statusGroups.map(g => {
+          const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
+          const photosHtml = renderStatusGroupItems(g.list, g.label, viewMode, selectedMonth);
+          return `
+            <div class="dash-status-group">
+              <button type="button" class="dash-bar-item dash-bar-item-clickable" data-status-filter="${escapeHtml(g.label)}" title="Filter the projects table to ${escapeHtml(g.label)}">
+                <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.list.length}</span></div>
+                <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.list.length/max*100))}%;background:${color};"></div></div>
+              </button>
+              ${photosHtml}
+            </div>`;
+        }).join('')}
+      </div>`;
   }).join('');
 }
 // Workload-by-person bar list (see projectsByResponsible above) — same

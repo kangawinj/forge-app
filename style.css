@@ -6538,3 +6538,9 @@
   .pcf-move{width:22px;height:22px;padding:0;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;color:var(--text);}
   .pcf-move:hover:not(:disabled){background:var(--primary-light);border-color:var(--primary);}
   .pcf-move:disabled{opacity:.35;cursor:default;}
+
+  /* Projects by Status: one section per category (International project, Domestic project ...), the status groups inside */
+  .proj-cat-section{margin-bottom:14px;}
+  .proj-cat-heading{display:flex;align-items:center;justify-content:space-between;gap:8px;background:var(--primary-dark);color:#fff;
+    font-size:13px;font-weight:700;padding:7px 12px;border-radius:8px;margin:6px 0 8px;position:sticky;left:0;}
+  .proj-cat-heading-count{background:rgba(255,255,255,.2);border-radius:10px;padding:0 9px;font-size:12px;font-weight:600;}
