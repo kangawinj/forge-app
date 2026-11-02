@@ -6520,7 +6520,6 @@
   .proj-xl-row > .pl-cat-auto{color:var(--text-dim);font-style:italic;}
 
   /* Projects by Status: column filter arrows in the List heading + their popup */
-  .proj-xl-header .pl-head{position:relative;}
   .pl-head-label{min-width:0;}
   .pl-filter-btn{flex-shrink:0;margin-left:4px;width:18px;height:18px;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:#0c2b30;font-size:11px;line-height:1;cursor:pointer;}
   .pl-filter-btn:hover{background:rgba(255,255,255,.7);border-color:#9bc9cf;}

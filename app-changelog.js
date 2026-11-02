@@ -815,6 +815,7 @@ export const CHANGELOG = [
   { version: "3.0.773", date: "2026-11-02", note: "Projects by Status: the column filters are remembered across reloads (on this browser), like the Category order" },
   { version: "3.0.774", date: "2026-11-02", note: "Projects by Status (Grid and List, and the Excel export): the projects are now grouped by Category first -- International project, Domestic project, Checking project, Long time project, Not set -- with the status groups (Not Started, In Progress ...) inside each. The Category arrows in the column filter choose which category section comes first" },
   { version: "3.0.775", date: "2026-11-02", note: "Projects by Status (List): the status banners (In Progress, Blocked / On Hold ...) are gone -- Status is now a column (after Product Name, with its own filter), and each category section is one continuous table in status order. Grid view keeps the status bars. The Excel export has the Status column and one group per category" },
+  { version: "3.0.776", date: "2026-11-02", note: "Projects by Status (List): fixed the column headings being shifted -- Product Name sat 46px to the right of where it belongs and covered the Status heading" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
