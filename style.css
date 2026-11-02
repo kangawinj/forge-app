@@ -6518,3 +6518,23 @@
   .proj-cat-count{display:inline-block;min-width:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:var(--bg);font-size:11px;color:var(--text-dim);text-align:center;}
   .proj-cat-filter .btn.active .proj-cat-count{background:rgba(255,255,255,.25);color:inherit;}
   .proj-xl-row > .pl-cat-auto{color:var(--text-dim);font-style:italic;}
+
+  /* Projects by Status: column filter arrows in the List heading + their popup */
+  .proj-xl-header .pl-head{position:relative;}
+  .pl-head-label{min-width:0;}
+  .pl-filter-btn{flex-shrink:0;margin-left:4px;width:18px;height:18px;padding:0;border:1px solid transparent;border-radius:4px;background:transparent;color:#0c2b30;font-size:11px;line-height:1;cursor:pointer;}
+  .pl-filter-btn:hover{background:rgba(255,255,255,.7);border-color:#9bc9cf;}
+  .pl-filter-btn.active{background:var(--primary);color:#fff;}
+  .pcf-pop{position:fixed;z-index:1500;width:260px;max-height:70vh;display:flex;flex-direction:column;background:#fff;border:1px solid var(--border);border-radius:12px;box-shadow:0 10px 30px rgba(12,24,48,.22);padding:10px 12px;font-size:13px;color:var(--text);}
+  .pcf-title{font-weight:700;color:var(--primary-dark);margin-bottom:4px;}
+  .pcf-hint{font-size:11px;color:var(--text-dim);margin-bottom:6px;line-height:1.35;}
+  .pcf-actions{margin-bottom:4px;}
+  .pcf-link{background:none;border:none;padding:0;color:var(--primary);font-size:12px;cursor:pointer;text-decoration:underline;}
+  .pcf-list{overflow-y:auto;border-top:1px solid var(--border);}
+  .pcf-row{display:flex;align-items:center;gap:6px;padding:4px 2px;border-bottom:1px solid var(--bg);}
+  .pcf-check{display:flex;align-items:center;gap:7px;flex:1;min-width:0;cursor:pointer;}
+  .pcf-label{overflow-wrap:anywhere;}
+  .pcf-count{font-size:11px;color:var(--text-dim);}
+  .pcf-move{width:22px;height:22px;padding:0;border:1px solid var(--border);border-radius:5px;background:#fff;font-size:10px;cursor:pointer;color:var(--text);}
+  .pcf-move:hover:not(:disabled){background:var(--primary-light);border-color:var(--primary);}
+  .pcf-move:disabled{opacity:.35;cursor:default;}

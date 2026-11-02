@@ -667,13 +667,134 @@ let responsibleStatusFilters = new Set();
 // vertical list -- one row per project, photo + Name + Responsible
 // Person (PD) + latest Activity Update, per request.
 let projectsByStatusViewMode = 'grid';
-// Category filter of Projects by Status: '' = all, a category key, or '__none' = projects with no category at all
-let projectsByStatusCategory = '';
-function projectMatchesCategoryFilter(p){
-  if(!projectsByStatusCategory) return true;
-  const key = projectCategoryOf(p).key;
-  return projectsByStatusCategory === '__none' ? !key : key === projectsByStatusCategory;
+// Column filters of Projects by Status (the little arrow in each column heading, like Excel): column key -> the set of
+// values that stay visible ('' stands for a blank cell); no entry = that column is not filtered.
+const projColFilters = new Map();
+// The order the Category column lists its projects in (Category heading > arrows). Only used once changed; kept per
+// browser in localStorage, never shared with other people.
+const PROJ_CAT_ORDER_KEY = 'forgeProjCategoryOrder';
+const PROJ_CAT_DEFAULT_ORDER = [...PROJECT_CATEGORIES.map(c => c.key), ''];
+let projCatOrder = PROJ_CAT_DEFAULT_ORDER.slice();
+let projCatOrderCustom = false;
+try{
+  const saved = JSON.parse(localStorage.getItem(PROJ_CAT_ORDER_KEY) || 'null');
+  if(Array.isArray(saved) && saved.length === PROJ_CAT_DEFAULT_ORDER.length && PROJ_CAT_DEFAULT_ORDER.every(k => saved.includes(k))){
+    projCatOrder = saved; projCatOrderCustom = true;
+  }
+}catch(e){ /* storage unavailable -- default order */ }
+function saveProjCatOrder(){
+  try{
+    if(projCatOrderCustom) localStorage.setItem(PROJ_CAT_ORDER_KEY, JSON.stringify(projCatOrder));
+    else localStorage.removeItem(PROJ_CAT_ORDER_KEY);
+  }catch(e){ /* storage unavailable -- order only lasts until reload */ }
 }
+const PROJ_COL_VALUE = {
+  name: p => p.name || 'Untitled project',
+  initiatedBy: p => p.initiatedBy || '',
+  customerName: p => p.customerName || '',
+  destinationCountry: p => p.destinationCountry || '',
+  category: p => projectCategoryOf(p).key,
+  ownerSalesRep: p => p.ownerSalesRep || '',
+  responsiblePerson: p => p.responsiblePerson || 'Unassigned PD',
+  requestDate: p => formatXlDate(p.requestDate),
+  cooked: p => COOKED_LABELS[p.cookedStatus]?.title || '',
+  factoryName: p => p.factoryName || ''
+};
+function projColValueLabel(colKey, v){
+  if(colKey === 'category') return v ? (PROJECT_CATEGORIES.find(c => c.key === v)?.label || v) : 'Not set';
+  return v || '(Blank)';
+}
+function projectMatchesCategoryFilter(p){
+  for(const [k, set] of projColFilters){
+    if(!set.has(PROJ_COL_VALUE[k](p))) return false;
+  }
+  return true;
+}
+// Within a status group, projects follow the chosen category order (stable: ties keep their usual order)
+function sortProjectsByCategoryOrder(list){
+  if(!projCatOrderCustom) return list;
+  const rank = p => projCatOrder.indexOf(projectCategoryOf(p).key);
+  return list.map((p, i) => [p, i]).sort((x, y) => rank(x[0]) - rank(y[0]) || x[1] - y[1]).map(x => x[0]);
+}
+function projColFilterPopHtml(colKey){
+  const counts = new Map();
+  projects.filter(isProjectCurrentlyVisible).forEach(p => { const v = PROJ_COL_VALUE[colKey](p); counts.set(v, (counts.get(v) || 0) + 1); });
+  let values;
+  if(colKey === 'category'){
+    values = projCatOrder.slice();
+    values.forEach(v => { if(!counts.has(v)) counts.set(v, 0); });
+  }else{
+    values = [...counts.keys()].sort((a, b) => ((a === '') - (b === '')) ||
+      (colKey === 'requestDate' ? String(a).split('/').reverse().join('').localeCompare(String(b).split('/').reverse().join('')) : String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })));
+  }
+  const set = projColFilters.get(colKey);
+  const col = PROJ_XL_COLS.find(c => c.key === colKey);
+  const isCat = colKey === 'category';
+  return `
+    <div class="pcf-title">${escapeHtml(col?.label || '')}</div>
+    ${isCat ? `<div class="pcf-hint">Tick what to show. Use the arrows to choose which category is listed first.${projCatOrderCustom ? ' <button type="button" class="pcf-link" data-pcf-reset-order>Reset order</button>' : ''}</div>` : ''}
+    <div class="pcf-actions"><button type="button" class="pcf-link" data-pcf-select-all>${set ? 'Show all' : 'All shown'}</button></div>
+    <div class="pcf-list">
+      ${values.map((v, i) => `
+        <div class="pcf-row">
+          <label class="pcf-check"><input type="checkbox" data-pcf-value="${escapeHtml(v)}"${!set || set.has(v) ? ' checked' : ''}><span class="pcf-label">${escapeHtml(projColValueLabel(colKey, v))}</span></label>
+          <span class="pcf-count">${counts.get(v) || 0}</span>
+          ${isCat ? `<button type="button" class="pcf-move" data-pcf-move="-1" data-pcf-value="${escapeHtml(v)}" title="List earlier"${i === 0 ? ' disabled' : ''}>&#9650;</button><button type="button" class="pcf-move" data-pcf-move="1" data-pcf-value="${escapeHtml(v)}" title="List later"${i === values.length - 1 ? ' disabled' : ''}>&#9660;</button>` : ''}
+        </div>`).join('')}
+    </div>`;
+}
+function closeProjColFilter(){ document.getElementById('projColFilterPop')?.remove(); }
+function openProjColFilter(btn, colKey){
+  const existing = document.getElementById('projColFilterPop');
+  if(existing && existing.dataset.col === colKey){ existing.remove(); return; }
+  closeProjColFilter();
+  const pop = document.createElement('div');
+  pop.id = 'projColFilterPop';
+  pop.className = 'pcf-pop';
+  pop.dataset.col = colKey;
+  pop.innerHTML = projColFilterPopHtml(colKey);
+  document.body.appendChild(pop);
+  const r = btn.getBoundingClientRect();
+  pop.style.top = `${Math.round(Math.min(r.bottom + 4, window.innerHeight - pop.offsetHeight - 8))}px`;
+  pop.style.left = `${Math.max(8, Math.min(window.innerWidth - pop.offsetWidth - 8, Math.round(r.left + r.width / 2 - pop.offsetWidth / 2)))}px`;
+  const refresh = () => {
+    const list = pop.querySelector('.pcf-list');
+    const keep = list ? list.scrollTop : 0;
+    pop.innerHTML = projColFilterPopHtml(colKey);
+    const l2 = pop.querySelector('.pcf-list');
+    if(l2) l2.scrollTop = keep;
+    renderProjectsList();
+  };
+  pop.addEventListener('click', e => {
+    if(e.target.closest('[data-pcf-select-all]')){ projColFilters.delete(colKey); refresh(); return; }
+    if(e.target.closest('[data-pcf-reset-order]')){ projCatOrder = PROJ_CAT_DEFAULT_ORDER.slice(); projCatOrderCustom = false; saveProjCatOrder(); refresh(); return; }
+    const mv = e.target.closest('[data-pcf-move]');
+    if(mv && !mv.disabled){
+      const i = projCatOrder.indexOf(mv.dataset.pcfValue), j = i + Number(mv.dataset.pcfMove);
+      if(i >= 0 && j >= 0 && j < projCatOrder.length){
+        [projCatOrder[i], projCatOrder[j]] = [projCatOrder[j], projCatOrder[i]];
+        projCatOrderCustom = true; saveProjCatOrder(); refresh();
+      }
+    }
+  });
+  pop.addEventListener('change', e => {
+    const cb = e.target.closest('[data-pcf-value]');
+    if(!cb || cb.type !== 'checkbox') return;
+    const all = [...pop.querySelectorAll('input[data-pcf-value]')].map(x => x.dataset.pcfValue);
+    const current = new Set(projColFilters.get(colKey) || all);
+    if(cb.checked) current.add(cb.dataset.pcfValue); else current.delete(cb.dataset.pcfValue);
+    if(!current.size){ cb.checked = true; return; }   // at least one value must stay shown
+    if(all.every(v => current.has(v))) projColFilters.delete(colKey); else projColFilters.set(colKey, current);
+    refresh();
+  });
+}
+document.addEventListener('click', e => {
+  // composedPath, not closest(): a click on a button that the popup has already re-rendered is no longer inside it
+  const inside = e.composedPath().some(n => n.id === 'projColFilterPop' || n.dataset?.projCol);
+  if(!inside) closeProjColFilter();
+});
+document.addEventListener('keydown', e => { if(e.key === 'Escape') closeProjColFilter(); });
+
 function categoryOptionsHtml(selected){
   return [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])]
     .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -1374,9 +1495,18 @@ function renderNewProjectPanel(){
 function wireProjectsByStatusCardClicks(dashboardContainer){
   dashboardContainer.querySelectorAll('#projCategoryFilter [data-proj-category]').forEach(btn => {
     btn.addEventListener('click', () => {
-      projectsByStatusCategory = btn.dataset.projCategory;
+      const v = btn.dataset.projCategory;
+      if(v === 'all') projColFilters.delete('category');
+      else projColFilters.set('category', new Set([v === 'none' ? '' : v]));
       renderProjectsList();
     });
+  });
+  dashboardContainer.querySelector('[data-role="proj-clear-col-filters"]')?.addEventListener('click', () => {
+    projColFilters.clear();
+    renderProjectsList();
+  });
+  dashboardContainer.querySelectorAll('[data-proj-col]').forEach(btn => {
+    btn.addEventListener('click', e => { e.stopPropagation(); openProjColFilter(btn, btn.dataset.projCol); });
   });
   dashboardContainer.querySelector('#projectsByStatusViewToggle')?.querySelectorAll('.view-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
@@ -1763,11 +1893,14 @@ export function renderProjectsList(){
           <span class="proj-cat-filter-label">Category:</span>
           ${(() => {
             const counts = new Map();
-            visibleProjects.forEach(pr => { const k = projectCategoryOf(pr).key || '__none'; counts.set(k, (counts.get(k) || 0) + 1); });
-            const chip = (key, label, n) => `<button type="button" class="btn btn-sm${projectsByStatusCategory === key ? ' active' : ''}" data-proj-category="${key}">${escapeHtml(label)} <span class="proj-cat-count">${n}</span></button>`;
-            return chip('', 'All', visibleProjects.length)
-              + PROJECT_CATEGORIES.map(c => chip(c.key, c.label, counts.get(c.key) || 0)).join('')
-              + (counts.get('__none') ? chip('__none', 'Not set', counts.get('__none')) : '');
+            visibleProjects.forEach(pr => { const k = projectCategoryOf(pr).key; counts.set(k, (counts.get(k) || 0) + 1); });
+            const catSet = projColFilters.get('category');
+            const chip = (val, label, n, active) => `<button type="button" class="btn btn-sm${active ? ' active' : ''}" data-proj-category="${val}">${escapeHtml(label)} <span class="proj-cat-count">${n}</span></button>`;
+            const only = key => !!catSet && catSet.size === 1 && catSet.has(key);
+            return chip('all', 'All', visibleProjects.length, !catSet)
+              + PROJECT_CATEGORIES.map(c => chip(c.key, c.label, counts.get(c.key) || 0, only(c.key))).join('')
+              + (counts.get('') ? chip('none', 'Not set', counts.get(''), only('')) : '')
+              + (projColFilters.size ? ' <button type="button" class="btn btn-sm" data-role="proj-clear-col-filters" title="Remove every column filter">Clear all filters</button>' : '');
           })()}
         </div>
         ${projectsByStatusViewMode === 'list' ? `
@@ -1781,7 +1914,7 @@ export function renderProjectsList(){
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
-            ${PROJ_XL_COLS.map(c => `<span class="pl-head${c.sticky ? ' pl-sticky pl-sticky-' + c.sticky : ''}">${c.label}</span>`).join('')}
+            ${PROJ_XL_COLS.map(c => `<span class="pl-head${c.sticky ? ' pl-sticky pl-sticky-' + c.sticky : ''}"><span class="pl-head-label">${c.label}</span>${c.key ? `<button type="button" class="pl-filter-btn${projColFilters.has(c.key) || (c.key === 'category' && projCatOrderCustom) ? ' active' : ''}" data-proj-col="${c.key}" title="Filter / order this column">&#9662;</button>` : ''}</span>`).join('')}
             ${monthsBackFrom(projectsByStatusMonth, projMuRenderedCount()).map((m, i) => `
               <span class="proj-mu-cell-header">
                 <span class="proj-mu-cell-header-main">
@@ -1822,7 +1955,7 @@ export function renderProjectsList(){
       let no = 0;
       const groups = projectsByStatus.map(g => ({
         label: `${g.label} (${g.count})`,
-        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)).map(p => ({
+        rows: sortProjectsByCategoryOrder(projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p))).map(p => ({
           image: p.image || '',
           // photos attached to each month's update (images only), keyed by the column they belong to
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
@@ -3426,9 +3559,10 @@ function monthsBackFrom(monthStr, count){
 // Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
-  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name' }, { label: 'Initiated by', w: 96 },
-  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Category', w: 96 }, { label: 'Owner', w: 96 }, { label: 'PD-Owner', w: 100 },
-  { label: 'Date Received', w: 100 }, { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
+  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
+  { label: 'Customer', w: 130, key: 'customerName' }, { label: 'Target Market', w: 96, key: 'destinationCountry' }, { label: 'Category', w: 100, key: 'category' },
+  { label: 'Owner', w: 96, key: 'ownerSalesRep' }, { label: 'PD-Owner', w: 100, key: 'responsiblePerson' },
+  { label: 'Date Received', w: 100, key: 'requestDate' }, { label: 'Cooked', w: 72, key: 'cooked' }, { label: 'Factory', w: 100, key: 'factoryName' }, { label: 'Overview', w: 300 }
 ];
 const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);
 // the company a short name stands for (from Reference Lists > Company Directory), for the tooltip
@@ -3813,7 +3947,7 @@ function renderStatusBarList(groups, viewMode, selectedMonth){
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
+    const projectsForStatus = sortProjectsByCategoryOrder(projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)));
     const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode, selectedMonth);
     return `
       <div class="dash-status-group">
