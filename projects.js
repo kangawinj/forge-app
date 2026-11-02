@@ -3804,7 +3804,27 @@ function projMuListMinWidth(){
 // list, out of reach), kept in sync with the list so dragging either moves both; the scroll position survives
 // the re-renders that every click on this card triggers.
 let projMuScrollLeft = 0;
+// Keep the column headings in view while the page scrolls down through a long list. position:sticky can't do it here
+// (the table scrolls sideways, which makes it its own scroll container), so the heading row is slid down by hand.
+function projMuStickHeader(){
+  const box = document.querySelector('.proj-mu-hscroll');
+  const head = box?.querySelector('.proj-xl-header');
+  if(!box || !head) return;
+  const nav = document.querySelector('.top-navbar');
+  const topEdge = nav && getComputedStyle(nav).display !== 'none' ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+  const r = box.getBoundingClientRect();
+  const shift = Math.max(0, Math.min(topEdge - r.top, r.height - head.offsetHeight - 60));
+  head.style.transform = shift > 0 ? `translateY(${shift}px)` : '';
+  head.classList.toggle('proj-xl-header-stuck', shift > 0);
+}
+let projMuStickWired = false;
 function wireProjMuScrollbar(root){
+  if(!projMuStickWired){
+    projMuStickWired = true;
+    document.addEventListener('scroll', projMuStickHeader, true);
+    window.addEventListener('resize', projMuStickHeader);
+  }
+  projMuStickHeader();
   const scroll = root.querySelector('.proj-mu-hscroll');
   const proxy = root.querySelector('#projMuScrollbarProxy');
   const inner = root.querySelector('#projMuScrollbarProxyInner');

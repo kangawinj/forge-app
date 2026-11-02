@@ -6593,3 +6593,6 @@
   .proj-xl-header > .pl-head.pl-hl-col, .proj-xl-header > .proj-mu-cell-header.pl-hl-col{background:#8fd3dc;}
   .proj-xl-row.pl-hl-row > .proj-mu-cell, .proj-xl-row > .proj-mu-cell.pl-hl-col{box-shadow:inset 0 0 0 2px #9bc9cf;}
   .proj-xl-row .pl-cell.pl-editing{background:#fff;}
+  /* Projects by Status (List): the heading row follows the page down (see projMuStickHeader) */
+  .proj-xl-header{position:relative;z-index:5;}
+  .proj-xl-header.proj-xl-header-stuck{box-shadow:0 4px 8px -4px rgba(12,24,48,.35);}

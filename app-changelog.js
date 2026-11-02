@@ -826,6 +826,7 @@ export const CHANGELOG = [
   { version: "3.0.784", date: "2026-11-02", note: "Projects by Status (List): a Remove last column button sits next to Add month column (admin only), so removing a month column no longer depends on scrolling to the x on the last column's heading" },
   { version: "3.0.785", date: "2026-11-02", note: "Projects by Status (List): every Summary month column now has its own x (admin) to remove it -- it is hidden for everyone, no data is deleted -- and a Show removed columns button brings them back" },
   { version: "3.0.786", date: "2026-11-02", note: "Projects by Status (List): the Remove last column button is gone -- each Summary column's own x does the job" },
+  { version: "3.0.787", date: "2026-11-02", note: "Projects by Status (List): the column headings stay in view while scrolling down the page" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
