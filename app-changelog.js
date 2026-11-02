@@ -808,6 +808,7 @@ export const CHANGELOG = [
   { version: "3.0.766", date: "2026-10-31", note: "Test Summary Excel: the project photo is now a rounded square cropped to fill, the same as in the Test Summary window" },
   { version: "3.0.767", date: "2026-10-31", note: "Test Summary Excel: the project photo is the original uploaded file (full resolution, uncropped, original proportions) instead of a cropped copy" },
   { version: "3.0.768", date: "2026-11-02", note: "Test Summary window and its Excel export: the photos attached to each sample (Part 1) are shown under that sample -- click a photo in the window to see it large; in Excel they are the original files, side by side" },
+  { version: "3.0.769", date: "2026-11-02", note: "Test Summary Excel: photos are placed with an absolute size so they keep the same proportions as in the app (they were stretched sideways in Excel)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

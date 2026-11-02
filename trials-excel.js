@@ -419,14 +419,11 @@ export async function exportTrialSummaryToExcel(t){
   title.alignment = { vertical: 'middle', indent: 1 };
   ws.getRow(1).height = 26;
 
-  // the detail rows get explicit heights so the project photo beside them can be anchored to exact row boundaries
-  const kvRowPx = [];
   const kv = (label, value) => {
     if(!String(value || '').trim()) return;
     const row = ws.addRow([label, value]);
     const lines = String(value).split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 95)), 0);
     row.height = Math.max(21, lines * 16 + 5);
-    kvRowPx.push(row.height / 0.75);
     ws.mergeCells(row.number, 2, row.number, 3);
     row.getCell(1).font = { bold: true, color: { argb: C.dim } };
     row.getCell(1).fill = fillOf(C.card);
@@ -446,16 +443,13 @@ export async function exportTrialSummaryToExcel(t){
   // project photo, top right, beside the details
   const photo = linkedProject?.image ? await prepareOriginalImage(linkedProject.image, 160, 110) : null;
   if(photo){
-    // its bottom-right corner is expressed as (row, offset in that row) by walking the detail rows' own heights, so it
-    // fills exactly that span without being squeezed into one row
+    // Placed by its top-left corner plus an absolute size (ext), not by a bottom-right cell: the width and height then
+    // can't be stretched by the column widths / row heights, so the photo keeps its own proportions in Excel
     const EMU = 9525;
-    const w = photo.width, h = photo.height;
     const id = wb.addImage({ base64: photo.base64, extension: photo.extension });
-    let remaining = 3 + h, rowIdx = 0;
-    while(remaining > (kvRowPx[rowIdx] || 20)){ remaining -= (kvRowPx[rowIdx] || 20); rowIdx++; }
     ws.addImage(id, {
       tl: { nativeCol: 2, nativeColOff: 3 * EMU, nativeRow: 1, nativeRowOff: 3 * EMU },
-      br: { nativeCol: 2, nativeColOff: (3 + w) * EMU, nativeRow: 1 + rowIdx, nativeRowOff: Math.round(remaining) * EMU },
+      ext: { width: photo.width, height: photo.height },
       editAs: 'oneCell'
     });
   }
@@ -519,7 +513,7 @@ export async function exportTrialSummaryToExcel(t){
         const id = wb.addImage({ base64: im.base64, extension: im.extension });
         ws.addImage(id, {
           tl: { ...place(x), nativeRow: row.number - 1, nativeRowOff: y * EMU },
-          br: { ...place(x + im.width), nativeRow: row.number - 1, nativeRowOff: (y + im.height) * EMU },
+          ext: { width: im.width, height: im.height },
           editAs: 'oneCell'
         });
         x += im.width + 8;
