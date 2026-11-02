@@ -810,6 +810,7 @@ export const CHANGELOG = [
   { version: "3.0.768", date: "2026-11-02", note: "Test Summary window and its Excel export: the photos attached to each sample (Part 1) are shown under that sample -- click a photo in the window to see it large; in Excel they are the original files, side by side" },
   { version: "3.0.769", date: "2026-11-02", note: "Test Summary Excel: photos are placed with an absolute size so they keep the same proportions as in the app (they were stretched sideways in Excel)" },
   { version: "3.0.770", date: "2026-11-02", note: "Test Result Excel (single test and whole project): photos are placed with an absolute size so they keep their proportions in Excel, same fix as the Test Summary Excel" },
+  { version: "3.0.771", date: "2026-11-02", note: "Projects: new Category field -- International / Domestic / Checking / Long time (project form, new-project form). Left on Auto it is worked out from Target Market (Thailand = Domestic, other countries = International; Checking and Long time are picked by hand). Projects by Status (Grid and List) has a Category filter with counts, a Category column in the List, and the Excel export follows the filter and includes the column" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

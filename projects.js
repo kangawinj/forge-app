@@ -26,7 +26,8 @@ import {
   selectTextOnFocus, blankProduct, formatPortionWeight, formatInnerPacking, formatOuterPacking,
   formatProjectMoq, duplicateProject, saveProjectToCloud, deleteProjectFromCloud,
   scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate,
-  blankMonthlySummary, migrateMonthlySummary, composeMonthlyText, monthlyLangsOf, monthlyLangTextareasHtml, readMonthlyLangs
+  blankMonthlySummary, migrateMonthlySummary, composeMonthlyText, monthlyLangsOf, monthlyLangTextareasHtml, readMonthlyLangs,
+  PROJECT_CATEGORIES, projectCategoryOf
 } from './projects-data.js';
 import { exportProjectsToExcel, exportProjectsStatusTableToExcel } from './projects-excel.js';
 import {
@@ -295,6 +296,7 @@ async function importSubmission(){
   setVal('newProjFactory', data.factoryName);
   setVal('newProjInitiatedBy', data.initiatedBy);
   setVal('newProjCooked', data.cookedStatus);
+  setVal('newProjCategory', data.category || '');
   setVal('newProjOverview', data.overview);
   setVal('newProjPortionQty', data.portionWeightQty);
   setVal('newProjPortionUnit', data.portionWeightUnit);
@@ -665,6 +667,17 @@ let responsibleStatusFilters = new Set();
 // vertical list -- one row per project, photo + Name + Responsible
 // Person (PD) + latest Activity Update, per request.
 let projectsByStatusViewMode = 'grid';
+// Category filter of Projects by Status: '' = all, a category key, or '__none' = projects with no category at all
+let projectsByStatusCategory = '';
+function projectMatchesCategoryFilter(p){
+  if(!projectsByStatusCategory) return true;
+  const key = projectCategoryOf(p).key;
+  return projectsByStatusCategory === '__none' ? !key : key === projectsByStatusCategory;
+}
+function categoryOptionsHtml(selected){
+  return [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])]
+    .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
 // List mode's own Monthly Update comparison (per request): which "YYYY-MM"
 // is the left-hand "selected month" column -- the right-hand column is
 // always whatever comes immediately before it (see previousMonthStr).
@@ -1005,6 +1018,10 @@ function renderNewProjectPanel(){
             <label>Cooked</label>
             <select id="newProjCooked"><option value="">-</option><option value="done">&#9675; Cooked</option><option value="partial">&#9651; Partly</option><option value="none">&ndash; Not yet</option></select>
           </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Category</label>
+            <select id="newProjCategory">${categoryOptionsHtml('')}</select>
+          </div>
         </div>
         <div class="field" style="margin-top:12px;margin-bottom:0;">
           <label>Overview</label>
@@ -1299,6 +1316,7 @@ function renderNewProjectPanel(){
     p.factoryName = document.getElementById('newProjFactory').value.trim();
     p.initiatedBy = document.getElementById('newProjInitiatedBy').value.trim();
     p.cookedStatus = document.getElementById('newProjCooked').value;
+    p.category = document.getElementById('newProjCategory').value;
     p.overview = document.getElementById('newProjOverview').value.trim();
     p.portionWeightQty = document.getElementById('newProjPortionQty').value.trim();
     p.portionWeightUnit = document.getElementById('newProjPortionUnit').value.trim();
@@ -1354,6 +1372,12 @@ function renderNewProjectPanel(){
 // Called once after every dashboardContainer rebuild, same as the Gantt
 // chart's own click wiring right above it.
 function wireProjectsByStatusCardClicks(dashboardContainer){
+  dashboardContainer.querySelectorAll('#projCategoryFilter [data-proj-category]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      projectsByStatusCategory = btn.dataset.projCategory;
+      renderProjectsList();
+    });
+  });
   dashboardContainer.querySelector('#projectsByStatusViewToggle')?.querySelectorAll('.view-mode-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       projectsByStatusViewMode = btn.dataset.mode;
@@ -1689,7 +1713,7 @@ export function renderProjectsList(){
     .map(stage => ({ label: stage, count: allProductsGlobal.filter(x => x.stage === stage).length }))
     .filter(g => g.count > 0);
   const projectsByStatus = PROJECT_STATUSES
-    .map(status => ({ label: status, count: visibleProjects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status).length }))
+    .map(status => ({ label: status, count: visibleProjects.filter(pr => (pr.status || PROJECT_STATUSES[0]) === status && projectMatchesCategoryFilter(pr)).length }))
     .filter(g => g.count > 0);
   // Workload-by-person overview -- how many projects each Responsible
   // Person (PD) currently has, plus a highlighted group for projects with
@@ -1734,6 +1758,17 @@ export function renderProjectsList(){
             <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'grid' ? ' active' : ''}" data-mode="grid">${icon('grid', 14)} Grid</button>
             <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           </div>
+        </div>
+        <div class="proj-cat-filter" id="projCategoryFilter">
+          <span class="proj-cat-filter-label">Category:</span>
+          ${(() => {
+            const counts = new Map();
+            visibleProjects.forEach(pr => { const k = projectCategoryOf(pr).key || '__none'; counts.set(k, (counts.get(k) || 0) + 1); });
+            const chip = (key, label, n) => `<button type="button" class="btn btn-sm${projectsByStatusCategory === key ? ' active' : ''}" data-proj-category="${key}">${escapeHtml(label)} <span class="proj-cat-count">${n}</span></button>`;
+            return chip('', 'All', visibleProjects.length)
+              + PROJECT_CATEGORIES.map(c => chip(c.key, c.label, counts.get(c.key) || 0)).join('')
+              + (counts.get('__none') ? chip('__none', 'Not set', counts.get('__none')) : '');
+          })()}
         </div>
         ${projectsByStatusViewMode === 'list' ? `
           <div class="proj-mu-month-picker">
@@ -1787,14 +1822,14 @@ export function renderProjectsList(){
       let no = 0;
       const groups = projectsByStatus.map(g => ({
         label: `${g.label} (${g.count})`,
-        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p)).map(p => ({
+        rows: projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)).map(p => ({
           image: p.image || '',
           // photos attached to each month's update (images only), keyed by the column they belong to
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
             .filter(a => a && typeof a.dataUrl === 'string' && a.dataUrl.startsWith('data:image')).map(a => a.dataUrl)])),
           cells: [
             String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
-            p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
+            projectCategoryOf(p).label, p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
             p.factoryName || '', p.overview || '',
             ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
           ]
@@ -2301,6 +2336,10 @@ export function renderProjectsList(){
                   <div class="field" style="margin-bottom:0;">
                     <label>Cooked</label>
                     <select class="proj-cooked" ${isEditing ? '' : 'disabled'}>${cookedOptionsHtml(p.cookedStatus)}</select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Category</label>
+                    <select class="proj-category" ${isEditing ? '' : 'disabled'}>${categoryOptionsHtml(p.category)}</select>
                   </div>
                 </div>
                 <div class="field" style="margin-top:12px;margin-bottom:0;">
@@ -2820,6 +2859,7 @@ export function renderProjectsList(){
         p.factoryName = block.querySelector('.proj-factory').value.trim();
         p.initiatedBy = block.querySelector('.proj-initiated-by').value.trim();
         p.cookedStatus = block.querySelector('.proj-cooked').value;
+        p.category = block.querySelector('.proj-category').value;
         p.overview = block.querySelector('.proj-overview').value.trim();
         p.portionWeightQty = block.querySelector('.proj-portion-qty').value.trim();
         p.portionWeightUnit = block.querySelector('.proj-portion-unit').value.trim();
@@ -3280,6 +3320,7 @@ export function attachProjectsListener(){
       if(!Array.isArray(p.products)) p.products = [];
       p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
       if(p.image === undefined) p.image = '';
+      if(p.category === undefined) p.category = '';
       if(p.startDate === undefined) p.startDate = '';
       if(p.targetEndDate === undefined) p.targetEndDate = '';
     });
@@ -3386,7 +3427,7 @@ function monthsBackFrom(monthStr, count){
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
   { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name' }, { label: 'Initiated by', w: 96 },
-  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Owner', w: 96 }, { label: 'PD-Owner', w: 100 },
+  { label: 'Customer', w: 130 }, { label: 'Target Market', w: 96 }, { label: 'Category', w: 96 }, { label: 'Owner', w: 96 }, { label: 'PD-Owner', w: 100 },
   { label: 'Date Received', w: 100 }, { label: 'Cooked', w: 72 }, { label: 'Factory', w: 100 }, { label: 'Overview', w: 300 }
 ];
 const PROJ_XL_FIXED_PX = PROJ_XL_COLS.reduce((s, c) => s + c.w, 0);
@@ -3740,6 +3781,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
             <span class="pl-cell pl-center pl-hide-sm" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
             <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
             <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
+            ${(() => { const c = projectCategoryOf(p); return `<span class="pl-cell pl-center pl-hide-sm${c.auto ? ' pl-cat-auto' : ''}" title="${c.auto && c.label ? 'Worked out from Target Market -- pick a Category on the project to set it yourself' : ''}">${escapeHtml(c.label)}</span>`; })()}
             <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(p.ownerSalesRep || '')}</span>
             <span class="pl-cell pl-center">${escapeHtml(p.responsiblePerson || 'Unassigned PD')}</span>
             <span class="pl-cell pl-center pl-hide-sm">${escapeHtml(formatXlDate(p.requestDate))}</span>
@@ -3771,7 +3813,7 @@ function renderStatusBarList(groups, viewMode, selectedMonth){
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => {
     const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
-    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p));
+    const projectsForStatus = projects.filter(p => (p.status || PROJECT_STATUSES[0]) === g.label && isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
     const photosHtml = renderStatusGroupItems(projectsForStatus, g.label, viewMode, selectedMonth);
     return `
       <div class="dash-status-group">

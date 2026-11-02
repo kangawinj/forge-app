@@ -16,6 +16,24 @@ export const CURRENCY_OPTIONS = ['THB','JPY','USD','CNY','EUR'];
 
 // Overall project lifecycle status (distinct from PROJECT_STAGES, which
 // tracks each individual product's stage within a project).
+// Project category (International / Domestic / Checking / Long time): picked on the project; when left on Auto,
+// Thailand as the Target Market counts as Domestic and any other country as International (Checking and Long time
+// are never worked out, they are always picked by hand). Nothing is written for Auto -- it is computed on the fly.
+export const PROJECT_CATEGORIES = [
+  { key: 'international', label: 'International' },
+  { key: 'domestic', label: 'Domestic' },
+  { key: 'checking', label: 'Checking' },
+  { key: 'longtime', label: 'Long time' }
+];
+export function projectCategoryOf(p){
+  const own = PROJECT_CATEGORIES.find(c => c.key === (p?.category || ''));
+  if(own) return { key: own.key, label: own.label, auto: false };
+  const country = String(p?.destinationCountry || '').trim().toLowerCase();
+  if(!country || ['n/a', 'na', '-', 'tbc', 'tbd'].includes(country)) return { key: '', label: '', auto: true };
+  const key = (country === 'thailand' || country === 'thai') ? 'domestic' : 'international';
+  return { key, label: PROJECT_CATEGORIES.find(c => c.key === key).label, auto: true };
+}
+
 export const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','In Review','Completed','Cancelled'];
 export const PROJECT_STATUS_LABELS = {
   'Not Started': 'Not Started (ยังไม่เริ่ม)',
@@ -213,6 +231,7 @@ export function blankProject(){
     initiatedBy: "",
     cookedStatus: "",          // "" | "done" | "partial" | "none"
     overview: "",
+    category: "",              // "" (worked out from Target Market) | "international" | "domestic" | "checking" | "longtime"
     flavors: [],
     requirements: blankRequirements(),
     portionWeightQty: "",
@@ -428,7 +447,7 @@ export const PROJECT_DIFF_FIELDS = {
   name: 'Project Name', status: 'Status', requestDate: 'Request Date', startDate: 'Start Date', targetEndDate: 'Target / End Date',
   customerName: 'Customer Name', destinationCountry: 'Destination Country', ownerSalesRep: 'Project Owner', factorySalesRep: 'Factory Sales Rep',
   responsiblePerson: 'Responsible Person (PD)', factoryName: 'Factory',
-  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview',
+  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview', category: 'Category',
   portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
   innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
   outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',
