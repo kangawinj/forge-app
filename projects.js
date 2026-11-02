@@ -669,7 +669,7 @@ let responsibleStatusFilters = new Set();
 let projectsByStatusViewMode = 'grid';
 // Column filters of Projects by Status (the little arrow in each column heading, like Excel): column key -> the set of
 // values that stay visible ('' stands for a blank cell); no entry = that column is not filtered.
-const PROJ_COL_VALUE_KEYS = { name: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
+const PROJ_COL_VALUE_KEYS = { name: 1, status: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
 const projColFilters = new Map();
 // ... remembered across reloads on this browser only (localStorage), like the Category order below
 const PROJ_COL_FILTERS_KEY = 'forgeProjColFilters';
@@ -707,6 +707,7 @@ function saveProjCatOrder(){
 }
 const PROJ_COL_VALUE = {
   name: p => p.name || 'Untitled project',
+  status: p => p.status || PROJECT_STATUSES[0],
   initiatedBy: p => p.initiatedBy || '',
   customerName: p => p.customerName || '',
   destinationCountry: p => p.destinationCountry || '',
@@ -751,7 +752,7 @@ function projColFilterPopHtml(colKey){
     values = projCatOrder.slice();
     values.forEach(v => { if(!counts.has(v)) counts.set(v, 0); });
   }else{
-    values = [...counts.keys()].sort((a, b) => ((a === '') - (b === '')) ||
+    values = colKey === 'status' ? PROJECT_STATUSES.filter(s => counts.has(s)) : [...counts.keys()].sort((a, b) => ((a === '') - (b === '')) ||
       (colKey === 'requestDate' ? String(a).split('/').reverse().join('').localeCompare(String(b).split('/').reverse().join('')) : String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })));
   }
   const set = projColFilters.get(colKey);
@@ -1984,21 +1985,21 @@ export function renderProjectsList(){
       const widths = [...PROJ_XL_COLS.map(c => Math.max(6, Math.round(c.w / 7.2))), ...months.map(() => 48)];
       let no = 0;
       const exportList = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
-      const groups = projectsByCategoryThenStatus(exportList).flatMap(c => c.statusGroups.map(g => ({
-        label: `${c.heading} · ${g.label} (${g.list.length})`,
-        rows: g.list.map(p => ({
+      const groups = projectsByCategoryThenStatus(exportList).map(c => ({
+        label: `${c.heading} (${c.count})`,
+        rows: c.statusGroups.flatMap(g => g.list).map(p => ({
           image: p.image || '',
           // photos attached to each month's update (images only), keyed by the column they belong to
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
             .filter(a => a && typeof a.dataUrl === 'string' && a.dataUrl.startsWith('data:image')).map(a => a.dataUrl)])),
           cells: [
-            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
+            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.status || PROJECT_STATUSES[0], p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
             projectCategoryOf(p).label, p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
             p.factoryName || '', p.overview || '',
             ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
           ]
         }))
-      })));
+      }));
       const stamp = new Date().toISOString().slice(0, 10);
       exportProjectsStatusTableToExcel({ title: `Projects by Status — ${formatMonthYear(projectsByStatusMonth)}`, headers, widths, groups, fileName: `Projects by Status ${stamp}` });
     });
@@ -3590,7 +3591,7 @@ function monthsBackFrom(monthStr, count){
 // Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
-  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
+  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Status', w: 118, key: 'status' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
   { label: 'Customer', w: 130, key: 'customerName' }, { label: 'Target Market', w: 96, key: 'destinationCountry' }, { label: 'Category', w: 100, key: 'category' },
   { label: 'Owner', w: 96, key: 'ownerSalesRep' }, { label: 'PD-Owner', w: 100, key: 'responsiblePerson' },
   { label: 'Date Received', w: 100, key: 'requestDate' }, { label: 'Cooked', w: 72, key: 'cooked' }, { label: 'Factory', w: 100, key: 'factoryName' }, { label: 'Overview', w: 300 }
@@ -3937,12 +3938,13 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
             <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
             <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
-                ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
-                : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
+                ? `<img class="proj-gallery-list-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+                : `<span class="proj-gallery-list-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 18)}</span>`}
               <span class="proj-gallery-list-name-wrap">
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
               </span>
             </button>
+            <span class="pl-cell pl-center">${statusPillHtml(p.status)}</span>
             <span class="pl-cell pl-center pl-hide-sm" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
             <span class="pl-cell">${escapeHtml(p.customerName || '')}</span>
             <span class="pl-cell pl-center">${escapeHtml(p.destinationCountry || '')}</span>
@@ -3964,8 +3966,8 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
       ${projectsForStatus.map(p => `
         <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')}">
           ${p.image
-            ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
-            : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${statusLabel === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
+            ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
+            : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
           <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
         </button>
       `).join('')}
@@ -3978,6 +3980,13 @@ function renderStatusBarList(groups, viewMode, selectedMonth){
   // Category first (in the order chosen under the Category column heading), then the status groups inside each
   const sections = projectsByCategoryThenStatus(projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p)));
   return sections.map(c => {
+    if(viewMode === 'list'){
+      return `
+      <div class="proj-cat-section" data-proj-cat-section="${escapeHtml(c.key)}">
+        <div class="proj-cat-heading"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></div>
+        ${renderStatusGroupItems(c.statusGroups.flatMap(g => g.list), '', viewMode, selectedMonth)}
+      </div>`;
+    }
     const max = Math.max(...c.statusGroups.map(g => g.list.length));
     return `
       <div class="proj-cat-section" data-proj-cat-section="${escapeHtml(c.key)}">
