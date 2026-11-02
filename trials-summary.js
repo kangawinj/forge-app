@@ -7,7 +7,7 @@ import {
   icon, escapeHtml, formatDateLong, projects, recipes, fullCode, formatWeight, allIngredientsInRecipe, findProjectForRecipe
 } from './app.js';
 import {
-  getEvaluationCriteria, trialEvalTargets, getTrialProductData, migrateTrial,
+  getEvaluationCriteria, trialEvalTargets, getTrialProductData, migrateTrial, normalizeTrialPhotos,
   summarizeTrialProduct, groupTrialsByProject, TRIAL_SUMMARY_VERDICT_CLASSES
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, see trials-wizard.js's
@@ -113,6 +113,15 @@ function renderTrialSummaryModal(){
                 : '<span class="overview-empty">Not yet evaluated</span>'}
             </div>
             ${productDetailLine(p) ? `<div class="trial-summary-product-detail">${escapeHtml(productDetailLine(p))}</div>` : ''}
+            ${(() => {
+              // the photos attached to this sample in Part 1 (click one to see it large)
+              const photos = normalizeTrialPhotos(getTrialProductData(t, p.id)).filter(ph => ph && ph.dataUrl);
+              return photos.length ? `<div class="trial-summary-photos">${photos.map(ph => `
+                <figure class="trial-summary-photo-item">
+                  <img class="trial-summary-photo" src="${escapeHtml(ph.dataUrl)}" alt="${escapeHtml(ph.caption || 'Sample photo')}">
+                  ${(ph.caption || '').trim() ? `<figcaption>${escapeHtml(ph.caption)}</figcaption>` : ''}
+                </figure>`).join('')}</div>` : '';
+            })()}
             ${comments.length ? `
               <div class="trial-summary-improve-title">Comments</div>
               <ul class="trial-summary-improve-list">${comments.map(x => `<li><b>${escapeHtml(x.label)}:</b> ${escapeHtml(x.text)}${x.note ? `<span class="trial-summary-item-note"> — ${escapeHtml(x.note)}</span>` : ''}</li>`).join('')}</ul>
@@ -132,6 +141,13 @@ function renderTrialSummaryModal(){
       ` : ''}
     </div>
   `;
+  overlay.querySelectorAll('.trial-summary-photo').forEach(img => img.addEventListener('click', () => {
+    const box = document.createElement('div');
+    box.className = 'trial-summary-lightbox';
+    box.innerHTML = `<img src="${escapeHtml(img.src)}" alt="">`;
+    box.addEventListener('click', () => box.remove());
+    document.body.appendChild(box);
+  }));
   overlay.querySelector('[data-role="summary-export-excel"]')?.addEventListener('click', () => exportTrialSummaryToExcel(t));
   // PDF = the browser's print dialog (choose "Save as PDF"); only this window's content is printed, see body.printing-summary in style.css
   overlay.querySelector('[data-role="summary-export-pdf"]')?.addEventListener('click', () => {

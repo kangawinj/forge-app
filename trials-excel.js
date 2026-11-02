@@ -495,6 +495,36 @@ export async function exportTrialSummaryToExcel(t){
       ? [`Code ${fullCode(r) || '-'}`, r.date ? `Date ${r.date}` : '', (() => { const w = allIngredientsInRecipe(r).reduce((s, i) => s + (parseFloat(i.weight) || 0), 0); return w ? `Total weight ${formatWeight(w)}` : ''; })(), findProjectForRecipe(r.id)?.product?.stage ? `Stage ${findProjectForRecipe(r.id).product.stage}` : ''].filter(Boolean).join(' · ')
       : (p.code ? `Code ${p.code}` : '');
     if(details) line('Product details', details);
+    // photos attached to this sample: original files, up to 3 per row, laid out left to right across columns B-C
+    const samplePhotos = normalizeTrialPhotos(getTrialProductData(mt, p.id)).filter(ph => ph && ph.dataUrl);
+    for(let s = 0; s < samplePhotos.length; s += 3){
+      const imgs = [];
+      for(const ph of samplePhotos.slice(s, s + 3)){
+        const im = await prepareOriginalImage(ph.dataUrl, 200, 150);
+        if(im) imgs.push(im);
+      }
+      if(!imgs.length) continue;
+      const row = ws.addRow([s === 0 ? 'Photos' : '']);
+      ws.mergeCells(row.number, 2, row.number, 3);
+      row.getCell(1).font = { bold: true, color: { argb: C.text } };
+      row.getCell(1).alignment = wrap;
+      [1, 2, 3].forEach(c => { row.getCell(c).border = box(); });
+      const tallest = Math.max(...imgs.map(im => im.height));
+      row.height = (tallest + 12) * 0.75;
+      const EMU = 9525, colB = Math.round(80 * 7 + 5);
+      let x = 6;
+      for(const im of imgs){
+        const place = off => off < colB ? { nativeCol: 1, nativeColOff: off * EMU } : { nativeCol: 2, nativeColOff: (off - colB) * EMU };
+        const y = Math.max(2, Math.floor((tallest + 12 - im.height) / 2));
+        const id = wb.addImage({ base64: im.base64, extension: im.extension });
+        ws.addImage(id, {
+          tl: { ...place(x), nativeRow: row.number - 1, nativeRowOff: y * EMU },
+          br: { ...place(x + im.width), nativeRow: row.number - 1, nativeRowOff: (y + im.height) * EMU },
+          editAs: 'oneCell'
+        });
+        x += im.width + 8;
+      }
+    }
     comments.forEach((x, i) => line(i === 0 ? 'Comments' : '', `${x.label}: ${x.text}`, x.note));
     if(improvements.length) improvements.forEach((x, i) => line(i === 0 ? 'Suggested improvements' : '', `${x.label}: ${x.suggestion}`, x.note));
     else if(verdict) line('Suggested improvements', 'No Improvement Guidelines suggested');

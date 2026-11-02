@@ -6502,3 +6502,12 @@
     body.printing-summary .trial-summary-actions{display:none !important;}
     body.printing-summary .trial-summary-product, body.printing-summary .trial-summary-info{break-inside:avoid;}
   }
+
+  /* Test Summary window: the photos attached to each sample */
+  .trial-summary-photos{display:flex;flex-wrap:wrap;gap:10px;margin:2px 0 10px;}
+  .trial-summary-photo-item{margin:0;width:140px;}
+  .trial-summary-photo{width:140px;height:140px;object-fit:contain;background:#fff;border:1px solid var(--border);border-radius:8px;display:block;cursor:zoom-in;}
+  .trial-summary-photo-item figcaption{font-size:11px;color:var(--text-dim);margin-top:3px;overflow-wrap:anywhere;}
+  .trial-summary-lightbox{position:fixed;inset:0;z-index:1700;background:rgba(12,24,48,.8);display:flex;align-items:center;justify-content:center;padding:24px;cursor:zoom-out;}
+  .trial-summary-lightbox img{max-width:100%;max-height:100%;object-fit:contain;border-radius:8px;background:#fff;}
+  @media print{ body.printing-summary .trial-summary-lightbox{display:none !important;} body.printing-summary .trial-summary-photo-item{break-inside:avoid;} }
