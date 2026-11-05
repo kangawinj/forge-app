@@ -829,6 +829,7 @@ export const CHANGELOG = [
   { version: "3.0.787", date: "2026-11-02", note: "Projects by Status (List): the column headings stay in view while scrolling down the page" },
   { version: "3.0.788", date: "2026-11-02", note: "Projects by Status (List): click a row once to mark it yellow, click again to clear it (kept in this browser; the project name, editable cells and month boxes keep their own clicks)" },
   { version: "3.0.789", date: "2026-11-05", note: "Renamed the Test Results page to Product Sample Evaluation -- the navbar tab, the page title, the print dialog, the recipe's Linked card, the Manage Users module list and the online-users activity label. The Test Result verdict inside each evaluation keeps its name" },
+  { version: "3.0.790", date: "2026-11-05", note: "Shortened the page name from Product Sample Evaluation to Sample Evaluation everywhere it is shown" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

@@ -295,7 +295,7 @@ function isApprovalExempt(email){
 export const MODULE_PERMISSIONS = [
   { key: 'recipes', label: 'Recipes', navBtnId: 'btnRecipesTab' },
   { key: 'projects', label: 'Projects', navBtnId: 'btnOpenProjects' },
-  { key: 'trials', label: 'Product Sample Evaluation', navBtnId: 'btnOpenTrials' },
+  { key: 'trials', label: 'Sample Evaluation', navBtnId: 'btnOpenTrials' },
   { key: 'materials', label: 'Ingredients', navBtnId: 'btnOpenMaterialLibSidebar' },
   { key: 'productList', label: 'Products', navBtnId: 'btnOpenProductsTab' },
   { key: 'sampleSubmissions', label: 'Sample Submissions', navBtnId: 'btnOpenSampleSubmissionsTab' },
