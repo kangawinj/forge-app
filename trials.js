@@ -155,7 +155,7 @@ export function mountTrialsView(){
   main.classList.add('trials-a4-width');
   main.innerHTML = `
     <div class="main-header">
-      <div class="section-title-display">${icon('flask-conical', 24)} Test Results</div>
+      <div class="section-title-display">${icon('flask-conical', 24)} Product Sample Evaluation</div>
     </div>
     <div class="card">
       <div style="display:flex;align-items:center;margin-bottom:16px;">
@@ -1275,7 +1275,7 @@ function renderBulkPrintModal(){
   overlay.innerHTML = `
     <div class="eval-wizard-card">
       <div class="eval-wizard-header">
-        <div class="eval-wizard-title">Forge · Print Test Results</div>
+        <div class="eval-wizard-title">Forge · Print Product Sample Evaluation</div>
         <button type="button" class="eval-wizard-close" data-role="bulk-print-close" title="Close">${icon('x')}</button>
       </div>
       <div style="font-size:13px;color:var(--text-dim);margin-bottom:10px;">Choose which tests to print — newest to oldest by test date.</div>
@@ -1358,7 +1358,7 @@ function printSelectedTrials(ids){
     block.classList.add('printing-only');
     container.appendChild(block);
   });
-  const pageLabel = order.length === 1 ? `Test Result — ${trialProductNames(order[0])}` : `Test Results (${order.length} tests)`;
+  const pageLabel = order.length === 1 ? `Test Result — ${trialProductNames(order[0])}` : `Product Sample Evaluation (${order.length} tests)`;
   const restoreTitle = setPrintDocumentTitle(pageLabel);
   const cleanup = () => {
     window.removeEventListener('afterprint', cleanup);

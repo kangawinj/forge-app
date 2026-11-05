@@ -472,7 +472,7 @@ function renderLinkedTestResults(r){
   const sorted = [...matches].sort((a,b) => (b.testDate || '').localeCompare(a.testDate || '') || (b.updatedAt - a.updatedAt));
   section.innerHTML = `
     <div class="card">
-      <div class="card-title">Linked Test Results</div>
+      <div class="card-title">Linked Product Sample Evaluations</div>
       <div class="linked-trial-list">
         ${sorted.map(t => {
           const mt = migrateTrial(t);

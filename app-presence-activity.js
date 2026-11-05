@@ -8,7 +8,7 @@ import { presenceTrialActivity } from './trials.js';
 
 const PAGE_LABELS = {
   recipesList: 'Recipes', compare: 'Compare Recipes', materials: 'Ingredients', productList: 'Products',
-  sampleSubmissions: 'Sample Submissions', refLists: 'Reference Lists', projects: 'Projects', trials: 'Test Results',
+  sampleSubmissions: 'Sample Submissions', refLists: 'Reference Lists', projects: 'Projects', trials: 'Product Sample Evaluation',
   bdPricing: 'BD Pricing', seriesMigration: 'Recipe Series tool'
 };
 
