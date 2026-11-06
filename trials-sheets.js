@@ -305,14 +305,11 @@ export function wireTrialSheets(block, t, isEditing, rerender){
 }
 
 // the stored table back out as an .xlsx (what each cell showed, with bold / fill / merged cells)
-export async function exportSheetsFile(f){
-  if(!window.ExcelJS){ alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.'); return; }
-  const wb = new window.ExcelJS.Workbook();
-  wb.creator = 'Forge';
-  wb.created = new Date();
-  const used = new Set();
+// one worksheet per stored sheet of `f`, added to an existing workbook `wb` (sheet names stay unique through `used`,
+// a Set of lower-cased names already taken in that workbook; `prefix` goes in front of each name)
+export function addAttachedSheets(wb, f, used = new Set(), prefix = ''){
   f.sheets.forEach((s, i) => {
-    let name = String(s.name || `Sheet ${i + 1}`).replace(/[\[\]:*?\/\\]/g, '-').slice(0, 31) || `Sheet ${i + 1}`, k = 2;
+    let name = (prefix + String(s.name || `Sheet ${i + 1}`)).replace(/[\[\]:*?\/\\]/g, '-').slice(0, 31) || `Sheet ${i + 1}`, k = 2;
     while(used.has(name.toLowerCase())) name = `${name.slice(0, 27)} (${k++})`;
     used.add(name.toLowerCase());
     const ws = wb.addWorksheet(name);
@@ -344,6 +341,14 @@ export async function exportSheetsFile(f){
     });
     (s.merges || []).forEach(({ r1, c1, r2, c2 }) => { try{ ws.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1); }catch(e){ /* overlapping merge in the source -- skip it */ } });
   });
+}
+
+export async function exportSheetsFile(f){
+  if(!window.ExcelJS){ alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.'); return; }
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+  addAttachedSheets(wb, f);
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const url = URL.createObjectURL(blob);

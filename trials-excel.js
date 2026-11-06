@@ -10,6 +10,7 @@ import {
 } from './trials-data.js';
 // Circular import back to core trials.js -- safe, only read inside the export functions.
 import { trials } from './trials.js';
+import { addAttachedSheets } from './trials-sheets.js';
 
 const argb = hex => 'FF' + hex.replace('#', '').toUpperCase();
 const C = {
@@ -441,7 +442,7 @@ export async function exportTrialSummaryToExcel(t){
   kv('Test participants', (mt.testParticipants || []).map(s => String(s || '').trim()).filter(Boolean).join(', '));
   kv('Cooking method', mt.cookingMethod || '');
   const attached = Array.isArray(t.excelFiles) ? t.excelFiles : [];
-  if(attached.length) kv('Attached Excel', `Please see the details in the attached Excel file${attached.length > 1 ? 's' : ''}: ${attached.map(f => f.name).join(', ')}`);
+  if(attached.length) kv('Attached Excel', `Please see the details in the attached Excel file${attached.length > 1 ? 's' : ''}: ${attached.map(f => f.name).join(', ')} (the tables are in the worksheet tab${attached.reduce((n, f) => n + f.sheets.length, 0) > 1 ? 's' : ''} after this one)`);
 
   // project photo, top right, beside the details
   const photo = linkedProject?.image ? await prepareOriginalImage(linkedProject.image, 160, 110) : null;
@@ -528,6 +529,11 @@ export async function exportTrialSummaryToExcel(t){
     ws.addRow([]);
   }
   if((mt.note || '').trim()){ section('Note'); line('', mt.note.trim()); }
+
+  // the attached Excel files' tables, one extra worksheet per sheet (named "Attached - <sheet>", or "<file n> - <sheet>" when
+  // there is more than one file)
+  const used = new Set(['test summary']);
+  attached.forEach((f, i) => addAttachedSheets(wb, f, used, attached.length > 1 ? `File ${i + 1} - ` : 'Attached - '));
 
   await downloadWorkbook(wb, [`Test Summary - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' '));
 }
