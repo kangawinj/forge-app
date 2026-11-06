@@ -38,6 +38,7 @@ import {
 import { renderEvaluationWizard, openEvalWizard } from './trials-wizard.js';
 import { renderTrialSummaryModal, openTrialSummaryModal, renderTrialsSummaryTable, exportTrialsSummaryToExcel } from './trials-summary.js';
 import { exportTrialToExcel, exportProjectTrialsToExcel } from './trials-excel.js';
+import { trialSheetsHtml, wireTrialSheets } from './trials-sheets.js';
 import {
   renderTrialShareModal, renderShareResponsePreviewModal, openTrialShareModal,
   loadSharePendingCounts, trialSharePendingCounts, deleteTrialShareArtifacts
@@ -787,6 +788,8 @@ export function renderTrialsList(){
               ` : '<div class="overview-empty">Add a product above first</div>'}
             </div>
 
+            ${trialSheetsHtml(t, isEditing)}
+
             <div class="field" style="margin-bottom:0;">
               <label>Note</label>
               <div class="mu-field-with-translate" style="width:auto;">
@@ -834,6 +837,8 @@ export function renderTrialsList(){
         renderTrialsList();
       });
     }
+
+    wireTrialSheets(block, t, isEditing, renderTrialsList);
 
     block.querySelector('[data-role="start-evaluation"]')?.addEventListener('click', () => {
       if(!currentUser?.email) return;

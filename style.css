@@ -6599,3 +6599,21 @@
   /* Projects by Status (List): a row marked yellow by clicking it */
   .proj-xl-row.pl-marked > .pl-cell:not(.pl-editing){background:#fff3a6;}
   .proj-xl-row.pl-marked > .pl-cell.pl-hl-col:not(.pl-editing){background:#ffe97a;}
+  /* Sample Evaluation: Excel sheets imported into the card */
+  .tsheet-field{margin-top:4px;}
+  .tsheet-card{border:1px solid var(--border);border-radius:12px;background:#fff;margin-top:8px;overflow:hidden;}
+  .tsheet-head{display:flex;flex-wrap:wrap;align-items:center;gap:6px 12px;padding:8px 12px;border-bottom:1px solid var(--border);background:var(--bg);}
+  .tsheet-name{font-weight:700;font-size:13px;display:inline-flex;align-items:center;gap:6px;overflow-wrap:anywhere;}
+  .tsheet-meta{font-size:11px;color:var(--text-dim);}
+  .tsheet-actions{margin-left:auto;display:inline-flex;gap:6px;}
+  .tsheet-tabs{display:flex;gap:4px;padding:6px 10px 0;border-bottom:1px solid var(--border);overflow-x:auto;}
+  .tsheet-tab{border:1px solid var(--border);border-bottom:none;border-radius:8px 8px 0 0;background:var(--bg);padding:4px 12px;font-size:12px;cursor:pointer;white-space:nowrap;color:var(--text-dim);}
+  .tsheet-tab.active{background:#fff;color:var(--primary-dark);font-weight:700;}
+  .tsheet-scroll{max-height:460px;overflow:auto;}
+  .tsheet-table{border-collapse:collapse;font-size:12px;min-width:100%;}
+  .tsheet-table th{position:sticky;top:0;background:#f1f3f6;color:var(--text-dim);font-weight:600;font-size:11px;padding:3px 8px;border:1px solid #d9dde3;z-index:1;}
+  .tsheet-table th.tsheet-rowno{position:sticky;left:0;top:auto;z-index:1;text-align:center;}
+  .tsheet-table th.tsheet-corner{left:0;z-index:2;}
+  .tsheet-table td{border:1px solid #d9dde3;padding:4px 8px;vertical-align:top;white-space:pre-wrap;min-width:70px;max-width:360px;}
+  .tsheet-table td.tsheet-bold{font-weight:700;}
+  @media print{ .tsheet-actions, .tsheet-import-btn{display:none !important;} .tsheet-scroll{max-height:none;overflow:visible;} }

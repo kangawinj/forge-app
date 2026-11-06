@@ -1,0 +1,184 @@
+// Excel sheets attached to a Sample Evaluation (trial): import an .xlsx, see it as a table right in the card, and
+// export it again as an Excel file. The sheets are stored as plain text cells (t.excelFiles) -- pictures, charts and
+// formulas in the original are not kept, only what each cell shows, plus bold / fill colour / merged cells.
+import { currentUser, uid, escapeHtml, icon, formatActivityDateTime } from './app.js';
+import { scheduleTrialSave } from './trials-data.js';
+
+const MAX_ROWS = 500;
+const MAX_COLS = 40;
+const MAX_FILE_JSON = 300000;   // one imported file, as stored
+const MAX_TRIAL_JSON = 950000;  // Firestore's limit is 1 MB per document
+
+const activeSheet = new Map();  // fileId -> index of the sheet tab being looked at
+
+function colLetter(n){
+  let s = '';
+  for(; n > 0; n = Math.floor((n - 1) / 26)) s = String.fromCharCode(65 + (n - 1) % 26) + s;
+  return s;
+}
+
+async function parseWorkbook(file){
+  if(!window.ExcelJS) throw new Error('Excel reading is not available right now (ExcelJS failed to load) -- check your connection and try again.');
+  const wb = new window.ExcelJS.Workbook();
+  await wb.xlsx.load(await file.arrayBuffer());
+  const sheets = [];
+  wb.eachSheet(ws => {
+    if(ws.state && ws.state !== 'visible') return;
+    const rowCount = Math.min(ws.rowCount || 0, MAX_ROWS);
+    const colCount = Math.min(ws.columnCount || 0, MAX_COLS);
+    const rows = [];
+    const styles = {};
+    let lastRow = 0, lastCol = 0;
+    for(let r = 1; r <= rowCount; r++){
+      const out = [];
+      for(let c = 1; c <= colCount; c++){
+        const cell = ws.getCell(r, c);
+        let text = '';
+        try{ text = cell.text == null ? '' : String(cell.text); }catch(e){ text = ''; }
+        out.push(text);
+        if(text !== ''){ lastRow = r; lastCol = Math.max(lastCol, c); }
+        const st = {};
+        if(cell.font?.bold) st.b = 1;
+        const argb = cell.fill?.type === 'pattern' ? cell.fill.fgColor?.argb : '';
+        if(argb && /^[0-9A-F]{8}$/i.test(argb) && argb.slice(2).toUpperCase() !== 'FFFFFF' && argb.slice(0, 2).toUpperCase() !== '00') st.bg = argb.slice(2);
+        if(st.b || st.bg) styles[`${r - 1},${c - 1}`] = st;
+      }
+      rows.push(out);
+    }
+    const trimmed = rows.slice(0, lastRow).map(r => r.slice(0, lastCol));
+    const merges = (ws.model?.merges || []).map(m => {
+      const mm = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m);
+      if(!mm) return null;
+      const toNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+      return [Number(mm[2]) - 1, toNum(mm[1]) - 1, Number(mm[4]) - 1, toNum(mm[3]) - 1];
+    }).filter(m => m && m[0] < lastRow && m[1] < lastCol);
+    if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges });
+  });
+  return sheets;
+}
+
+function sheetTableHtml(sheet){
+  const spans = {}, hidden = new Set();
+  (sheet.merges || []).forEach(([r1, c1, r2, c2]) => {
+    spans[`${r1},${c1}`] = [r2 - r1 + 1, c2 - c1 + 1];
+    for(let r = r1; r <= r2; r++) for(let c = c1; c <= c2; c++) if(r !== r1 || c !== c1) hidden.add(`${r},${c}`);
+  });
+  const cols = Math.max(...sheet.rows.map(r => r.length), 1);
+  const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}</th>`).join('')}</tr>`;
+  const body = sheet.rows.map((row, r) => `<tr><th class="tsheet-rowno">${r + 1}</th>${Array.from({ length: cols }, (_, c) => {
+    const key = `${r},${c}`;
+    if(hidden.has(key)) return '';
+    const st = sheet.styles?.[key] || {};
+    const sp = spans[key];
+    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${st.bg ? ` style="background:#${escapeHtml(st.bg)};"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row[c] || '')}</td>`;
+  }).join('')}</tr>`).join('');
+  return `<table class="tsheet-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+export function trialSheetsHtml(t, isEditing){
+  const files = Array.isArray(t.excelFiles) ? t.excelFiles : [];
+  const cards = files.map(f => {
+    const idx = Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
+    const sheet = f.sheets[idx];
+    return `
+      <div class="tsheet-card" data-sheet-file-id="${escapeHtml(f.id)}">
+        <div class="tsheet-head">
+          <span class="tsheet-name">${icon('file-text', 14)} ${escapeHtml(f.name)}</span>
+          <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}</span>
+          <span class="tsheet-actions">
+            <button type="button" class="btn btn-sm" data-role="export-trial-sheet">${icon('download', 14)} Export Excel</button>
+            ${isEditing ? `<button type="button" class="btn btn-sm btn-danger" data-role="remove-trial-sheet" title="Remove this file from the evaluation">${icon('x', 14)} Remove</button>` : ''}
+          </span>
+        </div>
+        ${f.sheets.length > 1 ? `<div class="tsheet-tabs">${f.sheets.map((s, i) => `<button type="button" class="tsheet-tab${i === idx ? ' active' : ''}" data-role="trial-sheet-tab" data-sheet-index="${i}">${escapeHtml(s.name)}</button>`).join('')}</div>` : ''}
+        <div class="tsheet-scroll">${sheetTableHtml(sheet)}</div>
+      </div>`;
+  }).join('');
+  return `
+    <div class="field tsheet-field">
+      <div class="teval-head">
+        <label>Excel Sheets</label>
+        ${isEditing ? `<label class="btn btn-sm tsheet-import-btn">${icon('upload', 14)} Import Excel<input type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" data-role="import-trial-sheet" hidden></label>` : ''}
+      </div>
+      ${cards || `<div class="overview-empty">${isEditing ? 'No Excel file yet -- use Import Excel to show a sheet here as a table' : 'No Excel file attached'}</div>`}
+    </div>`;
+}
+
+export function wireTrialSheets(block, t, isEditing, rerender){
+  block.querySelector('[data-role="import-trial-sheet"]')?.addEventListener('change', async e => {
+    const file = e.target.files[0];
+    e.target.value = '';
+    if(!file) return;
+    if(!/\.xlsx$/i.test(file.name)){ alert('Please choose an .xlsx file (open an older .xls in Excel and Save As .xlsx first).'); return; }
+    try{
+      const sheets = await parseWorkbook(file);
+      if(!sheets.length){ alert('That file has no cells with data to show.'); return; }
+      const entry = { id: uid(), name: file.name, importedBy: currentUser?.email || '', importedAt: Date.now(), sheets };
+      const size = JSON.stringify(entry).length;
+      if(size > MAX_FILE_JSON){ alert(`That file is too large to keep inside the evaluation (${Math.round(size / 1000)} KB; the limit is ${MAX_FILE_JSON / 1000} KB). Remove unused rows/sheets and try again.`); return; }
+      if(JSON.stringify(t).length + size > MAX_TRIAL_JSON){ alert('This evaluation is already close to the size limit (photos take most of it), so the file cannot be added.'); return; }
+      t.excelFiles = [...(Array.isArray(t.excelFiles) ? t.excelFiles : []), entry];
+      scheduleTrialSave(t);
+      rerender();
+    }catch(err){
+      console.error('Forge: Excel import failed', err);
+      alert('Could not read that Excel file: ' + (err.message || err));
+    }
+  });
+  block.querySelectorAll('.tsheet-card').forEach(card => {
+    const f = (t.excelFiles || []).find(x => x.id === card.dataset.sheetFileId);
+    if(!f) return;
+    card.querySelectorAll('[data-role="trial-sheet-tab"]').forEach(btn => btn.addEventListener('click', () => {
+      activeSheet.set(f.id, Number(btn.dataset.sheetIndex));
+      rerender();
+    }));
+    card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
+    card.querySelector('[data-role="remove-trial-sheet"]')?.addEventListener('click', () => {
+      if(!confirm(`Remove "${f.name}" from this evaluation? (Your original file on your computer is not touched.)`)) return;
+      t.excelFiles = (t.excelFiles || []).filter(x => x.id !== f.id);
+      scheduleTrialSave(t);
+      rerender();
+    });
+  });
+}
+
+// the stored table back out as an .xlsx (what each cell showed, with bold / fill / merged cells)
+export async function exportSheetsFile(f){
+  if(!window.ExcelJS){ alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.'); return; }
+  const wb = new window.ExcelJS.Workbook();
+  wb.creator = 'Forge';
+  wb.created = new Date();
+  const used = new Set();
+  f.sheets.forEach((s, i) => {
+    let name = String(s.name || `Sheet ${i + 1}`).replace(/[\[\]:*?\/\\]/g, '-').slice(0, 31) || `Sheet ${i + 1}`, k = 2;
+    while(used.has(name.toLowerCase())) name = `${name.slice(0, 27)} (${k++})`;
+    used.add(name.toLowerCase());
+    const ws = wb.addWorksheet(name);
+    const widths = [];
+    s.rows.forEach((row, r) => {
+      row.forEach((text, c) => {
+        const cell = ws.getCell(r + 1, c + 1);
+        cell.value = text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
+        cell.alignment = { vertical: 'top', wrapText: true };
+        cell.border = { top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } }, bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } } };
+        const st = s.styles?.[`${r},${c}`];
+        if(st?.b) cell.font = { bold: true };
+        if(st?.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + st.bg } };
+        const longest = Math.max(...String(text).split('\n').map(x => x.length), 0);
+        widths[c] = Math.max(widths[c] || 8, Math.min(longest + 2, 60));
+      });
+    });
+    widths.forEach((w, c) => { ws.getColumn(c + 1).width = w; });
+    (s.merges || []).forEach(([r1, c1, r2, c2]) => { try{ ws.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1); }catch(e){ /* overlapping merge in the source -- skip it */ } });
+  });
+  const buffer = await wb.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = (f.name || 'Sample Evaluation').replace(/\.xlsx$/i, '').replace(/[\\/:*?"<>|]/g, '-') + ' (Forge).xlsx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 60000);
+}
