@@ -6649,3 +6649,17 @@
   .tsheet-colgrip:hover,.tsheet-rowgrip:hover{background:var(--primary);opacity:.5;}
   @media print{ .tsheet-colgrip,.tsheet-rowgrip,.tsheet-addpic,.tsheet-picbar{display:none !important;} }
   .tsheet-nogrid td{border-color:transparent;}
+  /* Excel Sheets editor: selection + formatting bar */
+  .tsheet-fmtbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px;padding:6px 10px;background:#fff;border-bottom:1px solid var(--border);}
+  .tsheet-fmtbar button,.tsheet-fmtbar select,.tsheet-fb-color{height:28px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;padding:0 8px;cursor:pointer;color:var(--text);}
+  .tsheet-fmtbar button:hover{background:var(--bg);}
+  .tsheet-fmtbar button.active{background:var(--primary-light,#e3f1f4);border-color:var(--primary);color:var(--primary-dark);}
+  .tsheet-fb-sep{width:1px;height:20px;background:var(--border);margin:0 4px;}
+  .tsheet-fb-color{position:relative;display:inline-flex;align-items:center;justify-content:center;width:34px;padding:0;font-weight:700;overflow:hidden;}
+  .tsheet-fb-color input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+  .tsheet-fb-fill{font-size:15px;color:#f5c400;}
+  .tsheet-scroll:focus{outline:none;}
+  .tsheet-table.tsheet-editing td{user-select:none;}
+  .tsheet-table.tsheet-editing td .tsheet-ed[contenteditable="true"]{user-select:text;}
+  .tsheet-table td.tsheet-sel{outline:2px solid var(--primary);outline-offset:-2px;background-image:linear-gradient(rgba(0,120,200,.13),rgba(0,120,200,.13));}
+  .tsheet-ed{white-space:inherit;overflow-wrap:inherit;}
