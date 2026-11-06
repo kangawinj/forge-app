@@ -839,6 +839,7 @@ export const CHANGELOG = [
   { version: "3.0.797", date: "2026-11-06", note: "Sample Evaluation: the row buttons (Edit, Perform Evaluation, Summary Test, Export Excel ...) are lined up at the right edge in every row on a wide screen, so a test with fewer buttons no longer sits in the middle" },
   { version: "3.0.798", date: "2026-11-06", note: "Test Summary (page, PDF and Excel export): when an Excel file is attached to the evaluation, it says \"Please see the details in the attached Excel file\" with the file name(s), and no longer shows \"No products in this test yet\" for a test that only has an attachment" },
   { version: "3.0.799", date: "2026-11-06", note: "Test Summary > Export Excel: the attached Excel files' tables are now included as extra worksheets (one per sheet, with their bold / fill / merged cells and pictures)" },
+  { version: "3.0.800", date: "2026-11-06", note: "Sample Evaluation > Export Excel (the row button): the attached Excel files' tables follow as extra worksheets. Importing an Excel file now also keeps its italic / font size / text colour / alignment / borders and its column widths and row heights (re-import a file to pick these up), in the card, the exports and the Test Summary export" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

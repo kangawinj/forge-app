@@ -377,6 +377,10 @@ export async function exportTrialToExcel(t){
   const linkedProject = mt.linkedProjectId ? projects.find(p => p.id === mt.linkedProjectId) : null;
   const wb = newWorkbook();
   await buildTrialSheet(wb, t, 'Test Result');
+  // the attached Excel files' tables follow as their own worksheets (same look and pictures as attached)
+  const attached = Array.isArray(t.excelFiles) ? t.excelFiles : [];
+  const used = new Set(['test result']);
+  attached.forEach((f, i) => addAttachedSheets(wb, f, used, attached.length > 1 ? `File ${i + 1} - ` : 'Attached - '));
   await downloadWorkbook(wb, [`Test Result - ${linkedProject?.name || 'Untitled test'}`, mt.testDate || ''].filter(Boolean).join(' '));
 }
 

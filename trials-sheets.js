@@ -1,6 +1,7 @@
 // Excel sheets attached to a Sample Evaluation (trial): import an .xlsx, see it as a table right in the card, and
 // export it again as an Excel file. The sheets are stored as plain text cells (t.excelFiles) -- pictures, charts and
-// formulas in the original are not kept, only what each cell shows, plus bold / fill colour / merged cells.
+// formulas in the original are not kept, only what each cell shows, plus its look: bold / italic / size / text colour /
+// fill colour / alignment / borders, merged cells, column widths and row heights.
 // Firestore refuses arrays inside arrays, so a row is { c: [cell texts] } and a merge is { r1, c1, r2, c2 }.
 // Pictures are kept too, shrunk to a small JPEG each so they fit inside the evaluation (see shrinkImage).
 import { currentUser, uid, escapeHtml, icon, formatActivityDateTime, requestAuthConfirm } from './app.js';
@@ -188,21 +189,35 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
         out.push(text);
         if(text !== ''){ lastRow = Math.max(lastRow, r); lastCol = Math.max(lastCol, c); }
         const st = {};
-        if(cell.font?.bold) st.b = 1;
-        const argb = cell.fill?.type === 'pattern' ? cell.fill.fgColor?.argb : '';
-        if(argb && /^[0-9A-F]{8}$/i.test(argb) && argb.slice(2).toUpperCase() !== 'FFFFFF' && argb.slice(0, 2).toUpperCase() !== '00') st.bg = argb.slice(2);
-        if(st.b || st.bg) styles[`${r - 1},${c - 1}`] = st;
+        const fnt = cell.font || {};
+        if(fnt.bold) st.b = 1;
+        if(fnt.italic) st.i = 1;
+        if(fnt.size && fnt.size !== 11) st.sz = fnt.size;
+        const rgb = a => (a && /^[0-9A-F]{8}$/i.test(a) && a.slice(0, 2).toUpperCase() !== '00') ? a.slice(2).toUpperCase() : '';
+        const fc = rgb(fnt.color?.argb);
+        if(fc && fc !== '000000') st.fc = fc;
+        const bg = cell.fill?.type === 'pattern' ? rgb(cell.fill.fgColor?.argb) : '';
+        if(bg && bg !== 'FFFFFF') st.bg = bg;
+        if(['left', 'center', 'right'].includes(cell.alignment?.horizontal)) st.ha = cell.alignment.horizontal;
+        if(['top', 'middle', 'bottom'].includes(cell.alignment?.vertical)) st.va = cell.alignment.vertical;
+        const bd = ['top', 'right', 'bottom', 'left'].filter(side => cell.border?.[side]?.style).map(side => side[0]).join('');
+        if(bd) st.bd = bd;
+        if(Object.keys(st).length) styles[`${r - 1},${c - 1}`] = st;
       }
       rows.push(out);
     }
     const trimmed = rows.slice(0, lastRow).map(r => ({ c: r.slice(0, lastCol) }));
+    const colw = [];
+    for(let c = 1; c <= lastCol; c++){ const w = ws.getColumn(c).width; colw.push(w ? Math.round(w * 10) / 10 : 0); }
+    const rowh = {};
+    for(let r = 1; r <= lastRow; r++){ const h = ws.getRow(r).height; if(h) rowh[r - 1] = Math.round(h * 10) / 10; }
     const merges = (ws.model?.merges || []).map(m => {
       const mm = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m);
       if(!mm) return null;
       const toNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
       return { r1: Number(mm[2]) - 1, c1: toNum(mm[1]) - 1, r2: Number(mm[4]) - 1, c2: toNum(mm[3]) - 1 };
     }).filter(m => m && m.r1 < lastRow && m.c1 < lastCol);
-    if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges, images });
+    if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges, images, colw, rowh });
   }
   return { sheets, skipped };
 }
@@ -216,15 +231,26 @@ function sheetTableHtml(sheet){
   const pics = {};
   (sheet.images || []).forEach(im => { (pics[`${im.r},${im.c}`] = pics[`${im.r},${im.c}`] || []).push(im); });
   const cols = Math.max(...sheet.rows.map(r => r.c.length), 1);
+  // the original column widths / row heights when the file gave them (chars -> px like Excel: 7 px a char + 5)
+  const hasWidths = (sheet.colw || []).some(w => w);
+  const colPx = c => Math.round(((sheet.colw || [])[c] || 8.43) * 7 + 5);
+  const colgroup = hasWidths ? `<colgroup><col style="width:36px">${Array.from({ length: cols }, (_, c) => `<col style="width:${colPx(c)}px">`).join('')}</colgroup>` : '';
+  const tableStyle = hasWidths ? ` style="table-layout:fixed;width:${36 + Array.from({ length: cols }, (_, c) => colPx(c)).reduce((a, b) => a + b, 0)}px;min-width:0;"` : '';
+  const cellStyle = st => [
+    st.bg ? `background:#${st.bg}` : '', st.fc ? `color:#${st.fc}` : '', st.i ? 'font-style:italic' : '',
+    st.sz ? `font-size:${Math.min(28, Math.round(st.sz * 4 / 3))}px` : '', st.ha ? `text-align:${st.ha}` : '',
+    st.va ? `vertical-align:${st.va}` : '',
+    ...(st.bd ? [['t', 'top'], ['r', 'right'], ['b', 'bottom'], ['l', 'left']].filter(([k]) => st.bd.includes(k)).map(([, side]) => `border-${side}:1px solid #555`) : [])
+  ].filter(Boolean).join(';');
   const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}</th>`).join('')}</tr>`;
-  const body = sheet.rows.map((row, r) => `<tr><th class="tsheet-rowno">${r + 1}</th>${Array.from({ length: cols }, (_, c) => {
+  const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] ? ` style="height:${Math.round(sheet.rowh[r] * 4 / 3)}px"` : ''}><th class="tsheet-rowno">${r + 1}</th>${Array.from({ length: cols }, (_, c) => {
     const key = `${r},${c}`;
     if(hidden.has(key)) return '';
     const st = sheet.styles?.[key] || {};
     const sp = spans[key];
-    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${st.bg ? ` style="background:#${escapeHtml(st.bg)};"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row.c[c] || '')}${(pics[key] || []).map(im => `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('')}</td>`;
+    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${cellStyle(st) ? ` style="${escapeHtml(cellStyle(st))}"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row.c[c] || '')}${(pics[key] || []).map(im => `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('')}</td>`;
   }).join('')}</tr>`).join('');
-  return `<table class="tsheet-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
+  return `<table class="tsheet-table"${tableStyle}>${colgroup}<thead>${head}</thead><tbody>${body}</tbody></table>`;
 }
 
 export function trialSheetsHtml(t, isEditing){
@@ -314,19 +340,29 @@ export function addAttachedSheets(wb, f, used = new Set(), prefix = ''){
     used.add(name.toLowerCase());
     const ws = wb.addWorksheet(name);
     const widths = [];
+    const ownBorders = Object.values(s.styles || {}).some(x => x.bd);   // the file had its own borders: use those, not a grid everywhere
+    const line = { style: 'thin', color: { argb: 'FF7F7F7F' } };
     s.rows.forEach((rowObj, r) => {
       rowObj.c.forEach((text, c) => {
         const cell = ws.getCell(r + 1, c + 1);
         cell.value = text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
-        cell.alignment = { vertical: 'top', wrapText: true };
-        cell.border = { top: { style: 'thin', color: { argb: 'FFBFBFBF' } }, left: { style: 'thin', color: { argb: 'FFBFBFBF' } }, bottom: { style: 'thin', color: { argb: 'FFBFBFBF' } }, right: { style: 'thin', color: { argb: 'FFBFBFBF' } } };
-        const st = s.styles?.[`${r},${c}`];
-        if(st?.b) cell.font = { bold: true };
-        if(st?.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + st.bg } };
+        const st = s.styles?.[`${r},${c}`] || {};
+        cell.alignment = { vertical: st.va || 'top', horizontal: st.ha, wrapText: true };
+        if(ownBorders){
+          if(st.bd) cell.border = Object.fromEntries([['t', 'top'], ['r', 'right'], ['b', 'bottom'], ['l', 'left']].filter(([k]) => st.bd.includes(k)).map(([, side]) => [side, line]));
+        }else{
+          const grey = { style: 'thin', color: { argb: 'FFBFBFBF' } };
+          cell.border = { top: grey, left: grey, bottom: grey, right: grey };
+        }
+        if(st.b || st.i || st.sz || st.fc) cell.font = { bold: !!st.b, italic: !!st.i, size: st.sz || 11, ...(st.fc ? { color: { argb: 'FF' + st.fc } } : {}) };
+        if(st.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + st.bg } };
         const longest = Math.max(...String(text).split('\n').map(x => x.length), 0);
         widths[c] = Math.max(widths[c] || 8, Math.min(longest + 2, 60));
       });
     });
+    // the file's own column widths and row heights win over the guessed ones
+    (s.colw || []).forEach((w, c) => { if(w) widths[c] = w; });
+    Object.entries(s.rowh || {}).forEach(([r, h]) => { ws.getRow(Number(r) + 1).height = h; });
     (s.images || []).filter(im => im.cp).forEach(im => {
       widths[im.c] = Math.max(widths[im.c] || 8, Math.ceil(im.w / 7) + 2);
       const row = ws.getRow(im.r + 1);
