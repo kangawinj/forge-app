@@ -9,7 +9,7 @@ import { scheduleTrialSave } from './trials-data.js';
 const MAX_ROWS = 500;
 const MAX_COLS = 40;
 const MAX_FILE_JSON = 600000;   // one imported file, as stored (pictures included)
-const MAX_IMAGES = 30;          // pictures kept per file
+const MAX_IMAGES = 60;          // pictures kept per file
 const MAX_TRIAL_JSON = 950000;  // Firestore's limit is 1 MB per document
 
 const activeSheet = new Map();  // fileId -> index of the sheet tab being looked at
@@ -20,7 +20,7 @@ function colLetter(n){
   return s;
 }
 
-// Picture bytes -> a smaller JPEG data URL (transparent areas become white). Null if the browser cannot read the format.
+// Picture bytes -> { src: smaller JPEG data URL (transparent areas become white), w, h }. Null if the browser cannot read the format.
 async function shrinkImage(buffer, ext, maxSide, quality){
   const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif' }[String(ext).toLowerCase()];
   if(!mime) return null;
@@ -35,7 +35,7 @@ async function shrinkImage(buffer, ext, maxSide, quality){
     g.fillStyle = '#fff';
     g.fillRect(0, 0, c.width, c.height);
     g.drawImage(img, 0, 0, c.width, c.height);
-    return c.toDataURL('image/jpeg', quality);
+    return { src: c.toDataURL('image/jpeg', quality), w: c.width, h: c.height };
   }catch(e){
     return null;
   }finally{
@@ -55,12 +55,91 @@ function pictureSize(ws, range){
   return [Math.max(20, Math.round(w)), Math.max(20, Math.round(h))];
 }
 
-async function parseWorkbook(file, maxSide = 480, quality = 0.7){
+// "Place in cell" pictures (the Insert > Pictures > Place in Cell kind, shown in a cell as a picture but stored by the
+// file as an error value) are not seen by ExcelJS, so they are read straight out of the .xlsx zip: cell -> value
+// metadata -> rich value -> related media file. Returns { sheetName: [{ r, c, buffer, ext }] }.
+let jszipPromise = null;
+function loadJSZip(){
+  if(window.JSZip) return Promise.resolve(window.JSZip);
+  if(!jszipPromise) jszipPromise = new Promise((res, rej) => {
+    const s = document.createElement('script');
+    s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+    s.onload = () => res(window.JSZip);
+    s.onerror = () => { jszipPromise = null; rej(new Error('could not load the zip reader')); };
+    document.head.appendChild(s);
+  });
+  return jszipPromise;
+}
+async function readCellPictures(file){
+  const JSZip = await loadJSZip();
+  const zip = await JSZip.loadAsync(await file.arrayBuffer());
+  const text = async p => { const f = zip.file(p); return f ? f.async('string') : null; };
+  const parse = s => new DOMParser().parseFromString(s, 'application/xml');
+  const all = (doc, local) => Array.from(doc.getElementsByTagNameNS('*', local));
+  const attr = (el, local) => { for(const a of Array.from(el.attributes)) if(a.localName === local) return a.value; return null; };
+  const rvXml = await text('xl/richData/rdrichvalue.xml');
+  const metaXml = await text('xl/metadata.xml');
+  if(!rvXml || !metaXml) return {};
+  const structXml = await text('xl/richData/rdrichvaluestructure.xml');
+  const relXml = await text('xl/richData/richValueRel.xml');
+  const relRels = await text('xl/richData/_rels/richValueRel.xml.rels');
+  if(!structXml || !relXml || !relRels) return {};
+  // rich value i -> index of its picture in richValueRel.xml
+  const structs = all(parse(structXml), 's').map(s => all(s, 'k').map(k => attr(k, 'n')));
+  const richToRel = all(parse(rvXml), 'rv').map(rv => {
+    const keys = structs[Number(attr(rv, 's')) || 0] || [];
+    const at = keys.indexOf('_rvRel:LocalImageIdentifier');
+    const v = Array.from(rv.children).filter(x => x.localName === 'v')[at];
+    return at >= 0 && v ? Number(v.textContent) : -1;
+  });
+  const relIds = all(parse(relXml), 'rel').map(r => attr(r, 'id'));
+  const relTarget = {};
+  all(parse(relRels), 'Relationship').forEach(r => { relTarget[r.getAttribute('Id')] = r.getAttribute('Target'); });
+  // cell value-metadata index (vm, 1-based) -> rich value i
+  const meta = parse(metaXml);
+  const fm = all(meta, 'futureMetadata').find(f => f.getAttribute('name') === 'XLRICHVALUE');
+  const rvbOfBk = fm ? Array.from(fm.children).filter(b => b.localName === 'bk').map(b => { const rvb = all(b, 'rvb')[0]; return rvb ? Number(attr(rvb, 'i')) : -1; }) : [];
+  const vmToRich = all(meta, 'valueMetadata').flatMap(vmEl => Array.from(vmEl.children).filter(b => b.localName === 'bk').map(b => {
+    const rc = all(b, 'rc')[0];
+    return rc ? (rvbOfBk[Number(attr(rc, 'v'))] ?? -1) : -1;
+  }));
+  // sheet name -> sheet xml path
+  const wbDoc = parse(await text('xl/workbook.xml') || '<x/>');
+  const wbRels = {};
+  all(parse(await text('xl/_rels/workbook.xml.rels') || '<x/>'), 'Relationship').forEach(r => { wbRels[r.getAttribute('Id')] = r.getAttribute('Target'); });
+  const out = {};
+  for(const sEl of all(wbDoc, 'sheet')){
+    const target = wbRels[attr(sEl, 'id')];
+    if(!target) continue;
+    const xml = await text(target.startsWith('/') ? target.slice(1) : 'xl/' + target);
+    if(!xml) continue;
+    const list = [];
+    for(const c of all(parse(xml), 'c')){
+      const vm = Number(c.getAttribute('vm'));
+      if(!vm) continue;
+      const rich = vmToRich[vm - 1];
+      const relIdx = rich >= 0 ? richToRel[rich] : -1;
+      const tgt = relIdx >= 0 ? relTarget[relIds[relIdx]] : null;
+      const m = /^([A-Z]+)(\d+)$/.exec(c.getAttribute('r') || '');
+      if(!tgt || !m) continue;
+      const path = 'xl/' + tgt.replace(/^\.\.\//, '');
+      const f = zip.file(path);
+      if(!f) continue;
+      list.push({ r: Number(m[2]) - 1, c: [...m[1]].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0) - 1, buffer: await f.async('uint8array'), ext: (path.split('.').pop() || '').toLowerCase() });
+    }
+    if(list.length) out[sEl.getAttribute('name')] = list;
+  }
+  return out;
+}
+
+async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180){
   if(!window.ExcelJS) throw new Error('Excel reading is not available right now (ExcelJS failed to load) -- check your connection and try again.');
   const wb = new window.ExcelJS.Workbook();
   await wb.xlsx.load(await file.arrayBuffer());
   const sheets = [];
   let kept = 0, skipped = 0;
+  let cellPics = {};
+  try{ cellPics = await readCellPictures(file); }catch(e){ console.warn('Forge: reading in-cell pictures failed', e); }
   const wsList = [];
   wb.eachSheet(ws => { if(!ws.state || ws.state === 'visible') wsList.push(ws); });
   for(const ws of wsList){
@@ -72,10 +151,21 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7){
       const tl = im.range?.tl;
       if(!tl || tl.nativeRow >= MAX_ROWS || tl.nativeCol >= MAX_COLS || kept >= MAX_IMAGES){ skipped++; continue; }
       const media = wb.getImage(im.imageId);
-      const src = media?.buffer ? await shrinkImage(media.buffer, media.extension, maxSide, quality) : null;
-      if(!src){ skipped++; continue; }
+      const shrunk = media?.buffer ? await shrinkImage(media.buffer, media.extension, maxSide, quality) : null;
+      if(!shrunk){ skipped++; continue; }
       const [w, h] = pictureSize(ws, im.range);
-      images.push({ r: tl.nativeRow, c: tl.nativeCol, x: Math.round((tl.nativeColOff || 0) / 9525), y: Math.round((tl.nativeRowOff || 0) / 9525), w, h, src });
+      images.push({ r: tl.nativeRow, c: tl.nativeCol, x: Math.round((tl.nativeColOff || 0) / 9525), y: Math.round((tl.nativeRowOff || 0) / 9525), w, h, src: shrunk.src });
+      kept++;
+    }
+    // pictures placed inside cells: shown at up to 120 px, and the cell's own "#VALUE!" text is dropped
+    const inCell = new Set();
+    for(const cp of (cellPics[ws.name] || [])){
+      if(cp.r >= MAX_ROWS || cp.c >= MAX_COLS || kept >= MAX_IMAGES){ skipped++; continue; }
+      const shrunk = await shrinkImage(cp.buffer, cp.ext, cellSide, quality);
+      if(!shrunk){ skipped++; continue; }
+      const k = 120 / Math.max(shrunk.w, shrunk.h);
+      images.push({ r: cp.r, c: cp.c, x: 0, y: 0, w: Math.round(shrunk.w * k), h: Math.round(shrunk.h * k), src: shrunk.src, cp: 1 });
+      inCell.add(`${cp.r},${cp.c}`);
       kept++;
     }
     const rowCount = Math.min(Math.max(ws.rowCount || 0, ...images.map(i => i.r + 1)), MAX_ROWS);
@@ -89,6 +179,7 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7){
         const cell = ws.getCell(r, c);
         let text = '';
         try{ text = cell.text == null ? '' : String(cell.text); }catch(e){ text = ''; }
+        if(inCell.has(`${r - 1},${c - 1}`)) text = '';
         out.push(text);
         if(text !== ''){ lastRow = Math.max(lastRow, r); lastCol = Math.max(lastCol, c); }
         const st = {};
@@ -173,7 +264,7 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       let size = JSON.stringify(entry).length;
       if(size > MAX_FILE_JSON && sheets.some(s => s.images?.length)){
         // pictures are the bulk of it: read the file again with smaller, more compressed pictures
-        ({ sheets, skipped } = await parseWorkbook(file, 300, 0.55));
+        ({ sheets, skipped } = await parseWorkbook(file, 300, 0.55, 120));
         entry = { ...entry, sheets };
         size = JSON.stringify(entry).length;
       }
@@ -231,6 +322,11 @@ export async function exportSheetsFile(f){
         const longest = Math.max(...String(text).split('\n').map(x => x.length), 0);
         widths[c] = Math.max(widths[c] || 8, Math.min(longest + 2, 60));
       });
+    });
+    (s.images || []).filter(im => im.cp).forEach(im => {
+      widths[im.c] = Math.max(widths[im.c] || 8, Math.ceil(im.w / 7) + 2);
+      const row = ws.getRow(im.r + 1);
+      row.height = Math.max(row.height || 15, Math.ceil(im.h * 0.75) + 4);
     });
     widths.forEach((w, c) => { ws.getColumn(c + 1).width = w; });
     (s.images || []).forEach(im => {
