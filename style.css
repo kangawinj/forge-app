@@ -6618,3 +6618,7 @@
   .tsheet-table td.tsheet-bold{font-weight:700;}
   @media print{ .tsheet-actions, .tsheet-import-btn{display:none !important;} .tsheet-scroll{max-height:none;overflow:visible;} }
   .tsheet-img{display:block;max-width:100%;height:auto;margin-top:4px;border-radius:4px;}
+  /* the note under every attach button (see attach-notes.js) */
+  .attach-note{display:block;flex:1 0 100%;width:100%;font-size:11px;line-height:1.4;color:var(--text-dim);margin:4px 0 6px;font-weight:400;}
+  input[style*="none"] + .attach-note, label[style*="none"] + .attach-note{display:none;}
+  @media print{ .attach-note{display:none !important;} }
