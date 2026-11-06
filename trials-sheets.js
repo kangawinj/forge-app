@@ -23,7 +23,7 @@ function colLetter(n){
 
 // Picture bytes -> { src: smaller JPEG data URL (transparent areas become white), w, h }. Null if the browser cannot read the format.
 async function shrinkImage(buffer, ext, maxSide, quality){
-  const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif' }[String(ext).toLowerCase()];
+  const mime = { png: 'image/png', jpg: 'image/jpeg', jpeg: 'image/jpeg', gif: 'image/gif', webp: 'image/webp' }[String(ext).toLowerCase()];
   if(!mime) return null;
   const url = URL.createObjectURL(new Blob([buffer], { type: mime }));
   try{
@@ -222,7 +222,7 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
   return { sheets, skipped };
 }
 
-function sheetTableHtml(sheet){
+function sheetTableHtml(sheet, edit = false){
   const spans = {}, hidden = new Set();
   (sheet.merges || []).forEach(({ r1, c1, r2, c2 }) => {
     spans[`${r1},${c1}`] = [r2 - r1 + 1, c2 - c1 + 1];
@@ -232,7 +232,7 @@ function sheetTableHtml(sheet){
   (sheet.images || []).forEach(im => { (pics[`${im.r},${im.c}`] = pics[`${im.r},${im.c}`] || []).push(im); });
   const cols = Math.max(...sheet.rows.map(r => r.c.length), 1);
   // the original column widths / row heights when the file gave them (chars -> px like Excel: 7 px a char + 5)
-  const hasWidths = (sheet.colw || []).some(w => w);
+  const hasWidths = edit || (sheet.colw || []).some(w => w);
   const colPx = c => Math.round(((sheet.colw || [])[c] || 8.43) * 7 + 5);
   const colgroup = hasWidths ? `<colgroup><col style="width:36px">${Array.from({ length: cols }, (_, c) => `<col style="width:${colPx(c)}px">`).join('')}</colgroup>` : '';
   const tableStyle = hasWidths ? ` style="table-layout:fixed;width:${36 + Array.from({ length: cols }, (_, c) => colPx(c)).reduce((a, b) => a + b, 0)}px;min-width:0;"` : '';
@@ -242,34 +242,68 @@ function sheetTableHtml(sheet){
     st.va ? `vertical-align:${st.va}` : '',
     ...(st.bd ? [['t', 'top'], ['r', 'right'], ['b', 'bottom'], ['l', 'left']].filter(([k]) => st.bd.includes(k)).map(([, side]) => `border-${side}:1px solid #555`) : [])
   ].filter(Boolean).join(';');
-  const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}</th>`).join('')}</tr>`;
-  const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] ? ` style="height:${Math.round(sheet.rowh[r] * 4 / 3)}px"` : ''}><th class="tsheet-rowno">${r + 1}</th>${Array.from({ length: cols }, (_, c) => {
+  const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}${edit ? `<span class="tsheet-colgrip" data-col="${i}" title="Drag to change the column width"></span>` : ''}</th>`).join('')}</tr>`;
+  const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] ? ` style="height:${Math.round(sheet.rowh[r] * 4 / 3)}px"` : ''}><th class="tsheet-rowno">${r + 1}${edit ? `<span class="tsheet-rowgrip" data-row="${r}" title="Drag to change the row height"></span>` : ''}</th>${Array.from({ length: cols }, (_, c) => {
     const key = `${r},${c}`;
     if(hidden.has(key)) return '';
     const st = sheet.styles?.[key] || {};
     const sp = spans[key];
-    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${cellStyle(st) ? ` style="${escapeHtml(cellStyle(st))}"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row.c[c] || '')}${(pics[key] || []).map(im => `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('')}</td>`;
+    const imgs = (pics[key] || []).map(im => edit
+      ? `<span class="tsheet-pic"><img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;"><span class="tsheet-picbar"><button type="button" data-pic-scale="0.8" data-img-index="${sheet.images.indexOf(im)}" title="Smaller">&minus;</button><button type="button" data-pic-scale="1.25" data-img-index="${sheet.images.indexOf(im)}" title="Larger">+</button><button type="button" data-pic-remove data-img-index="${sheet.images.indexOf(im)}" title="Remove this picture">&times;</button></span></span>`
+      : `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('');
+    const inner = edit
+      ? `<span class="tsheet-ed" contenteditable="true" spellcheck="false" data-r="${r}" data-c="${c}">${escapeHtml(row.c[c] || '')}</span><span class="tsheet-cellpics" contenteditable="false">${imgs}<button type="button" class="tsheet-addpic" data-r="${r}" data-c="${c}" title="Add a picture to this cell">${icon('upload', 12)}</button></span>`
+      : `${escapeHtml(row.c[c] || '')}${imgs}`;
+    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${cellStyle(st) ? ` style="${escapeHtml(cellStyle(st))}"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${inner}</td>`;
   }).join('')}</tr>`).join('');
-  return `<table class="tsheet-table"${tableStyle}>${colgroup}<thead>${head}</thead><tbody>${body}</tbody></table>`;
+  return `<table class="tsheet-table${edit ? ' tsheet-editing' : ''}"${tableStyle}>${colgroup}<thead>${head}</thead><tbody>${body}</tbody></table>`;
+}
+
+// Editing one sheet of an attached file in place: a working copy (`draft`) is changed and only written back on Save.
+let sheetEdit = null;        // { trialId, fileId, sheetIndex, draft }
+let keepScroll = null;       // scroll position of the table being edited, restored after a redraw
+const clone = o => JSON.parse(JSON.stringify(o));
+function normalizeDraft(d){
+  const cols = Math.max(...d.rows.map(r => r.c.length), 1);
+  d.rows.forEach(r => { while(r.c.length < cols) r.c.push(''); });
+  d.colw = Array.from({ length: cols }, (_, c) => (d.colw || [])[c] || 13);
+  d.rowh = d.rowh || {};
+  d.images = d.images || [];
+  d.merges = d.merges || [];
+  d.styles = d.styles || {};
+  return d;
 }
 
 export function trialSheetsHtml(t, isEditing){
+  if(sheetEdit && sheetEdit.trialId === t.id && !isEditing) sheetEdit = null;
   const files = Array.isArray(t.excelFiles) ? t.excelFiles : [];
   const cards = files.map(f => {
-    const idx = Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
-    const sheet = f.sheets[idx];
+    const ed = !!(sheetEdit && sheetEdit.trialId === t.id && sheetEdit.fileId === f.id && isEditing);
+    const idx = ed ? sheetEdit.sheetIndex : Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
+    const sheet = ed ? sheetEdit.draft : f.sheets[idx];
+    const otherEditing = !!(sheetEdit && sheetEdit.trialId === t.id && !ed);
     return `
-      <div class="tsheet-card" data-sheet-file-id="${escapeHtml(f.id)}">
+      <div class="tsheet-card${ed ? ' tsheet-card-editing' : ''}" data-sheet-file-id="${escapeHtml(f.id)}">
         <div class="tsheet-head">
           <span class="tsheet-name">${icon('file-text', 14)} ${escapeHtml(f.name)}</span>
           <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}</span>
           <span class="tsheet-actions">
-            <button type="button" class="btn btn-sm" data-role="export-trial-sheet">${icon('download', 14)} Export Excel</button>
-            ${isEditing ? `<button type="button" class="btn btn-sm btn-danger" data-role="remove-trial-sheet" title="Remove this file from the evaluation">${icon('x', 14)} Remove</button>` : ''}
+            ${ed ? `
+              <button type="button" class="btn btn-sm" data-role="sheet-add-row">${icon('plus', 14)} Row</button>
+              <button type="button" class="btn btn-sm" data-role="sheet-add-col">${icon('plus', 14)} Column</button>
+              <button type="button" class="btn btn-sm btn-primary" data-role="sheet-edit-save">${icon('save', 14)} Save table</button>
+              <button type="button" class="btn btn-sm" data-role="sheet-edit-cancel">Cancel</button>
+            ` : `
+              <button type="button" class="btn btn-sm" data-role="export-trial-sheet">${icon('download', 14)} Export Excel</button>
+              ${isEditing ? `<button type="button" class="btn btn-sm" data-role="edit-trial-sheet" ${otherEditing ? 'disabled title="Finish the other table first"' : ''}>${icon('pencil', 14)} Edit table</button>` : ''}
+              ${isEditing ? `<button type="button" class="btn btn-sm btn-danger" data-role="remove-trial-sheet" title="Remove this file from the evaluation">${icon('x', 14)} Remove</button>` : ''}
+            `}
           </span>
         </div>
-        ${f.sheets.length > 1 ? `<div class="tsheet-tabs">${f.sheets.map((s, i) => `<button type="button" class="tsheet-tab${i === idx ? ' active' : ''}" data-role="trial-sheet-tab" data-sheet-index="${i}">${escapeHtml(s.name)}</button>`).join('')}</div>` : ''}
-        <div class="tsheet-scroll">${sheetTableHtml(sheet)}</div>
+        ${ed
+          ? `<div class="tsheet-edit-hint">Editing sheet "${escapeHtml(sheet.name)}": click a cell to type. Drag the edge of a column letter or a row number to resize it. The arrow button in a cell adds a picture (then &minus; / + / &times; on the picture). Nothing is kept until you press Save table.</div>`
+          : (f.sheets.length > 1 ? `<div class="tsheet-tabs">${f.sheets.map((s, i) => `<button type="button" class="tsheet-tab${i === idx ? ' active' : ''}" data-role="trial-sheet-tab" data-sheet-index="${i}">${escapeHtml(s.name)}</button>`).join('')}</div>` : '')}
+        <div class="tsheet-scroll">${sheetTableHtml(sheet, ed)}</div>
       </div>`;
   }).join('');
   return `
@@ -280,6 +314,109 @@ export function trialSheetsHtml(t, isEditing){
       </div>
       ${cards || `<div class="overview-empty">${isEditing ? 'No Excel file yet -- use Import Excel to show a sheet here as a table' : 'No Excel file attached'}</div>`}
     </div>`;
+}
+
+function wireSheetEditor(card, t, f, rerender){
+  const draft = sheetEdit.draft;
+  const scrollBox = card.querySelector('.tsheet-scroll');
+  if(keepScroll && keepScroll.fileId === f.id){ scrollBox.scrollTop = keepScroll.top; scrollBox.scrollLeft = keepScroll.left; keepScroll = null; }
+  const redraw = () => { keepScroll = { fileId: f.id, top: scrollBox.scrollTop, left: scrollBox.scrollLeft }; rerender(); };
+  // typing
+  card.querySelectorAll('.tsheet-ed').forEach(el => {
+    el.addEventListener('input', () => { draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = el.innerText.replace(/\n$/, ''); });
+    el.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
+    el.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); document.execCommand('insertLineBreak'); } });
+  });
+  // rows / columns
+  card.querySelector('[data-role="sheet-add-row"]')?.addEventListener('click', () => {
+    if(draft.rows.length >= MAX_ROWS){ alert(`A sheet can have up to ${MAX_ROWS} rows.`); return; }
+    draft.rows.push({ c: Array(draft.colw.length).fill('') });
+    redraw();
+  });
+  card.querySelector('[data-role="sheet-add-col"]')?.addEventListener('click', () => {
+    if(draft.colw.length >= MAX_COLS){ alert(`A sheet can have up to ${MAX_COLS} columns.`); return; }
+    draft.rows.forEach(r => r.c.push(''));
+    draft.colw.push(13);
+    redraw();
+  });
+  // pictures
+  card.querySelectorAll('.tsheet-addpic').forEach(btn => btn.addEventListener('click', () => {
+    const r = Number(btn.dataset.r), c = Number(btn.dataset.c);
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = 'image/*';
+    input.addEventListener('change', async () => {
+      const file = input.files[0];
+      if(!file) return;
+      if(draft.images.length >= MAX_IMAGES){ alert(`A file can keep up to ${MAX_IMAGES} pictures.`); return; }
+      const shrunk = await shrinkImage(await file.arrayBuffer(), (file.type.split('/')[1] || '').toLowerCase(), 480, 0.7);
+      if(!shrunk){ alert('Could not read that picture (use PNG, JPG, GIF or WebP).'); return; }
+      const k = 120 / Math.max(shrunk.w, shrunk.h);
+      draft.images.push({ r, c, x: 0, y: 0, w: Math.round(shrunk.w * k), h: Math.round(shrunk.h * k), src: shrunk.src, cp: 1 });
+      redraw();
+    });
+    input.click();
+  }));
+  card.querySelectorAll('[data-pic-remove]').forEach(btn => btn.addEventListener('click', () => {
+    draft.images.splice(Number(btn.dataset.imgIndex), 1);
+    redraw();
+  }));
+  card.querySelectorAll('[data-pic-scale]').forEach(btn => btn.addEventListener('click', () => {
+    const im = draft.images[Number(btn.dataset.imgIndex)];
+    const k = Number(btn.dataset.picScale);
+    im.w = Math.min(420, Math.max(30, Math.round(im.w * k)));
+    im.h = Math.max(20, Math.round(im.h * k));
+    redraw();
+  }));
+  // dragging the edge of a column letter / row number
+  const table = card.querySelector('table');
+  const drag = (grip, onMove) => grip.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    e.stopPropagation();
+    const x0 = e.clientX, y0 = e.clientY;
+    const move = ev => onMove(ev.clientX - x0, ev.clientY - y0);
+    const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
+    document.addEventListener('pointermove', move);
+    document.addEventListener('pointerup', up);
+  });
+  card.querySelectorAll('.tsheet-colgrip').forEach(grip => {
+    const c = Number(grip.dataset.col);
+    const col = table.querySelectorAll('colgroup col')[c + 1];
+    const w0 = parseFloat(col.style.width), tw0 = parseFloat(table.style.width);
+    drag(grip, dx => {
+      const w = Math.max(24, w0 + dx);
+      col.style.width = w + 'px';
+      table.style.width = (tw0 + w - w0) + 'px';
+      draft.colw[c] = Math.round((w - 5) / 7 * 10) / 10;
+    });
+  });
+  card.querySelectorAll('.tsheet-rowgrip').forEach(grip => {
+    const r = Number(grip.dataset.row);
+    const tr = grip.closest('tr');
+    const h0 = tr.getBoundingClientRect().height;
+    drag(grip, (dx, dy) => {
+      const h = Math.max(18, h0 + dy);
+      tr.style.height = h + 'px';
+      draft.rowh[r] = Math.round(h * 0.75 * 10) / 10;
+    });
+  });
+  // save / cancel
+  card.querySelector('[data-role="sheet-edit-cancel"]')?.addEventListener('click', () => {
+    if(!confirm('Discard the changes you made to this table?')) return;
+    sheetEdit = null;
+    rerender();
+  });
+  card.querySelector('[data-role="sheet-edit-save"]')?.addEventListener('click', () => {
+    const next = { ...f, sheets: f.sheets.map((s, i) => i === sheetEdit.sheetIndex ? draft : s) };
+    const size = JSON.stringify(next).length;
+    if(size > MAX_FILE_JSON){ alert(`This table is now too large to keep inside the evaluation (${Math.round(size / 1000)} KB; the limit is ${MAX_FILE_JSON / 1000} KB). Remove some pictures or rows and save again.`); return; }
+    if(JSON.stringify(t).length - JSON.stringify(f).length + size > MAX_TRIAL_JSON){ alert('This evaluation is already close to the size limit (photos take most of it), so these changes cannot be saved.'); return; }
+    const before = t.excelFiles;
+    t.excelFiles = before.map(x => x.id === f.id ? next : x);
+    try{ scheduleTrialSave(t); }catch(err){ t.excelFiles = before; alert('Could not save: ' + (err.message || err)); return; }
+    sheetEdit = null;
+    rerender();
+  });
 }
 
 export function wireTrialSheets(block, t, isEditing, rerender){
@@ -319,6 +456,12 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       rerender();
     }));
     card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
+    card.querySelector('[data-role="edit-trial-sheet"]')?.addEventListener('click', () => {
+      const idx = Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
+      sheetEdit = { trialId: t.id, fileId: f.id, sheetIndex: idx, draft: normalizeDraft(clone(f.sheets[idx])) };
+      rerender();
+    });
+    if(sheetEdit && sheetEdit.trialId === t.id && sheetEdit.fileId === f.id && isEditing) wireSheetEditor(card, t, f, rerender);
     card.querySelector('[data-role="remove-trial-sheet"]')?.addEventListener('click', () => {
       // removing is asked twice over: the warning below, and the person's password (same as editing a project cell)
       requestAuthConfirm('Confirm removal', `Remove "${f.name}" from this evaluation? Its table and pictures here are deleted (the original file on your computer is not touched). Enter your password to remove it.`, () => {
