@@ -831,6 +831,7 @@ export const CHANGELOG = [
   { version: "3.0.789", date: "2026-11-05", note: "Renamed the Test Results page to Product Sample Evaluation -- the navbar tab, the page title, the print dialog, the recipe's Linked card, the Manage Users module list and the online-users activity label. The Test Result verdict inside each evaluation keeps its name" },
   { version: "3.0.790", date: "2026-11-05", note: "Shortened the page name from Product Sample Evaluation to Sample Evaluation everywhere it is shown" },
   { version: "3.0.791", date: "2026-11-06", note: "Sample Evaluation: new Excel Sheets section under Sensory Evaluation -- Import Excel (.xlsx) shows each sheet right in the card as a table (sheet tabs, bold, fill colours and merged cells kept), and Export Excel downloads it again as an .xlsx; Remove deletes it from the evaluation. Only what each cell shows is kept (no pictures, charts or formulas); up to 500 rows x 40 columns per sheet. Pictures in the Excel file are shrunk (JPEG, 480 px at most) and kept: shown inside their cell and put back by Export Excel (up to 30 pictures per file)" },
+  { version: "3.0.792", date: "2026-11-06", note: "Sample Evaluation > Excel Sheets: fixed Import Excel failing with \"Nested arrays are not supported\" (Firestore does not allow arrays inside arrays) -- rows and merged cells are now stored in a form it accepts, and a failed save no longer leaves the file half-added" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

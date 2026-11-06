@@ -1,6 +1,7 @@
 // Excel sheets attached to a Sample Evaluation (trial): import an .xlsx, see it as a table right in the card, and
 // export it again as an Excel file. The sheets are stored as plain text cells (t.excelFiles) -- pictures, charts and
 // formulas in the original are not kept, only what each cell shows, plus bold / fill colour / merged cells.
+// Firestore refuses arrays inside arrays, so a row is { c: [cell texts] } and a merge is { r1, c1, r2, c2 }.
 // Pictures are kept too, shrunk to a small JPEG each so they fit inside the evaluation (see shrinkImage).
 import { currentUser, uid, escapeHtml, icon, formatActivityDateTime } from './app.js';
 import { scheduleTrialSave } from './trials-data.js';
@@ -89,7 +90,7 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7){
         let text = '';
         try{ text = cell.text == null ? '' : String(cell.text); }catch(e){ text = ''; }
         out.push(text);
-        if(text !== ''){ lastRow = r; lastCol = Math.max(lastCol, c); }
+        if(text !== ''){ lastRow = Math.max(lastRow, r); lastCol = Math.max(lastCol, c); }
         const st = {};
         if(cell.font?.bold) st.b = 1;
         const argb = cell.fill?.type === 'pattern' ? cell.fill.fgColor?.argb : '';
@@ -98,13 +99,13 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7){
       }
       rows.push(out);
     }
-    const trimmed = rows.slice(0, lastRow).map(r => r.slice(0, lastCol));
+    const trimmed = rows.slice(0, lastRow).map(r => ({ c: r.slice(0, lastCol) }));
     const merges = (ws.model?.merges || []).map(m => {
       const mm = /^([A-Z]+)(\d+):([A-Z]+)(\d+)$/.exec(m);
       if(!mm) return null;
       const toNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
-      return [Number(mm[2]) - 1, toNum(mm[1]) - 1, Number(mm[4]) - 1, toNum(mm[3]) - 1];
-    }).filter(m => m && m[0] < lastRow && m[1] < lastCol);
+      return { r1: Number(mm[2]) - 1, c1: toNum(mm[1]) - 1, r2: Number(mm[4]) - 1, c2: toNum(mm[3]) - 1 };
+    }).filter(m => m && m.r1 < lastRow && m.c1 < lastCol);
     if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges, images });
   }
   return { sheets, skipped };
@@ -112,20 +113,20 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7){
 
 function sheetTableHtml(sheet){
   const spans = {}, hidden = new Set();
-  (sheet.merges || []).forEach(([r1, c1, r2, c2]) => {
+  (sheet.merges || []).forEach(({ r1, c1, r2, c2 }) => {
     spans[`${r1},${c1}`] = [r2 - r1 + 1, c2 - c1 + 1];
     for(let r = r1; r <= r2; r++) for(let c = c1; c <= c2; c++) if(r !== r1 || c !== c1) hidden.add(`${r},${c}`);
   });
   const pics = {};
   (sheet.images || []).forEach(im => { (pics[`${im.r},${im.c}`] = pics[`${im.r},${im.c}`] || []).push(im); });
-  const cols = Math.max(...sheet.rows.map(r => r.length), 1);
+  const cols = Math.max(...sheet.rows.map(r => r.c.length), 1);
   const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}</th>`).join('')}</tr>`;
   const body = sheet.rows.map((row, r) => `<tr><th class="tsheet-rowno">${r + 1}</th>${Array.from({ length: cols }, (_, c) => {
     const key = `${r},${c}`;
     if(hidden.has(key)) return '';
     const st = sheet.styles?.[key] || {};
     const sp = spans[key];
-    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${st.bg ? ` style="background:#${escapeHtml(st.bg)};"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row[c] || '')}${(pics[key] || []).map(im => `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('')}</td>`;
+    return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${st.bg ? ` style="background:#${escapeHtml(st.bg)};"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${escapeHtml(row.c[c] || '')}${(pics[key] || []).map(im => `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('')}</td>`;
   }).join('')}</tr>`).join('');
   return `<table class="tsheet-table"><thead>${head}</thead><tbody>${body}</tbody></table>`;
 }
@@ -178,8 +179,9 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       }
       if(size > MAX_FILE_JSON){ alert(`That file is too large to keep inside the evaluation (${Math.round(size / 1000)} KB; the limit is ${MAX_FILE_JSON / 1000} KB). Remove unused rows/sheets and try again.`); return; }
       if(JSON.stringify(t).length + size > MAX_TRIAL_JSON){ alert('This evaluation is already close to the size limit (photos take most of it), so the file cannot be added.'); return; }
-      t.excelFiles = [...(Array.isArray(t.excelFiles) ? t.excelFiles : []), entry];
-      scheduleTrialSave(t);
+      const before = t.excelFiles;
+      t.excelFiles = [...(Array.isArray(before) ? before : []), entry];
+      try{ scheduleTrialSave(t); }catch(err){ t.excelFiles = before; throw err; }
       rerender();
       if(skipped) alert(`${skipped} picture${skipped > 1 ? 's' : ''} could not be kept (unsupported picture type, or more than ${MAX_IMAGES} pictures in the file). Everything else was added.`);
     }catch(err){
@@ -217,8 +219,8 @@ export async function exportSheetsFile(f){
     used.add(name.toLowerCase());
     const ws = wb.addWorksheet(name);
     const widths = [];
-    s.rows.forEach((row, r) => {
-      row.forEach((text, c) => {
+    s.rows.forEach((rowObj, r) => {
+      rowObj.c.forEach((text, c) => {
         const cell = ws.getCell(r + 1, c + 1);
         cell.value = text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
         cell.alignment = { vertical: 'top', wrapText: true };
@@ -237,7 +239,7 @@ export async function exportSheetsFile(f){
         ws.addImage(id, { tl: { col: im.c + (im.x || 0) / Math.max(1, (widths[im.c] || 8) * 7 + 5), row: im.r + (im.y || 0) / 20 }, ext: { width: Math.min(im.w, 900), height: Math.min(im.h, 900) } });
       }catch(e){ /* a picture that cannot be placed is skipped */ }
     });
-    (s.merges || []).forEach(([r1, c1, r2, c2]) => { try{ ws.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1); }catch(e){ /* overlapping merge in the source -- skip it */ } });
+    (s.merges || []).forEach(({ r1, c1, r2, c2 }) => { try{ ws.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1); }catch(e){ /* overlapping merge in the source -- skip it */ } });
   });
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
