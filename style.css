@@ -6668,3 +6668,8 @@
   .tsheet-zoom button:hover{background:var(--bg);}
   .tsheet-zoom .tsheet-zoom-pct{min-width:48px;font-size:12px;}
   @media print{ .tsheet-zoom{display:none !important;} }
+  /* Excel Sheets: the Expand button -- the card fills the whole app window (above the navbar, below the password window) */
+  .tsheet-card-full{position:fixed;inset:0;z-index:200;margin:0;border-radius:0;border:none;display:flex;flex-direction:column;background:#fff;}
+  .tsheet-card-full .tsheet-scroll{max-height:none;flex:1 1 auto;min-height:0;}
+  .tsheet-card-full .tsheet-head,.tsheet-card-full .tsheet-fmtbar,.tsheet-card-full .tsheet-edit-hint,.tsheet-card-full .tsheet-tabs{flex:0 0 auto;}
+  body.tsheet-fullopen{overflow:hidden;}

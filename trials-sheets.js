@@ -382,6 +382,9 @@ function sheetTableHtml(sheet, edit = false, sel = null, zoom = 1){
 
 // Editing one sheet of an attached file in place: a working copy (`draft`) is changed and only written back on Save.
 let sheetEdit = null;        // { trialId, fileId, sheetIndex, draft, sel }
+let sheetFull = null;           // fileId of the table shown over the whole app window (the Expand button)
+const ICON_EXPAND = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Expand';
+const ICON_COLLAPSE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg> Collapse';
 const sheetZoom = new Map();   // fileId -> zoom of that file's table (Ctrl + mouse wheel over it, or the - / + buttons)
 let sheetDragUp = null;      // the document-level mouseup handler of the table being edited
 // does a cell wrap its text? its own setting, else the default (an older import wrapped everything; a v2 import wraps only what the file says)
@@ -408,11 +411,12 @@ export function trialSheetsHtml(t, isEditing){
     const sheet = ed ? sheetEdit.draft : f.sheets[idx];
     const otherEditing = !!(sheetEdit && sheetEdit.trialId === t.id && !ed);
     return `
-      <div class="tsheet-card${ed ? ' tsheet-card-editing' : ''}" data-sheet-file-id="${escapeHtml(f.id)}">
+      <div class="tsheet-card${ed ? ' tsheet-card-editing' : ''}${sheetFull === f.id ? ' tsheet-card-full' : ''}" data-sheet-file-id="${escapeHtml(f.id)}">
         <div class="tsheet-head">
           <span class="tsheet-name">${icon('file-text', 14)} ${escapeHtml(f.name)}</span>
           <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}</span>
           <span class="tsheet-actions">
+            <button type="button" class="btn btn-sm" data-role="sheet-fullscreen" title="${sheetFull === f.id ? 'Back to the normal size (Esc)' : 'Fill the whole app window'}">${sheetFull === f.id ? ICON_COLLAPSE : ICON_EXPAND}</button>
             <span class="tsheet-zoom" title="Zoom the table: hold Ctrl and turn the mouse wheel over it">
               <button type="button" data-role="sheet-zoom-out" title="Zoom out">&minus;</button>
               <button type="button" data-role="sheet-zoom-reset" class="tsheet-zoom-pct" title="Back to 100%">${Math.round((sheetZoom.get(f.id) || 1) * 100)}%</button>
@@ -768,6 +772,16 @@ function wireSheetEditor(card, t, f, rerender){
 }
 
 export function wireTrialSheets(block, t, isEditing, rerender){
+  document.body.classList.toggle('tsheet-fullopen', !!document.querySelector('.tsheet-card-full'));
+  if(!window.__tsheetEsc){
+    window.__tsheetEsc = true;
+    document.addEventListener('keydown', e => {
+      if(e.key !== 'Escape') return;
+      const open = document.querySelector('.tsheet-card-full');
+      if(!open || e.target.closest?.('.tsheet-ed[contenteditable="true"]') || document.querySelector('.modal-overlay.open')) return;
+      open.querySelector('[data-role="sheet-fullscreen"]')?.click();
+    });
+  }
   block.querySelector('[data-role="import-trial-sheet"]')?.addEventListener('change', async e => {
     const file = e.target.files[0];
     e.target.value = '';
@@ -804,6 +818,15 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       rerender();
     }));
     card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
+    // Expand / Collapse: the table fills the whole app window, and back
+    card.querySelector('[data-role="sheet-fullscreen"]')?.addEventListener('click', e => {
+      const on = !card.classList.contains('tsheet-card-full');
+      sheetFull = on ? f.id : null;
+      card.classList.toggle('tsheet-card-full', on);
+      document.body.classList.toggle('tsheet-fullopen', on);
+      e.currentTarget.innerHTML = on ? ICON_COLLAPSE : ICON_EXPAND;
+      e.currentTarget.title = on ? 'Back to the normal size (Esc)' : 'Fill the whole app window';
+    });
     // zoom: Ctrl (or Cmd) + mouse wheel / trackpad pinch over the table, or the - / + buttons; the page itself does not zoom
     const box = card.querySelector('.tsheet-scroll'), zTable = box.querySelector('table'), pct = card.querySelector('.tsheet-zoom-pct');
     const setZoom = (z, ox, oy) => {
