@@ -3,7 +3,7 @@
 // formulas in the original are not kept, only what each cell shows, plus bold / fill colour / merged cells.
 // Firestore refuses arrays inside arrays, so a row is { c: [cell texts] } and a merge is { r1, c1, r2, c2 }.
 // Pictures are kept too, shrunk to a small JPEG each so they fit inside the evaluation (see shrinkImage).
-import { currentUser, uid, escapeHtml, icon, formatActivityDateTime } from './app.js';
+import { currentUser, uid, escapeHtml, icon, formatActivityDateTime, requestAuthConfirm } from './app.js';
 import { scheduleTrialSave } from './trials-data.js';
 
 const MAX_ROWS = 500;
@@ -179,6 +179,11 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
         const cell = ws.getCell(r, c);
         let text = '';
         try{ text = cell.text == null ? '' : String(cell.text); }catch(e){ text = ''; }
+        if(cell.value instanceof Date && !isNaN(cell.value)){
+          // a date cell: ExcelJS hands back a JS Date (midnight UTC for a plain date), so write it as dd/mm/yyyy [hh:mm]
+          const d = cell.value, p2 = n => String(n).padStart(2, '0');
+          text = `${p2(d.getUTCDate())}/${p2(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}` + (d.getUTCHours() || d.getUTCMinutes() ? ` ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}` : '');
+        }
         if(inCell.has(`${r - 1},${c - 1}`)) text = '';
         out.push(text);
         if(text !== ''){ lastRow = Math.max(lastRow, r); lastCol = Math.max(lastCol, c); }
@@ -289,10 +294,12 @@ export function wireTrialSheets(block, t, isEditing, rerender){
     }));
     card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
     card.querySelector('[data-role="remove-trial-sheet"]')?.addEventListener('click', () => {
-      if(!confirm(`Remove "${f.name}" from this evaluation? (Your original file on your computer is not touched.)`)) return;
-      t.excelFiles = (t.excelFiles || []).filter(x => x.id !== f.id);
-      scheduleTrialSave(t);
-      rerender();
+      // removing is asked twice over: the warning below, and the person's password (same as editing a project cell)
+      requestAuthConfirm('Confirm removal', `Remove "${f.name}" from this evaluation? Its table and pictures here are deleted (the original file on your computer is not touched). Enter your password to remove it.`, () => {
+        t.excelFiles = (t.excelFiles || []).filter(x => x.id !== f.id);
+        scheduleTrialSave(t);
+        rerender();
+      });
     });
   });
 }
