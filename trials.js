@@ -666,8 +666,8 @@ export function renderTrialsList(){
             ${isEditing ? `<button class="btn btn-sm" data-role="save-trial">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-trial">${icon('pencil')} Edit</button>`}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="start-evaluation">${icon('clipboard-check')} Perform Evaluation</button>` : ''}
             ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-share">${icon('share-2')} Share External Evaluation${trialSharePendingCounts[t.id] ? `<span class="trial-share-pending-badge" title="${trialSharePendingCounts[t.id]} guest response${trialSharePendingCounts[t.id] === 1 ? '' : 's'} waiting for a decision">${trialSharePendingCounts[t.id]}</span>` : ''}</button>` : ''}
-            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>` : ''}
-            ${combinedCount > 0 ? `<button class="btn btn-sm" data-role="export-trial-excel">${icon('download')} Export Excel</button>` : ''}
+            <button class="btn btn-sm" data-role="open-trial-summary">${icon('file-text')} Summary Test</button>
+            <button class="btn btn-sm" data-role="export-trial-excel">${icon('download')} Export Excel</button>
             ${isExpanded ? `<button class="btn btn-sm" data-role="print-trial">${icon('printer')} Print</button>` : ''}
             ${isExpanded ? `<button class="btn btn-sm btn-danger" data-role="delete-trial">${icon('x')} Delete</button>` : ''}
           </div>
