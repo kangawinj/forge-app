@@ -490,6 +490,7 @@ export function accountDisplayFromEmail(email){
 }
 
 function renderApp(){
+  if(window.hideBootSplash) window.hideBootSplash();   // the loading screen in index.html: the app is up and knows which view to show
   document.getElementById('authScreen').classList.toggle('active', appView === 'auth');
   document.getElementById('pendingScreen').classList.toggle('active', appView === 'pending');
   document.getElementById('appRoot').style.display = appView === 'app' ? 'grid' : 'none';
