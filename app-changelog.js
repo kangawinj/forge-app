@@ -836,6 +836,7 @@ export const CHANGELOG = [
   { version: "3.0.794", date: "2026-11-06", note: "A short note now sits under every attach button / photo box saying what it accepts -- how many photos, that photos of any size are shrunk automatically (with the pixel size), 700 KB for PDF / Word / Excel / CSV attachments, and the Excel Sheets import limits" },
   { version: "3.0.795", date: "2026-11-06", note: "Sample Evaluation > Excel Sheets: Remove now asks for the person's password after a warning (like editing a project cell), and date cells import as dd/mm/yyyy instead of a long JavaScript date string" },
   { version: "3.0.796", date: "2026-11-06", note: "Sample Evaluation: Summary Test and Export Excel buttons are shown on every test, also one with no products yet (Perform Evaluation and Share External Evaluation still need at least one product)" },
+  { version: "3.0.797", date: "2026-11-06", note: "Sample Evaluation: the row buttons (Edit, Perform Evaluation, Summary Test, Export Excel ...) are lined up at the right edge in every row on a wide screen, so a test with fewer buttons no longer sits in the middle" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

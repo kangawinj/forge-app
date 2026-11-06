@@ -6622,3 +6622,7 @@
   .attach-note{display:block;flex:1 0 100%;width:100%;font-size:11px;line-height:1.4;color:var(--text-dim);margin:4px 0 6px;font-weight:400;}
   input[style*="none"] + .attach-note, label[style*="none"] + .attach-note{display:none;}
   @media print{ .attach-note{display:none !important;} }
+  /* Sample Evaluation rows: on a wide screen the action buttons sit at the right edge in every row, however many there are */
+  @media screen and (min-width:1000px){
+    .part-header > .trial-row-actions{justify-content:flex-end;}
+  }
