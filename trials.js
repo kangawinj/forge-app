@@ -208,12 +208,26 @@ export function mountTrialsView(){
   playContentTransition(main);
 }
 
+// One test that cannot be drawn (odd data, a bug) must not blank the whole list: it gets a small notice with the reason instead.
+function safeTrialCard(draw){
+  return t => {
+    try{ return draw(t); }
+    catch(err){
+      console.error('Forge: could not draw test', t && t.id, err);
+      return `<div class="overview-empty" style="margin:8px 0;">This test could not be displayed (${escapeHtml(String((err && err.message) || err))}). Reload the page; if it stays, send this message to the admin. &nbsp;[id: ${escapeHtml(String(t && t.id || ''))}]</div>`;
+    }
+  };
+}
+
 export function renderTrialsList(){
   const container = document.getElementById('trialsList');
   if(!container) return;
   trialScrollbarProxySyncs = [];
   if(trials.length === 0){
-    container.innerHTML = '<div class="overview-empty">No test results yet — click "+ New Test" above to start one</div>';
+    // until Firestore has answered, "no results" would be a lie (on a slow connection the answer can take a while)
+    container.innerHTML = trialsLoaded
+      ? '<div class="overview-empty">No test results yet — click "+ New Test" above to start one</div>'
+      : '<div class="overview-empty">Loading test results&hellip; (on a slow connection this can take a little while)</div>';
     return;
   }
   // Most recent Tested date first (not last-edited timestamp) -- per user
@@ -244,7 +258,7 @@ export function renderTrialsList(){
   const groups = groupTrialsByProject(sorted);
   container.innerHTML = groups.map(g => {
     const groupProject = g.projectId ? projects.find(pr => pr.id === g.projectId) : null;
-    const cardsHtml = g.trials.map(t => {
+    const cardsHtml = g.trials.map(safeTrialCard(t => {
     const isEditing = t.id === trialEditingId;
     const isExpanded = isEditing || trialExpandedIds.has(t.id);
     // Migrated view used only for building this HTML string below — the
@@ -802,7 +816,7 @@ export function renderTrialsList(){
         </div>
       </div>
     `;
-    }).join('');
+    })).join('');
     return groupProject ? `<div class="trial-project-group-header">${icon('folder', 14)} <span class="trial-project-group-name">${escapeHtml(groupProject.name || 'Untitled project')}</span><button type="button" class="btn btn-sm trial-project-export-btn" data-role="export-project-excel" data-project-id="${escapeHtml(groupProject.id)}" title="Export every test of this project into one Excel file (newest first)">${icon('download', 14)} Export Excel</button></div>${cardsHtml}` : cardsHtml;
   }).join('');
 
@@ -838,7 +852,7 @@ export function renderTrialsList(){
       });
     }
 
-    wireTrialSheets(block, t, isEditing, renderTrialsList);
+    try{ wireTrialSheets(block, t, isEditing, renderTrialsList); }catch(err){ console.error('Forge: could not wire the Excel sheets of test', t.id, err); }
 
     block.querySelector('[data-role="start-evaluation"]')?.addEventListener('click', () => {
       if(!currentUser?.email) return;
