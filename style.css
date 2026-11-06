@@ -6663,3 +6663,8 @@
   .tsheet-table.tsheet-editing td .tsheet-ed[contenteditable="true"]{user-select:text;}
   .tsheet-table td.tsheet-sel{outline:2px solid var(--primary);outline-offset:-2px;background-image:linear-gradient(rgba(0,120,200,.13),rgba(0,120,200,.13));}
   .tsheet-ed{white-space:inherit;overflow-wrap:inherit;}
+  .tsheet-zoom{display:inline-flex;align-items:center;gap:2px;margin-right:6px;}
+  .tsheet-zoom button{height:28px;min-width:28px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:13px;cursor:pointer;padding:0 6px;color:var(--text);}
+  .tsheet-zoom button:hover{background:var(--bg);}
+  .tsheet-zoom .tsheet-zoom-pct{min-width:48px;font-size:12px;}
+  @media print{ .tsheet-zoom{display:none !important;} }

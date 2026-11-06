@@ -336,7 +336,7 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
   return { sheets, skipped };
 }
 
-function sheetTableHtml(sheet, edit = false, sel = null){
+function sheetTableHtml(sheet, edit = false, sel = null, zoom = 1){
   const spans = {}, hidden = new Set();
   (sheet.merges || []).forEach(({ r1, c1, r2, c2 }) => {
     spans[`${r1},${c1}`] = [r2 - r1 + 1, c2 - c1 + 1];
@@ -349,7 +349,8 @@ function sheetTableHtml(sheet, edit = false, sel = null){
   const hasWidths = edit || (sheet.colw || []).some(w => w);
   const colPx = c => Math.round(((sheet.colw || [])[c] || 8.43) * 7 + 5);
   const colgroup = hasWidths ? `<colgroup><col style="width:36px">${Array.from({ length: cols }, (_, c) => `<col style="width:${colPx(c)}px">`).join('')}</colgroup>` : '';
-  const tableStyle = hasWidths ? ` style="table-layout:fixed;width:${36 + Array.from({ length: cols }, (_, c) => colPx(c)).reduce((a, b) => a + b, 0)}px;min-width:0;"` : '';
+  const tableCss = (hasWidths ? `table-layout:fixed;width:${36 + Array.from({ length: cols }, (_, c) => colPx(c)).reduce((a, b) => a + b, 0)}px;min-width:0;` : '') + (zoom && zoom !== 1 ? `zoom:${zoom};` : '');
+  const tableStyle = tableCss ? ` style="${tableCss}"` : '';
   const v2 = !!sheet.v2;   // imported by the version that keeps the file's own wrapping / vertical alignment / fonts
   const cellStyle = st => [
     st.bg ? `background:#${st.bg}` : '', st.fc ? `color:#${st.fc}` : '', st.i ? 'font-style:italic' : '',
@@ -381,6 +382,7 @@ function sheetTableHtml(sheet, edit = false, sel = null){
 
 // Editing one sheet of an attached file in place: a working copy (`draft`) is changed and only written back on Save.
 let sheetEdit = null;        // { trialId, fileId, sheetIndex, draft, sel }
+const sheetZoom = new Map();   // fileId -> zoom of that file's table (Ctrl + mouse wheel over it, or the - / + buttons)
 let sheetDragUp = null;      // the document-level mouseup handler of the table being edited
 // does a cell wrap its text? its own setting, else the default (an older import wrapped everything; a v2 import wraps only what the file says)
 const wrapOf = (st, v2) => st.wr !== undefined ? !!st.wr : !v2;
@@ -411,6 +413,11 @@ export function trialSheetsHtml(t, isEditing){
           <span class="tsheet-name">${icon('file-text', 14)} ${escapeHtml(f.name)}</span>
           <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}</span>
           <span class="tsheet-actions">
+            <span class="tsheet-zoom" title="Zoom the table: hold Ctrl and turn the mouse wheel over it">
+              <button type="button" data-role="sheet-zoom-out" title="Zoom out">&minus;</button>
+              <button type="button" data-role="sheet-zoom-reset" class="tsheet-zoom-pct" title="Back to 100%">${Math.round((sheetZoom.get(f.id) || 1) * 100)}%</button>
+              <button type="button" data-role="sheet-zoom-in" title="Zoom in">+</button>
+            </span>
             ${ed ? `
               <button type="button" class="btn btn-sm" data-role="sheet-add-row">${icon('plus', 14)} Row</button>
               <button type="button" class="btn btn-sm" data-role="sheet-add-col">${icon('plus', 14)} Column</button>
@@ -452,7 +459,7 @@ export function trialSheetsHtml(t, isEditing){
           <button type="button" data-fmt="split" title="Split a merged cell back into cells">Split cells</button>
           <select data-fmt-select="border" title="Borders of the selected cells">${[['', 'Borders...'], ['all', 'All borders'], ['outer', 'Outer border'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right'], ['none', 'No border']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
         </div>` : ''}
-        <div class="tsheet-scroll" ${ed ? 'tabindex="0"' : ''}>${sheetTableHtml(sheet, ed, ed ? sheetEdit.sel : null)}</div>
+        <div class="tsheet-scroll" ${ed ? 'tabindex="0"' : ''}>${sheetTableHtml(sheet, ed, ed ? sheetEdit.sel : null, sheetZoom.get(f.id) || 1)}</div>
       </div>`;
   }).join('');
   return `
@@ -706,11 +713,12 @@ function wireSheetEditor(card, t, f, rerender){
     redraw();
   }));
   // dragging the edge of a column letter / row number
-  const drag = (grip, onMove) => grip.addEventListener('pointerdown', e => {
+  const drag = (grip, begin) => grip.addEventListener('pointerdown', e => {
     e.preventDefault();
     e.stopPropagation();
+    const onMove = begin(), z = sheetZoom.get(f.id) || 1;   // the mouse moves in screen pixels, the table's sizes are in zoomed-out pixels
     const x0 = e.clientX, y0 = e.clientY;
-    const move = ev => onMove(ev.clientX - x0, ev.clientY - y0);
+    const move = ev => onMove((ev.clientX - x0) / z, (ev.clientY - y0) / z);
     const up = () => { document.removeEventListener('pointermove', move); document.removeEventListener('pointerup', up); };
     document.addEventListener('pointermove', move);
     document.addEventListener('pointerup', up);
@@ -718,22 +726,26 @@ function wireSheetEditor(card, t, f, rerender){
   card.querySelectorAll('.tsheet-colgrip').forEach(grip => {
     const c = Number(grip.dataset.col);
     const col = table.querySelectorAll('colgroup col')[c + 1];
-    const w0 = parseFloat(col.style.width), tw0 = parseFloat(table.style.width);
-    drag(grip, dx => {
-      const w = Math.max(24, w0 + dx);
-      col.style.width = w + 'px';
-      table.style.width = (tw0 + w - w0) + 'px';
-      draft.colw[c] = Math.round((w - 5) / 7 * 10) / 10;
+    drag(grip, () => {
+      const w0 = parseFloat(col.style.width), tw0 = parseFloat(table.style.width);
+      return dx => {
+        const w = Math.max(24, w0 + dx);
+        col.style.width = w + 'px';
+        table.style.width = (tw0 + w - w0) + 'px';
+        draft.colw[c] = Math.round((w - 5) / 7 * 10) / 10;
+      };
     });
   });
   card.querySelectorAll('.tsheet-rowgrip').forEach(grip => {
     const r = Number(grip.dataset.row);
     const tr = grip.closest('tr');
-    const h0 = tr.getBoundingClientRect().height;
-    drag(grip, (dx, dy) => {
-      const h = Math.max(18, h0 + dy);
-      tr.style.height = h + 'px';
-      draft.rowh[r] = Math.round(h * 0.75 * 10) / 10;
+    drag(grip, () => {
+      const h0 = tr.offsetHeight;
+      return (dx, dy) => {
+        const h = Math.max(18, h0 + dy);
+        tr.style.height = h + 'px';
+        draft.rowh[r] = Math.round(h * 0.75 * 10) / 10;
+      };
     });
   });
   // save / cancel
@@ -792,6 +804,28 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       rerender();
     }));
     card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
+    // zoom: Ctrl (or Cmd) + mouse wheel / trackpad pinch over the table, or the - / + buttons; the page itself does not zoom
+    const box = card.querySelector('.tsheet-scroll'), zTable = box.querySelector('table'), pct = card.querySelector('.tsheet-zoom-pct');
+    const setZoom = (z, ox, oy) => {
+      z = Math.min(3, Math.max(0.4, Math.round(z * 100) / 100));
+      const old = sheetZoom.get(f.id) || 1;
+      if(z === old) return;
+      sheetZoom.set(f.id, z);
+      zTable.style.zoom = z === 1 ? '' : String(z);
+      box.scrollLeft = (box.scrollLeft + ox) * (z / old) - ox;   // keep the spot under the pointer where it is
+      box.scrollTop = (box.scrollTop + oy) * (z / old) - oy;
+      if(pct) pct.textContent = Math.round(z * 100) + '%';
+    };
+    box.addEventListener('wheel', e => {
+      if(!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      const rc = box.getBoundingClientRect();
+      setZoom((sheetZoom.get(f.id) || 1) * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - rc.left, e.clientY - rc.top);
+    }, { passive: false });
+    card.querySelectorAll('.tsheet-zoom button').forEach(b => b.addEventListener('mousedown', e => e.preventDefault()));
+    card.querySelector('[data-role="sheet-zoom-in"]')?.addEventListener('click', () => setZoom((sheetZoom.get(f.id) || 1) * 1.15, box.clientWidth / 2, box.clientHeight / 2));
+    card.querySelector('[data-role="sheet-zoom-out"]')?.addEventListener('click', () => setZoom((sheetZoom.get(f.id) || 1) / 1.15, box.clientWidth / 2, box.clientHeight / 2));
+    card.querySelector('[data-role="sheet-zoom-reset"]')?.addEventListener('click', () => setZoom(1, box.clientWidth / 2, box.clientHeight / 2));
     card.querySelector('[data-role="edit-trial-sheet"]')?.addEventListener('click', () => {
       const idx = Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
       sheetEdit = { trialId: t.id, fileId: f.id, sheetIndex: idx, draft: normalizeDraft(clone(f.sheets[idx])) };
