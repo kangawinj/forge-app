@@ -440,6 +440,8 @@ export async function exportTrialSummaryToExcel(t){
   kv('Sample prepared by', mt.samplePreparedBy || '');
   kv('Test participants', (mt.testParticipants || []).map(s => String(s || '').trim()).filter(Boolean).join(', '));
   kv('Cooking method', mt.cookingMethod || '');
+  const attached = Array.isArray(t.excelFiles) ? t.excelFiles : [];
+  if(attached.length) kv('Attached Excel', `Please see the details in the attached Excel file${attached.length > 1 ? 's' : ''}: ${attached.map(f => f.name).join(', ')}`);
 
   // project photo, top right, beside the details
   const photo = linkedProject?.image ? await prepareOriginalImage(linkedProject.image, 160, 110) : null;

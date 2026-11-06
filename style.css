@@ -6626,3 +6626,6 @@
   @media screen and (min-width:1000px){
     .part-header > .trial-row-actions{justify-content:flex-end;}
   }
+  .trial-summary-attached{display:flex;align-items:flex-start;gap:8px;margin:14px 0 4px;padding:12px 14px;border:1px solid var(--border);border-left:4px solid var(--primary);border-radius:10px;background:var(--bg);font-size:13px;line-height:1.5;}
+  .trial-summary-attached .lucide-icon{flex-shrink:0;margin-top:3px;}
+  .trial-summary-attached b{overflow-wrap:anywhere;}

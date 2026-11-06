@@ -33,6 +33,7 @@ function renderTrialSummaryModal(){
   if(!t){ trialSummaryId = null; existing?.remove(); return; }
   const evalTargets = trialEvalTargets(t);
   const criteria = getEvaluationCriteria(t);
+  const attachedFiles = Array.isArray(t.excelFiles) ? t.excelFiles : [];
 
   // Test details shown above the products: project, tested date, who is responsible, who tasted, where / how
   const mt = migrateTrial(t);
@@ -102,7 +103,8 @@ function renderTrialSummaryModal(){
         </div>
       </div>
       ${infoHtml}
-      ${evalTargets.length === 0 ? '<div class="overview-empty">No products in this test yet</div>' : evalTargets.map(p => {
+      ${attachedFiles.length ? `<div class="trial-summary-attached">${icon('paperclip', 14)} <span>Please see the details in the attached Excel file${attachedFiles.length > 1 ? 's' : ''}: <b>${attachedFiles.map(f => escapeHtml(f.name)).join(', ')}</b></span></div>` : ''}
+      ${evalTargets.length === 0 ? (attachedFiles.length ? '' : '<div class="overview-empty">No products in this test yet</div>') : evalTargets.map(p => {
         const { label, verdict, comments, improvements, reference } = summarizeTrialProduct(t, criteria, p);
         return `
           <div class="trial-summary-product">
