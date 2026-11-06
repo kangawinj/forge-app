@@ -6617,3 +6617,4 @@
   .tsheet-table td{border:1px solid #d9dde3;padding:4px 8px;vertical-align:top;white-space:pre-wrap;min-width:70px;max-width:360px;}
   .tsheet-table td.tsheet-bold{font-weight:700;}
   @media print{ .tsheet-actions, .tsheet-import-btn{display:none !important;} .tsheet-scroll{max-height:none;overflow:visible;} }
+  .tsheet-img{display:block;max-width:100%;height:auto;margin-top:4px;border-radius:4px;}
