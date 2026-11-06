@@ -6648,3 +6648,4 @@
   .tsheet-rowgrip{position:absolute;left:0;bottom:-3px;width:100%;height:7px;cursor:row-resize;z-index:3;touch-action:none;}
   .tsheet-colgrip:hover,.tsheet-rowgrip:hover{background:var(--primary);opacity:.5;}
   @media print{ .tsheet-colgrip,.tsheet-rowgrip,.tsheet-addpic,.tsheet-picbar{display:none !important;} }
+  .tsheet-nogrid td{border-color:transparent;}

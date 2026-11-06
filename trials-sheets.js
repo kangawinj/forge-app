@@ -78,13 +78,22 @@ async function readCellPictures(file){
   const parse = s => new DOMParser().parseFromString(s, 'application/xml');
   const all = (doc, local) => Array.from(doc.getElementsByTagNameNS('*', local));
   const attr = (el, local) => { for(const a of Array.from(el.attributes)) if(a.localName === local) return a.value; return null; };
+  // the theme's colour palette, in the order Excel numbers it (0 = light 1, 1 = dark 1, 2 = light 2, 3 = dark 2, 4-9 = accents ...)
+  let theme = [];
+  const themeXml = await text('xl/theme/theme1.xml');
+  const scheme = themeXml ? all(parse(themeXml), 'clrScheme')[0] : null;
+  if(scheme) theme = ['lt1', 'dk1', 'lt2', 'dk2', 'accent1', 'accent2', 'accent3', 'accent4', 'accent5', 'accent6', 'hlink', 'folHlink'].map(n => {
+    const el = Array.from(scheme.children).find(x => x.localName === n);
+    const c = el && el.firstElementChild;
+    return c ? String((c.localName === 'sysClr' ? c.getAttribute('lastClr') : c.getAttribute('val')) || '').toUpperCase() : '';
+  });
   const rvXml = await text('xl/richData/rdrichvalue.xml');
   const metaXml = await text('xl/metadata.xml');
-  if(!rvXml || !metaXml) return {};
+  if(!rvXml || !metaXml) return { pics: {}, theme };
   const structXml = await text('xl/richData/rdrichvaluestructure.xml');
   const relXml = await text('xl/richData/richValueRel.xml');
   const relRels = await text('xl/richData/_rels/richValueRel.xml.rels');
-  if(!structXml || !relXml || !relRels) return {};
+  if(!structXml || !relXml || !relRels) return { pics: {}, theme };
   // rich value i -> index of its picture in richValueRel.xml
   const structs = all(parse(structXml), 's').map(s => all(s, 'k').map(k => attr(k, 'n')));
   const richToRel = all(parse(rvXml), 'rv').map(rv => {
@@ -130,7 +139,101 @@ async function readCellPictures(file){
     }
     if(list.length) out[sEl.getAttribute('name')] = list;
   }
-  return out;
+  return { pics: out, theme };
+}
+
+// ---- reading a cell's look the way Excel stores it (theme colours, number / date formats, border styles ...) ----
+const INDEXED = ['000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF', '000000', 'FFFFFF', 'FF0000', '00FF00', '0000FF', 'FFFF00', 'FF00FF', '00FFFF', '800000', '008000', '000080', '808000', '800080', '008080', 'C0C0C0', '808080'];
+function applyTint(hex, t){
+  if(!t) return hex;
+  const [r, g, b] = [0, 2, 4].map(i => parseInt(hex.slice(i, i + 2), 16) / 255);
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b);
+  let h = 0, s = 0, l = (mx + mn) / 2;
+  if(mx !== mn){
+    const d = mx - mn;
+    s = l > 0.5 ? d / (2 - mx - mn) : d / (mx + mn);
+    h = mx === r ? (g - b) / d + (g < b ? 6 : 0) : mx === g ? (b - r) / d + 2 : (r - g) / d + 4;
+    h /= 6;
+  }
+  l = t < 0 ? l * (1 + t) : l * (1 - t) + t;
+  const q = l < 0.5 ? l * (1 + s) : l + s - l * s, p = 2 * l - q;
+  const f = x => { if(x < 0) x += 1; if(x > 1) x -= 1; return x < 1 / 6 ? p + (q - p) * 6 * x : x < 1 / 2 ? q : x < 2 / 3 ? p + (q - p) * (2 / 3 - x) * 6 : p; };
+  const out = s === 0 ? [l, l, l] : [f(h + 1 / 3), f(h), f(h - 1 / 3)];
+  return out.map(v => Math.round(v * 255).toString(16).padStart(2, '0')).join('').toUpperCase();
+}
+// an ExcelJS colour ({ argb } | { theme, tint } | { indexed }) -> 'RRGGBB' ('' when automatic / unknown)
+function colorHex(col, theme){
+  if(!col) return '';
+  if(col.argb && /^[0-9A-F]{8}$/i.test(col.argb)) return col.argb.slice(0, 2).toUpperCase() === '00' ? '' : col.argb.slice(2).toUpperCase();
+  if(col.theme != null && theme[col.theme]) return applyTint(theme[col.theme], col.tint || 0);
+  if(col.indexed != null && INDEXED[col.indexed]) return INDEXED[col.indexed];
+  return '';
+}
+const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+const WEEKDAYS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+// a date shown the way its Excel number format says (UTC fields: ExcelJS hands dates back as UTC)
+function fmtDate(d, f){
+  const p2 = n => String(n).padStart(2, '0');
+  const Y = d.getUTCFullYear(), M = d.getUTCMonth(), D = d.getUTCDate(), h = d.getUTCHours(), mi = d.getUTCMinutes(), s = d.getUTCSeconds();
+  if(!f || /^general$/i.test(f)) return `${p2(D)}/${p2(M + 1)}/${Y}` + (h || mi ? ` ${p2(h)}:${p2(mi)}` : '');
+  const toks = f.split(';')[0].replace(/\[[^\]]*\]/g, '').match(/"[^"]*"|\\.|yyyy|yy|mmmm|mmm|mm|m|dddd|ddd|dd|d|hh|h|ss|s|AM\/PM|am\/pm|A\/P|./gi) || [];
+  const isUnit = x => /^(yyyy|yy|mmmm|mmm|mm|m|dddd|ddd|dd|d|hh|h|ss|s)$/i.test(x);
+  const units = toks.map((x, i) => isUnit(x) ? i : -1).filter(i => i >= 0);
+  const ampm = toks.some(x => /^(AM\/PM|A\/P)$/i.test(x));
+  return toks.map((x, i) => {
+    const k = x.toLowerCase();
+    if(k === 'yyyy') return String(Y);
+    if(k === 'yy') return p2(Y % 100);
+    if(k === 'dddd') return WEEKDAYS[d.getUTCDay()];
+    if(k === 'ddd') return WEEKDAYS[d.getUTCDay()].slice(0, 3);
+    if(k === 'dd') return p2(D);
+    if(k === 'd') return String(D);
+    if(k === 'hh' || k === 'h'){ const hh = ampm ? ((h + 11) % 12) + 1 : h; return k === 'hh' ? p2(hh) : String(hh); }
+    if(k === 'ss') return p2(s);
+    if(k === 's') return String(s);
+    if(k === 'mmmm') return MONTHS[M];
+    if(k === 'mmm') return MONTHS[M].slice(0, 3);
+    if(k === 'mm' || k === 'm'){
+      const at = units.indexOf(i), prev = toks[units[at - 1]], next = toks[units[at + 1]];
+      const minute = (prev && /^h+$/i.test(prev)) || (next && /^s+$/i.test(next));
+      const v = minute ? mi : M + 1;
+      return k === 'mm' ? p2(v) : String(v);
+    }
+    if(k === 'am/pm') return h < 12 ? 'AM' : 'PM';
+    if(k === 'a/p') return h < 12 ? 'A' : 'P';
+    if(x.startsWith('"')) return x.slice(1, -1);
+    if(x.startsWith('\\')) return x.slice(1);
+    return x;
+  }).join('');
+}
+// a number shown the way its Excel number format says (decimals, thousands, %, currency text); General -> as is
+function fmtNumber(n, f){
+  if(!f || /^general$/i.test(f)) return String(Number(n.toPrecision(12)));
+  const parts = f.split(';');
+  let sec = parts[0], neg = false;
+  if(n < 0 && parts[1]){ sec = parts[1]; n = Math.abs(n); neg = true; }
+  sec = sec.replace(/\[[^\]]*\]/g, '').replace(/_./g, '').replace(/\*./g, '');
+  const m = /^(.*?)([#0?][#0?,]*(?:\.[#0?]+)?)(.*)$/.exec(sec);
+  if(!m) return String(n);
+  const lit = s => s.replace(/"([^"]*)"/g, '$1').replace(/\\(.)/g, '$1');
+  const val = /%/.test(sec) ? n * 100 : n;
+  const dec = (m[2].split('.')[1] || '').length, zeros = (m[2].split('.')[0].match(/0/g) || []).length;
+  let [ip, fp] = Math.abs(val).toFixed(dec).split('.');
+  ip = ip.padStart(zeros, '0');
+  if(m[2].includes(',')) ip = ip.replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return (val < 0 && !neg ? '-' : '') + lit(m[1]) + ip + (fp ? '.' + fp : '') + lit(m[3]);
+}
+// stored border: { t|r|b|l: 'style:RRGGBB' } (an older import stored just the letters) -> [[side, style, colour]]
+function borderParts(bd){
+  if(!bd) return [];
+  const sides = { t: 'top', r: 'right', b: 'bottom', l: 'left' };
+  if(typeof bd === 'string') return [...bd].filter(k => sides[k]).map(k => [sides[k], 'thin', '555555']);
+  return Object.entries(bd).filter(([k]) => sides[k]).map(([k, v]) => { const [style, color] = String(v).split(':'); return [sides[k], style || 'thin', color || '000000']; });
+}
+function cssBorder(style, color){
+  const w = /^medium/.test(style) ? 2 : /^thick/.test(style) ? 3 : 1;
+  const kind = /dash/i.test(style) ? 'dashed' : /dot|hair/i.test(style) ? 'dotted' : /double/.test(style) ? 'double' : 'solid';
+  return `${kind === 'double' ? Math.max(3, w) : w}px ${kind} #${color}`;
 }
 
 async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180){
@@ -139,8 +242,8 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
   await wb.xlsx.load(await file.arrayBuffer());
   const sheets = [];
   let kept = 0, skipped = 0;
-  let cellPics = {};
-  try{ cellPics = await readCellPictures(file); }catch(e){ console.warn('Forge: reading in-cell pictures failed', e); }
+  let cellPics = {}, theme = [];
+  try{ ({ pics: cellPics, theme } = await readCellPictures(file)); }catch(e){ console.warn('Forge: reading in-cell pictures / theme failed', e); }
   const wsList = [];
   wb.eachSheet(ws => { if(!ws.state || ws.state === 'visible') wsList.push(ws); });
   for(const ws of wsList){
@@ -173,36 +276,47 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
     const colCount = Math.min(Math.max(ws.columnCount || 0, ...images.map(i => i.c + 1)), MAX_COLS);
     const rows = [];
     const styles = {};
+    const vals = {};
     let lastRow = Math.max(0, ...images.map(i => i.r + 1)), lastCol = Math.max(0, ...images.map(i => i.c + 1));
     for(let r = 1; r <= rowCount; r++){
       const out = [];
       for(let c = 1; c <= colCount; c++){
         const cell = ws.getCell(r, c);
-        let text = '';
+        const key = `${r - 1},${c - 1}`;
+        let text = '', raw;
         try{ text = cell.text == null ? '' : String(cell.text); }catch(e){ text = ''; }
-        if(cell.value instanceof Date && !isNaN(cell.value)){
-          // a date cell: ExcelJS hands back a JS Date (midnight UTC for a plain date), so write it as dd/mm/yyyy [hh:mm]
-          const d = cell.value, p2 = n => String(n).padStart(2, '0');
-          text = `${p2(d.getUTCDate())}/${p2(d.getUTCMonth() + 1)}/${d.getUTCFullYear()}` + (d.getUTCHours() || d.getUTCMinutes() ? ` ${p2(d.getUTCHours())}:${p2(d.getUTCMinutes())}` : '');
-        }
-        if(inCell.has(`${r - 1},${c - 1}`)) text = '';
+        // numbers and dates are shown the way their Excel number format says, and kept as real values (for the export)
+        let v = cell.value;
+        if(v && typeof v === 'object' && !(v instanceof Date) && 'result' in v) v = v.result;
+        if(v instanceof Date && !isNaN(v)){ text = fmtDate(v, cell.numFmt); raw = 'D:' + v.toISOString(); }
+        else if(typeof v === 'number' && isFinite(v)){ text = fmtNumber(v, cell.numFmt); raw = v; }
+        if(inCell.has(key)){ text = ''; raw = undefined; }
         out.push(text);
+        if(raw !== undefined) vals[key] = raw;
         if(text !== ''){ lastRow = Math.max(lastRow, r); lastCol = Math.max(lastCol, c); }
         const st = {};
         const fnt = cell.font || {};
         if(fnt.bold) st.b = 1;
         if(fnt.italic) st.i = 1;
+        if(fnt.underline) st.u = 1;
+        if(fnt.strike) st.s = 1;
         if(fnt.size && fnt.size !== 11) st.sz = fnt.size;
-        const rgb = a => (a && /^[0-9A-F]{8}$/i.test(a) && a.slice(0, 2).toUpperCase() !== '00') ? a.slice(2).toUpperCase() : '';
-        const fc = rgb(fnt.color?.argb);
+        if(fnt.name && fnt.name !== 'Calibri') st.fn = fnt.name;
+        const fc = colorHex(fnt.color, theme);
         if(fc && fc !== '000000') st.fc = fc;
-        const bg = cell.fill?.type === 'pattern' ? rgb(cell.fill.fgColor?.argb) : '';
+        const bg = cell.fill?.type === 'pattern' && cell.fill.pattern && cell.fill.pattern !== 'none' ? colorHex(cell.fill.fgColor, theme) : '';
         if(bg && bg !== 'FFFFFF') st.bg = bg;
         if(['left', 'center', 'right'].includes(cell.alignment?.horizontal)) st.ha = cell.alignment.horizontal;
         if(['top', 'middle', 'bottom'].includes(cell.alignment?.vertical)) st.va = cell.alignment.vertical;
-        const bd = ['top', 'right', 'bottom', 'left'].filter(side => cell.border?.[side]?.style).map(side => side[0]).join('');
-        if(bd) st.bd = bd;
-        if(Object.keys(st).length) styles[`${r - 1},${c - 1}`] = st;
+        if(cell.alignment?.wrapText) st.wr = 1;
+        const bd = {};
+        for(const side of ['top', 'right', 'bottom', 'left']){
+          const b = cell.border?.[side];
+          if(b?.style) bd[side[0]] = `${b.style}:${colorHex(b.color, theme) || '000000'}`;
+        }
+        if(Object.keys(bd).length) st.bd = bd;
+        if(raw !== undefined && cell.numFmt && !/^general$/i.test(cell.numFmt)) st.nf = cell.numFmt;
+        if(Object.keys(st).length) styles[key] = st;
       }
       rows.push(out);
     }
@@ -217,7 +331,7 @@ async function parseWorkbook(file, maxSide = 480, quality = 0.7, cellSide = 180)
       const toNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
       return { r1: Number(mm[2]) - 1, c1: toNum(mm[1]) - 1, r2: Number(mm[4]) - 1, c2: toNum(mm[3]) - 1 };
     }).filter(m => m && m.r1 < lastRow && m.c1 < lastCol);
-    if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges, images, colw, rowh });
+    if(trimmed.length) sheets.push({ name: ws.name || `Sheet ${sheets.length + 1}`, rows: trimmed, styles, merges, images, colw, rowh, vals, v2: 1, ng: ws.views?.[0]?.showGridLines === false ? 1 : 0 });
   }
   return { sheets, skipped };
 }
@@ -236,11 +350,15 @@ function sheetTableHtml(sheet, edit = false){
   const colPx = c => Math.round(((sheet.colw || [])[c] || 8.43) * 7 + 5);
   const colgroup = hasWidths ? `<colgroup><col style="width:36px">${Array.from({ length: cols }, (_, c) => `<col style="width:${colPx(c)}px">`).join('')}</colgroup>` : '';
   const tableStyle = hasWidths ? ` style="table-layout:fixed;width:${36 + Array.from({ length: cols }, (_, c) => colPx(c)).reduce((a, b) => a + b, 0)}px;min-width:0;"` : '';
+  const v2 = !!sheet.v2;   // imported by the version that keeps the file's own wrapping / vertical alignment / fonts
   const cellStyle = st => [
     st.bg ? `background:#${st.bg}` : '', st.fc ? `color:#${st.fc}` : '', st.i ? 'font-style:italic' : '',
+    st.u || st.s ? `text-decoration:${[st.u ? 'underline' : '', st.s ? 'line-through' : ''].filter(Boolean).join(' ')}` : '',
+    st.fn ? `font-family:'${String(st.fn).replace(/['"<>&]/g, '')}',sans-serif` : '',
     st.sz ? `font-size:${Math.min(28, Math.round(st.sz * 4 / 3))}px` : '', st.ha ? `text-align:${st.ha}` : '',
-    st.va ? `vertical-align:${st.va}` : '',
-    ...(st.bd ? [['t', 'top'], ['r', 'right'], ['b', 'bottom'], ['l', 'left']].filter(([k]) => st.bd.includes(k)).map(([, side]) => `border-${side}:1px solid #555`) : [])
+    st.va || v2 ? `vertical-align:${st.va || 'bottom'}` : '',
+    v2 && !st.wr ? 'white-space:nowrap' : '',
+    ...borderParts(st.bd).map(([side, style, color]) => `border-${side}:${cssBorder(style, color)}`)
   ].filter(Boolean).join(';');
   const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th>${colLetter(i + 1)}${edit ? `<span class="tsheet-colgrip" data-col="${i}" title="Drag to change the column width"></span>` : ''}</th>`).join('')}</tr>`;
   const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] ? ` style="height:${Math.round(sheet.rowh[r] * 4 / 3)}px"` : ''}><th class="tsheet-rowno">${r + 1}${edit ? `<span class="tsheet-rowgrip" data-row="${r}" title="Drag to change the row height"></span>` : ''}</th>${Array.from({ length: cols }, (_, c) => {
@@ -256,7 +374,7 @@ function sheetTableHtml(sheet, edit = false){
       : `${escapeHtml(row.c[c] || '')}${imgs}`;
     return `<td${sp ? ` rowspan="${sp[0]}" colspan="${sp[1]}"` : ''}${cellStyle(st) ? ` style="${escapeHtml(cellStyle(st))}"` : ''}${st.b ? ' class="tsheet-bold"' : ''}>${inner}</td>`;
   }).join('')}</tr>`).join('');
-  return `<table class="tsheet-table${edit ? ' tsheet-editing' : ''}"${tableStyle}>${colgroup}<thead>${head}</thead><tbody>${body}</tbody></table>`;
+  return `<table class="tsheet-table${edit ? ' tsheet-editing' : ''}${sheet.ng ? ' tsheet-nogrid' : ''}"${tableStyle}>${colgroup}<thead>${head}</thead><tbody>${body}</tbody></table>`;
 }
 
 // Editing one sheet of an attached file in place: a working copy (`draft`) is changed and only written back on Save.
@@ -323,7 +441,10 @@ function wireSheetEditor(card, t, f, rerender){
   const redraw = () => { keepScroll = { fileId: f.id, top: scrollBox.scrollTop, left: scrollBox.scrollLeft }; rerender(); };
   // typing
   card.querySelectorAll('.tsheet-ed').forEach(el => {
-    el.addEventListener('input', () => { draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = el.innerText.replace(/\n$/, ''); });
+    el.addEventListener('input', () => {
+      draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = el.innerText.replace(/\n$/, '');
+      if(draft.vals) delete draft.vals[`${el.dataset.r},${el.dataset.c}`];   // typed text replaces the number / date it held
+    });
     el.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
     el.addEventListener('keydown', e => { if(e.key === 'Enter'){ e.preventDefault(); document.execCommand('insertLineBreak'); } });
   });
@@ -483,27 +604,35 @@ export function addAttachedSheets(wb, f, used = new Set(), prefix = ''){
     used.add(name.toLowerCase());
     const ws = wb.addWorksheet(name);
     const widths = [];
-    const ownBorders = Object.values(s.styles || {}).some(x => x.bd);   // the file had its own borders: use those, not a grid everywhere
-    const line = { style: 'thin', color: { argb: 'FF7F7F7F' } };
+    const v2 = !!s.v2;
+    const ownBorders = v2 || Object.values(s.styles || {}).some(x => x.bd);   // the file's own borders only; none were added
+    if(s.ng) ws.views = [{ showGridLines: false }];
     s.rows.forEach((rowObj, r) => {
       rowObj.c.forEach((text, c) => {
         const cell = ws.getCell(r + 1, c + 1);
-        cell.value = text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
-        const st = s.styles?.[`${r},${c}`] || {};
-        cell.alignment = { vertical: st.va || 'top', horizontal: st.ha, wrapText: true };
+        const key = `${r},${c}`;
+        const raw = s.vals ? s.vals[key] : undefined;
+        if(raw !== undefined) cell.value = typeof raw === 'string' && raw.startsWith('D:') ? new Date(raw.slice(2)) : raw;
+        else cell.value = !s.vals && text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
+        const st = s.styles?.[key] || {};
+        if(st.nf && raw !== undefined) cell.numFmt = st.nf;
+        cell.alignment = v2 ? { vertical: st.va || 'bottom', horizontal: st.ha, wrapText: !!st.wr } : { vertical: st.va || 'top', horizontal: st.ha, wrapText: true };
         if(ownBorders){
-          if(st.bd) cell.border = Object.fromEntries([['t', 'top'], ['r', 'right'], ['b', 'bottom'], ['l', 'left']].filter(([k]) => st.bd.includes(k)).map(([, side]) => [side, line]));
+          const parts = borderParts(st.bd);
+          if(parts.length) cell.border = Object.fromEntries(parts.map(([side, style, color]) => [side, { style, color: { argb: 'FF' + color } }]));
         }else{
           const grey = { style: 'thin', color: { argb: 'FFBFBFBF' } };
           cell.border = { top: grey, left: grey, bottom: grey, right: grey };
         }
-        if(st.b || st.i || st.sz || st.fc) cell.font = { bold: !!st.b, italic: !!st.i, size: st.sz || 11, ...(st.fc ? { color: { argb: 'FF' + st.fc } } : {}) };
+        if(st.b || st.i || st.u || st.s || st.sz || st.fc || st.fn) cell.font = { name: st.fn || 'Calibri', bold: !!st.b, italic: !!st.i, underline: !!st.u, strike: !!st.s, size: st.sz || 11, ...(st.fc ? { color: { argb: 'FF' + st.fc } } : {}) };
         if(st.bg) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + st.bg } };
         const longest = Math.max(...String(text).split('\n').map(x => x.length), 0);
         widths[c] = Math.max(widths[c] || 8, Math.min(longest + 2, 60));
       });
     });
-    // the file's own column widths and row heights win over the guessed ones
+    // the file's own column widths and row heights win over the guessed ones (a v2 import has no guesses at all: Excel's default 8.43)
+    const nCols = Math.max(...s.rows.map(r => r.c.length), 1);
+    if(v2) for(let c = 0; c < nCols; c++) widths[c] = 8.43;
     (s.colw || []).forEach((w, c) => { if(w) widths[c] = w; });
     Object.entries(s.rowh || {}).forEach(([r, h]) => { ws.getRow(Number(r) + 1).height = h; });
     (s.images || []).filter(im => im.cp).forEach(im => {
