@@ -6673,3 +6673,6 @@
   .tsheet-card-full .tsheet-scroll{max-height:none;flex:1 1 auto;min-height:0;}
   .tsheet-card-full .tsheet-head,.tsheet-card-full .tsheet-fmtbar,.tsheet-card-full .tsheet-edit-hint,.tsheet-card-full .tsheet-tabs{flex:0 0 auto;}
   body.tsheet-fullopen{overflow:hidden;}
+  .tsheet-fmtbar button:disabled{opacity:.4;cursor:default;}
+  .tsheet-fillhandle{position:absolute;right:-4px;bottom:-4px;width:8px;height:8px;background:var(--primary);border:1px solid #fff;cursor:crosshair;z-index:4;}
+  .tsheet-table td.tsheet-fillpreview{outline:2px dashed var(--primary);outline-offset:-2px;}

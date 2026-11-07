@@ -435,9 +435,12 @@ export function trialSheetsHtml(t, isEditing){
           </span>
         </div>
         ${ed
-          ? `<div class="tsheet-edit-hint">Editing sheet "${escapeHtml(sheet.name)}": click a cell to select it (drag, or Shift+click, for several; a column letter or row number selects all of it), <b>double-click</b> it &mdash; or press Enter, or just start typing &mdash; to type. Enter confirms (Alt+Enter = new line inside the cell), Esc cancels. Use the bar below to format, merge or split cells. Drag the edge of a column letter or row number to resize. The arrow button in a cell adds a picture. Nothing is kept until you press Save table.</div>`
+          ? `<div class="tsheet-edit-hint">Editing sheet "${escapeHtml(sheet.name)}": click a cell to select it (drag, or Shift+click, for several; a column letter or row number selects all of it), <b>double-click</b> it &mdash; or press Enter, or just start typing &mdash; to type. Enter confirms (Alt+Enter = new line inside the cell), Esc cancels. Ctrl+Z / Ctrl+Y undo and redo, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste (also with real Excel), Ctrl+D / Ctrl+R or the small square at the corner of the selection fill. Use the bar below to format, merge or split cells and to insert or delete rows and columns. Drag the edge of a column letter or row number to resize. The arrow button in a cell adds a picture. Nothing is kept until you press Save table.</div>`
           : (f.sheets.length > 1 ? `<div class="tsheet-tabs">${f.sheets.map((s, i) => `<button type="button" class="tsheet-tab${i === idx ? ' active' : ''}" data-role="trial-sheet-tab" data-sheet-index="${i}">${escapeHtml(s.name)}</button>`).join('')}</div>` : '')}
         ${ed ? `<div class="tsheet-fmtbar">
+          <button type="button" data-fmt="undo" title="Undo (Ctrl+Z)" ${sheetEdit.undo && sheetEdit.undo.length ? '' : 'disabled'}>&#8630; Undo</button>
+          <button type="button" data-fmt="redo" title="Redo (Ctrl+Y)" ${sheetEdit.redo && sheetEdit.redo.length ? '' : 'disabled'}>&#8631; Redo</button>
+          <span class="tsheet-fb-sep"></span>
           <select data-fmt-select="fn" title="Font">${['Calibri', 'Arial', 'Tahoma', 'Times New Roman', 'Courier New', 'TH Sarabun New', 'Angsana New'].map(n => `<option>${n}</option>`).join('')}</select>
           <select data-fmt-select="sz" title="Font size">${[8, 9, 10, 11, 12, 14, 16, 18, 20, 24, 28].map(n => `<option${n === 11 ? ' selected' : ''}>${n}</option>`).join('')}</select>
           <span class="tsheet-fb-sep"></span>
@@ -461,6 +464,7 @@ export function trialSheetsHtml(t, isEditing){
           <span class="tsheet-fb-sep"></span>
           <button type="button" data-fmt="merge" title="Merge the selected cells into one">Merge cells</button>
           <button type="button" data-fmt="split" title="Split a merged cell back into cells">Split cells</button>
+          <select data-fmt-select="rc" title="Insert or delete rows / columns, fill">${[['', 'Rows & columns...'], ['row-above', 'Insert row above'], ['row-below', 'Insert row below'], ['row-del', 'Delete row'], ['col-left', 'Insert column left'], ['col-right', 'Insert column right'], ['col-del', 'Delete column'], ['fill-down', 'Fill down (Ctrl+D)'], ['fill-right', 'Fill right (Ctrl+R)']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
           <select data-fmt-select="border" title="Borders of the selected cells">${[['', 'Borders...'], ['all', 'All borders'], ['outer', 'Outer border'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right'], ['none', 'No border']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
         </div>` : ''}
         <div class="tsheet-scroll" ${ed ? 'tabindex="0"' : ''}>${sheetTableHtml(sheet, ed, ed ? sheetEdit.sel : null, sheetZoom.get(f.id) || 1)}</div>
@@ -474,6 +478,92 @@ export function trialSheetsHtml(t, isEditing){
       </div>
       ${cards || `<div class="overview-empty">${isEditing ? 'No Excel file yet -- use Import Excel to show a sheet here as a table' : 'No Excel file attached'}</div>`}
     </div>`;
+}
+
+// ---- undo / redo, clipboard (tab-separated, like Excel) and inserting / deleting rows and columns ----
+function pushUndo(){
+  if(!sheetEdit) return;
+  (sheetEdit.undo = sheetEdit.undo || []).push(JSON.stringify(sheetEdit.draft));
+  if(sheetEdit.undo.length > 60) sheetEdit.undo.shift();
+  sheetEdit.redo = [];
+}
+let sheetClip = null;   // what Ctrl+C last copied from a table here: { tsv, cells, merges, images } (keeps formatting inside Forge)
+// Excel puts cells on the clipboard as tab-separated text: rows end with a newline, a cell holding a tab / newline / quote is wrapped in quotes
+function escTSV(s){ return /[\t\n\r"]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; }
+function parseTSV(text){
+  const rows = [];
+  let row = [], cell = '', i = 0, quoted = false, started = true;
+  const s = text.replace(/\r\n?/g, '\n');
+  while(i < s.length){
+    const ch = s[i];
+    if(quoted){
+      if(ch === '"'){ if(s[i + 1] === '"'){ cell += '"'; i += 2; continue; } quoted = false; i++; continue; }
+      cell += ch; i++; continue;
+    }
+    if(ch === '"' && started){ quoted = true; started = false; i++; continue; }
+    if(ch === '\t'){ row.push(cell); cell = ''; started = true; i++; continue; }
+    if(ch === '\n'){ row.push(cell); rows.push(row); row = []; cell = ''; started = true; i++; continue; }
+    cell += ch; started = false; i++;
+  }
+  if(cell !== '' || row.length) { row.push(cell); rows.push(row); }
+  return rows;
+}
+// new key -> value map for the per-cell maps (styles / vals) when rows or columns move; f(r, c) returns [r, c] or null (cell gone)
+function rekeyCells(obj, f){
+  const out = {};
+  Object.entries(obj || {}).forEach(([k, v]) => {
+    const [r, c] = k.split(',').map(Number);
+    const to = f(r, c);
+    if(to) out[`${to[0]},${to[1]}`] = v;
+  });
+  return out;
+}
+// insert `n` blank rows (axis 'r') or columns (axis 'c') before index `at`
+function insertLines(d, axis, at, n){
+  const mv = i => i >= at ? i + n : i;
+  if(axis === 'r'){
+    d.rows.splice(at, 0, ...Array.from({ length: n }, () => ({ c: Array(d.colw.length).fill('') })));
+    const rh = {}; Object.entries(d.rowh || {}).forEach(([k, v]) => { rh[mv(Number(k))] = v; }); d.rowh = rh;
+  }else{
+    d.rows.forEach(r => r.c.splice(at, 0, ...Array(n).fill('')));
+    d.colw.splice(at, 0, ...Array(n).fill(13));
+  }
+  const f = (r, c) => axis === 'r' ? [mv(r), c] : [r, mv(c)];
+  d.styles = rekeyCells(d.styles, f);
+  if(d.vals) d.vals = rekeyCells(d.vals, f);
+  d.merges.forEach(m => {
+    const a = axis === 'r' ? ['r1', 'r2'] : ['c1', 'c2'];
+    if(m[a[0]] >= at){ m[a[0]] += n; m[a[1]] += n; } else if(m[a[1]] >= at) m[a[1]] += n;   // inserting inside a merge makes it bigger
+  });
+  d.images.forEach(im => { if(axis === 'r') im.r = mv(im.r); else im.c = mv(im.c); });
+}
+// delete rows (axis 'r') or columns (axis 'c') `from`..`to` with everything in them
+function deleteLines(d, axis, from, to){
+  const n = to - from + 1;
+  const gone = i => i >= from && i <= to;
+  const mv = i => i > to ? i - n : i;
+  if(axis === 'r'){
+    d.rows.splice(from, n);
+    const rh = {}; Object.entries(d.rowh || {}).forEach(([k, v]) => { const i = Number(k); if(!gone(i)) rh[mv(i)] = v; }); d.rowh = rh;
+  }else{
+    d.rows.forEach(r => r.c.splice(from, n));
+    d.colw.splice(from, n);
+  }
+  const f = (r, c) => { const i = axis === 'r' ? r : c; return gone(i) ? null : (axis === 'r' ? [mv(r), c] : [r, mv(c)]); };
+  d.styles = rekeyCells(d.styles, f);
+  if(d.vals) d.vals = rekeyCells(d.vals, f);
+  d.merges = d.merges.map(m => {
+    const a = axis === 'r' ? ['r1', 'r2'] : ['c1', 'c2'];
+    const lo = m[a[0]], hi = m[a[1]];
+    if(hi < from) return m;
+    if(lo > to){ m[a[0]] = lo - n; m[a[1]] = hi - n; return m; }
+    const nlo = lo < from ? lo : from, nhi = hi > to ? hi - n : from - 1;   // what is left of the merge once the deleted lines are gone
+    if(nhi < nlo) return null;
+    m[a[0]] = nlo; m[a[1]] = nhi;
+    return m;
+  }).filter(m => m && !(m.r1 === m.r2 && m.c1 === m.c2));
+  d.images = d.images.filter(im => !gone(axis === 'r' ? im.r : im.c));
+  d.images.forEach(im => { if(axis === 'r') im.r = mv(im.r); else im.c = mv(im.c); });
 }
 
 function wireSheetEditor(card, t, f, rerender){
@@ -519,15 +609,23 @@ function wireSheetEditor(card, t, f, rerender){
     setVal('[data-fmt-select="sz"]', String(st.sz || 11));
     setVal('[data-fmt-color="fc"]', '#' + (st.fc || '000000').toLowerCase());
     if(st.bg) setVal('[data-fmt-color="bg"]', '#' + st.bg.toLowerCase());
+    // the small square at the bottom-right corner of the selection: drag it to fill
+    table.querySelectorAll('.tsheet-fillhandle').forEach(x => x.remove());
+    if(s){
+      let td = cellOf(s.r2, s.c2);
+      if(!td){ const m = mergeAt(s.r2, s.c2); if(m) td = cellOf(m.r1, m.c1); }
+      if(td){ const hd = document.createElement('span'); hd.className = 'tsheet-fillhandle'; hd.title = 'Drag to fill'; td.appendChild(hd); }
+    }
   };
   const select = (ar, ac, fr, fc) => { sheetEdit.sel = rangeFor(ar, ac, fr, fc); paintSel(); };
   const reveal = (r, c) => cellOf(r, c)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   // ---- typing: double-click a cell (or Enter / F2, or just start typing) ----
-  let editOriginal = '';
+  let editOriginal = '', editPushed = false;
   const startEdit = (td, replace) => {
     const sp = td?.querySelector('.tsheet-ed');
     if(!sp) return;
     editOriginal = sp.innerText.replace(/\n$/, '');
+    pushUndo(); editPushed = true;   // one undo step for the whole typing session
     sp.contentEditable = 'true';
     sp.focus();
     const rg = document.createRange();
@@ -550,7 +648,10 @@ function wireSheetEditor(card, t, f, rerender){
       draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = el.innerText.replace(/\n$/, '');
       if(draft.vals) delete draft.vals[`${el.dataset.r},${el.dataset.c}`];   // typed text replaces the number / date it held
     });
-    el.addEventListener('blur', () => { el.contentEditable = 'false'; });
+    el.addEventListener('blur', () => {
+      el.contentEditable = 'false';
+      if(editPushed){ editPushed = false; const u = sheetEdit.undo; if(u && u.length && u[u.length - 1] === JSON.stringify(draft)) u.pop(); }   // nothing typed: no undo step
+    });
     el.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
     el.addEventListener('keydown', e => {
       if(e.key === 'Enter' && e.altKey){ e.preventDefault(); document.execCommand('insertLineBreak'); }
@@ -566,8 +667,10 @@ function wireSheetEditor(card, t, f, rerender){
     });
   });
   let dragging = false;
+  let fillDrag = null;               // dragging the fill handle: { src, tgt, dir }
+  let finishFill = () => {};
   table.addEventListener('mousedown', e => {
-    if(e.button !== 0 || e.target.closest('button, .tsheet-colgrip, .tsheet-rowgrip')) return;
+    if(e.button !== 0 || e.target.closest('button, .tsheet-colgrip, .tsheet-rowgrip, .tsheet-fillhandle')) return;
     const td = e.target.closest('td[data-r]');
     if(td){
       if(td.querySelector('.tsheet-ed[contenteditable="true"]')) return;   // already typing in it
@@ -587,7 +690,7 @@ function wireSheetEditor(card, t, f, rerender){
     if(td) select(sheetEdit.sel.ar, sheetEdit.sel.ac, Number(td.dataset.r), Number(td.dataset.c));
   });
   if(sheetDragUp) document.removeEventListener('mouseup', sheetDragUp);
-  sheetDragUp = () => { dragging = false; };
+  sheetDragUp = () => { dragging = false; finishFill(); };
   document.addEventListener('mouseup', sheetDragUp);
   table.addEventListener('dblclick', e => {
     const td = e.target.closest('td[data-r]');
@@ -596,6 +699,13 @@ function wireSheetEditor(card, t, f, rerender){
   });
   scrollBox.addEventListener('keydown', e => {
     if(e.target.closest('.tsheet-ed[contenteditable="true"]')) return;
+    if((e.ctrlKey || e.metaKey) && !e.altKey){
+      const k = e.key.toLowerCase();
+      if(k === 'z'){ e.preventDefault(); if(e.shiftKey) redo(); else undo(); return; }
+      if(k === 'y'){ e.preventDefault(); redo(); return; }
+      if(k === 'd'){ e.preventDefault(); fillDown(); return; }
+      if(k === 'r'){ e.preventDefault(); fillRight(); return; }
+    }
     const s = sheetEdit.sel;
     if(!s) return;
     const arrows = { ArrowUp: [-1, 0], ArrowDown: [1, 0], ArrowLeft: [0, -1], ArrowRight: [0, 1] };
@@ -603,6 +713,7 @@ function wireSheetEditor(card, t, f, rerender){
     else if(e.key === 'Enter' || e.key === 'F2'){ e.preventDefault(); startEdit(cellOf(s.r1, s.c1), false); }
     else if(e.key === 'Delete' || e.key === 'Backspace'){
       e.preventDefault();
+      pushUndo();
       for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; }
       redraw();
     }
@@ -612,6 +723,7 @@ function wireSheetEditor(card, t, f, rerender){
   const mutateSel = fn => {
     const s = sheetEdit.sel;
     if(!s){ alert('Select a cell (or drag over several cells) first.'); return; }
+    pushUndo();
     for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){
       const k = keyOf(r, c), st = { ...(draft.styles[k] || {}) };
       fn(st, r, c);
@@ -638,6 +750,7 @@ function wireSheetEditor(card, t, f, rerender){
   const doMerge = () => {
     const s = sheetEdit.sel;
     if(!s || (s.r1 === s.r2 && s.c1 === s.c2)){ alert('Select two or more cells to merge.'); return; }
+    pushUndo();
     draft.merges = draft.merges.filter(m => !(m.r1 >= s.r1 && m.r2 <= s.r2 && m.c1 >= s.c1 && m.c2 <= s.c2));
     draft.merges.push({ r1: s.r1, c1: s.c1, r2: s.r2, c2: s.c2 });
     // like Excel, only the top-left cell's text survives; pictures of the other cells move to it
@@ -652,9 +765,10 @@ function wireSheetEditor(card, t, f, rerender){
   const doSplit = () => {
     const s = sheetEdit.sel;
     if(!s) return;
-    const before = draft.merges.length;
-    draft.merges = draft.merges.filter(m => !(m.r1 <= s.r2 && m.r2 >= s.r1 && m.c1 <= s.c2 && m.c2 >= s.c1));
-    if(draft.merges.length === before){ alert('The selected cells are not merged.'); return; }
+    const next = draft.merges.filter(m => !(m.r1 <= s.r2 && m.r2 >= s.r1 && m.c1 <= s.c2 && m.c2 >= s.c1));
+    if(next.length === draft.merges.length){ alert('The selected cells are not merged.'); return; }
+    pushUndo();
+    draft.merges = next;
     redraw();
   };
   card.querySelectorAll('[data-fmt]').forEach(btn => btn.addEventListener('mousedown', e => e.preventDefault()));   // keep the selection / caret while clicking the toolbar
@@ -674,15 +788,223 @@ function wireSheetEditor(card, t, f, rerender){
   card.querySelector('[data-fmt-select="border"]')?.addEventListener('change', e => { if(e.target.value) applyBorder(e.target.value); });
   card.querySelector('[data-fmt-color="fc"]')?.addEventListener('change', e => { const hex = e.target.value.slice(1).toUpperCase(); mutateSel(st => { if(hex === '000000') delete st.fc; else st.fc = hex; }); });
   card.querySelector('[data-fmt-color="bg"]')?.addEventListener('change', e => { const hex = e.target.value.slice(1).toUpperCase(); mutateSel(st => { st.bg = hex; }); });
+  // ---- undo / redo ----
+  const clampSel = () => {
+    const s = sheetEdit.sel, R = sheetEdit.draft.rows.length - 1, C = sheetEdit.draft.colw.length - 1;
+    if(!s) return;
+    if(s.r1 > R || s.c1 > C){ sheetEdit.sel = null; return; }
+    const m = Math.min;
+    sheetEdit.sel = { ar: m(s.ar, R), ac: m(s.ac, C), fr: m(s.fr, R), fc: m(s.fc, C), r1: m(s.r1, R), c1: m(s.c1, C), r2: m(s.r2, R), c2: m(s.c2, C) };
+  };
+  const undo = () => {
+    if(!sheetEdit.undo || !sheetEdit.undo.length) return;
+    (sheetEdit.redo = sheetEdit.redo || []).push(JSON.stringify(draft));
+    sheetEdit.draft = JSON.parse(sheetEdit.undo.pop());
+    clampSel();
+    redraw();
+  };
+  const redo = () => {
+    if(!sheetEdit.redo || !sheetEdit.redo.length) return;
+    sheetEdit.undo.push(JSON.stringify(draft));
+    sheetEdit.draft = JSON.parse(sheetEdit.redo.pop());
+    clampSel();
+    redraw();
+  };
+  // ---- copy / cut / paste (tab-separated text, so it also goes to and comes from real Excel) ----
+  const snap = (r, c) => { const k = keyOf(r, c); return { text: draft.rows[r].c[c] || '', val: draft.vals ? draft.vals[k] : undefined, st: draft.styles[k] ? { ...draft.styles[k] } : null }; };
+  const put = (r, c, cell, withStyle) => {
+    const k = keyOf(r, c);
+    draft.rows[r].c[c] = cell.text;
+    if(draft.vals){ if(cell.val !== undefined) draft.vals[k] = cell.val; else delete draft.vals[k]; }
+    if(withStyle){ if(cell.st) draft.styles[k] = { ...cell.st }; else delete draft.styles[k]; }
+  };
+  const clearTarget = (r1, c1, r2, c2) => {   // merges touching the target are undone, pictures inside cells are replaced
+    draft.merges = draft.merges.filter(m => !(m.r1 <= r2 && m.r2 >= r1 && m.c1 <= c2 && m.c2 >= c1));
+    draft.images = draft.images.filter(im => !(im.cp && im.r >= r1 && im.r <= r2 && im.c >= c1 && im.c <= c2));
+  };
+  const copyRange = e => {
+    const s = sheetEdit.sel;
+    if(!s) return false;
+    const cells = [];
+    for(let r = s.r1; r <= s.r2; r++){ const line = []; for(let c = s.c1; c <= s.c2; c++) line.push(snap(r, c)); cells.push(line); }
+    const tsv = cells.map(line => line.map(x => escTSV(x.text)).join('\t')).join('\n');
+    const html = '<table>' + cells.map(line => '<tr>' + line.map(x => {
+      const st = x.st || {};
+      const css = [st.bg ? `background:#${st.bg}` : '', st.fc ? `color:#${st.fc}` : '', st.b ? 'font-weight:bold' : '', st.i ? 'font-style:italic' : ''].filter(Boolean).join(';');
+      return `<td${css ? ` style="${css}"` : ''}>${escapeHtml(x.text).replace(/\n/g, '<br>')}</td>`;
+    }).join('') + '</tr>').join('') + '</table>';
+    e.clipboardData.setData('text/plain', tsv);
+    e.clipboardData.setData('text/html', html);
+    e.preventDefault();
+    sheetClip = {
+      tsv, cells,
+      merges: draft.merges.filter(m => m.r1 >= s.r1 && m.r2 <= s.r2 && m.c1 >= s.c1 && m.c2 <= s.c2).map(m => ({ r1: m.r1 - s.r1, c1: m.c1 - s.c1, r2: m.r2 - s.r1, c2: m.c2 - s.c1 })),
+      images: draft.images.filter(im => im.r >= s.r1 && im.r <= s.r2 && im.c >= s.c1 && im.c <= s.c2).map(im => ({ ...im, r: im.r - s.r1, c: im.c - s.c1 }))
+    };
+    return true;
+  };
+  const doPaste = (text, s) => {
+    const clean = text.replace(/\r\n?/g, '\n');
+    const internal = sheetClip && sheetClip.tsv === clean.replace(/\n$/, '') ? sheetClip : (sheetClip && sheetClip.tsv === clean ? sheetClip : null);
+    const grid = internal ? internal.cells.map(line => line.map(x => x.text)) : parseTSV(text);
+    if(!grid.length) return;
+    const h = grid.length, w = Math.max(...grid.map(r => r.length), 1);
+    const single = h === 1 && w === 1;
+    const r0 = s.r1, c0 = s.c1;
+    let th = h, tw = w;
+    if(single && (s.r2 > s.r1 || s.c2 > s.c1)){ th = s.r2 - s.r1 + 1; tw = s.c2 - s.c1 + 1; }   // one value into a block: fills the block, like Excel
+    th = Math.min(th, MAX_ROWS - r0); tw = Math.min(tw, MAX_COLS - c0);
+    if(th < 1 || tw < 1) return;
+    pushUndo();
+    while(draft.rows.length < r0 + th) draft.rows.push({ c: Array(draft.colw.length).fill('') });
+    while(draft.colw.length < c0 + tw){ draft.colw.push(13); draft.rows.forEach(r => r.c.push('')); }
+    clearTarget(r0, c0, r0 + th - 1, c0 + tw - 1);
+    for(let i = 0; i < th; i++) for(let j = 0; j < tw; j++){
+      if(internal) put(r0 + i, c0 + j, single ? internal.cells[0][0] : (internal.cells[i] && internal.cells[i][j]) || { text: '', val: undefined, st: null }, true);
+      else put(r0 + i, c0 + j, { text: single ? grid[0][0] : ((grid[i] && grid[i][j]) || ''), val: undefined, st: null }, false);   // text from outside keeps the target's own formatting
+    }
+    if(internal && !single){
+      internal.merges.forEach(m => { if(r0 + m.r2 < draft.rows.length && c0 + m.c2 < draft.colw.length) draft.merges.push({ r1: r0 + m.r1, c1: c0 + m.c1, r2: r0 + m.r2, c2: c0 + m.c2 }); });
+      internal.images.forEach(im => { if(draft.images.length < MAX_IMAGES && r0 + im.r < draft.rows.length && c0 + im.c < draft.colw.length) draft.images.push({ ...im, r: r0 + im.r, c: c0 + im.c }); });
+    }
+    sheetEdit.sel = { ar: r0, ac: c0, fr: r0 + th - 1, fc: c0 + tw - 1, r1: r0, c1: c0, r2: r0 + th - 1, c2: c0 + tw - 1 };
+    redraw();
+  };
+  scrollBox.addEventListener('copy', e => { if(!e.target.closest('.tsheet-ed[contenteditable="true"]')) copyRange(e); });
+  scrollBox.addEventListener('cut', e => {
+    if(e.target.closest('.tsheet-ed[contenteditable="true"]')) return;
+    const s = sheetEdit.sel;
+    if(!copyRange(e)) return;
+    pushUndo();   // cutting clears the text (formatting stays, as with Delete)
+    for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; }
+    redraw();
+  });
+  scrollBox.addEventListener('paste', e => {
+    if(e.target.closest('.tsheet-ed[contenteditable="true"]')) return;   // typing in a cell: the browser pastes into it
+    const s = sheetEdit.sel, text = e.clipboardData ? e.clipboardData.getData('text/plain') : '';
+    if(!s || text === '') return;
+    e.preventDefault();
+    doPaste(text, s);
+  });
+  // ---- fill: Ctrl+D / Ctrl+R, the "Fill down / right" menu entries, and dragging the small square at the corner of the selection ----
+  const numOf = cell => typeof cell.val === 'number' ? cell.val : (/^-?\d+(\.\d+)?$/.test(cell.text) ? Number(cell.text) : null);
+  const doFill = (src, tgt, dir) => {
+    const vertical = dir === 'down' || dir === 'up';
+    const k = vertical ? src.r2 - src.r1 + 1 : src.c2 - src.c1 + 1;
+    pushUndo();
+    clearTarget(tgt.r1, tgt.c1, tgt.r2, tgt.c2);
+    const lines = [];
+    for(let i = vertical ? src.c1 : src.r1; i <= (vertical ? src.c2 : src.r2); i++) lines.push(i);
+    const idxs = [];
+    if(vertical){ if(dir === 'down') for(let r = tgt.r1; r <= tgt.r2; r++) idxs.push(r); else for(let r = tgt.r2; r >= tgt.r1; r--) idxs.push(r); }
+    else if(dir === 'right') for(let c = tgt.c1; c <= tgt.c2; c++) idxs.push(c); else for(let c = tgt.c2; c >= tgt.c1; c--) idxs.push(c);
+    lines.forEach(line => {
+      const source = [];
+      for(let i = 0; i < k; i++) source.push(vertical ? snap(src.r1 + i, line) : snap(line, src.c1 + i));
+      const nums = source.map(numOf);
+      const forward = dir === 'down' || dir === 'right';
+      const series = forward && k >= 2 && nums.every(x => x !== null);   // 1, 2 -> 3, 4, 5 ...
+      const step = series ? (nums[k - 1] - nums[0]) / (k - 1) : 0;
+      const tail = k === 1 && forward ? /^(.*\D)(\d+)$/.exec(source[0].text) : null;   // "Item 1" -> "Item 2"
+      idxs.forEach((idx, n) => {
+        let cell;
+        if(series){
+          const v = Math.round((nums[k - 1] + step * (n + 1)) * 1e9) / 1e9, base = source[k - 1];
+          cell = { text: base.val !== undefined ? fmtNumber(v, base.st && base.st.nf) : String(v), val: base.val !== undefined ? v : undefined, st: base.st };
+        }else if(tail){
+          const num = String(Number(tail[2]) + n + 1).padStart(tail[2].length, '0');
+          cell = { text: tail[1] + num, val: undefined, st: source[0].st };
+        }else cell = source[forward ? n % k : (k - 1 - (n % k))];
+        if(vertical) put(idx, line, cell, true); else put(line, idx, cell, true);
+      });
+    });
+    const all = { r1: Math.min(src.r1, tgt.r1), c1: Math.min(src.c1, tgt.c1), r2: Math.max(src.r2, tgt.r2), c2: Math.max(src.c2, tgt.c2) };
+    sheetEdit.sel = { ar: all.r1, ac: all.c1, fr: all.r2, fc: all.c2, ...all };
+    redraw();
+  };
+  const fillDown = () => {
+    const s = sheetEdit.sel;
+    if(!s) return;
+    if(s.r1 === s.r2){ if(s.r1 > 0) doFill({ r1: s.r1 - 1, r2: s.r1 - 1, c1: s.c1, c2: s.c2 }, { r1: s.r1, r2: s.r1, c1: s.c1, c2: s.c2 }, 'down'); }
+    else doFill({ r1: s.r1, r2: s.r1, c1: s.c1, c2: s.c2 }, { r1: s.r1 + 1, r2: s.r2, c1: s.c1, c2: s.c2 }, 'down');
+  };
+  const fillRight = () => {
+    const s = sheetEdit.sel;
+    if(!s) return;
+    if(s.c1 === s.c2){ if(s.c1 > 0) doFill({ r1: s.r1, r2: s.r2, c1: s.c1 - 1, c2: s.c1 - 1 }, { r1: s.r1, r2: s.r2, c1: s.c1, c2: s.c1 }, 'right'); }
+    else doFill({ r1: s.r1, r2: s.r2, c1: s.c1, c2: s.c1 }, { r1: s.r1, r2: s.r2, c1: s.c1 + 1, c2: s.c2 }, 'right');
+  };
+  table.addEventListener('mousedown', e => {
+    if(e.button !== 0 || !e.target.closest('.tsheet-fillhandle') || !sheetEdit.sel) return;
+    e.preventDefault();
+    e.stopPropagation();
+    fillDrag = { src: { ...sheetEdit.sel }, tgt: null, dir: null };
+  });
+  table.addEventListener('mouseover', e => {
+    if(!fillDrag) return;
+    const td = e.target.closest('td[data-r]');
+    if(!td) return;
+    const s = fillDrag.src, hr = Number(td.dataset.r), hc = Number(td.dataset.c);
+    const dr = hr > s.r2 ? hr - s.r2 : hr < s.r1 ? hr - s.r1 : 0, dc = hc > s.c2 ? hc - s.c2 : hc < s.c1 ? hc - s.c1 : 0;
+    fillDrag.tgt = null;
+    if(dr && Math.abs(dr) >= Math.abs(dc)){ fillDrag.dir = dr > 0 ? 'down' : 'up'; fillDrag.tgt = dr > 0 ? { r1: s.r2 + 1, r2: hr, c1: s.c1, c2: s.c2 } : { r1: hr, r2: s.r1 - 1, c1: s.c1, c2: s.c2 }; }
+    else if(dc){ fillDrag.dir = dc > 0 ? 'right' : 'left'; fillDrag.tgt = dc > 0 ? { r1: s.r1, r2: s.r2, c1: s.c2 + 1, c2: hc } : { r1: s.r1, r2: s.r2, c1: hc, c2: s.c1 - 1 }; }
+    table.querySelectorAll('.tsheet-fillpreview').forEach(x => x.classList.remove('tsheet-fillpreview'));
+    const t = fillDrag.tgt;
+    if(t) table.querySelectorAll('td[data-r]').forEach(x => {
+      const r = Number(x.dataset.r), c = Number(x.dataset.c);
+      if(r >= t.r1 && r <= t.r2 && c >= t.c1 && c <= t.c2) x.classList.add('tsheet-fillpreview');
+    });
+  });
+  finishFill = () => {
+    if(!fillDrag) return;
+    const d = fillDrag;
+    fillDrag = null;
+    table.querySelectorAll('.tsheet-fillpreview').forEach(x => x.classList.remove('tsheet-fillpreview'));
+    if(d.tgt) doFill(d.src, d.tgt, d.dir);
+  };
+  // ---- insert / delete rows and columns (the menu in the bar) ----
+  const lineOp = op => {
+    const s = sheetEdit.sel;
+    if(op === 'fill-down'){ fillDown(); return; }
+    if(op === 'fill-right'){ fillRight(); return; }
+    if(!s){ alert('Select a cell first.'); return; }
+    const axis = op.startsWith('row') ? 'r' : 'c';
+    const from = axis === 'r' ? s.r1 : s.c1, to = axis === 'r' ? s.r2 : s.c2, n = to - from + 1;
+    const total = axis === 'r' ? draft.rows.length : draft.colw.length;
+    if(op.endsWith('del')){
+      if(n >= total){ alert(`A sheet needs at least one ${axis === 'r' ? 'row' : 'column'}.`); return; }
+      if(!confirm(`Delete ${n} ${axis === 'r' ? 'row' : 'column'}${n > 1 ? 's' : ''} with everything in ${n > 1 ? 'them' : 'it'}? (Undo brings ${n > 1 ? 'them' : 'it'} back until you press Save table.)`)) return;
+      pushUndo();
+      deleteLines(draft, axis, from, to);
+      const last = (axis === 'r' ? draft.rows.length : draft.colw.length) - 1;
+      const at = Math.min(from, last);
+      sheetEdit.sel = axis === 'r' ? { ar: at, ac: s.c1, fr: at, fc: s.c2, r1: at, c1: s.c1, r2: at, c2: s.c2 } : { ar: s.r1, ac: at, fr: s.r2, fc: at, r1: s.r1, c1: at, r2: s.r2, c2: at };
+      redraw();
+      return;
+    }
+    const before = op.endsWith('above') || op.endsWith('left');
+    if(total + n > (axis === 'r' ? MAX_ROWS : MAX_COLS)){ alert(`A sheet can have up to ${axis === 'r' ? MAX_ROWS + ' rows' : MAX_COLS + ' columns'}.`); return; }
+    const at = before ? from : to + 1;
+    pushUndo();
+    insertLines(draft, axis, at, n);
+    sheetEdit.sel = axis === 'r' ? { ar: at, ac: s.c1, fr: at + n - 1, fc: s.c2, r1: at, c1: s.c1, r2: at + n - 1, c2: s.c2 } : { ar: s.r1, ac: at, fr: s.r2, fc: at + n - 1, r1: s.r1, c1: at, r2: s.r2, c2: at + n - 1 };
+    redraw();
+  };
+  card.querySelector('[data-fmt-select="rc"]')?.addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if(v) lineOp(v); });
+  card.querySelector('[data-fmt="undo"]')?.addEventListener('click', undo);
+  card.querySelector('[data-fmt="redo"]')?.addEventListener('click', redo);
   paintSel();
   // rows / columns
   card.querySelector('[data-role="sheet-add-row"]')?.addEventListener('click', () => {
     if(draft.rows.length >= MAX_ROWS){ alert(`A sheet can have up to ${MAX_ROWS} rows.`); return; }
+    pushUndo();
     draft.rows.push({ c: Array(draft.colw.length).fill('') });
     redraw();
   });
   card.querySelector('[data-role="sheet-add-col"]')?.addEventListener('click', () => {
     if(draft.colw.length >= MAX_COLS){ alert(`A sheet can have up to ${MAX_COLS} columns.`); return; }
+    pushUndo();
     draft.rows.forEach(r => r.c.push(''));
     draft.colw.push(13);
     redraw();
@@ -700,18 +1022,21 @@ function wireSheetEditor(card, t, f, rerender){
       const shrunk = await shrinkImage(await file.arrayBuffer(), (file.type.split('/')[1] || '').toLowerCase(), 480, 0.7);
       if(!shrunk){ alert('Could not read that picture (use PNG, JPG, GIF or WebP).'); return; }
       const k = 120 / Math.max(shrunk.w, shrunk.h);
+      pushUndo();
       draft.images.push({ r, c, x: 0, y: 0, w: Math.round(shrunk.w * k), h: Math.round(shrunk.h * k), src: shrunk.src, cp: 1 });
       redraw();
     });
     input.click();
   }));
   card.querySelectorAll('[data-pic-remove]').forEach(btn => btn.addEventListener('click', () => {
+    pushUndo();
     draft.images.splice(Number(btn.dataset.imgIndex), 1);
     redraw();
   }));
   card.querySelectorAll('[data-pic-scale]').forEach(btn => btn.addEventListener('click', () => {
     const im = draft.images[Number(btn.dataset.imgIndex)];
     const k = Number(btn.dataset.picScale);
+    pushUndo();
     im.w = Math.min(420, Math.max(30, Math.round(im.w * k)));
     im.h = Math.max(20, Math.round(im.h * k));
     redraw();
@@ -720,6 +1045,7 @@ function wireSheetEditor(card, t, f, rerender){
   const drag = (grip, begin) => grip.addEventListener('pointerdown', e => {
     e.preventDefault();
     e.stopPropagation();
+    pushUndo();   // a column / row drag is one undo step
     const onMove = begin(), z = sheetZoom.get(f.id) || 1;   // the mouse moves in screen pixels, the table's sizes are in zoomed-out pixels
     const x0 = e.clientX, y0 = e.clientY;
     const move = ev => onMove((ev.clientX - x0) / z, (ev.clientY - y0) / z);
@@ -851,7 +1177,7 @@ export function wireTrialSheets(block, t, isEditing, rerender){
     card.querySelector('[data-role="sheet-zoom-reset"]')?.addEventListener('click', () => setZoom(1, box.clientWidth / 2, box.clientHeight / 2));
     card.querySelector('[data-role="edit-trial-sheet"]')?.addEventListener('click', () => {
       const idx = Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
-      sheetEdit = { trialId: t.id, fileId: f.id, sheetIndex: idx, draft: normalizeDraft(clone(f.sheets[idx])) };
+      sheetEdit = { trialId: t.id, fileId: f.id, sheetIndex: idx, draft: normalizeDraft(clone(f.sheets[idx])), undo: [], redo: [] };
       rerender();
     });
     if(sheetEdit && sheetEdit.trialId === t.id && sheetEdit.fileId === f.id && isEditing) wireSheetEditor(card, t, f, rerender);
