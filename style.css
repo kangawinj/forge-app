@@ -6561,7 +6561,7 @@
   @media print{ .proj-undo-toast{display:none !important;} }
 
   /* Company Directory: the "New company" section */
-  .reflist-company-form{border:1px solid var(--border);border-radius:14px;background:var(--panel);padding:16px 18px;margin-bottom:18px;}
+  .reflist-company-form{border:2px solid var(--accent);border-radius:14px;background:var(--panel);padding:16px 18px;margin-bottom:18px;}
   .rcf-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 12px;margin-bottom:12px;}
   .rcf-title{font-size:15px;font-weight:700;color:var(--primary-dark);}
   .rcf-sub{font-size:12px;color:var(--text-dim);}
