@@ -6676,3 +6676,19 @@
   .tsheet-fmtbar button:disabled{opacity:.4;cursor:default;}
   .tsheet-fillhandle{position:absolute;right:-4px;bottom:-4px;width:8px;height:8px;background:var(--primary);border:1px solid #fff;cursor:crosshair;z-index:4;}
   .tsheet-table td.tsheet-fillpreview{outline:2px dashed var(--primary);outline-offset:-2px;}
+  /* Excel Sheets: sheet bar, filter */
+  .tsheet-sheetbar{display:flex;flex-wrap:wrap;align-items:center;gap:4px 6px;padding:6px 10px;background:var(--bg);border-bottom:1px solid var(--border);font-size:12px;color:var(--text-dim);}
+  .tsheet-sheetbar button{height:26px;border:1px solid var(--border);border-radius:6px;background:#fff;font-size:12px;padding:0 8px;cursor:pointer;color:var(--text);display:inline-flex;align-items:center;gap:4px;}
+  .tsheet-sheetbar button:hover:not(:disabled){background:var(--bg);}
+  .tsheet-sheetbar button:disabled{opacity:.4;cursor:default;}
+  .tsheet-sheetbar .tsheet-danger{color:var(--danger);}
+  .tsheet-filterbtn{position:absolute;right:2px;bottom:2px;width:18px;height:18px;padding:0;border:1px solid #9aa4b2;border-radius:4px;background:#fff;font-size:10px;line-height:1;cursor:pointer;color:#333;z-index:3;}
+  .tsheet-filterbtn.active{background:var(--primary);color:#fff;border-color:var(--primary);}
+  .tsheet-fpop{position:fixed;z-index:210;width:260px;background:#fff;border:1px solid var(--border);border-radius:10px;box-shadow:0 10px 28px rgba(12,24,48,.28);padding:8px;font-size:12px;}
+  .tsheet-fpop label{display:flex;align-items:center;gap:6px;padding:2px 4px;cursor:pointer;}
+  .tsheet-fpop label span{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .tsheet-fpop label em{color:var(--text-dim);font-style:normal;}
+  .tsheet-fpop-all{border-bottom:1px solid var(--border);margin-bottom:4px;padding-bottom:6px !important;font-weight:700;}
+  .tsheet-fpop-list{max-height:220px;overflow:auto;}
+  .tsheet-fpop-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;}
+  @media print{ .tsheet-sheetbar,.tsheet-filterbtn{display:none !important;} }

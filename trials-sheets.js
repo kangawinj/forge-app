@@ -6,6 +6,7 @@
 // Pictures are kept too, shrunk to a small JPEG each so they fit inside the evaluation (see shrinkImage).
 import { currentUser, uid, escapeHtml, icon, formatActivityDateTime, requestAuthConfirm } from './app.js';
 import { scheduleTrialSave } from './trials-data.js';
+import { recalc, shiftFormula, insertRefs, deleteRefs } from './sheet-formulas.js';
 
 const MAX_ROWS = 500;
 const MAX_COLS = 40;
@@ -362,7 +363,8 @@ function sheetTableHtml(sheet, edit = false, sel = null, zoom = 1){
     ...borderParts(st.bd).map(([side, style, color]) => `border-${side}:${cssBorder(style, color)}`)
   ].filter(Boolean).join(';');
   const head = `<tr><th class="tsheet-corner"></th>${Array.from({ length: cols }, (_, i) => `<th${edit ? ` data-colhead="${i}"` : ''}>${colLetter(i + 1)}${edit ? `<span class="tsheet-colgrip" data-col="${i}" title="Drag to change the column width"></span>` : ''}</th>`).join('')}</tr>`;
-  const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] ? ` style="height:${Math.round(sheet.rowh[r] * 4 / 3)}px"` : ''}><th class="tsheet-rowno"${edit ? ` data-rowhead="${r}"` : ''}>${r + 1}${edit ? `<span class="tsheet-rowgrip" data-row="${r}" title="Drag to change the row height"></span>` : ''}</th>${Array.from({ length: cols }, (_, c) => {
+  const hiddenRows = hiddenRowsOf(sheet), fl = sheet.filter;
+  const body = sheet.rows.map((row, r) => `<tr${(sheet.rowh || {})[r] || hiddenRows.has(r) ? ` style="${(sheet.rowh || {})[r] ? `height:${Math.round(sheet.rowh[r] * 4 / 3)}px;` : ''}${hiddenRows.has(r) ? 'display:none;' : ''}"` : ''}><th class="tsheet-rowno"${edit ? ` data-rowhead="${r}"` : ''}>${r + 1}${edit ? `<span class="tsheet-rowgrip" data-row="${r}" title="Drag to change the row height"></span>` : ''}</th>${Array.from({ length: cols }, (_, c) => {
     const key = `${r},${c}`;
     if(hidden.has(key)) return '';
     const st = sheet.styles?.[key] || {};
@@ -371,7 +373,7 @@ function sheetTableHtml(sheet, edit = false, sel = null, zoom = 1){
       ? `<span class="tsheet-pic"><img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;"><span class="tsheet-picbar"><button type="button" data-pic-scale="0.8" data-img-index="${sheet.images.indexOf(im)}" title="Smaller">&minus;</button><button type="button" data-pic-scale="1.25" data-img-index="${sheet.images.indexOf(im)}" title="Larger">+</button><button type="button" data-pic-remove data-img-index="${sheet.images.indexOf(im)}" title="Remove this picture">&times;</button></span></span>`
       : `<img class="tsheet-img" src="${escapeHtml(im.src)}" alt="" style="width:${Math.min(im.w, 420)}px;">`).join('');
     const inner = edit
-      ? `<span class="tsheet-ed" contenteditable="false" spellcheck="false" data-r="${r}" data-c="${c}">${escapeHtml(row.c[c] || '')}</span><span class="tsheet-cellpics" contenteditable="false">${imgs}<button type="button" class="tsheet-addpic" data-r="${r}" data-c="${c}" title="Add a picture to this cell">${icon('upload', 12)}</button></span>`
+      ? `<span class="tsheet-ed" contenteditable="false" spellcheck="false" data-r="${r}" data-c="${c}">${escapeHtml(row.c[c] || '')}</span><span class="tsheet-cellpics" contenteditable="false">${imgs}<button type="button" class="tsheet-addpic" data-r="${r}" data-c="${c}" title="Add a picture to this cell">${icon('upload', 12)}</button></span>${fl && r === fl.r && c >= fl.c1 && c <= fl.c2 ? `<button type="button" class="tsheet-filterbtn${fl.cols && fl.cols[c] ? ' active' : ''}" data-fcol="${c}" title="Filter this column">&#9662;</button>` : ''}`
       : `${escapeHtml(row.c[c] || '')}${imgs}`;
     const inSel = !!(edit && sel && r >= sel.r1 && r <= sel.r2 && c >= sel.c1 && c <= sel.c2);
     const cls = [st.b ? 'tsheet-bold' : '', inSel ? 'tsheet-sel' : ''].filter(Boolean).join(' ');
@@ -399,6 +401,8 @@ function normalizeDraft(d){
   d.images = d.images || [];
   d.merges = d.merges || [];
   d.styles = d.styles || {};
+  d.fx = d.fx || {};
+  d.fxv = d.fxv || {};
   return d;
 }
 
@@ -408,13 +412,14 @@ export function trialSheetsHtml(t, isEditing){
   const cards = files.map(f => {
     const ed = !!(sheetEdit && sheetEdit.trialId === t.id && sheetEdit.fileId === f.id && isEditing);
     const idx = ed ? sheetEdit.sheetIndex : Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
+    if(ed) recalc(sheetEdit.draft, fmtNumber);   // formulas are worked out afresh every time the table is drawn
     const sheet = ed ? sheetEdit.draft : f.sheets[idx];
     const otherEditing = !!(sheetEdit && sheetEdit.trialId === t.id && !ed);
     return `
       <div class="tsheet-card${ed ? ' tsheet-card-editing' : ''}${sheetFull === f.id ? ' tsheet-card-full' : ''}" data-sheet-file-id="${escapeHtml(f.id)}">
         <div class="tsheet-head">
           <span class="tsheet-name">${icon('file-text', 14)} ${escapeHtml(f.name)}</span>
-          <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}</span>
+          <span class="tsheet-meta">${escapeHtml(f.importedBy || '')}${f.importedAt ? ' · ' + escapeHtml(formatActivityDateTime(f.importedAt)) : ''}${(() => { const n = hiddenRowsOf(sheet).size; return n ? ` · <b>Filtered: ${n} row${n > 1 ? 's' : ''} hidden</b>` : ''; })()}</span>
           <span class="tsheet-actions">
             <button type="button" class="btn btn-sm" data-role="sheet-fullscreen" title="${sheetFull === f.id ? 'Back to the normal size (Esc)' : 'Fill the whole app window'}">${sheetFull === f.id ? ICON_COLLAPSE : ICON_EXPAND}</button>
             <span class="tsheet-zoom" title="Zoom the table: hold Ctrl and turn the mouse wheel over it">
@@ -434,8 +439,16 @@ export function trialSheetsHtml(t, isEditing){
             `}
           </span>
         </div>
+
+        ${!ed && isEditing ? `<div class="tsheet-sheetbar"><span>Sheets:</span>
+          <button type="button" data-role="sheet-add">${icon('plus', 12)} New sheet</button>
+          <button type="button" data-role="sheet-rename">${icon('pencil', 12)} Rename</button>
+          <button type="button" data-role="sheet-left" ${idx === 0 ? 'disabled' : ''}>&larr; Move left</button>
+          <button type="button" data-role="sheet-right" ${idx >= f.sheets.length - 1 ? 'disabled' : ''}>Move right &rarr;</button>
+          <button type="button" data-role="sheet-delete" class="tsheet-danger" ${f.sheets.length < 2 ? 'disabled title="A file needs at least one sheet (use Remove to delete the whole file)"' : ''}>${icon('x', 12)} Delete sheet</button>
+        </div>` : ''}
         ${ed
-          ? `<div class="tsheet-edit-hint">Editing sheet "${escapeHtml(sheet.name)}": click a cell to select it (drag, or Shift+click, for several; a column letter or row number selects all of it), <b>double-click</b> it &mdash; or press Enter, or just start typing &mdash; to type. Enter confirms (Alt+Enter = new line inside the cell), Esc cancels. Ctrl+Z / Ctrl+Y undo and redo, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste (also with real Excel), Ctrl+D / Ctrl+R or the small square at the corner of the selection fill. Use the bar below to format, merge or split cells and to insert or delete rows and columns. Drag the edge of a column letter or row number to resize. The arrow button in a cell adds a picture. Nothing is kept until you press Save table.</div>`
+          ? `<div class="tsheet-edit-hint">Editing sheet "${escapeHtml(sheet.name)}": click a cell to select it (drag, or Shift+click, for several; a column letter or row number selects all of it), <b>double-click</b> it &mdash; or press Enter, or just start typing &mdash; to type. Enter confirms (Alt+Enter = new line inside the cell), Esc cancels. Ctrl+Z / Ctrl+Y undo and redo, Ctrl+C / Ctrl+X / Ctrl+V copy, cut and paste (also with real Excel), Ctrl+D / Ctrl+R or the small square at the corner of the selection fill. Type a formula starting with = (for example =SUM(B2:B9), =IF(C2>10,"high","low"), =COUNTIF(A2:A20,">5")). Use the bar below to format, merge or split cells, to insert or delete rows and columns, and for sorting and filtering (Data menu). Drag the edge of a column letter or row number to resize. The arrow button in a cell adds a picture. Nothing is kept until you press Save table.</div>`
           : (f.sheets.length > 1 ? `<div class="tsheet-tabs">${f.sheets.map((s, i) => `<button type="button" class="tsheet-tab${i === idx ? ' active' : ''}" data-role="trial-sheet-tab" data-sheet-index="${i}">${escapeHtml(s.name)}</button>`).join('')}</div>` : '')}
         ${ed ? `<div class="tsheet-fmtbar">
           <button type="button" data-fmt="undo" title="Undo (Ctrl+Z)" ${sheetEdit.undo && sheetEdit.undo.length ? '' : 'disabled'}>&#8630; Undo</button>
@@ -465,6 +478,7 @@ export function trialSheetsHtml(t, isEditing){
           <button type="button" data-fmt="merge" title="Merge the selected cells into one">Merge cells</button>
           <button type="button" data-fmt="split" title="Split a merged cell back into cells">Split cells</button>
           <select data-fmt-select="rc" title="Insert or delete rows / columns, fill">${[['', 'Rows & columns...'], ['row-above', 'Insert row above'], ['row-below', 'Insert row below'], ['row-del', 'Delete row'], ['col-left', 'Insert column left'], ['col-right', 'Insert column right'], ['col-del', 'Delete column'], ['fill-down', 'Fill down (Ctrl+D)'], ['fill-right', 'Fill right (Ctrl+R)']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
+          <select data-fmt-select="data" title="Sort and filter">${[['', 'Data...'], ['sort-az', 'Sort A to Z (by the first selected column)'], ['sort-za', 'Sort Z to A'], ['filter-on', 'Filter: heading row = the selected row'], ['filter-off', 'Remove the filter']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
           <select data-fmt-select="border" title="Borders of the selected cells">${[['', 'Borders...'], ['all', 'All borders'], ['outer', 'Outer border'], ['top', 'Top'], ['bottom', 'Bottom'], ['left', 'Left'], ['right', 'Right'], ['none', 'No border']].map(([v, l]) => `<option value="${v}">${l}</option>`).join('')}</select>
         </div>` : ''}
         <div class="tsheet-scroll" ${ed ? 'tabindex="0"' : ''}>${sheetTableHtml(sheet, ed, ed ? sheetEdit.sel : null, sheetZoom.get(f.id) || 1)}</div>
@@ -531,6 +545,8 @@ function insertLines(d, axis, at, n){
   const f = (r, c) => axis === 'r' ? [mv(r), c] : [r, mv(c)];
   d.styles = rekeyCells(d.styles, f);
   if(d.vals) d.vals = rekeyCells(d.vals, f);
+  if(d.fx){ d.fx = rekeyCells(d.fx, f); Object.keys(d.fx).forEach(k => { d.fx[k] = insertRefs(d.fx[k], axis, at, n); }); }
+  shiftFilter(d, axis, 'ins', at, n);
   d.merges.forEach(m => {
     const a = axis === 'r' ? ['r1', 'r2'] : ['c1', 'c2'];
     if(m[a[0]] >= at){ m[a[0]] += n; m[a[1]] += n; } else if(m[a[1]] >= at) m[a[1]] += n;   // inserting inside a merge makes it bigger
@@ -552,6 +568,8 @@ function deleteLines(d, axis, from, to){
   const f = (r, c) => { const i = axis === 'r' ? r : c; return gone(i) ? null : (axis === 'r' ? [mv(r), c] : [r, mv(c)]); };
   d.styles = rekeyCells(d.styles, f);
   if(d.vals) d.vals = rekeyCells(d.vals, f);
+  if(d.fx){ d.fx = rekeyCells(d.fx, f); Object.keys(d.fx).forEach(k => { d.fx[k] = deleteRefs(d.fx[k], axis, from, to); }); }
+  shiftFilter(d, axis, 'del', from, to);
   d.merges = d.merges.map(m => {
     const a = axis === 'r' ? ['r1', 'r2'] : ['c1', 'c2'];
     const lo = m[a[0]], hi = m[a[1]];
@@ -565,6 +583,45 @@ function deleteLines(d, axis, from, to){
   d.images = d.images.filter(im => !gone(axis === 'r' ? im.r : im.c));
   d.images.forEach(im => { if(axis === 'r') im.r = mv(im.r); else im.c = mv(im.c); });
 }
+
+// rows hidden by the sheet's filter (header row filter.r; each filtered column keeps only the listed values)
+function hiddenRowsOf(d){
+  const out = new Set(), fl = d.filter;
+  if(!fl || !fl.cols) return out;
+  const cols = Object.keys(fl.cols);
+  if(!cols.length) return out;
+  for(let r = fl.r + 1; r < d.rows.length; r++){
+    if(cols.some(c => { const v = (d.rows[r].c[Number(c)] || '') || '(Blanks)'; return !fl.cols[c].includes(v); })) out.add(r);
+  }
+  return out;
+}
+// the filter follows rows / columns that are inserted (kind 'ins') or deleted (kind 'del')
+function shiftFilter(d, axis, kind, a, b){
+  const fl = d.filter;
+  if(!fl) return;
+  const n = (b === undefined ? 0 : b - a + 1);
+  if(axis === 'r'){
+    if(kind === 'ins'){ if(a <= fl.r) fl.r += b; }   // for 'ins', a = index, b = count
+    else if(fl.r >= a && fl.r <= b) delete d.filter;
+    else if(fl.r > b) fl.r -= n;
+    return;
+  }
+  const cols = {};
+  if(kind === 'ins'){
+    const mv = i => i >= a ? i + b : i;
+    Object.entries(fl.cols || {}).forEach(([k, v]) => { cols[mv(Number(k))] = v; });
+    if(fl.c1 >= a) fl.c1 += b;
+    if(fl.c2 >= a) fl.c2 += b;
+  }else{
+    Object.entries(fl.cols || {}).forEach(([k, v]) => { const i = Number(k); if(i < a) cols[i] = v; else if(i > b) cols[i - n] = v; });
+    fl.c1 = fl.c1 > b ? fl.c1 - n : (fl.c1 >= a ? a : fl.c1);
+    fl.c2 = fl.c2 > b ? fl.c2 - n : (fl.c2 >= a ? a - 1 : fl.c2);
+    if(fl.c2 < fl.c1){ delete d.filter; return; }
+  }
+  fl.cols = cols;
+}
+const newSheet = name => ({ name, rows: Array.from({ length: 30 }, () => ({ c: Array(8).fill('') })), styles: {}, merges: [], images: [], colw: Array(8).fill(13), rowh: {}, vals: {}, fx: {}, fxv: {}, v2: 1, ng: 0 });
+const safeSheetName = s => String(s || '').replace(/[\[\]:*?\/\\]/g, '-').trim().slice(0, 31);
 
 function wireSheetEditor(card, t, f, rerender){
   const draft = sheetEdit.draft;
@@ -624,7 +681,9 @@ function wireSheetEditor(card, t, f, rerender){
   const startEdit = (td, replace) => {
     const sp = td?.querySelector('.tsheet-ed');
     if(!sp) return;
-    editOriginal = sp.innerText.replace(/\n$/, '');
+    const fxText = draft.fx && draft.fx[keyOf(Number(sp.dataset.r), Number(sp.dataset.c))];
+    if(fxText && !replace) sp.textContent = fxText;   // a formula cell shows its formula while it is being edited
+    editOriginal = fxText || sp.innerText.replace(/\n$/, '');
     pushUndo(); editPushed = true;   // one undo step for the whole typing session
     sp.contentEditable = 'true';
     sp.focus();
@@ -638,30 +697,40 @@ function wireSheetEditor(card, t, f, rerender){
   const moveSel = (dr, dc, extend) => {
     const s = sheetEdit.sel;
     if(!s) return;
-    const nr = Math.max(0, Math.min(rowsN() - 1, s.fr + dr)), nc = Math.max(0, Math.min(colsN() - 1, s.fc + dc));
+    const hid = hiddenRowsOf(draft);
+    let nr = Math.max(0, Math.min(rowsN() - 1, s.fr + dr)), nc = Math.max(0, Math.min(colsN() - 1, s.fc + dc));
+    while(dr && hid.has(nr) && nr + Math.sign(dr) >= 0 && nr + Math.sign(dr) < rowsN()) nr += Math.sign(dr);   // filtered-out rows are skipped
     if(extend) select(s.ar, s.ac, nr, nc); else select(nr, nc, nr, nc);
     reveal(nr, nc);
     scrollBox.focus({ preventScroll: true });
+  };
+  // the end of a typing session in a cell: "=..." becomes a formula, anything else a plain value; formulas are recalculated
+  const finishCell = el => {
+    el.contentEditable = 'false';
+    if(!editPushed) return;
+    editPushed = false;
+    const u = sheetEdit.undo;
+    if(u && u.length && u[u.length - 1] === JSON.stringify(draft)) u.pop();   // nothing typed: no undo step
+    const r = Number(el.dataset.r), c = Number(el.dataset.c), k = keyOf(r, c), txt = draft.rows[r].c[c] || '';
+    const isFx = txt.startsWith('=') && txt.length > 1, hadFx = !!(draft.fx && draft.fx[k]);
+    if(isFx) draft.fx[k] = txt; else if(hadFx) delete draft.fx[k];
+    if(isFx || hadFx || Object.keys(draft.fx || {}).length) redraw();   // other formulas may use this cell
   };
   card.querySelectorAll('.tsheet-ed').forEach(el => {
     el.addEventListener('input', () => {
       draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = el.innerText.replace(/\n$/, '');
       if(draft.vals) delete draft.vals[`${el.dataset.r},${el.dataset.c}`];   // typed text replaces the number / date it held
     });
-    el.addEventListener('blur', () => {
-      el.contentEditable = 'false';
-      if(editPushed){ editPushed = false; const u = sheetEdit.undo; if(u && u.length && u[u.length - 1] === JSON.stringify(draft)) u.pop(); }   // nothing typed: no undo step
-    });
+    el.addEventListener('blur', () => finishCell(el));
     el.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, e.clipboardData.getData('text/plain')); });
     el.addEventListener('keydown', e => {
       if(e.key === 'Enter' && e.altKey){ e.preventDefault(); document.execCommand('insertLineBreak'); }
-      else if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); el.contentEditable = 'false'; el.blur(); moveSel(e.key === 'Enter' ? (e.shiftKey ? -1 : 1) : 0, e.key === 'Tab' ? (e.shiftKey ? -1 : 1) : 0, false); }
+      else if(e.key === 'Enter' || e.key === 'Tab'){ e.preventDefault(); moveSel(e.key === 'Enter' ? (e.shiftKey ? -1 : 1) : 0, e.key === 'Tab' ? (e.shiftKey ? -1 : 1) : 0, false); finishCell(el); }
       else if(e.key === 'Escape'){
         e.preventDefault();
         el.innerText = editOriginal;
         draft.rows[Number(el.dataset.r)].c[Number(el.dataset.c)] = editOriginal;
-        el.contentEditable = 'false';
-        el.blur();
+        finishCell(el);
         scrollBox.focus({ preventScroll: true });
       }
     });
@@ -714,7 +783,7 @@ function wireSheetEditor(card, t, f, rerender){
     else if(e.key === 'Delete' || e.key === 'Backspace'){
       e.preventDefault();
       pushUndo();
-      for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; }
+      for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; if(draft.fx) delete draft.fx[keyOf(r, c)]; }
       redraw();
     }
     else if(e.key.length === 1 && !e.ctrlKey && !e.metaKey && !e.altKey) startEdit(cellOf(s.r1, s.c1), true);   // the typed key then replaces the cell's text
@@ -811,11 +880,13 @@ function wireSheetEditor(card, t, f, rerender){
     redraw();
   };
   // ---- copy / cut / paste (tab-separated text, so it also goes to and comes from real Excel) ----
-  const snap = (r, c) => { const k = keyOf(r, c); return { text: draft.rows[r].c[c] || '', val: draft.vals ? draft.vals[k] : undefined, st: draft.styles[k] ? { ...draft.styles[k] } : null }; };
+  const snap = (r, c) => { const k = keyOf(r, c); return { r, c, text: draft.rows[r].c[c] || '', val: draft.vals ? draft.vals[k] : undefined, st: draft.styles[k] ? { ...draft.styles[k] } : null, fx: draft.fx ? draft.fx[k] : undefined }; };
   const put = (r, c, cell, withStyle) => {
     const k = keyOf(r, c);
     draft.rows[r].c[c] = cell.text;
     if(draft.vals){ if(cell.val !== undefined) draft.vals[k] = cell.val; else delete draft.vals[k]; }
+    if(cell.fx) draft.fx[k] = shiftFormula(cell.fx, r - cell.r, c - cell.c);   // a copied formula keeps pointing at the same neighbours
+    else if(draft.fx) delete draft.fx[k];
     if(withStyle){ if(cell.st) draft.styles[k] = { ...cell.st }; else delete draft.styles[k]; }
   };
   const clearTarget = (r1, c1, r2, c2) => {   // merges touching the target are undone, pictures inside cells are replaced
@@ -876,7 +947,7 @@ function wireSheetEditor(card, t, f, rerender){
     const s = sheetEdit.sel;
     if(!copyRange(e)) return;
     pushUndo();   // cutting clears the text (formatting stays, as with Delete)
-    for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; }
+    for(let r = s.r1; r <= s.r2; r++) for(let c = s.c1; c <= s.c2; c++){ draft.rows[r].c[c] = ''; if(draft.vals) delete draft.vals[keyOf(r, c)]; if(draft.fx) delete draft.fx[keyOf(r, c)]; }
     redraw();
   });
   scrollBox.addEventListener('paste', e => {
@@ -887,7 +958,7 @@ function wireSheetEditor(card, t, f, rerender){
     doPaste(text, s);
   });
   // ---- fill: Ctrl+D / Ctrl+R, the "Fill down / right" menu entries, and dragging the small square at the corner of the selection ----
-  const numOf = cell => typeof cell.val === 'number' ? cell.val : (/^-?\d+(\.\d+)?$/.test(cell.text) ? Number(cell.text) : null);
+  const numOf = cell => cell.fx ? null : typeof cell.val === 'number' ? cell.val : (/^-?\d+(\.\d+)?$/.test(cell.text) ? Number(cell.text) : null);
   const doFill = (src, tgt, dir) => {
     const vertical = dir === 'down' || dir === 'up';
     const k = vertical ? src.r2 - src.r1 + 1 : src.c2 - src.c1 + 1;
@@ -994,6 +1065,100 @@ function wireSheetEditor(card, t, f, rerender){
   card.querySelector('[data-fmt-select="rc"]')?.addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if(v) lineOp(v); });
   card.querySelector('[data-fmt="undo"]')?.addEventListener('click', undo);
   card.querySelector('[data-fmt="redo"]')?.addEventListener('click', redo);
+  // ---- sort and filter (the "Data" menu) ----
+  const sortValue = (r, c) => {
+    const k = keyOf(r, c), text = draft.rows[r].c[c] || '';
+    if(draft.vals && typeof draft.vals[k] === 'number') return draft.vals[k];
+    if(text === '') return null;
+    return /^-?\d+(\.\d+)?$/.test(text) ? Number(text) : text;
+  };
+  const doSort = desc => {
+    let s = sheetEdit.sel;
+    if(!s){ alert('Select the cells to sort first.'); return; }
+    let { r1, r2, c1, c2 } = s, col = s.c1;
+    const fl = draft.filter;
+    if(r1 === r2 && c1 === c2 && fl && c1 >= fl.c1 && c1 <= fl.c2){ r1 = fl.r + 1; r2 = draft.rows.length - 1; c1 = fl.c1; c2 = fl.c2; col = s.c1; }   // one cell inside a filtered table: sort the whole table by that column
+    if(r1 === r2){ alert('Select several rows to sort (the data rows, without the heading row), or turn on Filter and click a cell in the column to sort by.'); return; }
+    if(draft.merges.some(m => m.r1 <= r2 && m.r2 >= r1 && m.c1 <= c2 && m.c2 >= c1)){ alert('Cells in this range are merged: split them first, then sort.'); return; }
+    if(Object.keys(draft.fx || {}).some(k => { const [r, c] = k.split(',').map(Number); return r >= r1 && r <= r2 && c >= c1 && c <= c2; })){ alert('This range contains formulas, which cannot be sorted. Type the values in first.'); return; }
+    const order = [];
+    for(let r = r1; r <= r2; r++) order.push(r);
+    order.sort((a, b) => {
+      const x = sortValue(a, col), y = sortValue(b, col);
+      if(x === null || y === null) return x === y ? a - b : (x === null ? 1 : -1);   // blanks stay last
+      const tx = typeof x === 'number' ? 0 : 1, ty = typeof y === 'number' ? 0 : 1;
+      let k = tx !== ty ? tx - ty : (tx === 0 ? x - y : String(x).localeCompare(String(y), undefined, { sensitivity: 'base', numeric: true }));
+      if(tx === ty && desc) k = -k; else if(tx !== ty && desc) k = -k;
+      return k || a - b;
+    });
+    pushUndo();
+    const rowsSnap = order.map(r => { const line = []; for(let c = c1; c <= c2; c++) line.push(snap(r, c)); return line; });
+    rowsSnap.forEach((line, p) => line.forEach((cell, j) => put(r1 + p, c1 + j, cell, true)));
+    const where = new Map(order.map((r, p) => [r, r1 + p]));
+    draft.images.forEach(im => { if(im.cp && im.c >= c1 && im.c <= c2 && where.has(im.r)) im.r = where.get(im.r); });
+    redraw();
+  };
+  const dataOp = op => {
+    const s = sheetEdit.sel;
+    if(op === 'sort-az') doSort(false);
+    else if(op === 'sort-za') doSort(true);
+    else if(op === 'filter-on'){
+      if(!s){ alert('Click a cell in the heading row of the table first (or select the heading cells).'); return; }
+      pushUndo();
+      const single = s.r1 === s.r2 && s.c1 === s.c2;
+      draft.filter = { r: s.r1, c1: single ? 0 : s.c1, c2: single ? draft.colw.length - 1 : s.c2, cols: {} };
+      redraw();
+    }
+    else if(op === 'filter-off'){
+      if(!draft.filter) return;
+      pushUndo();
+      delete draft.filter;
+      redraw();
+    }
+  };
+  card.querySelector('[data-fmt-select="data"]')?.addEventListener('change', e => { const v = e.target.value; e.target.value = ''; if(v) dataOp(v); });
+  // the small arrow in a filtered heading cell: a list of the values in that column to tick
+  card.querySelectorAll('.tsheet-filterbtn').forEach(btn => {
+    btn.addEventListener('mousedown', e => e.stopPropagation());
+    btn.addEventListener('click', e => {
+      e.stopPropagation();
+      document.getElementById('tsheetFilterPop')?.remove();
+      const c = Number(btn.dataset.fcol), fl = draft.filter;
+      if(!fl) return;
+      const seen = new Map();
+      for(let r = fl.r + 1; r < draft.rows.length; r++){ const v = (draft.rows[r].c[c] || '') || '(Blanks)'; seen.set(v, (seen.get(v) || 0) + 1); }
+      const values = [...seen.keys()].sort((a, b) => (a === '(Blanks)') - (b === '(Blanks)') || String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' }));
+      const allowed = fl.cols[c] ? new Set(fl.cols[c]) : null;
+      const pop = document.createElement('div');
+      pop.id = 'tsheetFilterPop';
+      pop.className = 'tsheet-fpop';
+      pop.innerHTML = `
+        <label class="tsheet-fpop-all"><input type="checkbox" data-all> (Select all)</label>
+        <div class="tsheet-fpop-list">${values.map((v, i) => `<label><input type="checkbox" data-i="${i}" ${!allowed || allowed.has(v) ? 'checked' : ''}> <span>${escapeHtml(v)}</span> <em>${seen.get(v)}</em></label>`).join('')}</div>
+        <div class="tsheet-fpop-actions"><button type="button" data-ok class="btn btn-sm btn-primary">OK</button><button type="button" data-clear class="btn btn-sm">Clear</button><button type="button" data-cancel class="btn btn-sm">Cancel</button></div>`;
+      document.body.appendChild(pop);
+      const rc = btn.getBoundingClientRect();
+      pop.style.left = Math.max(8, Math.min(rc.left, window.innerWidth - 270)) + 'px';
+      pop.style.top = Math.min(rc.bottom + 4, window.innerHeight - 330) + 'px';
+      const boxes = () => [...pop.querySelectorAll('.tsheet-fpop-list input')];
+      const sync = () => { pop.querySelector('[data-all]').checked = boxes().every(b => b.checked); };
+      sync();
+      pop.querySelector('[data-all]').addEventListener('change', ev => boxes().forEach(b => { b.checked = ev.target.checked; }));
+      pop.addEventListener('change', sync);
+      const close = () => { pop.remove(); document.removeEventListener('mousedown', outside, true); };
+      const outside = ev => { if(!pop.contains(ev.target)) close(); };
+      setTimeout(() => document.addEventListener('mousedown', outside, true), 0);
+      pop.querySelector('[data-cancel]').addEventListener('click', close);
+      pop.querySelector('[data-clear]').addEventListener('click', () => { close(); pushUndo(); delete fl.cols[c]; redraw(); });
+      pop.querySelector('[data-ok]').addEventListener('click', () => {
+        const keep = boxes().filter(b => b.checked).map(b => values[Number(b.dataset.i)]);
+        close();
+        pushUndo();
+        if(keep.length === values.length) delete fl.cols[c]; else fl.cols[c] = keep;
+        redraw();
+      });
+    });
+  });
   paintSel();
   // rows / columns
   card.querySelector('[data-role="sheet-add-row"]')?.addEventListener('click', () => {
@@ -1085,6 +1250,7 @@ function wireSheetEditor(card, t, f, rerender){
     rerender();
   });
   card.querySelector('[data-role="sheet-edit-save"]')?.addEventListener('click', () => {
+    recalc(draft, fmtNumber);
     const next = { ...f, sheets: f.sheets.map((s, i) => i === sheetEdit.sheetIndex ? draft : s) };
     const size = JSON.stringify(next).length;
     if(size > MAX_FILE_JSON){ alert(`This table is now too large to keep inside the evaluation (${Math.round(size / 1000)} KB; the limit is ${MAX_FILE_JSON / 1000} KB). Remove some pictures or rows and save again.`); return; }
@@ -1144,6 +1310,43 @@ export function wireTrialSheets(block, t, isEditing, rerender){
       rerender();
     }));
     card.querySelector('[data-role="export-trial-sheet"]')?.addEventListener('click', () => exportSheetsFile(f));
+    // ---- several sheets in a file: add, rename, move, delete (only while the evaluation itself is being edited) ----
+    const curIdx = () => Math.min(activeSheet.get(f.id) || 0, f.sheets.length - 1);
+    const saveSheets = (apply, undoIt) => {
+      try{ apply(); scheduleTrialSave(t); }catch(err){ undoIt(); alert('Could not save: ' + (err.message || err)); return false; }
+      return true;
+    };
+    card.querySelector('[data-role="sheet-add"]')?.addEventListener('click', () => {
+      if(f.sheets.length >= 12){ alert('A file can have up to 12 sheets.'); return; }
+      let n = f.sheets.length + 1, name = 'Sheet' + n;
+      while(f.sheets.some(s => s.name.toLowerCase() === name.toLowerCase())) name = 'Sheet' + (++n);
+      const before = f.sheets;
+      if(JSON.stringify(t).length + 4000 > MAX_TRIAL_JSON){ alert('This evaluation is already close to the size limit, so a sheet cannot be added.'); return; }
+      if(saveSheets(() => { f.sheets = [...before, newSheet(name)]; activeSheet.set(f.id, f.sheets.length - 1); }, () => { f.sheets = before; })) rerender();
+    });
+    card.querySelector('[data-role="sheet-rename"]')?.addEventListener('click', () => {
+      const i = curIdx(), old = f.sheets[i].name;
+      const name = safeSheetName(prompt('Sheet name:', old));
+      if(!name || name === old) return;
+      if(f.sheets.some((s, k) => k !== i && s.name.toLowerCase() === name.toLowerCase())){ alert('Another sheet already has that name.'); return; }
+      if(saveSheets(() => { f.sheets[i].name = name; }, () => { f.sheets[i].name = old; })) rerender();
+    });
+    const move = d => {
+      const i = curIdx(), j = i + d;
+      if(j < 0 || j >= f.sheets.length) return;
+      const before = f.sheets;
+      if(saveSheets(() => { const a = [...before]; [a[i], a[j]] = [a[j], a[i]]; f.sheets = a; activeSheet.set(f.id, j); }, () => { f.sheets = before; })) rerender();
+    };
+    card.querySelector('[data-role="sheet-left"]')?.addEventListener('click', () => move(-1));
+    card.querySelector('[data-role="sheet-right"]')?.addEventListener('click', () => move(1));
+    card.querySelector('[data-role="sheet-delete"]')?.addEventListener('click', () => {
+      if(f.sheets.length < 2) return;
+      const i = curIdx(), s = f.sheets[i];
+      requestAuthConfirm('Confirm removal', `Delete the sheet "${s.name}" with everything in it? Enter your password to delete it.`, () => {
+        const before = f.sheets;
+        if(saveSheets(() => { f.sheets = before.filter((_, k) => k !== i); activeSheet.set(f.id, Math.max(0, i - 1)); }, () => { f.sheets = before; })) rerender();
+      });
+    });
     // Expand / Collapse: the table fills the whole app window, and back
     card.querySelector('[data-role="sheet-fullscreen"]')?.addEventListener('click', e => {
       const on = !card.classList.contains('tsheet-card-full');
@@ -1212,6 +1415,10 @@ export function addAttachedSheets(wb, f, used = new Set(), prefix = ''){
         const raw = s.vals ? s.vals[key] : undefined;
         if(raw !== undefined) cell.value = typeof raw === 'string' && raw.startsWith('D:') ? new Date(raw.slice(2)) : raw;
         else cell.value = !s.vals && text !== '' && /^-?\d+(\.\d+)?$/.test(text) && String(Number(text)) === text ? Number(text) : text;
+        if(s.fx && s.fx[key]){   // a formula: Excel gets the formula itself plus the value worked out here
+          const rv = s.fxv ? s.fxv[key] : undefined;
+          cell.value = { formula: s.fx[key].replace(/^=/, ''), result: rv && typeof rv === 'object' ? { error: rv.e } : (rv === undefined || rv === null ? text : rv) };
+        }
         const st = s.styles?.[key] || {};
         if(st.nf && raw !== undefined) cell.numFmt = st.nf;
         cell.alignment = { vertical: st.va || (v2 ? 'bottom' : 'top'), horizontal: st.ha, wrapText: wrapOf(st, v2) };
@@ -1245,6 +1452,8 @@ export function addAttachedSheets(wb, f, used = new Set(), prefix = ''){
         ws.addImage(id, { tl: { col: im.c + (im.x || 0) / Math.max(1, (widths[im.c] || 8) * 7 + 5), row: im.r + (im.y || 0) / 20 }, ext: { width: Math.min(im.w, 900), height: Math.min(im.h, 900) } });
       }catch(e){ /* a picture that cannot be placed is skipped */ }
     });
+    hiddenRowsOf(s).forEach(r => { ws.getRow(r + 1).hidden = true; });
+    if(s.filter) ws.autoFilter = { from: { row: s.filter.r + 1, column: s.filter.c1 + 1 }, to: { row: s.filter.r + 1, column: s.filter.c2 + 1 } };
     (s.merges || []).forEach(({ r1, c1, r2, c2 }) => { try{ ws.mergeCells(r1 + 1, c1 + 1, r2 + 1, c2 + 1); }catch(e){ /* overlapping merge in the source -- skip it */ } });
   });
 }
