@@ -6716,3 +6716,20 @@
   tbody[data-project-id]{scroll-margin-top:120px;}
   @keyframes projJumpFlash{0%{background:rgba(239,127,36,.28);}100%{background:transparent;}}
   tbody.proj-jump-flash > tr:first-child{animation:projJumpFlash 1.6s ease-out;}
+
+  /* Projects by Status (List): the month boxes of a row take the colour of the project's status as their border; pointing at
+     them (or editing) lights the border up. Completed projects get green boxes, cancelled ones grey. */
+  .proj-xl-row{--st-border:#b9c0cc;}
+  .proj-xl-row[data-status="not-started"]{--st-border:#b9c0cc;}
+  .proj-xl-row[data-status="in-progress"]{--st-border:var(--accent);}
+  .proj-xl-row[data-status="blocked-on-hold"]{--st-border:var(--danger);}
+  .proj-xl-row[data-status="paused"]{--st-border:#d4a017;}
+  .proj-xl-row[data-status="in-review"]{--st-border:var(--primary);}
+  .proj-xl-row[data-status="completed"]{--st-border:var(--ok);}
+  .proj-xl-row[data-status="cancelled"]{--st-border:#9aa1ad;}
+  .proj-xl-row > .proj-mu-cell{border:2px solid color-mix(in srgb, var(--st-border) 45%, transparent);transition:border-color .15s, box-shadow .15s;}
+  .proj-xl-row.pl-hl-row > .proj-mu-cell, .proj-xl-row > .proj-mu-cell.pl-hl-col{border-color:var(--st-border);box-shadow:0 0 0 3px color-mix(in srgb, var(--st-border) 22%, transparent);}
+  .proj-xl-row[data-status="completed"] > .proj-mu-cell{background:var(--ok-light);}
+  .proj-xl-row[data-status="completed"] > .proj-mu-cell .proj-mu-cell-meta{color:var(--ok);}
+  .proj-xl-row[data-status="cancelled"] > .proj-mu-cell{background:#e6e8ec;color:#7b8290;}
+  .proj-xl-row[data-status="cancelled"] > .proj-mu-cell .proj-mu-cell-meta{color:#8b93a0;}

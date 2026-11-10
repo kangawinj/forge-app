@@ -4038,6 +4038,10 @@ function saveProjMuQuickEdit(){
 // for that exact month, whether it's the selected or the previous one;
 // "See more" stops its own click from also triggering that (see its own
 // listener).
+// 'Blocked / On Hold' -> 'blocked-on-hold': the row's data-status, which style.css turns into the colour of its month boxes
+function projStatusSlug(status){
+  return String(status || PROJECT_STATUSES[0]).toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
+}
 function renderProjMuCell(info, variant, projectId, month){
   const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to add/edit this month's update"`;
   if(!info){
@@ -4153,7 +4157,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
     return `
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
+          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}" data-status="${projStatusSlug(p.status)}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
             <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
             <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
