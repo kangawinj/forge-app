@@ -158,21 +158,22 @@ export async function exportProjectsToExcel(projects){
 //   { title, headers: [...], widths: [...], groups: [{ label, rows: [{ cells: [...], image: dataUrl|'', monthPhotos: { columnIndex: [dataUrl, ...] } }] }] }
 // monthPhotos are the photos attached to a Monthly Update; they sit as small thumbnails along the bottom of that month's cell.
 // The project photo (if any) is placed at the left of the Product Name cell, like the thumbnail on the page.
-// A project photo as a small square JPEG (whole picture visible on white), for the Product Name cell.
-function prepareStatusPhoto(dataUrl, px){
+// A photo for the sheet at its FULL stored resolution (the picture itself is embedded untouched, so it stays sharp when
+// it is enlarged in Excel); only the size it is shown at is small: it fits inside a box x box square, keeping its
+// proportions. (Before, each photo was redrawn into a tiny square picture, which fell apart when enlarged.)
+function prepareStatusPhoto(dataUrl, box){
   return new Promise(resolve => {
     const img = new Image();
     img.onload = () => {
-      const size = px * 2;
-      const canvas = document.createElement('canvas');
-      canvas.width = size; canvas.height = size;
-      const ctx = canvas.getContext('2d');
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(0, 0, size, size);
-      const k = Math.min(size / img.naturalWidth, size / img.naturalHeight);
-      const w = img.naturalWidth * k, h = img.naturalHeight * k;
-      ctx.drawImage(img, (size - w) / 2, (size - h) / 2, w, h);
-      resolve(canvas.toDataURL('image/jpeg', 0.85));
+      const w0 = img.naturalWidth, h0 = img.naturalHeight;
+      const k = Math.min(box / w0, box / h0);
+      const shown = { width: Math.max(1, Math.round(w0 * k)), height: Math.max(1, Math.round(h0 * k)) };
+      const m = /^data:image\/(png|jpe?g|gif);base64,/i.exec(dataUrl);
+      if(m){ resolve({ base64: dataUrl, extension: m[1].toLowerCase().replace('jpg', 'jpeg'), ...shown }); return; }
+      const canvas = document.createElement('canvas');   // another format (webp ...): same size, as PNG
+      canvas.width = w0; canvas.height = h0;
+      canvas.getContext('2d').drawImage(img, 0, 0);
+      resolve({ base64: canvas.toDataURL('image/png'), extension: 'png', ...shown });
     };
     img.onerror = () => resolve(null);
     img.src = dataUrl;
@@ -230,10 +231,10 @@ export async function exportProjectsStatusTableToExcel(model){
       if(img){
         const EMU = 9525;
         const yOff = Math.max(3, Math.round((row.height / 0.75 - PHOTO_PX) / 2));
-        const id = wb.addImage({ base64: img, extension: 'jpeg' });
+        const id = wb.addImage({ base64: img.base64, extension: img.extension });
         ws.addImage(id, {
-          tl: { nativeCol: 1, nativeColOff: 4 * EMU, nativeRow: row.number - 1, nativeRowOff: yOff * EMU },
-          br: { nativeCol: 1, nativeColOff: (4 + PHOTO_PX) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + PHOTO_PX) * EMU },
+          tl: { nativeCol: 1, nativeColOff: (4 + Math.round((PHOTO_PX - img.width) / 2)) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + Math.round((PHOTO_PX - img.height) / 2)) * EMU },
+          ext: { width: img.width, height: img.height },
           editAs: 'oneCell'
         });
       }
@@ -247,10 +248,10 @@ export async function exportProjectsStatusTableToExcel(model){
           if(!thumb) continue;
           const EMU = 9525;
           const xOff = 4 + k * (THUMB_PX + 4);
-          const id = wb.addImage({ base64: thumb, extension: 'jpeg' });
+          const id = wb.addImage({ base64: thumb.base64, extension: thumb.extension });
           ws.addImage(id, {
-            tl: { nativeCol: Number(col), nativeColOff: xOff * EMU, nativeRow: row.number - 1, nativeRowOff: yOff * EMU },
-            br: { nativeCol: Number(col), nativeColOff: (xOff + THUMB_PX) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + THUMB_PX) * EMU },
+            tl: { nativeCol: Number(col), nativeColOff: (xOff + Math.round((THUMB_PX - thumb.width) / 2)) * EMU, nativeRow: row.number - 1, nativeRowOff: (yOff + Math.round((THUMB_PX - thumb.height) / 2)) * EMU },
+            ext: { width: thumb.width, height: thumb.height },
             editAs: 'oneCell'
           });
           k++;
