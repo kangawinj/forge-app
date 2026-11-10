@@ -750,8 +750,8 @@ function projectsByCategoryThenStatus(list){
 // seconds afterwards. Saved changes are logged like a normal project edit; Esc or clicking away leaves the cell as it was.
 // Pointing at a cell of Projects by Status (List), or editing it, tints that cell's whole row and column (and the
 // column heading) so it is easy to see which project and which field it belongs to.
-// Rows marked yellow with a single click (this browser only; click again to clear). Kept across reloads.
-const projMarkedRows = new Set((() => { try{ const a = JSON.parse(localStorage.getItem('forgeProjMarkedRows') || '[]'); return Array.isArray(a) ? a : []; }catch(e){ return []; } })());
+// The row marked yellow with a single click (one at a time; this browser only; click it again to clear). Kept across reloads.
+const projMarkedRows = new Set((() => { try{ const a = JSON.parse(localStorage.getItem('forgeProjMarkedRows') || '[]'); return Array.isArray(a) ? a.slice(-1) : []; }catch(e){ return []; } })());
 function saveProjMarkedRows(){ try{ localStorage.setItem('forgeProjMarkedRows', JSON.stringify([...projMarkedRows])); }catch(e){ /* storage blocked -- the marks just last until reload */ } }
 let projHlLock = null;   // the cell being edited keeps its highlight even when the pointer moves away
 function projHighlightClear(root){
@@ -786,8 +786,11 @@ function wireProjHighlight(root){
     if(e.target.closest('button, a, input, select, textarea, label, .pl-inline, .proj-mu-cell, [data-role]')) return;
     const id = row.querySelector('[data-gallery-project-id]')?.dataset.galleryProjectId;
     if(!id) return;
-    if(projMarkedRows.has(id)){ projMarkedRows.delete(id); row.classList.remove('pl-marked'); }
-    else{ projMarkedRows.add(id); row.classList.add('pl-marked'); }
+    // only one row is marked at a time: marking another row moves the yellow to it, clicking the marked row clears it
+    const wasMarked = projMarkedRows.has(id);
+    projMarkedRows.clear();
+    root.querySelectorAll('.proj-xl-row.pl-marked').forEach(r => r.classList.remove('pl-marked'));
+    if(!wasMarked){ projMarkedRows.add(id); row.classList.add('pl-marked'); }
     saveProjMarkedRows();
   });
 }
