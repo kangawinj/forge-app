@@ -6692,3 +6692,23 @@
   .tsheet-fpop-list{max-height:220px;overflow:auto;}
   .tsheet-fpop-actions{display:flex;gap:6px;justify-content:flex-end;margin-top:8px;}
   @media print{ .tsheet-sheetbar,.tsheet-filterbtn{display:none !important;} }
+
+  /* Sensory Evaluation table on screen: tighter and calmer (print keeps its own look). Smaller entry boxes that still
+     grow with their text, light separators, one thin line between criteria instead of a box around every field. */
+  @media screen{
+    .teval-print-hide-scores th, .teval-print-hide-scores td{padding:3px 6px;border-bottom:none;}
+    .teval-print-hide-scores thead th{padding:8px 6px 6px;border-bottom:1px solid var(--border);}
+    .teval-print-hide-scores .compare-th-name{font-size:11px;}
+    .teval-print-hide-scores .compare-th-code{font-size:13px;}
+    .compare-table.teval-print-hide-scores .recipe-boundary{border-left:1px solid var(--border);}
+    .teval-print-hide-scores textarea{min-height:30px;padding:5px 9px;border-radius:8px;font-size:13px;line-height:1.35;border-color:#e6e9ef;}
+    .teval-print-hide-scores textarea:focus{border-color:var(--primary);}
+    .teval-print-hide-scores textarea[readonly]{background:#fcfcfd;}
+    .teval-print-hide-scores tbody tr:has(> td[rowspan="2"]) > td{border-top:1px solid var(--border);}
+    .teval-print-hide-scores tbody tr:first-child > td{border-top:none;}
+    .teval-print-hide-scores tbody td.teval-sticky-1{padding-top:9px;font-size:13px;}
+    .teval-print-hide-scores td.teval-row-type-label{padding-top:8px;line-height:1.25;}
+    .teval-print-hide-scores td.teval-row-type-label b{font-weight:600;font-size:11px;}
+    .teval-print-hide-scores .trial-testresult-radios{gap:2px;font-size:12.5px;}
+    .teval-print-hide-scores .trial-ref-sample-label{margin-top:2px;padding-top:4px;}
+  }

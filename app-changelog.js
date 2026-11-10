@@ -851,6 +851,7 @@ export const CHANGELOG = [
   { version: "3.0.809", date: "2026-11-07", note: "Excel Sheets, round 2: formulas in Edit table (type = then e.g. SUM, AVERAGE, COUNT, MIN, MAX, IF, IFERROR, AND, OR, ROUND, COUNTIF, SUMIF, VLOOKUP, LEFT, CONCAT ... with cell references and ranges; they recalculate as you edit, follow copy / fill / insert / delete, and Export Excel carries the real formula); sorting A to Z / Z to A and a column filter (Data menu; the arrow in the heading cell lists the values to show; hidden rows stay hidden in the view and in the export); and several sheets per file (New sheet, Rename, Move left / right, Delete sheet with password)" },
   { version: "3.0.810", date: "2026-11-07", note: "Company Directory: the New company box now has an orange frame" },
   { version: "3.0.811", date: "2026-11-10", note: "Projects by Status > Export Excel: photos are embedded at their full stored resolution (project photo 400 px, Monthly Update photos 640 px) and only shown small, so they stay sharp when enlarged in Excel and keep their proportions -- before, each photo was redrawn into a tiny 88 px square" },
+  { version: "3.0.812", date: "2026-11-10", note: "Sample Evaluation: the Sensory Evaluation table is more compact -- smaller entry boxes that still grow with their text, thin separators instead of a box around every field and heavy column lines, tighter spacing and a quieter Test Result list" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
