@@ -853,6 +853,7 @@ export const CHANGELOG = [
   { version: "3.0.811", date: "2026-11-10", note: "Projects by Status > Export Excel: photos are embedded at their full stored resolution (project photo 400 px, Monthly Update photos 640 px) and only shown small, so they stay sharp when enlarged in Excel and keep their proportions -- before, each photo was redrawn into a tiny 88 px square" },
   { version: "3.0.812", date: "2026-11-10", note: "Sample Evaluation: the Sensory Evaluation table is more compact -- smaller entry boxes that still grow with their text, thin separators instead of a box around every field and heavy column lines, tighter spacing and a quieter Test Result list" },
   { version: "3.0.813", date: "2026-11-10", note: "Projects by Status: clicking a project name now jumps straight to the top of that project's own section below (instead of leaving you above it, or landing in the middle of a long section), and the section flashes once; if the project is hidden by the list's own search or column filters, those are cleared first" },
+  { version: "3.0.814", date: "2026-11-10", note: "Projects: new status Paused (พักโครงการ) -- for a project put on hold on purpose, not cancelled and not stuck. It sits after Blocked / On Hold, has its own amber colour, and works everywhere a status does (project form, Projects by Status list and its Status filter / column, the table filters, Excel exports and the sample-submission form)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

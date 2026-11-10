@@ -34,11 +34,12 @@ export function projectCategoryOf(p){
   return { key, label: PROJECT_CATEGORIES.find(c => c.key === key).label, auto: true };
 }
 
-export const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','In Review','Completed','Cancelled'];
+export const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','Paused','In Review','Completed','Cancelled'];
 export const PROJECT_STATUS_LABELS = {
   'Not Started': 'Not Started (ยังไม่เริ่ม)',
   'In Progress': 'In Progress (กำลังดำเนินการ)',
   'Blocked / On Hold': 'Blocked / On Hold (ติดปัญหา / รอการตัดสินใจ)',
+  'Paused': 'Paused (พักโครงการ)',
   'In Review': 'In Review (รอตรวจสอบ)',
   'Completed': 'Completed (เสร็จสมบูรณ์)',
   'Cancelled': 'Cancelled (ยกเลิก)'
@@ -53,6 +54,7 @@ export const PROJECT_STATUS_BAR = {
   'Not Started': { pct: 0, color: 'var(--border)' },
   'In Progress': { pct: 40, color: 'var(--accent)' },
   'Blocked / On Hold': { pct: 40, color: 'var(--danger)' },
+  'Paused': { pct: 40, color: '#d4a017' },
   'In Review': { pct: 75, color: 'var(--primary)' },
   'Completed': { pct: 100, color: 'var(--ok)' },
   'Cancelled': { pct: 100, color: 'var(--text-dim)' }
@@ -72,6 +74,7 @@ export const PROJECT_STATUS_PILL = {
   'Not Started': { bg:'var(--bg)', border:'var(--border)', text:'var(--text-dim)' },
   'In Progress': { bg:'var(--accent-light)', border:'var(--accent)', text:'var(--primary-dark)' },
   'Blocked / On Hold': { bg:'var(--danger-light)', border:'var(--danger)', text:'var(--danger)' },
+  'Paused': { bg:'#fff6d6', border:'#d4a017', text:'#8a6500' },
   'In Review': { bg:'var(--primary-light)', border:'var(--primary)', text:'var(--primary-dark)' },
   'Completed': { bg:'var(--ok-light)', border:'var(--ok)', text:'var(--ok)' },
   'Cancelled': { bg:'var(--bg)', border:'var(--border)', text:'var(--text-dim)' }

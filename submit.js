@@ -34,11 +34,12 @@ const db = getFirestore(firebaseApp);
 // can't import that module directly, since projects.js pulls in the
 // entire authenticated app (Firebase Auth, every other collection) this
 // page is deliberately built to avoid needing at all.
-const PROJECT_STATUSES = ['Not Started', 'In Progress', 'Blocked / On Hold', 'In Review', 'Completed', 'Cancelled'];
+const PROJECT_STATUSES = ['Not Started', 'In Progress', 'Blocked / On Hold', 'Paused', 'In Review', 'Completed', 'Cancelled'];
 const PROJECT_STATUS_LABELS = {
   'Not Started': 'Not Started (ยังไม่เริ่ม)',
   'In Progress': 'In Progress (กำลังดำเนินการ)',
   'Blocked / On Hold': 'Blocked / On Hold (ติดปัญหา / รอการตัดสินใจ)',
+  'Paused': 'Paused (พักโครงการ)',
   'In Review': 'In Review (รอตรวจสอบ)',
   'Completed': 'Completed (เสร็จสมบูรณ์)',
   'Cancelled': 'Cancelled (ยกเลิก)'
