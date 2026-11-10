@@ -1836,7 +1836,18 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
       const id = btn.dataset.galleryProjectId;
       projectExpandedIds.add(id);
       renderProjectsList();
-      document.querySelector(`tbody[data-project-id="${CSS.escape(id)}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      const find = () => document.querySelector(`tbody[data-project-id="${CSS.escape(id)}"]`);
+      if(!find()){   // hidden by the list's own search / column filters: clear them so the project can be shown
+        projectColumnFilters = {};
+        const search = document.getElementById('projectSearchInput');
+        if(search) search.value = '';
+        renderProjectsList();
+      }
+      // jump straight to the top of the project's own section (no scrolling down by hand), and flash it so it is easy to spot
+      const jump = () => { const el = find(); if(el) el.scrollIntoView({ behavior: 'auto', block: 'start' }); return el; };
+      const el = jump();
+      requestAnimationFrame(jump);   // once more after the page has settled (images / charts can shift the layout)
+      if(el){ el.classList.remove('proj-jump-flash'); void el.offsetWidth; el.classList.add('proj-jump-flash'); }
     });
   });
   dashboardContainer.querySelectorAll('[data-status-filter]').forEach(btn => {

@@ -6712,3 +6712,7 @@
     .teval-print-hide-scores .trial-testresult-radios{gap:2px;font-size:12.5px;}
     .teval-print-hide-scores .trial-ref-sample-label{margin-top:2px;padding-top:4px;}
   }
+  /* Clicking a project name in Projects by Status jumps to its own section, which flashes once */
+  tbody[data-project-id]{scroll-margin-top:72px;}
+  @keyframes projJumpFlash{0%{background:rgba(239,127,36,.28);}100%{background:transparent;}}
+  tbody.proj-jump-flash > tr:first-child{animation:projJumpFlash 1.6s ease-out;}
