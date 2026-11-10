@@ -1844,7 +1844,17 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
         renderProjectsList();
       }
       // jump straight to the top of the project's own section (no scrolling down by hand), and flash it so it is easy to spot
-      const jump = () => { const el = find(); if(el) el.scrollIntoView({ behavior: 'auto', block: 'start' }); return el; };
+      // the project's row ends up right under the pinned top bar AND the pinned column headings (PHOTO / PROJECT / STATUS ...),
+      // with its details below, so nothing is hidden behind them
+      const jump = () => {
+        const el = find();
+        if(!el) return null;
+        const nav = document.querySelector('.top-navbar');
+        const head = document.querySelector('#projectsList .proj-overview-table thead');
+        const pinned = (nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0) + (head ? head.offsetHeight : 0) + 6;
+        window.scrollBy(0, el.getBoundingClientRect().top - pinned);
+        return el;
+      };
       const el = jump();
       requestAnimationFrame(jump);   // once more after the page has settled (images / charts can shift the layout)
       if(el){ el.classList.remove('proj-jump-flash'); void el.offsetWidth; el.classList.add('proj-jump-flash'); }
