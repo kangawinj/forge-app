@@ -1716,6 +1716,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
     const v = e.target.value;
     if(/^\d{4}-\d{2}$/.test(v)){
       projectsByStatusMonth = v;
+      projMuScrollToMonth = v;   // scroll to that month's column; the other months stay
       if(isCurrentUserAdmin()){
         // Picking the current month stores '' (keep following the
         // calendar) instead of pinning a month that'd go stale.
@@ -1739,6 +1740,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
       if(next > bangkokMonthStr()) return;
       projectsByStatusMonth = next;
       projectsByStatusMonthIsLocal = true;
+      projMuScrollToMonth = next;
       renderProjectsList();
     });
   });
@@ -2144,7 +2146,7 @@ export function renderProjectsList(){
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
             ${PROJ_XL_COLS.map(c => `<span class="pl-head${c.sticky ? ' pl-sticky pl-sticky-' + c.sticky : ''}"><span class="pl-head-label">${c.label}</span>${c.key ? `<button type="button" class="pl-filter-btn${projColFilters.has(c.key) || (c.key === 'category' && projCatOrderCustom) ? ' active' : ''}" data-proj-col="${c.key}" title="Filter / order this column">&#9662;</button>` : ''}</span>`).join('')}
             ${projMuMonths(projectsByStatusMonth).map(m => `
-              <span class="proj-mu-cell-header">
+              <span class="proj-mu-cell-header" data-month="${escapeHtml(m)}">
                 <span class="proj-mu-cell-header-main">
                   <span>Summary of ${escapeHtml(formatMonthYear(m))} (${escapeHtml(m.slice(5, 7))})</span>
                   <button type="button" class="proj-mu-expand-all" data-role="proj-mu-expand-column" data-month="${escapeHtml(m)}">${projMuExpandedMonths.has(m) ? 'Collapse all' : 'Expand all'}</button>
@@ -3826,8 +3828,14 @@ function formatXlDate(iso){
 // Month columns that are actually rendered: the ones the admin chose to show (projectsByStatusMonthColumnCount)
 // plus the older months up to the maximum, which sit past the right edge so the scrollbar (or a drag) reveals them.
 // the month columns actually drawn: the rendered months minus the ones an admin hid
+// The month columns, newest (this month) first. Choosing a month in the picker does NOT cut the other months away: the run
+// always starts at this month and reaches back at least PROJ_MU_MAX_MONTH_COLUMNS months, further if the chosen month is older,
+// and the table is simply scrolled to the chosen month's column (see projMuScrollToMonth).
 function projMuMonths(selectedMonth){
-  return monthsBackFrom(selectedMonth, projMuRenderedCount()).filter(m => !projectsByStatusHiddenMonths.has(m));
+  if(projMuRenderedCount() === 0) return [];
+  const newest = bangkokMonthStr();
+  const span = Math.max(projMuRenderedCount(), selectedMonth ? monthsBetween(selectedMonth, newest) + 1 : 0);
+  return monthsBackFrom(newest, Math.min(36, span)).filter(m => !projectsByStatusHiddenMonths.has(m));
 }
 function projMuRenderedCount(){
   return projectsByStatusMonthColumnCount > 0 ? PROJ_MU_MAX_MONTH_COLUMNS : 0;
@@ -3853,6 +3861,8 @@ function projMuListMinWidth(){
 let projMuScrollLeft = 0;
 // Keep the column headings in view while the page scrolls down through a long list. position:sticky can't do it here
 // (the table scrolls sideways, which makes it its own scroll container), so the heading row is slid down by hand.
+let projMuScrollToMonth = null;   // a month the table should scroll to after the next draw (the picker / arrows set it)
+let projMuInitialScrolled = false; // the first draw of the session also scrolls to the saved starting month
 let projListZoom = 1;      // zoom of the Projects by Status (List) table (Ctrl + wheel, the - / + buttons, Fit width)
 let projListFull = false;  // the table's card fills the whole app window
 const ICON_PROJ_EXPAND = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Expand';
@@ -3944,6 +3954,23 @@ function wireProjMuScrollbar(root){
   sync();
   scroll.scrollLeft = projMuScrollLeft;
   proxy.scrollLeft = scroll.scrollLeft;
+  // go to the column of the month that was chosen (or the saved starting month, on the first draw), right after the frozen
+  // No. / Product Name columns -- every other month column stays where it is
+  if(!projMuInitialScrolled && projectsByStatusMonth){
+    projMuInitialScrolled = true;
+    if(projectsByStatusMonth !== bangkokMonthStr()) projMuScrollToMonth = projectsByStatusMonth;
+  }
+  if(projMuScrollToMonth){
+    const month = projMuScrollToMonth;
+    projMuScrollToMonth = null;
+    const head = scroll.querySelector(`.proj-xl-header .proj-mu-cell-header[data-month="${month}"]`);
+    const frozen = scroll.querySelector('.proj-xl-header .pl-sticky-name');
+    if(head && frozen){
+      scroll.scrollLeft += head.getBoundingClientRect().left - frozen.getBoundingClientRect().right - 8;
+      proxy.scrollLeft = scroll.scrollLeft;
+      projMuScrollLeft = scroll.scrollLeft;
+    }
+  }
   if(typeof ResizeObserver !== 'undefined'){
     const ro = new ResizeObserver(sync);
     ro.observe(scroll);
@@ -4335,6 +4362,8 @@ export function resetProjectsState(){
   projectsByStatusSharedStartMonth = '';
   projectsByStatusMonthIsLocal = false;
   projectsByStatusMonth = null;
+  projMuInitialScrolled = false;
+  projMuScrollToMonth = null;
   projMuExpandedMonths.clear();
   resetPendingSubmissionsState();
   projectsLoaded = false;

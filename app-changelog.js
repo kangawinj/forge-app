@@ -858,6 +858,7 @@ export const CHANGELOG = [
   { version: "3.0.816", date: "2026-11-10", note: "Projects by Status (List): the Monthly Update boxes now have a border in the project's status colour (grey = not started, orange = in progress, red = blocked, amber = paused, navy = in review) that lights up when you point at a row or column; completed projects get green boxes and cancelled projects grey boxes" },
   { version: "3.0.817", date: "2026-11-10", note: "Projects by Status (List): the yellow row mark is now one row at a time -- clicking another row moves the yellow to it and clears the old one; clicking the marked row clears it" },
   { version: "3.0.818", date: "2026-11-12", note: "Projects by Status (List): see the whole table -- zoom it with Ctrl (or Cmd) + mouse wheel, the - / 100% / + buttons, or Fit width (shrinks it so every column fits the screen), and Expand to let the table fill the whole app window (Esc or Collapse to go back)" },
+  { version: "3.0.819", date: "2026-11-12", note: "Projects by Status (List): choosing a month in Monthly Update (or the < > arrows) now scrolls the table to that month's column instead of cutting the other months away -- the columns always run from this month back (further back when you pick an older month) and nothing is hidden; the saved starting month is scrolled to when the page opens" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
