@@ -2129,7 +2129,16 @@ export function renderProjectsList(){
             ${projectsByStatusMonthColumnCount > 0 ? `<button type="button" class="btn btn-sm proj-mu-month-step" data-role="proj-mu-month-step" data-step="1" title="Look forward one month (your own view only)" ${projectsByStatusMonth >= bangkokMonthStr() ? 'disabled' : ''}>${icon('chevron-right', 14)}</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusHiddenMonths.size ? `<button type="button" class="btn btn-sm" data-role="show-hidden-proj-mu-months" title="Bring back the month columns that were removed">Show removed columns (${projectsByStatusHiddenMonths.size})</button>` : ''}
-            <button type="button" class="btn btn-sm" id="btnExportProjectsStatusExcel" style="margin-left:auto;" title="Download this table (all status groups and month columns) as an Excel file">${icon('download', 14)} Export Excel</button>
+            <span class="proj-list-tools" style="margin-left:auto;">
+              <span class="proj-zoom" title="Zoom the table: hold Ctrl and turn the mouse wheel over it">
+                <button type="button" data-role="proj-zoom-out" title="Zoom out">&minus;</button>
+                <button type="button" data-role="proj-zoom-reset" class="proj-zoom-pct" title="Back to 100%">${Math.round(projListZoom * 100)}%</button>
+                <button type="button" data-role="proj-zoom-in" title="Zoom in">+</button>
+                <button type="button" data-role="proj-zoom-fit" title="Shrink the table so all its columns fit the screen width">Fit width</button>
+              </span>
+              <button type="button" class="btn btn-sm" data-role="proj-expand" title="${projListFull ? 'Back to the normal size (Esc)' : 'Fill the whole app window'}">${projListFull ? ICON_PROJ_COLLAPSE : ICON_PROJ_EXPAND}</button>
+              <button type="button" class="btn btn-sm" id="btnExportProjectsStatusExcel" title="Download this table (all status groups and month columns) as an Excel file">${icon('download', 14)} Export Excel</button>
+            </span>
           </div>
           <div class="proj-mu-hscroll"><div class="proj-mu-hscroll-inner" style="min-width:${projMuListMinWidth()};">
           <div class="proj-gallery-list-header proj-xl-header" style="grid-template-columns:${escapeHtml(projMuListGridColumns())};">
@@ -3844,15 +3853,20 @@ function projMuListMinWidth(){
 let projMuScrollLeft = 0;
 // Keep the column headings in view while the page scrolls down through a long list. position:sticky can't do it here
 // (the table scrolls sideways, which makes it its own scroll container), so the heading row is slid down by hand.
+let projListZoom = 1;      // zoom of the Projects by Status (List) table (Ctrl + wheel, the - / + buttons, Fit width)
+let projListFull = false;  // the table's card fills the whole app window
+const ICON_PROJ_EXPAND = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 3h6v6M9 21H3v-6M21 3l-7 7M3 21l7-7"/></svg> Expand';
+const ICON_PROJ_COLLAPSE = '<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 14h6v6M20 10h-6V4M14 10l7-7M3 21l7-7"/></svg> Collapse';
 function projMuStickHeader(){
   const box = document.querySelector('.proj-mu-hscroll');
   const head = box?.querySelector('.proj-xl-header');
   if(!box || !head) return;
   const nav = document.querySelector('.top-navbar');
-  const topEdge = nav && getComputedStyle(nav).display !== 'none' ? Math.max(0, nav.getBoundingClientRect().bottom) : 0;
+  const full = box.closest('.proj-card-full');   // expanded: the headings stick to the top of that window, not under the navbar
+  const topEdge = full ? full.getBoundingClientRect().top : (nav && getComputedStyle(nav).display !== 'none' ? Math.max(0, nav.getBoundingClientRect().bottom) : 0);
   const r = box.getBoundingClientRect();
-  const shift = Math.max(0, Math.min(topEdge - r.top, r.height - head.offsetHeight - 60));
-  head.style.transform = shift > 0 ? `translateY(${shift}px)` : '';
+  const shift = Math.max(0, Math.min(topEdge - r.top, r.height - head.getBoundingClientRect().height - 60));
+  head.style.transform = shift > 0 ? `translateY(${shift / projListZoom}px)` : '';   // the heading row sits inside the zoomed table, so its own pixels are zoomed too
   head.classList.toggle('proj-xl-header-stuck', shift > 0);
 }
 let projMuStickWired = false;
@@ -3862,10 +3876,64 @@ function wireProjMuScrollbar(root){
     document.addEventListener('scroll', projMuStickHeader, true);
     window.addEventListener('resize', projMuStickHeader);
   }
-  projMuStickHeader();
   const scroll = root.querySelector('.proj-mu-hscroll');
   const proxy = root.querySelector('#projMuScrollbarProxy');
   const inner = root.querySelector('#projMuScrollbarProxyInner');
+  if(scroll){
+    const card = scroll.closest('.dash-card');
+    const table = scroll.querySelector('.proj-mu-hscroll-inner');
+    const pct = root.querySelector('.proj-zoom-pct');
+    card?.classList.toggle('proj-card-full', projListFull);
+    document.body.classList.toggle('proj-fullopen', projListFull);
+    if(table && projListZoom !== 1) table.style.zoom = String(projListZoom);
+    const setZoom = (z, ox, oy) => {
+      z = Math.min(2, Math.max(0.2, Math.round(z * 100) / 100));
+      const old = projListZoom;
+      if(z === old || !table) return;
+      projListZoom = z;
+      table.style.zoom = z === 1 ? '' : String(z);
+      scroll.scrollLeft = (scroll.scrollLeft + ox) * (z / old) - ox;   // keep the spot under the pointer where it is
+      if(pct) pct.textContent = Math.round(z * 100) + '%';
+      projMuStickHeader();
+    };
+    scroll.addEventListener('wheel', e => {
+      if(!(e.ctrlKey || e.metaKey)) return;
+      e.preventDefault();
+      setZoom(projListZoom * (e.deltaY < 0 ? 1.1 : 1 / 1.1), e.clientX - scroll.getBoundingClientRect().left, 0);
+    }, { passive: false });
+    root.querySelector('[data-role="proj-zoom-in"]')?.addEventListener('click', () => setZoom(projListZoom * 1.15, scroll.clientWidth / 2, 0));
+    root.querySelector('[data-role="proj-zoom-out"]')?.addEventListener('click', () => setZoom(projListZoom / 1.15, scroll.clientWidth / 2, 0));
+    root.querySelector('[data-role="proj-zoom-reset"]')?.addEventListener('click', () => setZoom(1, 0, 0));
+    root.querySelector('[data-role="proj-zoom-fit"]')?.addEventListener('click', () => {
+      if(!table) return;
+      table.style.zoom = '';
+      const natural = table.scrollWidth;   // the table's width at 100%
+      const wanted = Math.floor((scroll.clientWidth / natural) * 100) / 100;
+      projListZoom = 1;
+      scroll.scrollLeft = 0;
+      setZoom(Math.min(1, wanted), 0, 0);
+      if(pct) pct.textContent = Math.round(projListZoom * 100) + '%';
+    });
+    root.querySelector('[data-role="proj-expand"]')?.addEventListener('click', e => {
+      projListFull = !projListFull;
+      card?.classList.toggle('proj-card-full', projListFull);
+      document.body.classList.toggle('proj-fullopen', projListFull);
+      e.currentTarget.innerHTML = projListFull ? ICON_PROJ_COLLAPSE : ICON_PROJ_EXPAND;
+      e.currentTarget.title = projListFull ? 'Back to the normal size (Esc)' : 'Fill the whole app window';
+      projMuStickHeader();
+    });
+    if(!window.__projFullEsc){
+      window.__projFullEsc = true;
+      document.addEventListener('keydown', e => {
+        if(e.key !== 'Escape' || !projListFull) return;
+        if(e.target.closest?.('.pl-inline, input, textarea, select') || document.querySelector('.modal-overlay.open')) return;
+        document.querySelector('[data-role="proj-expand"]')?.click();
+      });
+    }
+  }else{
+    document.body.classList.remove('proj-fullopen');
+  }
+  projMuStickHeader();
   if(!scroll || !proxy || !inner) return;
   const sync = () => {
     proxy.style.display = scroll.scrollWidth > scroll.clientWidth + 1 ? 'block' : 'none';

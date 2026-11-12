@@ -6733,3 +6733,13 @@
   .proj-xl-row[data-status="completed"] > .proj-mu-cell .proj-mu-cell-meta{color:var(--ok);}
   .proj-xl-row[data-status="cancelled"] > .proj-mu-cell{background:#e6e8ec;color:#7b8290;}
   .proj-xl-row[data-status="cancelled"] > .proj-mu-cell .proj-mu-cell-meta{color:#8b93a0;}
+  /* Projects by Status (List): zoom, Fit width and Expand (the card fills the whole app window) */
+  .proj-list-tools{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .proj-zoom{display:inline-flex;align-items:center;gap:2px;}
+  .proj-zoom button{height:30px;min-width:30px;border:1px solid var(--border);border-radius:8px;background:#fff;font-size:13px;cursor:pointer;padding:0 8px;color:var(--text);}
+  .proj-zoom button:hover{background:var(--bg);}
+  .proj-zoom .proj-zoom-pct{min-width:52px;font-size:12px;}
+  .dash-card.proj-card-full{position:fixed;inset:0;z-index:200;margin:0 !important;border-radius:0;overflow:auto;padding:14px 20px 40px;background:var(--panel);}
+  .proj-card-full .proj-mu-scrollbar-proxy{bottom:0;}
+  body.proj-fullopen{overflow:hidden;}
+  @media print{ .proj-list-tools .proj-zoom, [data-role="proj-expand"]{display:none !important;} }
