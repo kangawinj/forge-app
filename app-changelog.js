@@ -859,6 +859,7 @@ export const CHANGELOG = [
   { version: "3.0.817", date: "2026-11-10", note: "Projects by Status (List): the yellow row mark is now one row at a time -- clicking another row moves the yellow to it and clears the old one; clicking the marked row clears it" },
   { version: "3.0.818", date: "2026-11-12", note: "Projects by Status (List): see the whole table -- zoom it with Ctrl (or Cmd) + mouse wheel, the - / 100% / + buttons, or Fit width (shrinks it so every column fits the screen), and Expand to let the table fill the whole app window (Esc or Collapse to go back)" },
   { version: "3.0.819", date: "2026-11-12", note: "Projects by Status (List): choosing a month in Monthly Update (or the < > arrows) now scrolls the table to that month's column instead of cutting the other months away -- the columns always run from this month back (further back when you pick an older month) and nothing is hidden; the saved starting month is scrolled to when the page opens" },
+  { version: "3.0.820", date: "2026-11-13", note: "Recipe > 5. Process Steps: a short Process Flow overview (numbered nodes with each process's title and its components) now sits above the detailed steps, so the whole sequence reads at a glance; click a node to jump to that process's details. It follows every edit and is left out of print (the printed recipe already has its own)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

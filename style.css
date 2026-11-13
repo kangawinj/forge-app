@@ -6743,3 +6743,13 @@
   .proj-card-full .proj-mu-scrollbar-proxy{bottom:0;}
   body.proj-fullopen{overflow:hidden;}
   @media print{ .proj-list-tools .proj-zoom, [data-role="proj-expand"]{display:none !important;} }
+  /* Recipe > 5. Process Steps: the short Process Flow overview above the detailed steps */
+  .process-flow-overview{margin-bottom:16px;}
+  .process-flow-card{max-width:420px;padding:14px 18px 10px;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg);}
+  .process-flow-title{font-size:14px;font-weight:700;color:var(--primary-dark);margin-bottom:6px;}
+  .process-flow-overview .print-process-flow-label{font-size:14px;}
+  .process-flow-overview .print-process-flow-components{font-size:12px;}
+  .process-flow-node-click{cursor:pointer;border-radius:8px;}
+  .process-flow-node-click:hover .print-process-flow-circle{background:var(--primary);color:#fff;}
+  .process-flow-node-click:hover .print-process-flow-label{color:var(--primary);}
+  @media print{ .process-flow-overview{display:none !important;} }

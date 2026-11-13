@@ -13,12 +13,47 @@ import {
 // inside an event handler, never at module-evaluation time.
 import { scheduleSave } from './recipes.js';
 
+// The short "Process Flow" overview shown above the detailed Process Steps: one numbered node per process -- its title and
+// which Components go into it -- so the whole sequence reads at a glance before the details below (times, temperatures,
+// tolerances, steps). Clicking a node jumps to that process's detail block.
+function renderProcessFlowOverview(r, list){
+  const el = document.getElementById('processFlowOverview');
+  if(!el) return;
+  const items = (r.processes || []).map((p, idx) => ({ p, idx })).filter(({ p }) =>
+    (p.title || '').trim() !== '' || (p.steps || []).some(s => (s || '').trim() !== '') || (p.components || []).length > 0
+  );
+  if(!items.length){ el.innerHTML = ''; el.style.display = 'none'; return; }
+  el.style.display = '';
+  el.innerHTML = `
+    <div class="process-flow-card">
+      <div class="process-flow-title">Process Flow</div>
+      <div class="print-process-flow-stepper">
+        ${items.map(({ p, idx }, k) => {
+          // a component is stored as "English / Thai" -- only the part before the "/" is shown, to keep this a quick glance
+          const names = (p.components || []).map(c => (c.name || '').split('/')[0].trim()).filter(Boolean);
+          return `
+          <div class="print-process-flow-node process-flow-node-click" data-proc-idx="${idx}" title="Go to this process's details">
+            <div class="print-process-flow-circle">${idx + 1}</div>
+            <div class="print-process-flow-text">
+              <div class="print-process-flow-label">${escapeHtml(p.title || 'Untitled process')}</div>
+              ${names.length ? `<div class="print-process-flow-components">${escapeHtml(names.join(', '))}</div>` : ''}
+            </div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  el.querySelectorAll('[data-proc-idx]').forEach(node => node.addEventListener('click', () => {
+    list.children[Number(node.dataset.procIdx)]?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }));
+}
+
 /* ---------- Process Steps (grouped: a process title + its own numbered steps) ---------- */
 export function renderProcesses(r){
   syncProcessComponentWeights(r); // Component weights follow the ingredient tree
   const list = document.getElementById('processesList');
   if(!list) return;
   list.innerHTML = '';
+  renderProcessFlowOverview(r, list);
 
   r.processes.forEach((proc, pIdx) => {
     const block = document.createElement('div');

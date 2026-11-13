@@ -945,6 +945,7 @@ export function renderRecipeEditor(r){
       <div class="card-title">
         5. Process Steps
       </div>
+      <div id="processFlowOverview" class="process-flow-overview"></div>
       <div id="processesListWrap">
         <div class="processes-list" id="processesList"></div>
         <button class="btn btn-sm add-row-btn" id="btnAddProcess">+ Add Process</button>
