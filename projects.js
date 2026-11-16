@@ -1178,7 +1178,7 @@ function pdWorkloadStatusPanelHtml(){
       ${PROJECT_STATUSES.map(s => `
         <label class="pd-status-item">
           <input type="checkbox" class="pd-status-cb" value="${escapeHtml(s)}" ${isChecked(s) ? 'checked' : ''}>
-          <span class="pd-status-dot" style="background:${(PROJECT_STATUS_PILL[s] || PROJECT_STATUS_PILL['Not Started']).border};"></span>
+          <span class="pd-status-dot" style="background:${PD_STATUS_COLORS[s] || '#b9c0cc'};"></span>
           <span>${escapeHtml(s)}</span>
         </label>
       `).join('')}
@@ -2065,6 +2065,7 @@ export function renderProjectsList(){
   // filter click below exactly the way PROJECT_FILTER_ACCESSORS.
   // responsiblePerson already treats "no PD" elsewhere in this file.
   const responsibleCounts = new Map();
+  const responsibleByStatus = new Map();
   visibleProjects
     .filter(p => !responsibleStatusFilters.size || responsibleStatusFilters.has(p.status || PROJECT_STATUSES[0]))
     .forEach(p => {
@@ -2073,9 +2074,13 @@ export function renderProjectsList(){
       // the column filter itself would show.
       const key = PROJECT_FILTER_ACCESSORS.responsiblePerson(p);
       responsibleCounts.set(key, (responsibleCounts.get(key) || 0) + 1);
+      const st = p.status || PROJECT_STATUSES[0];   // per-status counts, for the coloured segments of the bar
+      const per = responsibleByStatus.get(key) || {};
+      per[st] = (per[st] || 0) + 1;
+      responsibleByStatus.set(key, per);
     });
   const projectsByResponsible = Array.from(responsibleCounts.entries())
-    .map(([key, count]) => ({ key, label: key || '(Not assigned)', count }))
+    .map(([key, count]) => ({ key, label: key || '(Not assigned)', count, byStatus: responsibleByStatus.get(key) || {} }))
     .sort((a, b) => {
       if((a.key === '') !== (b.key === '')) return a.key === '' ? -1 : 1;
       return b.count - a.count || a.label.localeCompare(b.label);
@@ -4323,13 +4328,18 @@ function renderStatusBarList(groups, viewMode, selectedMonth){
 // than browsing the projects themselves. The "(Not assigned)" group (key
 // === '') is colored danger-red so a PD gap actually stands out instead
 // of just being another bar in the list.
+// One colour per status, shared by the PD card's status check list (its dots) and the coloured segments of each person's bar
+const PD_STATUS_COLORS = {
+  'Not Started': '#b9c0cc', 'In Progress': 'var(--accent)', 'Blocked / On Hold': 'var(--danger)', 'Paused': '#d4a017',
+  'In Review': 'var(--primary)', 'Completed': 'var(--ok)', 'Cancelled': '#9aa1ad'
+};
 function renderResponsibleBarList(groups){
   if(!groups.length) return '<div class="dash-empty">No data yet</div>';
   const max = Math.max(...groups.map(g => g.count));
   return groups.map(g => `
     <button type="button" class="dash-bar-item dash-bar-item-clickable" data-responsible-filter="${escapeHtml(g.key)}" title="Filter the projects table to ${escapeHtml(g.label)}">
       <div class="dash-bar-label-row"><span>${escapeHtml(g.label)}</span><span class="dbl-count">${g.count}</span></div>
-      <div class="dash-bar-track"><div class="dash-bar-fill" style="width:${Math.max(4, Math.round(g.count/max*100))}%;background:${g.key === '' ? 'var(--danger)' : 'var(--primary)'};"></div></div>
+      <div class="dash-bar-track" title="${escapeHtml(PROJECT_STATUSES.filter(s => g.byStatus && g.byStatus[s]).map(s => `${s}: ${g.byStatus[s]}`).join(' · '))}"><div class="dash-bar-fill pd-bar-stack" style="width:${Math.max(4, Math.round(g.count/max*100))}%;">${PROJECT_STATUSES.filter(s => g.byStatus && g.byStatus[s]).map(s => `<span class="pd-bar-seg" style="flex:${g.byStatus[s]};background:${PD_STATUS_COLORS[s] || '#b9c0cc'};"></span>`).join('')}</div></div>
     </button>
   `).join('');
 }

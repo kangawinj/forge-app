@@ -6763,3 +6763,8 @@
   .pd-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
   .pd-card-bars{flex:1;min-width:0;}
   @media (max-width:700px){ .pd-card-body{flex-direction:column;gap:12px;} .pd-status-panel{flex:none;width:100%;} }
+  /* PD card: each person's bar is split into coloured segments, one per status (same colours as the check list dots) */
+  .pd-card-bars .dash-bar-track{height:10px;border-radius:5px;}
+  .dash-bar-fill.pd-bar-stack{display:flex;overflow:hidden;background:transparent;border-radius:5px;}
+  .pd-bar-seg{display:block;height:100%;min-width:3px;border-right:1px solid rgba(255,255,255,.7);}
+  .pd-bar-seg:last-child{border-right:none;}
