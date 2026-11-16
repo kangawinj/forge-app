@@ -862,6 +862,7 @@ export const CHANGELOG = [
   { version: "3.0.820", date: "2026-11-13", note: "Recipe > 5. Process Steps: a short Process Flow overview (numbered nodes with each process's title and its components) now sits above the detailed steps, so the whole sequence reads at a glance; click a node to jump to that process's details. It follows every edit and is left out of print (the printed recipe already has its own)" },
   { version: "3.0.821", date: "2026-11-16", note: "Projects by Responsible Person (PD): the Status filter is no longer a popup -- its check boxes (Select All and each status, with the status colour) now sit at the front of the card, beside the bars, so the selection is always visible and changes the totals as you tick" },
   { version: "3.0.822", date: "2026-11-16", note: "Projects by Responsible Person (PD): each person's bar is now split into coloured segments by project status (the same colours as the dots in the Status check list beside it); pointing at a bar lists the counts per status" },
+  { version: "3.0.823", date: "2026-11-16", note: "Projects: removed the Projects / Products count tiles from the top of the dashboard" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

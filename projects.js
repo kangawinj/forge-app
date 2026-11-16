@@ -2088,16 +2088,6 @@ export function renderProjectsList(){
   if(dashboardContainer){
     if(!projectsByStatusMonth) projectsByStatusMonth = projectsByStatusSharedStartMonth || bangkokMonthStr();
     dashboardContainer.innerHTML = `
-      <div class="dash-metrics" style="margin-bottom:14px;">
-        <div class="dash-metric">
-          <div class="dash-metric-label">Projects</div>
-          <div class="dash-metric-value">${visibleProjects.length}</div>
-        </div>
-        <div class="dash-metric">
-          <div class="dash-metric-label">Products</div>
-          <div class="dash-metric-value">${allProductsGlobal.length}</div>
-        </div>
-      </div>
       <div class="dash-card" style="margin-bottom:16px;">
         <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
           <span>Projects by Status</span>
