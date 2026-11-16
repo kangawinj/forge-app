@@ -19,7 +19,7 @@ import {
   certificateChecklistHtml, wireCertificateChecklist, readCertificateChecklist, getRequirements
 } from './projects-requirements.js';
 import {
-  CURRENCY_OPTIONS, PROJECT_STATUSES, PROJECT_STATUS_LABELS, PROJECT_STATUS_BAR,
+  CURRENCY_OPTIONS, PROJECT_STATUSES, PROJECT_STATUS_LABELS, PROJECT_STATUS_BAR, PROJECT_STATUS_PILL,
   projectStatusBarHtml, projectPhotoStatusColor, TASK_STATUS_META, migrateMonthlyUpdate,
   muPlanSummaryLine, monthlyUpdateStatus, getTaskStatus, daysBetween, projectHasUpdateThisMonth,
   projectProgressPct, statusPillHtml, projectNextAction, blankProject, blankFlavor,
@@ -1163,31 +1163,26 @@ function projectColumnFilterMenuHtml(key){
     </div>
   `;
 }
-// Same popover shell as projectColumnFilterMenuHtml above (reuses its
-// data-filter-menu="pdWorkloadStatus" key so it gets the exact same
-// open/close/reopen-after-render behavior for free), but backed by
-// responsibleStatusFilters instead of projectColumnFilters -- see that
-// state's own comment for why it's kept separate from the table's status
-// column filter. Wired by its own dedicated handlers (not the generic
-// PROJECT_FILTER_ACCESSORS-driven loop) since there's no table column
-// behind this one.
-function pdWorkloadStatusFilterMenuHtml(){
+// The status check list of the "Projects by Responsible Person (PD)" card: always visible at the front (left) of the card, no
+// popup to open. Backed by responsibleStatusFilters (empty set = every status counts), separate from the table's own status
+// column filter -- see that state's own comment. Wired by its own handlers in wireProjectsByStatusCardClicks.
+function pdWorkloadStatusPanelHtml(){
   const isChecked = s => !responsibleStatusFilters.size || responsibleStatusFilters.has(s);
   return `
-    <div class="proj-col-filter-menu" data-filter-menu="pdWorkloadStatus">
-      <label class="proj-col-filter-item proj-col-filter-selectall">
+    <div class="pd-status-panel" data-pd-status-panel>
+      <div class="pd-status-panel-title">Status</div>
+      <label class="pd-status-item pd-status-all">
         <input type="checkbox" class="pd-status-select-all" ${!responsibleStatusFilters.size ? 'checked' : ''}>
         <b>(Select All)</b>
       </label>
-      <div class="proj-col-filter-values">
-        ${PROJECT_STATUSES.map(s => `
-          <label class="proj-col-filter-item">
-            <input type="checkbox" class="pd-status-cb" value="${escapeHtml(s)}" ${isChecked(s) ? 'checked' : ''}>
-            ${escapeHtml(s)}
-          </label>
-        `).join('')}
-      </div>
-      ${responsibleStatusFilters.size ? `<button type="button" class="btn btn-sm" id="pdWorkloadStatusClear" style="margin-top:6px;width:100%;">Clear filter</button>` : ''}
+      ${PROJECT_STATUSES.map(s => `
+        <label class="pd-status-item">
+          <input type="checkbox" class="pd-status-cb" value="${escapeHtml(s)}" ${isChecked(s) ? 'checked' : ''}>
+          <span class="pd-status-dot" style="background:${(PROJECT_STATUS_PILL[s] || PROJECT_STATUS_PILL['Not Started']).border};"></span>
+          <span>${escapeHtml(s)}</span>
+        </label>
+      `).join('')}
+      ${responsibleStatusFilters.size ? `<button type="button" class="btn btn-sm" id="pdWorkloadStatusClear" style="margin-top:8px;width:100%;">Clear filter</button>` : ''}
     </div>
   `;
 }
@@ -1895,10 +1890,8 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
       });
     });
   });
-  const pdStatusMenu = dashboardContainer.querySelector('[data-filter-menu="pdWorkloadStatus"]');
+  const pdStatusMenu = dashboardContainer.querySelector('[data-pd-status-panel]');
   if(pdStatusMenu){
-    if(openProjectFilterMenuKey === 'pdWorkloadStatus') pdStatusMenu.classList.add('open');
-    pdStatusMenu.addEventListener('click', e => e.stopPropagation());
     const allStatuses = PROJECT_STATUSES;
     const selectAllCb = pdStatusMenu.querySelector('.pd-status-select-all');
     selectAllCb.addEventListener('change', () => {
@@ -2161,16 +2154,13 @@ export function renderProjectsList(){
         ` : renderStatusBarList(projectsByStatus, projectsByStatusViewMode, projectsByStatusMonth)}
       </div>
       <div class="dash-card" style="margin-bottom:16px;">
-        <div class="dash-card-title" style="display:flex;align-items:center;justify-content:space-between;gap:8px;">
+        <div class="dash-card-title">
           <span>Projects by Responsible Person (PD)</span>
-          <div class="task-tracking-who-filter-wrap">
-            <button type="button" class="btn btn-sm${responsibleStatusFilters.size ? ' active' : ''}" data-filter-trigger="pdWorkloadStatus" title="Choose which statuses count toward these totals">
-              Status${responsibleStatusFilters.size ? ` (${responsibleStatusFilters.size})` : ''} ${icon('chevron-down', 12)}
-            </button>
-            ${pdWorkloadStatusFilterMenuHtml()}
-          </div>
         </div>
-        ${renderResponsibleBarList(projectsByResponsible)}
+        <div class="pd-card-body">
+          ${pdWorkloadStatusPanelHtml()}
+          <div class="pd-card-bars">${renderResponsibleBarList(projectsByResponsible)}</div>
+        </div>
       </div>
       <div class="dash-card" style="margin-bottom:16px;" id="projectGanttChart"></div>
     `;

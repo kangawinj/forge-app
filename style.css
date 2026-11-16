@@ -6753,3 +6753,13 @@
   .process-flow-node-click:hover .print-process-flow-circle{background:var(--primary);color:#fff;}
   .process-flow-node-click:hover .print-process-flow-label{color:var(--primary);}
   @media print{ .process-flow-overview{display:none !important;} }
+  /* Projects by Responsible Person (PD): the status check list sits at the front of the card instead of in a popup */
+  .pd-card-body{display:flex;gap:24px;align-items:flex-start;}
+  .pd-status-panel{flex:0 0 190px;padding:10px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg);}
+  .pd-status-panel-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:var(--text-dim);margin-bottom:6px;}
+  .pd-status-item{display:flex;align-items:center;gap:8px;padding:4px 2px;font-size:13px;cursor:pointer;}
+  .pd-status-item input{margin:0;accent-color:var(--primary);flex-shrink:0;}
+  .pd-status-all{border-bottom:1px solid var(--border);margin-bottom:4px;padding-bottom:7px;}
+  .pd-status-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0;}
+  .pd-card-bars{flex:1;min-width:0;}
+  @media (max-width:700px){ .pd-card-body{flex-direction:column;gap:12px;} .pd-status-panel{flex:none;width:100%;} }
