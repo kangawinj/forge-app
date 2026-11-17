@@ -1,5 +1,5 @@
 /* ---------- Export Excel for Compare Recipes / Compare Trials ----------
-   Builds a workbook from what the Compare page is showing right now (the
+   Builds ONE worksheet ("Compare") from what the Compare page is showing right now (the
    selected recipes, "show codes"/"also show weight" choices, Part grouping):
      1. Ingredients     -- recipe info (name, code, date, total weight, customer, note ...)
                            on top, then % of recipe (and g) per recipe grouped by Part / Sub-part
@@ -375,6 +375,60 @@ function stripNonFinite(wb){
   wb.worksheets.forEach(ws => ws.eachRow(row => row.eachCell(cell => { if(bad(cell.value)) cell.value = null; })));
 }
 
+// All sections on ONE worksheet ("Compare"): the Ingredients table first, then Costing, then Process Steps underneath, each
+// with its own dark title bar. The three sections are built as before (in a scratch workbook) and then copied down the one
+// sheet; every recipe keeps the same column(s) all the way down (a recipe is 2 columns wide, % and g, when the weights are
+// shown -- Costing and Process Steps then merge those two columns), so a recipe reads straight down the page.
+const colNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
+function assembleOneSheet(wb, tmp, d, recipes){
+  const per = d.showWeights ? 2 : 1, n = recipes.length;
+  const ws = wb.addWorksheet('Compare');
+  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: per === 1 ? 40 : 20 })))];
+  const foldedRows = new Set();
+  let maxLevel = 0, offset = 0;
+  tmp.worksheets.forEach((src, si) => {
+    const kind = src.name === 'Ingredients' ? 'ing' : (src.name === 'Costing' ? 'cost' : 'steps');
+    const mapCol = c => kind === 'ing' ? [c, c] : (c === 1 ? [1, 1] : [2 + (c - 2) * per, 2 + (c - 2) * per + per - 1]);
+    if(si > 0){ ws.getRow(offset + 1).height = 16; offset += 1; }   // a blank row between the sections
+    // cells covered by a merge in the source (the title bar, the note): copied as merges, not paired up below
+    const merges = (src.model.merges || []).map(m => { const [a, b] = m.split(':'), pa = /^([A-Z]+)(\d+)$/.exec(a), pb = /^([A-Z]+)(\d+)$/.exec(b); return { c1: colNum(pa[1]), r1: +pa[2], c2: colNum(pb[1]), r2: +pb[2] }; });
+    const covered = new Set();
+    merges.forEach(m => { for(let r = m.r1; r <= m.r2; r++) for(let c = m.c1; c <= m.c2; c++) covered.add(`${r},${c}`); });
+    src.eachRow({ includeEmpty: true }, (row, rn) => {
+      const tr = ws.getRow(offset + rn);
+      if(row.height) tr.height = row.height;
+      if(row.outlineLevel){ tr.outlineLevel = row.outlineLevel; maxLevel = Math.max(maxLevel, row.outlineLevel); }
+      if(row.hidden) tr.hidden = true;
+      if(row.collapsed){ markFolded(tr); foldedRows.add(tr.number); }
+      let stepsLines = 1;
+      row.eachCell({ includeEmpty: false }, (cell, cn) => {
+        const [c1, c2] = mapCol(cn);
+        const tc = tr.getCell(c1);
+        tc.value = cell.value;
+        tc.style = JSON.parse(JSON.stringify(cell.style || {}));
+        for(let c = c1 + 1; c <= c2; c++) tr.getCell(c).style = JSON.parse(JSON.stringify(cell.style || {}));   // the second half of a pair keeps the fill / border
+        if(c2 > c1 && !covered.has(`${rn},${cn}`)) ws.mergeCells(offset + rn, c1, offset + rn, c2);
+        if(kind === 'steps' && per === 2 && cn >= 2 && typeof cell.value === 'string'){
+          // merged cells do not auto-fit their height: estimate it from the text
+          stepsLines = Math.max(stepsLines, cell.value.split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 36)), 0));
+        }
+      });
+      if(kind === 'steps' && per === 2 && stepsLines > 1) tr.height = Math.max(tr.height || 15, stepsLines * 15 + 4);
+    });
+    merges.forEach(m => {
+      const [a] = mapCol(m.c1), [, b] = mapCol(m.c2);
+      try{ ws.mergeCells(offset + m.r1, a, offset + m.r2, b); }catch(e){ /* overlapping merge in the source: skip */ }
+    });
+    offset += src.rowCount;
+  });
+  clearCollapsedMarks(ws, foldedRows);
+  ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
+  ws.properties.outlineLevelRow = maxLevel;
+  ws.pageSetup = { paperSize: 9, orientation: 'landscape', scale: 70 };
+  ws.views = [{ state: 'frozen', xSplit: 1, showGridLines: false }];
+  return ws;
+}
+
 export async function exportCompareToExcel(d){
   if(!window.ExcelJS){
     alert('Excel export isn\'t available right now (ExcelJS failed to load) -- check your connection and try again.');
@@ -385,12 +439,15 @@ export async function exportCompareToExcel(d){
     alert('Select at least 2 recipes to compare before exporting.');
     return;
   }
+  // the sections are built one by one in a scratch workbook, then laid out together on one worksheet
+  const tmp = new window.ExcelJS.Workbook();
+  buildIngredients(tmp, d, recipes);
+  if(d.showCosting !== false) buildCosting(tmp, d, recipes);   // sections hidden with their eye button stay out of the file
+  if(d.showSteps !== false) buildSteps(tmp, d, recipes);
   const wb = new window.ExcelJS.Workbook();
   wb.creator = 'Forge';
   wb.created = new Date();
-  buildIngredients(wb, d, recipes);
-  if(d.showCosting !== false) buildCosting(wb, d, recipes);   // sections hidden with their eye button stay out of the file
-  if(d.showSteps !== false) buildSteps(wb, d, recipes);
+  assembleOneSheet(wb, tmp, d, recipes);
   stripNonFinite(wb);
 
   const buffer = await wb.xlsx.writeBuffer();

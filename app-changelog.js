@@ -868,6 +868,7 @@ export const CHANGELOG = [
   { version: "3.0.826", date: "2026-11-17", note: "Recipe Excel > 5. Process Steps: the \"Trial Results Section\" heading is on one line again (it used to be chopped into pieces inside the narrow first column)" },
   { version: "3.0.827", date: "2026-11-17", note: "Compare Process Steps (page and Excel export): each step now shows its Control value (e.g. Control: 85°C, 5 min) like the recipe's own Process Steps do" },
   { version: "3.0.828", date: "2026-11-17", note: "Process steps typed in English followed by Thai are shown on two lines -- English first, Thai under it -- in Compare Process Steps (page and Excel), the recipe's read-only process view / Version Preview / Print, and the recipe Excel export" },
+  { version: "3.0.829", date: "2026-11-17", note: "Compare Excel export: everything is now on ONE worksheet -- Ingredients, then Costing, then Process Steps underneath, each with its own title bar (the +/- folding of Parts still works) -- instead of three tabs; every recipe keeps the same column(s) all the way down" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
