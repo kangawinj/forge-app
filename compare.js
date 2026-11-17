@@ -881,10 +881,11 @@ function renderCompareContent(){
     if(!r) return '<div class="compare-steps-col compare-empty">— Not selected —</div>';
     const processes = (r.processes || []).filter(p => (p.title||'').trim() !== '' || (p.steps||[]).some(s => (s||'').trim() !== ''));
     const processesHtml = processes.map(p => {
-      const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+      // each step keeps its control value (stored parallel to p.steps) after empty steps are dropped
+      const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
       return `
         <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
-        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+        ${steps.length ? `<ol>${steps.map(x => `<li>${escapeHtml(x.s)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       `;
     }).join('');
     return `

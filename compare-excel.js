@@ -346,8 +346,8 @@ function buildSteps(wb, d, recipes){
     const out = [];
     (r.processes || []).filter(p => (p.title || '').trim() !== '' || (p.steps || []).some(s => (s || '').trim() !== '')).forEach(p => {
       out.push({ text: p.title || 'Untitled process', head: true });
-      const steps = (p.steps || []).filter(s => (s || '').trim() !== '');
-      if(steps.length) steps.forEach((s, i) => out.push({ text: `${i + 1}. ${s}` }));
+      const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
+      if(steps.length) steps.forEach((x, i) => out.push({ text: `${i + 1}. ${x.s}${x.ctl ? `   [Control: ${x.ctl}]` : ''}` }));
       else out.push({ text: 'No steps yet', dim: true });
     });
     if(!out.length) out.push({ text: 'No processes yet', dim: true });

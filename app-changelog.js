@@ -866,6 +866,7 @@ export const CHANGELOG = [
   { version: "3.0.824", date: "2026-11-17", note: "Recipe > Process Steps: each step now has a Control value box on its right (e.g. 85\u00b0C, 5 min) -- it moves and is deleted together with its step, and shows next to the step in the read-only view, Version Preview, Print and the recipe Excel export" },
   { version: "3.0.825", date: "2026-11-17", note: "Every file Forge downloads (Excel exports, the backup, import templates, the photo ZIP) and every page saved as PDF now starts with the download date as YYYYMMDD, e.g. 20261117_Recipe Baby Octopus in Korean Sauce.xlsx -- a trailing date that some names carried is dropped so it is not there twice. Attachments you download back from a project keep their own name" },
   { version: "3.0.826", date: "2026-11-17", note: "Recipe Excel > 5. Process Steps: the \"Trial Results Section\" heading is on one line again (it used to be chopped into pieces inside the narrow first column)" },
+  { version: "3.0.827", date: "2026-11-17", note: "Compare Process Steps (page and Excel export): each step now shows its Control value (e.g. Control: 85°C, 5 min) like the recipe's own Process Steps do" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
