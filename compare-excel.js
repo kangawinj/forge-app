@@ -348,7 +348,13 @@ function buildSteps(wb, d, recipes){
     (r.processes || []).filter(p => (p.title || '').trim() !== '' || (p.steps || []).some(s => (s || '').trim() !== '')).forEach(p => {
       out.push({ text: p.title || 'Untitled process', head: true });
       const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
-      if(steps.length) steps.forEach((x, i) => out.push({ text: (() => { const { en, th } = splitStepLanguages(x.s); return `${i + 1}. ${en}${th ? `\n    ${th}` : ''}${x.ctl ? `   [Control: ${x.ctl}]` : ''}`; })() }));
+      if(steps.length) steps.forEach((x, i) => out.push((() => {
+        const { en, th } = splitStepLanguages(x.s);
+        const main = `${i + 1}. ${en}${th ? `\n    ${th}` : ''}`;
+        if(!x.ctl) return { text: main };
+        const ctl = `\nControl: ${x.ctl}`;
+        return { text: main + ctl, rich: { richText: [{ text: main, font: { name: FONT, color: { argb: C.text } } }, { text: ctl, font: { name: FONT, bold: true, color: { argb: 'FFC0392B' } } }] } };
+      })()));
       else out.push({ text: 'No steps yet', dim: true });
     });
     if(!out.length) out.push({ text: 'No processes yet', dim: true });
@@ -356,7 +362,7 @@ function buildSteps(wb, d, recipes){
   });
   const n = Math.max(...lines.map(l => l.length));
   for(let i = 0; i < n; i++){
-    const row = ws.addRow(['', ...lines.map(l => (l[i] ? l[i].text : ''))]);
+    const row = ws.addRow(['', ...lines.map(l => (l[i] ? (l[i].rich || l[i].text) : ''))]);
     lines.forEach((l, c) => {
       const cell = row.getCell(2 + c);
       const item = l[i];
@@ -408,9 +414,10 @@ function assembleOneSheet(wb, tmp, d, recipes){
         tc.style = JSON.parse(JSON.stringify(cell.style || {}));
         for(let c = c1 + 1; c <= c2; c++) tr.getCell(c).style = JSON.parse(JSON.stringify(cell.style || {}));   // the second half of a pair keeps the fill / border
         if(c2 > c1 && !covered.has(`${rn},${cn}`)) ws.mergeCells(offset + rn, c1, offset + rn, c2);
-        if(kind === 'steps' && per === 2 && cn >= 2 && typeof cell.value === 'string'){
+        const plain = typeof cell.value === 'string' ? cell.value : (cell.value && cell.value.richText ? cell.value.richText.map(r => r.text).join('') : '');
+        if(kind === 'steps' && per === 2 && cn >= 2 && plain){
           // merged cells do not auto-fit their height: estimate it from the text
-          stepsLines = Math.max(stepsLines, cell.value.split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 36)), 0));
+          stepsLines = Math.max(stepsLines, plain.split('\n').reduce((s, p) => s + Math.max(1, Math.ceil(p.length / 36)), 0));
         }
       });
       if(kind === 'steps' && per === 2 && stepsLines > 1) tr.height = Math.max(tr.height || 15, stepsLines * 15 + 4);

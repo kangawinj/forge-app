@@ -809,9 +809,11 @@ function buildProcessSheet(wb, r, ingRows){
       steps.forEach((x, idx) => {
         const stepRow = row;
         const { en, th } = splitStepLanguages(x.s);   // English on the first line, Thai under it
-        const stepText = `${en}${th ? `\n${th}` : ''}${x.ctl ? `   [Control: ${x.ctl}]` : ''}`;
-        setRow([`${idx+1}.`, stepText], r2 => {
-          r2.height = Math.max(15, (Math.ceil(en.length / 95) + (th ? Math.ceil(th.length / 85) : 0)) * 15 + 2);   // a merged cell does not auto-fit
+        const main = `${en}${th ? `\n${th}` : ''}`;
+        // the control value goes on its own line, bold and red
+        const stepValue = x.ctl ? { richText: [{ text: main }, { text: `\nControl: ${x.ctl}`, font: { bold: true, color: { argb: 'FFC0392B' } } }] } : main;
+        setRow([`${idx+1}.`, stepValue], r2 => {
+          r2.height = Math.max(15, (Math.ceil(en.length / 95) + (th ? Math.ceil(th.length / 85) : 0) + (x.ctl ? Math.ceil(x.ctl.length / 80) : 0)) * 15 + 2);   // a merged cell does not auto-fit
           r2.getCell(1).alignment = { horizontal: 'left', vertical: 'top' };
           r2.getCell(2).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
         });

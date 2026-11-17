@@ -869,6 +869,7 @@ export const CHANGELOG = [
   { version: "3.0.827", date: "2026-11-17", note: "Compare Process Steps (page and Excel export): each step now shows its Control value (e.g. Control: 85°C, 5 min) like the recipe's own Process Steps do" },
   { version: "3.0.828", date: "2026-11-17", note: "Process steps typed in English followed by Thai are shown on two lines -- English first, Thai under it -- in Compare Process Steps (page and Excel), the recipe's read-only process view / Version Preview / Print, and the recipe Excel export" },
   { version: "3.0.829", date: "2026-11-17", note: "Compare Excel export: everything is now on ONE worksheet -- Ingredients, then Costing, then Process Steps underneath, each with its own title bar (the +/- folding of Parts still works) -- instead of three tabs; every recipe keeps the same column(s) all the way down" },
+  { version: "3.0.830", date: "2026-11-17", note: "Process step Control values are shown on their own line, in bold red -- in the Compare page and its Excel export, the recipe's read-only process view / Version Preview / Print and the recipe Excel export" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
