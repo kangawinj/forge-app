@@ -794,12 +794,12 @@ function buildProcessSheet(wb, r, ingRows){
     }
 
     setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
-    const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+    const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
     if(steps.length){
       // Step number in column A, text from column B across to F, both left-aligned.
-      steps.forEach((s, idx) => {
+      steps.forEach((x, idx) => {
         const stepRow = row;
-        setRow([`${idx+1}.`, s], r2 => {
+        setRow([`${idx+1}.`, x.ctl ? `${x.s}   [Control: ${x.ctl}]` : x.s], r2 => {
           r2.getCell(1).alignment = { horizontal: 'left', vertical: 'top' };
           r2.getCell(2).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
         });

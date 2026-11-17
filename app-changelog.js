@@ -863,6 +863,7 @@ export const CHANGELOG = [
   { version: "3.0.821", date: "2026-11-16", note: "Projects by Responsible Person (PD): the Status filter is no longer a popup -- its check boxes (Select All and each status, with the status colour) now sit at the front of the card, beside the bars, so the selection is always visible and changes the totals as you tick" },
   { version: "3.0.822", date: "2026-11-16", note: "Projects by Responsible Person (PD): each person's bar is now split into coloured segments by project status (the same colours as the dots in the Status check list beside it); pointing at a bar lists the counts per status" },
   { version: "3.0.823", date: "2026-11-16", note: "Projects: removed the Projects / Products count tiles from the top of the dashboard" },
+  { version: "3.0.824", date: "2026-11-17", note: "Recipe > Process Steps: each step now has a Control value box on its right (e.g. 85\u00b0C, 5 min) -- it moves and is deleted together with its step, and shows next to the step in the read-only view, Version Preview, Print and the recipe Excel export" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

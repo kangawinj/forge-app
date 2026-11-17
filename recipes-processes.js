@@ -269,12 +269,17 @@ export function renderProcesses(r){
 
     function renderStepRows(){
       stepsListEl.innerHTML = '';
+      // control values run parallel to the steps (kept the same length, and moved / deleted together with them)
+      if(!Array.isArray(proc.stepControls)) proc.stepControls = [];
+      while(proc.stepControls.length < proc.steps.length) proc.stepControls.push('');
+      proc.stepControls.length = proc.steps.length;
       proc.steps.forEach((step, idx) => {
         const row = document.createElement('div');
         row.className = 'step-row';
         row.innerHTML = `
           <div class="step-badge">${idx+1}</div>
           <div class="step-body"><textarea rows="1" placeholder="Describe step ${idx+1}..."></textarea></div>
+          <div class="step-control"><input type="text" class="step-control-input" maxlength="80" placeholder="Control value" title="Control value of this step, e.g. 85°C, 5 min"></div>
           <div class="step-controls">
             <button class="icon-btn" title="Move up">${icon('chevron-up')}</button>
             <button class="icon-btn" title="Move down">${icon('chevron-down')}</button>
@@ -286,20 +291,26 @@ export function renderProcesses(r){
         // One compact line that grows only when the step text needs more.
         const fit = () => { ta.style.height = 'auto'; const h = ta.scrollHeight; ta.style.height = h > 0 ? h + 'px' : ''; };
         ta.addEventListener('input', e => { proc.steps[idx] = e.target.value; fit(); scheduleSave(); });
+        const ctlInput = row.querySelector('.step-control-input');
+        ctlInput.value = proc.stepControls[idx] || '';
+        ctlInput.addEventListener('input', e => { proc.stepControls[idx] = e.target.value; scheduleSave(); });
 
         const [upBtn, downBtn, delBtn] = row.querySelectorAll('.icon-btn');
         upBtn.addEventListener('click', () => {
           if(idx === 0) return;
           [proc.steps[idx-1], proc.steps[idx]] = [proc.steps[idx], proc.steps[idx-1]];
+          [proc.stepControls[idx-1], proc.stepControls[idx]] = [proc.stepControls[idx], proc.stepControls[idx-1]];
           renderStepRows(); scheduleSave();
         });
         downBtn.addEventListener('click', () => {
           if(idx === proc.steps.length-1) return;
           [proc.steps[idx+1], proc.steps[idx]] = [proc.steps[idx], proc.steps[idx+1]];
+          [proc.stepControls[idx+1], proc.stepControls[idx]] = [proc.stepControls[idx], proc.stepControls[idx+1]];
           renderStepRows(); scheduleSave();
         });
         delBtn.addEventListener('click', () => {
           proc.steps.splice(idx,1);
+          proc.stepControls.splice(idx,1);
           renderStepRows(); scheduleSave();
         });
 
@@ -313,6 +324,7 @@ export function renderProcesses(r){
 
     block.querySelector('[data-role="add-step"]').addEventListener('click', () => {
       proc.steps.push('');
+      proc.stepControls.push('');
       renderStepRows();
       scheduleSave();
     });

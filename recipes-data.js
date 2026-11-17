@@ -173,6 +173,7 @@ export function migrateRecipe(r){
     // A Process is valid with just a title and no steps yet — no longer
     // force a blank placeholder step just to have something to render.
     if(!Array.isArray(p.steps)) p.steps = [];
+    if(!Array.isArray(p.stepControls)) p.stepControls = [];   // a control value per step (e.g. "85°C, 5 min"), parallel to p.steps
     if(!Array.isArray(p.components)) p.components = [];
   });
 

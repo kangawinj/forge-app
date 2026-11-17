@@ -48,7 +48,8 @@ export function readOnlyProcessesHtml(processes, parts){
   const avgOf = (nums) => nums.length ? (nums.reduce((s,n)=>s+n,0) / nums.length).toFixed(2) : null;
 
   return list.map(p => {
-    const steps = (p.steps || []).filter(s => (s||'').trim() !== '');
+    // each step keeps its control value (stored parallel to p.steps), also after empty steps are dropped
+    const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
     const components = p.components || [];
 
     const wtBefore = parseFloat(p.weightBefore);
@@ -123,7 +124,7 @@ export function readOnlyProcessesHtml(processes, parts){
           </table>
         ` : ''}
         ${p.showActualYield === false ? '' : actualYieldHtml}
-        ${steps.length ? `<ol>${steps.map(s => `<li>${escapeHtml(s)}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+        ${steps.length ? `<ol>${steps.map(x => `<li>${escapeHtml(x.s)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       </div>
     `;
   }).join('');

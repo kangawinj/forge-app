@@ -6768,3 +6768,9 @@
   .dash-bar-fill.pd-bar-stack{display:flex;overflow:hidden;background:transparent;border-radius:5px;}
   .pd-bar-seg{display:block;height:100%;min-width:3px;border-right:1px solid rgba(255,255,255,.7);}
   .pd-bar-seg:last-child{border-right:none;}
+  /* Process Steps: a "Control value" box to the right of each step, and its badge in the read-only view / print */
+  .process-steps-list .step-control{flex:0 0 190px;}
+  .process-steps-list .step-control-input{height:32px;padding:5px 10px;font-size:12.5px;border-radius:var(--radius);}
+  .step-control-badge{display:inline-block;margin-left:8px;padding:1px 8px;border-radius:10px;background:var(--accent-light);color:#8a4a0a;font-size:11px;font-weight:600;white-space:nowrap;vertical-align:1px;}
+  @media (max-width:700px){ .process-steps-list .step-row{flex-wrap:wrap;} .process-steps-list .step-control{flex:1 1 140px;} }
+  @media print{ .step-control-badge{border:1px solid #999;background:#fff;color:#000;} }
