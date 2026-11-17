@@ -783,7 +783,14 @@ function buildProcessSheet(wb, r, ingRows){
     const wtAfter = parseFloat(p.weightAfter);
     const actualYieldPct = (isFinite(wtBefore) && wtBefore > 0 && isFinite(wtAfter)) ? (wtAfter / wtBefore * 100).toFixed(2) + '%' : '—';
     if(p.showActualYield !== false){
-      setRow(['Trial Results Section'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+      // one line across A:F (not wrapped inside the narrow No. column, which cut it into "Trial / Resul / ts ...")
+      const trialRow = row;
+      setRow(['Trial Results Section'], r2 => {
+        r2.height = 20;
+        r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } };
+        r2.getCell(1).alignment = { horizontal: 'left', vertical: 'middle', wrapText: false };
+      });
+      ws.mergeCells(trialRow, 1, trialRow, 6);
       setRow(['', 'Weight Before / After', `${isFinite(wtBefore) ? formatWeight(wtBefore) : '—'} → ${isFinite(wtAfter) ? formatWeight(wtAfter) : '—'}`, `Yield ${actualYieldPct}`]);
       ['brix','salt','ph'].forEach(field => {
         const reps = fmtReps(Array.isArray(p[field]) ? p[field] : [null, null, null]);
@@ -794,7 +801,7 @@ function buildProcessSheet(wb, r, ingRows){
 
     }
 
-    setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; });
+    setRow(['Steps'], r2 => { r2.getCell(1).font = { bold: true, color: { argb: XL_COLORS.dim } }; r2.getCell(1).alignment = { wrapText: false }; });
     const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
     if(steps.length){
       // Step number in column A, text from column B across to F, both left-aligned.
