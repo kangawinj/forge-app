@@ -6,6 +6,7 @@
 // Directory's own contact fields, ...) -- Trial Code Format and Food
 // Allergens are static reference pages, not stored lists, so they're not
 // included.
+import { datedFileName } from './file-names.js';
 import { metaItemName, formatActivityDateTime } from './app.js';
 
 function xlArgb(hex){
@@ -124,7 +125,7 @@ export async function exportRefListsToExcel(metaLists){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Reference Lists ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Reference Lists.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }

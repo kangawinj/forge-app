@@ -1,3 +1,4 @@
+import { datedFileName } from './file-names.js';
 // Products -> Export Excel. Same flat-row ExcelJS pattern as
 // materials-excel.js (see that file's own comment on why this stays its
 // own copy of the XL_COLORS/border helpers rather than importing them).
@@ -109,7 +110,7 @@ export async function exportProductsToExcel(productList){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Product List ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Product List.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }

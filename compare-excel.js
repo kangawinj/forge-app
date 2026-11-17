@@ -10,6 +10,7 @@
    the whole sheet), like a pivot table. Those two sheets deliberately don't use
    "fit to page" -- ExcelJS writes that setting ahead of the outline setting,
    an order Excel rejects as a corrupt sheet. */
+import { datedFileName } from './file-names.js';
 import { fullCode, recipeDisplayLabel, allIngredientsInRecipe, formatWeight } from './app.js';
 
 const C = {
@@ -406,7 +407,7 @@ export async function exportCompareToExcel(d){
   const names = [...new Set(recipes.map(r => (r.name || '').replace(/\s*\([^()]*\)\s*$/, '').trim()).filter(Boolean))].join(' + ');
   const shortNames = names.length > 90 ? names.slice(0, 87) + '...' : names;
   const codes = [...new Set(recipes.map(r => fullCode(r)).filter(Boolean))].join(', ');
-  a.download = [d.title, shortNames, codes ? `(${codes})` : '', dateStr].filter(Boolean).join(' ').replace(/\s*—\s*/g, ' - ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.download = datedFileName([d.title, shortNames, codes ? `(${codes})` : '', dateStr].filter(Boolean).join(' ').replace(/\s*—\s*/g, ' - ').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx');
   document.body.appendChild(a);
   a.click();
   a.remove();

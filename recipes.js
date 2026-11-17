@@ -16,6 +16,7 @@
 // every edit, so splitting them apart would mean real circular-dependency
 // risk between sibling files, not just the safe "sibling → core"
 // circularity the files above use.
+import { datedFileName } from './file-names.js';
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
   logActivityEvent, diffMainFields, showCloudError, isCurrentUserAdmin, playContentTransition,
@@ -1442,7 +1443,7 @@ export function renderRecipeEditor(r){
     const originalTitle = document.title;
     const code = fullCode(r);
     const namePart = [r.name || 'Untitled recipe', code].filter(Boolean).join(' ');
-    document.title = `Recipe ${namePart} Forge`.replace(/[\\/:*?"<>|]/g, '-');
+    document.title = datedFileName(`Recipe ${namePart} Forge`.replace(/[\\/:*?"<>|]/g, '-'));
     const restoreTitle = () => {
       document.title = originalTitle;
       window.removeEventListener('afterprint', restoreTitle);

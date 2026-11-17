@@ -5,6 +5,7 @@
 // (lossless, just wide) and Monthly Updates are summarized to a count +
 // latest entry rather than one column per update, which would make a
 // project with a long history unreadable as a single row.
+import { datedFileName } from './file-names.js';
 import { recipes, recipeDisplayLabel, fullCode, formatActivityDateTime } from './app.js';
 import { getRequirements, certificateSummaryText } from './projects-requirements.js';
 import { PROJECT_STATUS_LABELS, muPlanSummaryLine, migrateMonthlyUpdate } from './projects-data.js';
@@ -148,7 +149,7 @@ export async function exportProjectsToExcel(projects){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Projects ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Projects.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }
@@ -264,7 +265,7 @@ export async function exportProjectsStatusTableToExcel(model){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (model.fileName || 'Projects by Status').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.download = datedFileName((model.fileName || 'Projects by Status').replace(/[\\/:*?"<>|]/g, '-') + '.xlsx');
   document.body.appendChild(a);
   a.click();
   a.remove();

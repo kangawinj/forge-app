@@ -10,6 +10,7 @@
 //   * A row whose `id` is not found   -> skipped and reported (so a typo can never create a duplicate).
 //   * System columns (id, createdAt, createdBy, updatedAt, updatedBy) are never changed from the file.
 // Cell values are converted to the type already used in that field (text stays text, a number field stays a number).
+import { datedFileName } from './file-names.js';
 import { db, uid, currentUser, escapeHtml, isCurrentUserAdmin, logActivityEvent } from './app.js';
 import { collection, doc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
@@ -191,7 +192,7 @@ function downloadJson(name, obj){
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: 'application/json' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
-  a.href = url; a.download = name;
+  a.href = url; a.download = datedFileName(name);
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(() => URL.revokeObjectURL(url), 60000);
 }

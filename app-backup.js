@@ -4,6 +4,7 @@
    (plaintext passwords shouldn't travel in a shareable JSON backup file).
    Split out of app.js -- see app.js's own top-of-file comment for the
    overall file split. */
+import { datedFileName } from './file-names.js';
 import { APP_VERSION } from './app-changelog.js';
 import {
   uid, db, recipesCol, materialsCol, projectsCol, trialsCol,
@@ -32,7 +33,7 @@ export function exportAll(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `forge-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.download = datedFileName('forge-backup.json');
   a.click();
   URL.revokeObjectURL(url);
 }

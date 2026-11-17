@@ -4,6 +4,7 @@
 // fill colour / alignment / borders, merged cells, column widths and row heights.
 // Firestore refuses arrays inside arrays, so a row is { c: [cell texts] } and a merge is { r1, c1, r2, c2 }.
 // Pictures are kept too, shrunk to a small JPEG each so they fit inside the evaluation (see shrinkImage).
+import { datedFileName } from './file-names.js';
 import { currentUser, uid, escapeHtml, icon, formatActivityDateTime, requestAuthConfirm } from './app.js';
 import { scheduleTrialSave } from './trials-data.js';
 import { recalc, shiftFormula, insertRefs, deleteRefs } from './sheet-formulas.js';
@@ -1469,7 +1470,7 @@ export async function exportSheetsFile(f){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = (f.name || 'Sample Evaluation').replace(/\.xlsx$/i, '').replace(/[\\/:*?"<>|]/g, '-') + ' (Forge).xlsx';
+  a.download = datedFileName((f.name || 'Sample Evaluation').replace(/\.xlsx$/i, '').replace(/[\\/:*?"<>|]/g, '-') + ' (Forge).xlsx');
   document.body.appendChild(a);
   a.click();
   a.remove();

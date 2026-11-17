@@ -2,6 +2,7 @@
 // Products Being Compared cards (with their photos) as columns, the Sensory Evaluation table (Comment +
 // Improvement Guidelines per criteria, a Note column, Test Result row), the evaluators' Comments (with
 // photos) and the test Note. Split out of trials-summary.js (which keeps the Summary Table export).
+import { datedFileName } from './file-names.js';
 import { escapeHtml, formatDateLong, projects, recipes, fullCode, recipeDisplayLabel, formatWeight, allIngredientsInRecipe, findProjectForRecipe } from './app.js';
 import {
   migrateTrial, getEvaluationCriteria, getCriteriaNotes, trialEvalTargets, getTrialProductData,
@@ -364,7 +365,7 @@ async function downloadWorkbook(wb, fileName){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = fileName.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.download = datedFileName(fileName.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx');
   document.body.appendChild(a);
   a.click();
   a.remove();

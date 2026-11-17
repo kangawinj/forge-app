@@ -7,6 +7,7 @@
 //   * every photo / attachment is written to an images/ folder in the ZIP and the cell holds its relative path;
 //   * a README sheet lists every sheet, its row count and what is deliberately not included.
 // Everything is read straight from Firestore at the moment of the export (not from what happens to be open in the app).
+import { datedFileName } from './file-names.js';
 import { db } from './app.js';
 import { APP_VERSION } from './app-changelog.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -299,7 +300,7 @@ async function packAndDownload(wb, book, notes){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = fileName;
+  a.download = datedFileName(fileName);
   document.body.appendChild(a);
   a.click();
   a.remove();

@@ -3,6 +3,7 @@ import {
   formatWeight, descriptionListHtml, cookingGuidelineHtml, findMaterialByLabel, openMaterialDetail,
   playContentTransition, compareSetsCol, currentUser, uid
 } from './app.js';
+import { datedFileName } from './file-names.js';
 import { doc, getDoc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { partIngredients, partSubParts, seriesKeyDisplay } from './recipes-data.js';
 import { exportCompareToExcel } from './compare-excel.js';
@@ -138,7 +139,7 @@ export function mountCompareView(){
       ? `Compare Trials — ${seriesKeyDisplay(compareSeriesPrefilter.seriesKey, candidates[0])}`
       : 'Compare Recipes';
     const accountName = (currentUser?.email || '').split('@')[0];
-    document.title = `${dateStr} ${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-');
+    document.title = datedFileName(`${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-'));
     const restoreTitle = () => {
       document.title = originalTitle;
       window.removeEventListener('afterprint', restoreTitle);

@@ -9,6 +9,7 @@ import {
   moveToTrash, bangkokMonthStr, bangkokTodayStr, formatMonthYear, previousMonthStr,
   wireModalOverlayClose, appSettingsCol, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
+import { datedFileName } from './file-names.js';
 import {
   onSnapshot, setDoc, deleteDoc, doc, getDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -3084,7 +3085,7 @@ export function renderProjectsList(){
         if(!printTarget) return;
         printTarget.classList.add('printing-project');
         const originalTitle = document.title;
-        document.title = `Project ${p.name || 'Untitled project'} Forge`.replace(/[\\/:*?"<>|]/g, '-');
+        document.title = datedFileName(`Project ${p.name || 'Untitled project'} Forge`.replace(/[\\/:*?"<>|]/g, '-'));
         const cleanup = () => {
           printTarget.classList.remove('printing-project');
           document.title = originalTitle;

@@ -15,6 +15,7 @@
 // changes this split required inside it: three inline state assignments
 // became calls into those files' state instead, since an imported `let`
 // binding is read-only to importers in ES modules.
+import { datedFileName } from './file-names.js';
 import {
   recipes, recipeDisplayLabel, uid, currentUser, escapeHtml, icon, logActivityEvent,
   playContentTransition, projects, findProjectForRecipe, fullCode, formatWeight,
@@ -88,9 +89,8 @@ export function setPrintDocumentTitle(pageLabel){
   const originalTitle = document.title;
   const now = new Date();
   const pad = n => String(n).padStart(2, '0');
-  const dateStr = `${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}`;
   const accountName = (currentUser?.email || '').split('@')[0];
-  document.title = `${dateStr} ${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-');
+  document.title = datedFileName(`${pageLabel} Forge ${accountName}`.replace(/[\\/:*?"<>|]/g, '-'));
   return () => { document.title = originalTitle; };
 }
 

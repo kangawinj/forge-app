@@ -4,6 +4,7 @@
 // this) -- one flat row per ingredient, since this data (unlike Test
 // Results' per-product verdicts) has no nested per-evaluator structure to
 // lay out with rich text.
+import { datedFileName } from './file-names.js';
 import { formatMoq } from './app.js';
 
 function xlArgb(hex){
@@ -105,7 +106,7 @@ export async function exportMaterialsToExcel(ingredientMaster){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Ingredient Library ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Ingredient Library.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }

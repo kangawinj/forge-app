@@ -3,6 +3,7 @@
 // scannable overview across every test) plus its Excel export. Split out
 // of trials.js (which grew past 2,600 lines) -- see trials.js's own
 // top-of-file comment for the overall file split.
+import { datedFileName } from './file-names.js';
 import {
   icon, escapeHtml, formatDateLong, projects, recipes, fullCode, formatWeight, allIngredientsInRecipe, findProjectForRecipe
 } from './app.js';
@@ -308,7 +309,7 @@ export async function exportTrialsSummaryToExcel(){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Test Results Summary ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Test Results Summary.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }

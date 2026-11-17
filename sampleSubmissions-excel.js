@@ -6,6 +6,7 @@
 // samples are genuinely tabular data (many numeric/decision columns per
 // row), not something that reads well squeezed into one cell per
 // submission the way Comment/Improvement text summaries do elsewhere.
+import { datedFileName } from './file-names.js';
 import { sampleProductName } from './sampleSubmissions-data.js';
 
 function xlArgb(hex){
@@ -171,7 +172,7 @@ export async function exportSampleSubmissionsToExcel(submissions){
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `Sample Submissions ${new Date().toISOString().slice(0,10)}.xlsx`;
+  a.download = datedFileName('Sample Submissions.xlsx');
   a.click();
   URL.revokeObjectURL(url);
 }

@@ -18,6 +18,7 @@
    CSS variables (style.css) so the workbook reads as the same product.
    Split out of recipes.js (which grew past 5,200 lines) -- see recipes.js's
    own top-of-file comment for the overall file split. */
+import { datedFileName } from './file-names.js';
 import { addRecipePreviewSheet } from './recipe-excel-preview.js';
 import { finishRecipeWorksheets } from './excel-layout.js';
 import { computeIngredientCost, computePrepareWeight, partPrepareWeight, ingredientMaster, findMaterialByLabel } from './app.js';
@@ -855,7 +856,7 @@ export async function exportRecipeToExcel(r){
   a.href = url;
   const code = fullCode(r);
   const namePart = [r.name || 'Untitled recipe', code].filter(Boolean).join(' ');
-  a.download = `Recipe ${namePart}`.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx';
+  a.download = datedFileName(`Recipe ${namePart}`.replace(/[\\/:*?"<>|]/g, '-') + '.xlsx');
   document.body.appendChild(a);
   a.click();
   a.remove();
