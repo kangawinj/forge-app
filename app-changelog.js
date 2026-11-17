@@ -867,6 +867,7 @@ export const CHANGELOG = [
   { version: "3.0.825", date: "2026-11-17", note: "Every file Forge downloads (Excel exports, the backup, import templates, the photo ZIP) and every page saved as PDF now starts with the download date as YYYYMMDD, e.g. 20261117_Recipe Baby Octopus in Korean Sauce.xlsx -- a trailing date that some names carried is dropped so it is not there twice. Attachments you download back from a project keep their own name" },
   { version: "3.0.826", date: "2026-11-17", note: "Recipe Excel > 5. Process Steps: the \"Trial Results Section\" heading is on one line again (it used to be chopped into pieces inside the narrow first column)" },
   { version: "3.0.827", date: "2026-11-17", note: "Compare Process Steps (page and Excel export): each step now shows its Control value (e.g. Control: 85°C, 5 min) like the recipe's own Process Steps do" },
+  { version: "3.0.828", date: "2026-11-17", note: "Process steps typed in English followed by Thai are shown on two lines -- English first, Thai under it -- in Compare Process Steps (page and Excel), the recipe's read-only process view / Version Preview / Print, and the recipe Excel export" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

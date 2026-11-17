@@ -3,6 +3,7 @@ import {
   formatWeight, descriptionListHtml, cookingGuidelineHtml, findMaterialByLabel, openMaterialDetail,
   playContentTransition, compareSetsCol, currentUser, uid
 } from './app.js';
+import { stepTextHtml } from './step-text.js';
 import { datedFileName } from './file-names.js';
 import { doc, getDoc, setDoc, getDocs, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 import { partIngredients, partSubParts, seriesKeyDisplay } from './recipes-data.js';
@@ -885,7 +886,7 @@ function renderCompareContent(){
       const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
       return `
         <div class="compare-process-title">${escapeHtml(p.title || 'Untitled process')}</div>
-        ${steps.length ? `<ol>${steps.map(x => `<li>${escapeHtml(x.s)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+        ${steps.length ? `<ol>${steps.map(x => `<li>${stepTextHtml(x.s, escapeHtml)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       `;
     }).join('');
     return `

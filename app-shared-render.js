@@ -2,6 +2,7 @@
 // Preview, and Compare) plus the Prepare-weight/costing math they and the
 // live editor both depend on. Split out of app.js -- see app.js's own
 // top-of-file comment for the overall file split.
+import { stepTextHtml } from './step-text.js';
 import { escapeHtml } from './app.js';
 import { formatWeight, allIngredientsInPart, partTotalWeight, partSubParts } from './recipes-data.js';
 
@@ -124,7 +125,7 @@ export function readOnlyProcessesHtml(processes, parts){
           </table>
         ` : ''}
         ${p.showActualYield === false ? '' : actualYieldHtml}
-        ${steps.length ? `<ol>${steps.map(x => `<li>${escapeHtml(x.s)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
+        ${steps.length ? `<ol>${steps.map(x => `<li>${stepTextHtml(x.s, escapeHtml)}${x.ctl ? ` <span class="step-control-badge">Control: ${escapeHtml(x.ctl)}</span>` : ''}</li>`).join('')}</ol>` : '<div class="compare-missing">No steps yet</div>'}
       </div>
     `;
   }).join('');

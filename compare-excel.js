@@ -10,6 +10,7 @@
    the whole sheet), like a pivot table. Those two sheets deliberately don't use
    "fit to page" -- ExcelJS writes that setting ahead of the outline setting,
    an order Excel rejects as a corrupt sheet. */
+import { splitStepLanguages } from './step-text.js';
 import { datedFileName } from './file-names.js';
 import { fullCode, recipeDisplayLabel, allIngredientsInRecipe, formatWeight } from './app.js';
 
@@ -347,7 +348,7 @@ function buildSteps(wb, d, recipes){
     (r.processes || []).filter(p => (p.title || '').trim() !== '' || (p.steps || []).some(s => (s || '').trim() !== '')).forEach(p => {
       out.push({ text: p.title || 'Untitled process', head: true });
       const steps = (p.steps || []).map((s, i) => ({ s, ctl: ((p.stepControls || [])[i] || '').trim() })).filter(x => (x.s || '').trim() !== '');
-      if(steps.length) steps.forEach((x, i) => out.push({ text: `${i + 1}. ${x.s}${x.ctl ? `   [Control: ${x.ctl}]` : ''}` }));
+      if(steps.length) steps.forEach((x, i) => out.push({ text: (() => { const { en, th } = splitStepLanguages(x.s); return `${i + 1}. ${en}${th ? `\n    ${th}` : ''}${x.ctl ? `   [Control: ${x.ctl}]` : ''}`; })() }));
       else out.push({ text: 'No steps yet', dim: true });
     });
     if(!out.length) out.push({ text: 'No processes yet', dim: true });

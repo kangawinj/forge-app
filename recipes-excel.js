@@ -18,6 +18,7 @@
    CSS variables (style.css) so the workbook reads as the same product.
    Split out of recipes.js (which grew past 5,200 lines) -- see recipes.js's
    own top-of-file comment for the overall file split. */
+import { splitStepLanguages } from './step-text.js';
 import { datedFileName } from './file-names.js';
 import { addRecipePreviewSheet } from './recipe-excel-preview.js';
 import { finishRecipeWorksheets } from './excel-layout.js';
@@ -807,7 +808,10 @@ function buildProcessSheet(wb, r, ingRows){
       // Step number in column A, text from column B across to F, both left-aligned.
       steps.forEach((x, idx) => {
         const stepRow = row;
-        setRow([`${idx+1}.`, x.ctl ? `${x.s}   [Control: ${x.ctl}]` : x.s], r2 => {
+        const { en, th } = splitStepLanguages(x.s);   // English on the first line, Thai under it
+        const stepText = `${en}${th ? `\n${th}` : ''}${x.ctl ? `   [Control: ${x.ctl}]` : ''}`;
+        setRow([`${idx+1}.`, stepText], r2 => {
+          r2.height = Math.max(15, (Math.ceil(en.length / 95) + (th ? Math.ceil(th.length / 85) : 0)) * 15 + 2);   // a merged cell does not auto-fit
           r2.getCell(1).alignment = { horizontal: 'left', vertical: 'top' };
           r2.getCell(2).alignment = { horizontal: 'left', vertical: 'top', wrapText: true };
         });
