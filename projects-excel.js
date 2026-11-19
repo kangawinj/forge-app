@@ -204,7 +204,7 @@ export async function exportProjectsStatusTableToExcel(model){
   });
   ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];     // title + header rows, and No. + Product Name, stay in view
 
-  const centered = new Set([0, 2, 4, 5, 6, 7, 8, 9]);        // No., Initiated by, Target Market, Owner, PD, Date, Cooked, Factory
+  const centered = new Set([0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]);        // No., Reviewed, Status, Initiated by, Target Market, Category, Owner, PD, Date, Cooked, Factory
   const PHOTO_PX = 34;
   const THUMB_PX = 44;
   const nameWidth = model.widths[1] || 30;
@@ -223,6 +223,7 @@ export async function exportProjectsStatusTableToExcel(model){
         cell.border = { top: xlThinBorder(), bottom: xlThinBorder(), left: xlThinBorder(), right: xlThinBorder() };
         cell.font = { size: 11, color: { argb: XL_COLORS.text }, bold: col === 2 };
         cell.alignment = { vertical: col === 2 ? 'middle' : 'top', wrapText: true, horizontal: centered.has(col - 1) ? 'center' : 'left', indent: col === 2 ? 4 : 0 };
+        if(item.reviewed) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFDFF3E4' } };   // reviewed projects: the whole row green
       });
       const lines = Math.max(...item.cells.map((v, i) => linesOf(v, i === 1 ? nameWidth - 6 : (model.widths[i] || 12))));
       const monthPhotoCols = Object.keys(item.monthPhotos || {}).filter(c => (item.monthPhotos[c] || []).length);

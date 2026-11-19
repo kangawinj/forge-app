@@ -6777,3 +6777,12 @@
   /* A process step typed in English then Thai: two lines (see step-text.js) */
   .step-en, .step-th{display:block;}
   .step-th{margin-top:1px;}
+  /* Projects by Status (List): the Reviewed tick -- a ticked project's whole row turns green, with a green bar at its left edge */
+  .pl-review{display:flex;align-items:center;justify-content:center;}
+  .pl-review-cb{width:18px;height:18px;margin:0;accent-color:var(--ok);cursor:pointer;}
+  .proj-xl-row.pl-reviewed:not(.pl-marked) > .pl-cell:not(.pl-editing){background:#dff3e4;}
+  .proj-xl-row.pl-reviewed.pl-hl-row:not(.pl-marked) > .pl-cell:not(.pl-editing){background:#cdeed6;}
+  .proj-xl-row.pl-reviewed:not(.pl-marked) > .pl-cell.pl-hl-col:not(.pl-editing){background:#d3efdb;}
+  .proj-xl-row.pl-reviewed.pl-hl-row:not(.pl-marked) > .pl-cell.pl-hl-col:not(.pl-editing){background:#b9e6c5;}
+  .proj-xl-row.pl-reviewed > .pl-sticky-no{box-shadow:inset 5px 0 0 var(--ok);}
+  .proj-review-count{font-size:12px;font-weight:600;color:var(--ok);background:var(--ok-light);border-radius:12px;padding:5px 12px;white-space:nowrap;}

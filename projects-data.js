@@ -234,6 +234,9 @@ export function blankProject(){
     initiatedBy: "",
     cookedStatus: "",          // "" | "done" | "partial" | "none"
     overview: "",
+    reviewed: false,           // ticked in Projects by Status (List) once someone has checked that this project's information is complete
+    reviewedBy: "",
+    reviewedAt: 0,
     category: "",              // "" (worked out from Target Market) | "international" | "domestic" | "checking" | "longtime"
     flavors: [],
     requirements: blankRequirements(),
@@ -450,7 +453,7 @@ export const PROJECT_DIFF_FIELDS = {
   name: 'Project Name', status: 'Status', requestDate: 'Request Date', startDate: 'Start Date', targetEndDate: 'Target / End Date',
   customerName: 'Customer Name', destinationCountry: 'Destination Country', ownerSalesRep: 'Project Owner', factorySalesRep: 'Factory Sales Rep',
   responsiblePerson: 'Responsible Person (PD)', factoryName: 'Factory',
-  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview', category: 'Category',
+  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview', category: 'Category', reviewed: 'Review completed',
   portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
   innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
   outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',

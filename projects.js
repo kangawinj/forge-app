@@ -670,7 +670,7 @@ let responsibleStatusFilters = new Set();
 let projectsByStatusViewMode = 'grid';
 // Column filters of Projects by Status (the little arrow in each column heading, like Excel): column key -> the set of
 // values that stay visible ('' stands for a blank cell); no entry = that column is not filtered.
-const PROJ_COL_VALUE_KEYS = { name: 1, status: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
+const PROJ_COL_VALUE_KEYS = { name: 1, reviewed: 1, status: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
 const projColFilters = new Map();
 // ... remembered across reloads on this browser only (localStorage), like the Category order below
 const PROJ_COL_FILTERS_KEY = 'forgeProjColFilters';
@@ -709,6 +709,7 @@ function saveProjCatOrder(){
 const PROJ_COL_VALUE = {
   name: p => p.name || 'Untitled project',
   status: p => p.status || PROJECT_STATUSES[0],
+  reviewed: p => p.reviewed ? 'Reviewed' : 'Not reviewed',
   initiatedBy: p => p.initiatedBy || '',
   customerName: p => p.customerName || '',
   destinationCountry: p => p.destinationCountry || '',
@@ -1832,6 +1833,22 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
       });
     });
   });
+  // the Reviewed tick: marks the whole row green (saved on the project, so everyone sees it); an Undo bar follows
+  dashboardContainer.querySelectorAll('.pl-review-cb').forEach(cb => cb.addEventListener('change', () => {
+    const p = projects.find(x => x.id === cb.dataset.projectId);
+    if(!p) return;
+    const apply = (on, announce) => {
+      const before = snapshotMainFields(p, PROJECT_DIFF_FIELDS);
+      p.reviewed = on;
+      p.reviewedBy = on ? (currentUser?.email || '') : '';
+      p.reviewedAt = on ? Date.now() : 0;
+      scheduleProjectSave(p);
+      logActivityEvent('updated', 'project', p.name || 'Untitled project', diffMainFields(before, p, PROJECT_DIFF_FIELDS));
+      renderProjectsList();
+      if(announce) showProjUndoToast(`"${p.name || 'Untitled project'}" ${on ? 'marked as reviewed' : 'review removed'}`, () => apply(!on, false));
+    };
+    apply(cb.checked, true);
+  }));
   dashboardContainer.querySelectorAll('[data-gallery-project-id]').forEach(btn => {
     btn.addEventListener('click', () => {
       const id = btn.dataset.galleryProjectId;
@@ -2121,6 +2138,7 @@ export function renderProjectsList(){
             ${isCurrentUserAdmin() && projectsByStatusMonthColumnCount < PROJ_MU_MAX_MONTH_COLUMNS ? `<button type="button" class="btn btn-sm" data-role="add-proj-mu-month-column">${icon('plus', 12)} Add month column</button>` : ''}
             ${isCurrentUserAdmin() && projectsByStatusHiddenMonths.size ? `<button type="button" class="btn btn-sm" data-role="show-hidden-proj-mu-months" title="Bring back the month columns that were removed">Show removed columns (${projectsByStatusHiddenMonths.size})</button>` : ''}
             <span class="proj-list-tools" style="margin-left:auto;">
+              <span class="proj-review-count" id="projReviewCount" title="Projects ticked in the Reviewed column">${escapeHtml(projReviewCountText())}</span>
               <span class="proj-zoom" title="Zoom the table: hold Ctrl and turn the mouse wheel over it">
                 <button type="button" data-role="proj-zoom-out" title="Zoom out">&minus;</button>
                 <button type="button" data-role="proj-zoom-reset" class="proj-zoom-pct" title="Back to 100%">${Math.round(projListZoom * 100)}%</button>
@@ -2177,11 +2195,12 @@ export function renderProjectsList(){
         label: `${c.heading} (${c.count})`,
         rows: c.statusGroups.flatMap(g => g.list).map(p => ({
           image: p.image || '',
+          reviewed: !!p.reviewed,
           // photos attached to each month's update (images only), keyed by the column they belong to
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
             .filter(a => a && typeof a.dataUrl === 'string' && a.dataUrl.startsWith('data:image')).map(a => a.dataUrl)])),
           cells: [
-            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.status || PROJECT_STATUSES[0], p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
+            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.reviewed ? '\u2713' : '', p.status || PROJECT_STATUSES[0], p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
             projectCategoryOf(p).label, p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
             p.factoryName || '', p.overview || '',
             ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
@@ -3784,7 +3803,7 @@ function monthsBackFrom(monthStr, count){
 // Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
-  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Status', w: 118, key: 'status' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
+  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Reviewed', w: 82, key: 'reviewed' }, { label: 'Status', w: 118, key: 'status' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
   { label: 'Customer', w: 130, key: 'customerName' }, { label: 'Target Market', w: 96, key: 'destinationCountry' }, { label: 'Category', w: 100, key: 'category' },
   { label: 'Owner', w: 96, key: 'ownerSalesRep' }, { label: 'PD-Owner', w: 100, key: 'responsiblePerson' },
   { label: 'Date Received', w: 100, key: 'requestDate' }, { label: 'Cooked', w: 72, key: 'cooked' }, { label: 'Factory', w: 100, key: 'factoryName' }, { label: 'Overview', w: 300 }
@@ -3847,6 +3866,11 @@ function projMuListMinWidth(){
 let projMuScrollLeft = 0;
 // Keep the column headings in view while the page scrolls down through a long list. position:sticky can't do it here
 // (the table scrolls sideways, which makes it its own scroll container), so the heading row is slid down by hand.
+// "Reviewed 12 / 47": how many of the projects in the list have been ticked as checked
+function projReviewCountText(){
+  const list = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
+  return `Reviewed ${list.filter(p => p.reviewed).length} / ${list.length}`;
+}
 let projMuScrollToMonth = null;   // a month the table should scroll to after the next draw (the picker / arrows set it)
 let projMuInitialScrolled = false; // the first draw of the session also scrolls to the saved starting month
 let projListZoom = 1;      // zoom of the Projects by Status (List) table (Ctrl + wheel, the - / + buttons, Fit width)
@@ -4241,7 +4265,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
     return `
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}" data-status="${projStatusSlug(p.status)}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
+          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}${p.reviewed ? ' pl-reviewed' : ''}" data-status="${projStatusSlug(p.status)}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
             <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
             <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
@@ -4251,6 +4275,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
                 <span class="proj-gallery-list-name">${escapeHtml(p.name || 'Untitled project')}</span>
               </span>
             </button>
+            <span class="pl-cell pl-center pl-review"><input type="checkbox" class="pl-review-cb" data-project-id="${escapeHtml(p.id)}" ${p.reviewed ? 'checked' : ''} title="${p.reviewed ? `Reviewed${p.reviewedBy ? ' by ' + escapeHtml(p.reviewedBy) : ''}${p.reviewedAt ? ' · ' + escapeHtml(formatActivityDateTime(p.reviewedAt)) : ''} -- untick to undo` : 'Tick when this project\'s information has been checked and is complete'}"></span>
             <span class="pl-cell pl-center pl-editable" data-edit-field="status" data-project-id="${escapeHtml(p.id)}">${statusPillHtml(p.status)}</span>
             <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="initiatedBy" data-project-id="${escapeHtml(p.id)}" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
             <span class="pl-cell pl-editable" data-edit-field="customerName" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.customerName || '')}</span>
