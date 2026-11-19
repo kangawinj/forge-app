@@ -1813,9 +1813,7 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
   // one click only marks the month box; a double-click opens it to add / edit the update
   dashboardContainer.querySelectorAll('[data-role="proj-mu-cell-click"]').forEach(cell => {
     cell.addEventListener('click', () => {
-      projMarkedMuCell = { id: cell.dataset.projectId, month: cell.dataset.month };
-      dashboardContainer.querySelectorAll('.proj-mu-cell.pl-cell-marked').forEach(c => c.classList.remove('pl-cell-marked'));
-      cell.classList.add('pl-cell-marked');
+      projMuMarkCell(cell);
     });
     cell.addEventListener('dblclick', e => {
       if(e.target.closest('button, a, input, [data-role="proj-mu-photos"]')) return;
@@ -3896,10 +3894,60 @@ function projMuStickHeader(){
   head.style.transform = shift > 0 ? `translateY(${shift / projListZoom}px)` : '';   // the heading row sits inside the zoomed table, so its own pixels are zoomed too
   head.classList.toggle('proj-xl-header-stuck', shift > 0);
 }
+// Arrow keys move the marked month box from box to box like cells in Excel (left / right = the next / previous month, up / down =
+// the project above / below); Enter or F2 opens the marked box for editing.
+function projMuMarkCell(cell){
+  projMarkedMuCell = { id: cell.dataset.projectId, month: cell.dataset.month };
+  document.querySelectorAll('.proj-mu-cell.pl-cell-marked').forEach(c => c.classList.remove('pl-cell-marked'));
+  cell.classList.add('pl-cell-marked');
+}
+// scroll so the box is not hidden behind the frozen columns, the pinned headings or the edges of the window
+function projMuRevealCell(cell){
+  const scroll = cell.closest('.proj-mu-hscroll');
+  const frozen = scroll && scroll.querySelector('.proj-xl-header .pl-sticky-name');
+  if(scroll && frozen){
+    const r = cell.getBoundingClientRect(), s = scroll.getBoundingClientRect(), edge = frozen.getBoundingClientRect().right + 8;
+    if(r.left < edge) scroll.scrollLeft -= edge - r.left;
+    else if(r.right > s.right - 8) scroll.scrollLeft += r.right - (s.right - 8);
+  }
+  const nav = document.querySelector('.top-navbar'), head = document.querySelector('.proj-xl-header');
+  const top = (nav && getComputedStyle(nav).display !== 'none' ? nav.offsetHeight : 0) + (head ? head.getBoundingClientRect().height : 0) + 6;
+  const rr = cell.getBoundingClientRect();
+  if(rr.top < top) window.scrollBy(0, rr.top - top);
+  else if(rr.bottom > window.innerHeight - 34) window.scrollBy(0, rr.bottom - (window.innerHeight - 34));
+}
+let projMuKeysWired = false;
+function wireProjMuKeys(){
+  if(projMuKeysWired) return;
+  projMuKeysWired = true;
+  document.addEventListener('keydown', e => {
+    if(!projMarkedMuCell || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(e.target.closest?.('input, textarea, select, [contenteditable="true"], .pl-inline') || document.querySelector('.modal-overlay.open, .pcf-pop')) return;
+    const keys = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
+    const cur = document.querySelector(`.proj-xl-row .proj-mu-cell[data-project-id="${CSS.escape(projMarkedMuCell.id)}"][data-month="${CSS.escape(projMarkedMuCell.month)}"]`);
+    if(!cur) return;
+    if(e.key === 'Enter' || e.key === 'F2'){ e.preventDefault(); openProjMuQuickEdit(projMarkedMuCell.id, projMarkedMuCell.month); return; }
+    const move = keys[e.key];
+    if(!move) return;
+    e.preventDefault();
+    const row = cur.closest('.proj-xl-row');
+    const cells = [...row.querySelectorAll('.proj-mu-cell')], col = cells.indexOf(cur);
+    let target = null;
+    if(move[1]) target = cells[col + move[1]] || null;
+    else{
+      const rows = [...document.querySelectorAll('.proj-xl-row')], at = rows.indexOf(row) + move[0];
+      target = rows[at] ? rows[at].querySelectorAll('.proj-mu-cell')[col] || null : null;
+    }
+    if(!target) return;
+    projMuMarkCell(target);
+    projMuRevealCell(target);
+  });
+}
 let projMuStickWired = false;
 function wireProjMuScrollbar(root){
   if(!projMuStickWired){
     projMuStickWired = true;
+    wireProjMuKeys();
     document.addEventListener('scroll', projMuStickHeader, true);
     window.addEventListener('resize', projMuStickHeader);
   }
