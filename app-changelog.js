@@ -874,6 +874,7 @@ export const CHANGELOG = [
   { version: "3.0.832", date: "2026-11-19", note: "Projects by Status (List): clicking a Monthly Update box once now only marks it (blue outline); double-clicking it opens the update to add or edit, like the other cells of the table" },
   { version: "3.0.833", date: "2026-11-19", note: "Projects by Status (List): with a Monthly Update box marked, the arrow keys move the mark box by box like Excel (left / right = next / previous month, up / down = the project above / below, scrolling the table so the box stays in view) and Enter or F2 opens it for editing" },
   { version: "3.0.834", date: "2026-11-19", note: "Projects by Status (List): the arrow keys no longer stop at the oldest month column -- pressing right there adds the next older month (up to 36 months) and moves the mark onto it" },
+  { version: "3.0.835", date: "2026-11-19", note: "Projects by Status (List): every cell of the table can now be marked with one click (not only the Monthly Update boxes) and the arrow keys move the mark between cells like Excel -- left / right across the columns, up / down across the projects; Enter / F2 or a double-click edits the marked cell. The marked cell's row turns yellow and follows the mark" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

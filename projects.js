@@ -781,20 +781,35 @@ function wireProjHighlight(root){
     else projHighlightClear(root);
   });
   root.addEventListener('mouseleave', () => { if(!projHlLock) projHighlightClear(root); });
-  // one click on a row marks it yellow, another click clears it; the project name, editors, buttons and the month boxes keep their own clicks
+  // one click on any cell marks it (the cell cursor, moved with the arrow keys) and turns its row yellow; clicking the same cell again
+  // clears both. The No. cell only toggles the yellow row. Buttons, tick boxes and the editors keep their own clicks; a double-click edits.
   root.addEventListener('click', e => {
     const row = e.target.closest?.('.proj-xl-row');
     if(!row || !root.contains(row)) return;
-    if(e.target.closest('button, a, input, select, textarea, label, .pl-inline, .proj-mu-cell, [data-role]')) return;
-    const id = row.querySelector('[data-gallery-project-id]')?.dataset.galleryProjectId;
+    const skip = e.target.closest('button, a, input, select, textarea, label, .pl-inline, [data-role]');
+    if(skip && !skip.classList.contains('proj-mu-cell')) return;
+    if(e.detail > 1) return;   // the second click of a double-click: leave the mark as it is
+    const id = row.dataset.rowId;
     if(!id) return;
-    // only one row is marked at a time: marking another row moves the yellow to it, clicking the marked row clears it
-    const wasMarked = projMarkedRows.has(id);
-    projMarkedRows.clear();
-    root.querySelectorAll('.proj-xl-row.pl-marked').forEach(r => r.classList.remove('pl-marked'));
-    if(!wasMarked){ projMarkedRows.add(id); row.classList.add('pl-marked'); }
-    saveProjMarkedRows();
+    let cell = e.target;
+    while(cell.parentElement && cell.parentElement !== row) cell = cell.parentElement;
+    if(cell === row.firstElementChild){
+      projMarkRow(row, !projMarkedRows.has(id));
+      return;
+    }
+    const at = projCellId(cell);
+    const same = projCursor && projCursor.id === at.id && projCursor.idx === at.idx && projCursor.month === at.month;
+    projCursor = same ? null : at;
+    projApplyCursor();
+    projMarkRow(row, !same);
   });
+}
+// only one row is yellow at a time
+function projMarkRow(row, on){
+  projMarkedRows.clear();
+  document.querySelectorAll('.proj-xl-row.pl-marked').forEach(r => r.classList.remove('pl-marked'));
+  if(on){ projMarkedRows.add(row.dataset.rowId); row.classList.add('pl-marked'); }
+  saveProjMarkedRows();
 }
 
 // A bar at the bottom of the screen with an Undo button, for 10 seconds
@@ -1689,6 +1704,7 @@ function wireProjectsByStatusCardClicks(dashboardContainer){
     });
   });
   wireProjHighlight(dashboardContainer);
+  projApplyCursor();
   dashboardContainer.querySelectorAll('.pl-editable[data-edit-field]').forEach(cell => {
     cell.addEventListener('dblclick', () => startProjCellEdit(cell));
   });
@@ -1810,11 +1826,8 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
       btn.textContent = expanded ? 'See less' : 'See more';
     });
   });
-  // one click only marks the month box; a double-click opens it to add / edit the update
+  // one click only marks the month box (see wireProjHighlight); a double-click opens it to add / edit the update
   dashboardContainer.querySelectorAll('[data-role="proj-mu-cell-click"]').forEach(cell => {
-    cell.addEventListener('click', () => {
-      projMuMarkCell(cell);
-    });
     cell.addEventListener('dblclick', e => {
       if(e.target.closest('button, a, input, [data-role="proj-mu-photos"]')) return;
       openProjMuQuickEdit(cell.dataset.projectId, cell.dataset.month);
@@ -3897,16 +3910,37 @@ function projMuStickHeader(){
 }
 // Arrow keys move the marked month box from box to box like cells in Excel (left / right = the next / previous month, up / down =
 // the project above / below); Enter or F2 opens the marked box for editing.
-function projMuMarkCell(cell){
-  projMarkedMuCell = { id: cell.dataset.projectId, month: cell.dataset.month };
-  document.querySelectorAll('.proj-mu-cell.pl-cell-marked').forEach(c => c.classList.remove('pl-cell-marked'));
-  cell.classList.add('pl-cell-marked');
+// the cell cursor: { id, idx, month } -- idx is the cell's position in its row, month is set for the month boxes (they can shift)
+let projCursor = null;
+function projCellId(cell){
+  const row = cell.closest('.proj-xl-row');
+  let c = cell;
+  while(c.parentElement && c.parentElement !== row) c = c.parentElement;
+  return { id: row.dataset.rowId, idx: [...row.children].indexOf(c), month: c.classList.contains('proj-mu-cell') ? c.dataset.month : '' };
+}
+function projCursorCell(){
+  if(!projCursor) return null;
+  const row = document.querySelector(`.proj-xl-row[data-row-id="${CSS.escape(projCursor.id)}"]`);
+  if(!row) return null;
+  if(projCursor.month) return row.querySelector(`.proj-mu-cell[data-month="${CSS.escape(projCursor.month)}"]`);
+  return row.children[projCursor.idx] || null;
+}
+function projApplyCursor(){
+  document.querySelectorAll('.proj-xl-row > .pl-cell-marked').forEach(c => c.classList.remove('pl-cell-marked'));
+  projCursorCell()?.classList.add('pl-cell-marked');
+}
+// Enter / F2 on the marked cell: the same as a double-click on it
+function projCursorActivate(cell){
+  if(cell.classList.contains('proj-mu-cell')){ openProjMuQuickEdit(cell.dataset.projectId, cell.dataset.month); return; }
+  if(cell.matches('.pl-editable[data-edit-field]')){ startProjCellEdit(cell); return; }
+  if(cell.matches('[data-gallery-project-id]')){ cell.click(); return; }
+  cell.querySelector('.pl-review-cb')?.click();
 }
 // scroll so the box is not hidden behind the frozen columns, the pinned headings or the edges of the window
 function projMuRevealCell(cell){
   const scroll = cell.closest('.proj-mu-hscroll');
   const frozen = scroll && scroll.querySelector('.proj-xl-header .pl-sticky-name');
-  if(scroll && frozen){
+  if(scroll && frozen && !cell.classList.contains('pl-sticky')){
     const r = cell.getBoundingClientRect(), s = scroll.getBoundingClientRect(), edge = frozen.getBoundingClientRect().right + 8;
     if(r.left < edge) scroll.scrollLeft -= edge - r.left;
     else if(r.right > s.right - 8) scroll.scrollLeft += r.right - (s.right - 8);
@@ -3922,37 +3956,42 @@ function wireProjMuKeys(){
   if(projMuKeysWired) return;
   projMuKeysWired = true;
   document.addEventListener('keydown', e => {
-    if(!projMarkedMuCell || e.ctrlKey || e.metaKey || e.altKey) return;
+    if(!projCursor || e.ctrlKey || e.metaKey || e.altKey) return;
     if(e.target.closest?.('input, textarea, select, [contenteditable="true"], .pl-inline') || document.querySelector('.modal-overlay.open, .pcf-pop')) return;
     const keys = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] };
-    const cur = document.querySelector(`.proj-xl-row .proj-mu-cell[data-project-id="${CSS.escape(projMarkedMuCell.id)}"][data-month="${CSS.escape(projMarkedMuCell.month)}"]`);
+    const cur = projCursorCell();
     if(!cur) return;
-    if(e.key === 'Enter' || e.key === 'F2'){ e.preventDefault(); openProjMuQuickEdit(projMarkedMuCell.id, projMarkedMuCell.month); return; }
+    if(e.key === 'Enter' || e.key === 'F2'){ e.preventDefault(); projCursorActivate(cur); return; }
     const move = keys[e.key];
     if(!move) return;
     e.preventDefault();
     const row = cur.closest('.proj-xl-row');
-    const cells = [...row.querySelectorAll('.proj-mu-cell')], col = cells.indexOf(cur);
+    const kids = [...row.children], col = kids.indexOf(cur);
     let target = null;
-    if(move[1]) target = cells[col + move[1]] || null;
-    else{
+    if(move[1]){
+      const c = col + move[1];
+      if(c >= 1 && kids[c]) target = kids[c];   // the No. cell (first) is not part of the cursor's range
+      else if(c < 1) return;
+    }else{
       const rows = [...document.querySelectorAll('.proj-xl-row')], at = rows.indexOf(row) + move[0];
-      target = rows[at] ? rows[at].querySelectorAll('.proj-mu-cell')[col] || null : null;
+      target = rows[at] ? rows[at].children[col] || null : null;
     }
-    if(!target && move[1] > 0){
+    if(!target && move[1] > 0 && cur.classList.contains('proj-mu-cell')){
       // past the oldest month column: add the next older month (skipping any the admin removed) and move onto it
+      const cells = row.querySelectorAll('.proj-mu-cell');
       const newest = bangkokMonthStr();
       let older = previousMonthStr(cells[cells.length - 1].dataset.month);
       for(let i = 0; i < 36 && projectsByStatusHiddenMonths.has(older); i++) older = previousMonthStr(older);
       const span = monthsBetween(older, newest) + 1;
       if(span > 36 || projectsByStatusHiddenMonths.has(older)) return;
-      const id = projMarkedMuCell.id;
       projMuMinSpan = Math.max(projMuMinSpan, span);
+      projCursor = { id: projCursor.id, idx: -1, month: older };
       renderProjectsList();
-      target = document.querySelector(`.proj-xl-row .proj-mu-cell[data-project-id="${CSS.escape(id)}"][data-month="${CSS.escape(older)}"]`);
+      target = projCursorCell();
     }
     if(!target) return;
-    projMuMarkCell(target);
+    projCursor = projCellId(target);
+    projApplyCursor();
     projMuRevealCell(target);
   });
 }
@@ -4219,10 +4258,9 @@ function projStatusSlug(status){
   return String(status || PROJECT_STATUSES[0]).toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
 }
 // the month box that was last clicked (marked); double-click a box to add / edit its update
-let projMarkedMuCell = null;
 function renderProjMuCell(info, variant, projectId, month){
-  const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to mark this box -- double-click to add / edit this month's update"`;
-  const marked = projMarkedMuCell && projMarkedMuCell.id === projectId && projMarkedMuCell.month === month ? ' pl-cell-marked' : '';
+  const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to mark this box (then use the arrow keys) -- double-click to add / edit this month's update"`;
+  const marked = projCursor && projCursor.id === projectId && projCursor.month === month ? ' pl-cell-marked' : '';
   if(!info){
     return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty${marked}" ${dataAttrs}>No update yet this month</div>`;
   }
@@ -4336,7 +4374,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
     return `
       <div class="proj-gallery-list proj-xl-list" style="margin-bottom:6px;">
         ${projectsForStatus.map(p => `
-          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}${p.reviewed ? ' pl-reviewed' : ''}" data-status="${projStatusSlug(p.status)}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
+          <div class="proj-gallery-list-item proj-xl-row${projMarkedRows.has(p.id) ? ' pl-marked' : ''}${p.reviewed ? ' pl-reviewed' : ''}" data-row-id="${escapeHtml(p.id)}" data-status="${projStatusSlug(p.status)}" style="grid-template-columns:${escapeHtml(gridCols)};" title="${escapeHtml(p.name || 'Untitled project')}">
             <span class="pl-cell pl-center pl-sticky pl-sticky-no pl-no">${String(++projXlRowNo).padStart(2, '0')}</span>
             <button type="button" class="proj-gallery-list-identity pl-cell pl-name pl-sticky pl-sticky-name" data-gallery-project-id="${escapeHtml(p.id)}">
               ${p.image
