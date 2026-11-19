@@ -3844,7 +3844,7 @@ function formatXlDate(iso){
 function projMuMonths(selectedMonth){
   if(projMuRenderedCount() === 0) return [];
   const newest = bangkokMonthStr();
-  const span = Math.max(projMuRenderedCount(), selectedMonth ? monthsBetween(selectedMonth, newest) + 1 : 0);
+  const span = Math.max(projMuRenderedCount(), selectedMonth ? monthsBetween(selectedMonth, newest) + 1 : 0, projMuMinSpan);
   return monthsBackFrom(newest, Math.min(36, span)).filter(m => !projectsByStatusHiddenMonths.has(m));
 }
 function projMuRenderedCount(){
@@ -3876,6 +3876,7 @@ function projReviewCountText(){
   const list = projects.filter(p => isProjectCurrentlyVisible(p) && projectMatchesCategoryFilter(p));
   return `Reviewed ${list.filter(p => p.reviewed).length} / ${list.length}`;
 }
+let projMuMinSpan = 0;   // grows when the arrow keys walk past the oldest month column: further months are added on the right
 let projMuScrollToMonth = null;   // a month the table should scroll to after the next draw (the picker / arrows set it)
 let projMuInitialScrolled = false; // the first draw of the session also scrolls to the saved starting month
 let projListZoom = 1;      // zoom of the Projects by Status (List) table (Ctrl + wheel, the - / + buttons, Fit width)
@@ -3937,6 +3938,18 @@ function wireProjMuKeys(){
     else{
       const rows = [...document.querySelectorAll('.proj-xl-row')], at = rows.indexOf(row) + move[0];
       target = rows[at] ? rows[at].querySelectorAll('.proj-mu-cell')[col] || null : null;
+    }
+    if(!target && move[1] > 0){
+      // past the oldest month column: add the next older month (skipping any the admin removed) and move onto it
+      const newest = bangkokMonthStr();
+      let older = previousMonthStr(cells[cells.length - 1].dataset.month);
+      for(let i = 0; i < 36 && projectsByStatusHiddenMonths.has(older); i++) older = previousMonthStr(older);
+      const span = monthsBetween(older, newest) + 1;
+      if(span > 36 || projectsByStatusHiddenMonths.has(older)) return;
+      const id = projMarkedMuCell.id;
+      projMuMinSpan = Math.max(projMuMinSpan, span);
+      renderProjectsList();
+      target = document.querySelector(`.proj-xl-row .proj-mu-cell[data-project-id="${CSS.escape(id)}"][data-month="${CSS.escape(older)}"]`);
     }
     if(!target) return;
     projMuMarkCell(target);
@@ -4437,6 +4450,7 @@ export function resetProjectsState(){
   projectsByStatusMonthIsLocal = false;
   projectsByStatusMonth = null;
   projMuInitialScrolled = false;
+  projMuMinSpan = 0;
   projMuScrollToMonth = null;
   projMuExpandedMonths.clear();
   resetPendingSubmissionsState();
