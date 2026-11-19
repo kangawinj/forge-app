@@ -6786,3 +6786,7 @@
   .proj-xl-row.pl-reviewed.pl-hl-row:not(.pl-marked) > .pl-cell.pl-hl-col:not(.pl-editing){background:#b9e6c5;}
   .proj-xl-row.pl-reviewed > .pl-sticky-no{box-shadow:inset 5px 0 0 var(--ok);}
   .proj-review-count{font-size:12px;font-weight:600;color:var(--ok);background:var(--ok-light);border-radius:12px;padding:5px 12px;white-space:nowrap;}
+  /* Projects by Status (List): the month box that was clicked once (marked); double-click opens it for editing */
+  .proj-xl-row > .proj-mu-cell.pl-cell-marked{border-color:var(--primary);box-shadow:0 0 0 3px color-mix(in srgb, var(--primary) 25%, transparent);background-color:#e6eefb;}
+  .proj-xl-row > .proj-mu-cell{user-select:none;}
+  .proj-xl-row > .proj-mu-cell .proj-mu-cell-text{user-select:text;}

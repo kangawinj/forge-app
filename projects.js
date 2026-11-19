@@ -1810,8 +1810,15 @@ This hides it for everyone. No Monthly Update data is deleted -- you can bring i
       btn.textContent = expanded ? 'See less' : 'See more';
     });
   });
+  // one click only marks the month box; a double-click opens it to add / edit the update
   dashboardContainer.querySelectorAll('[data-role="proj-mu-cell-click"]').forEach(cell => {
     cell.addEventListener('click', () => {
+      projMarkedMuCell = { id: cell.dataset.projectId, month: cell.dataset.month };
+      dashboardContainer.querySelectorAll('.proj-mu-cell.pl-cell-marked').forEach(c => c.classList.remove('pl-cell-marked'));
+      cell.classList.add('pl-cell-marked');
+    });
+    cell.addEventListener('dblclick', e => {
+      if(e.target.closest('button, a, input, [data-role="proj-mu-photos"]')) return;
       openProjMuQuickEdit(cell.dataset.projectId, cell.dataset.month);
     });
   });
@@ -4150,13 +4157,16 @@ function saveProjMuQuickEdit(){
 function projStatusSlug(status){
   return String(status || PROJECT_STATUSES[0]).toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-+|-+$/g, '');
 }
+// the month box that was last clicked (marked); double-click a box to add / edit its update
+let projMarkedMuCell = null;
 function renderProjMuCell(info, variant, projectId, month){
-  const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to add/edit this month's update"`;
+  const dataAttrs = `data-role="proj-mu-cell-click" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}" title="Click to mark this box -- double-click to add / edit this month's update"`;
+  const marked = projMarkedMuCell && projMarkedMuCell.id === projectId && projMarkedMuCell.month === month ? ' pl-cell-marked' : '';
   if(!info){
-    return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty" ${dataAttrs}>No update yet this month</div>`;
+    return `<div class="proj-mu-cell proj-mu-cell-${variant} proj-mu-cell-empty${marked}" ${dataAttrs}>No update yet this month</div>`;
   }
   return `
-    <div class="proj-mu-cell proj-mu-cell-${variant}${projMuExpandedMonths.has(month) ? ' expanded' : ''}" ${dataAttrs}>
+    <div class="proj-mu-cell proj-mu-cell-${variant}${projMuExpandedMonths.has(month) ? ' expanded' : ''}${marked}" ${dataAttrs}>
       <div class="proj-mu-cell-text" data-role="proj-mu-text">${escapeHtml(info.text)}</div>
       <button type="button" class="proj-mu-cell-more" data-role="proj-mu-toggle" style="display:none;">See more</button>
       ${info.photos && info.photos.length ? `<div class="mu-attachments-chiplist proj-mu-photos-grid" data-role="proj-mu-photos" data-project-id="${escapeHtml(projectId)}" data-month="${escapeHtml(month)}">${muAttachmentChipsHtml(info.photos, false)}</div>` : ''}
