@@ -714,6 +714,28 @@ function renderCompareContent(){
     const p = parseFloat(m.price);
     return isNaN(p) ? null : p;
   }
+  // Costing has two columns per recipe: the cost (฿) and its % of that recipe's Total Cost (priced ingredients only)
+  const grandCost = {};
+  ids.forEach(id => {
+    let t = 0;
+    rows.forEach(row => {
+      const wt = row.weights[id];
+      if(wt === undefined) return;
+      const price = priceOf(row.label);
+      if(price !== null) t += (wt / 1000) * price;
+    });
+    grandCost[id] = t;
+  });
+  const costDash = idx => `<td class="col-pct${boundaryClass(idx)}">-</td><td class="col-wt">-</td>`;
+  const costMissing = (idx, text) => `<td class="compare-missing${boundaryClass(idx)}" colspan="2">${text}</td>`;
+  const costPair = (id, idx, cost, star) => `<td class="col-pct${boundaryClass(idx)}">฿${cost.toFixed(2)}${star ? ' *' : ''}</td><td class="col-wt">${grandCost[id] > 0 ? (cost / grandCost[id] * 100).toFixed(1) : '0.0'}%</td>`;
+  const costHeaderRowsHtml = `
+    <tr><th rowspan="2">Ingredient</th>${ids.map((id, idx) => {
+      const r = recipes.find(x => x.id === id);
+      return `<th colspan="2" class="${boundaryClass(idx)}">${r ? recipeColHeaderHtml(r) : '-'}</th>`;
+    }).join('')}</tr>
+    <tr>${ids.map((id, idx) => `<th class="col-pct${boundaryClass(idx)}">฿</th><th class="col-wt">% of total</th>`).join('')}</tr>
+  `;
 
   compareExportSnapshot = {
     ids, selected, rows, partSections, showWeights, priceOf,
@@ -729,18 +751,18 @@ function renderCompareContent(){
   const costRows = rows.map(row => {
     const price = priceOf(row.label);
     const cells = ids.map((id, idx) => {
-      if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+      if(!selected.some(r => r.id === id)) return costDash(idx);
       const wt = row.weights[id];
-      if(wt === undefined) return `<td class="compare-missing${boundaryClass(idx)}">— Not used —</td>`;
-      if(price === null) return `<td class="compare-missing${boundaryClass(idx)}">No price set</td>`;
-      return `<td class="${boundaryClass(idx)}">฿${((wt / 1000) * price).toFixed(2)}</td>`;
+      if(wt === undefined) return costMissing(idx, '— Not used —');
+      if(price === null) return costMissing(idx, 'No price set');
+      return costPair(id, idx, (wt / 1000) * price, false);
     }).join('');
     const displayLabel = showCodes ? row.label : stripIngredientCode(row.label);
     return `<tr>${ingNameCellHtml(row.label, displayLabel)}${cells}</tr>`;
   }).join('');
 
   const costTotalCells = ids.map((id, idx) => {
-    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+    if(!selected.some(r => r.id === id)) return costDash(idx);
     let total = 0;
     let hasUnpriced = false;
     rows.forEach(row => {
@@ -750,11 +772,11 @@ function renderCompareContent(){
       if(price === null){ hasUnpriced = true; return; }
       total += (wt / 1000) * price;
     });
-    return `<td class="${boundaryClass(idx)}">฿${total.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    return costPair(id, idx, total, hasUnpriced);
   }).join('');
 
   const costPerKgCells = ids.map((id, idx) => {
-    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+    if(!selected.some(r => r.id === id)) return costDash(idx);
     const r = recipes.find(x => x.id === id);
     let total = 0;
     let hasUnpriced = false;
@@ -766,8 +788,8 @@ function renderCompareContent(){
       total += (wt / 1000) * price;
     });
     const batchKg = (r && r.batchWeight) ? r.batchWeight / 1000 : 0;
-    if(batchKg <= 0) return `<td class="compare-missing${boundaryClass(idx)}">No batch weight</td>`;
-    return `<td class="${boundaryClass(idx)}">฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    if(batchKg <= 0) return costMissing(idx, 'No batch weight');
+    return `<td class="col-pct${boundaryClass(idx)}" colspan="2">฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
   }).join('');
 
   // Group by Part for Costing, same idea as Compare Ingredients' own
@@ -775,12 +797,12 @@ function renderCompareContent(){
   // each row's weight per recipe, which is all a cost figure needs) rather
   // than rebuilding the Part breakdown a second time.
   function costCell(row, id, idx){
-    if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+    if(!selected.some(r => r.id === id)) return costDash(idx);
     const wt = row.weights[id];
-    if(wt === undefined) return `<td class="compare-missing${boundaryClass(idx)}">— Not used —</td>`;
+    if(wt === undefined) return costMissing(idx, '— Not used —');
     const price = priceOf(row.label);
-    if(price === null) return `<td class="compare-missing${boundaryClass(idx)}">No price set</td>`;
-    return `<td class="${boundaryClass(idx)}">฿${((wt / 1000) * price).toFixed(2)}</td>`;
+    if(price === null) return costMissing(idx, 'No price set');
+    return costPair(id, idx, (wt / 1000) * price, false);
   }
   // Same recursive-subtree idea as sectionRecursiveTotals above, tallying
   // cost instead of %/weight.
@@ -817,17 +839,17 @@ function renderCompareContent(){
     }).join('');
     const recursiveTotals = sectionRecursiveCostTotals(section);
     const subtotalCells = ids.map((id, idx) => {
-      if(!selected.some(r => r.id === id)) return `<td class="${boundaryClass(idx)}">-</td>`;
+      if(!selected.some(r => r.id === id)) return costDash(idx);
       const { cost, hasUnpriced } = recursiveTotals[id];
-      return `<td class="${boundaryClass(idx)}">฿${cost.toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+      return costPair(id, idx, cost, hasUnpriced);
     }).join('');
     const hasChildren = section.subSections.length > 0;
     const subtotalRowHtml = `<tr class="total-row"><td>${escapeHtml(section.label)} Subtotal</td>${subtotalCells}</tr>`;
     const tableHtml = section.rows.length === 0 ? '' : `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${colgroupHtml(ids.length)}
-          <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
+          ${colgroupHtml(ids.length * 2)}
+          <thead>${costHeaderRowsHtml}</thead>
           <tbody>${collapsed ? '' : bodyRows}</tbody>
           ${hasChildren ? '' : `<tfoot>${subtotalRowHtml}</tfoot>`}
         </table>
@@ -837,7 +859,7 @@ function renderCompareContent(){
     const bottomSubtotalHtml = hasChildren ? `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${colgroupHtml(ids.length)}
+          ${colgroupHtml(ids.length * 2)}
           <tfoot>${subtotalRowHtml}</tfoot>
         </table>
       </div>
@@ -858,16 +880,16 @@ function renderCompareContent(){
   const combinedCostTableHtml = `
     <div style="overflow-x:auto;">
       <table class="compare-table">
-        ${colgroupHtml(ids.length)}
-        <thead><tr><th>Ingredient</th>${ingHeaderCells}</tr></thead>
-        <tbody>${costRows || `<tr><td colspan="${ids.length+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
+        ${colgroupHtml(ids.length * 2)}
+        <thead>${costHeaderRowsHtml}</thead>
+        <tbody>${costRows || `<tr><td colspan="${ids.length*2+1}" class="compare-empty">No ingredients yet</td></tr>`}</tbody>
       </table>
     </div>
   `;
   const costGrandTotalTableHtml = `
     <div style="overflow-x:auto;margin-top:8px;">
       <table class="compare-table">
-        ${colgroupHtml(ids.length)}
+        ${colgroupHtml(ids.length * 2)}
         <tfoot>
           <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
           <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
@@ -939,7 +961,7 @@ function renderCompareContent(){
       </label>
       ${compareCostGroupByPart ? (costPartSectionsHtml || '<div class="compare-empty">No ingredients yet</div>') : combinedCostTableHtml}
       ${costGrandTotalTableHtml}
-      <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ.</div>
+      <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ. "% of total" is that ingredient's (or Part's) share of the recipe's Total Cost.</div>
     ` : ''}
 
     ${sectionTitleWithEye('toggleStepsSection', 'Compare Process Steps', compareShowSteps)}

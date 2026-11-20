@@ -228,17 +228,35 @@ function buildIngredients(wb, d, recipes){
 /* ----- 3. Costing ----- */
 function buildCosting(wb, d, recipes){
   const ws = wb.addWorksheet('Costing');
-  const span = 1 + recipes.length;
-  ws.columns = [{ width: 46 }, ...recipes.map(() => ({ width: 20 }))];
+  const span = 1 + recipes.length * 2;           // every recipe gets two columns: the cost (฿) and its share of the recipe's total cost (%)
+  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => [{ width: 14 }, { width: 10 }])];
   titleBar(ws, `Compare Costing (weight × Price/kg from the Ingredient Library) — ${d.title}`, span);
-  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part (Parts folded on the Compare page start folded). * = a total that leaves out ingredients with no price on file.', span);
-  const h = ws.addRow(['Ingredient', ...recipes.map(recipeHeader)]);
+  noteRow(ws, 'Use the + / − buttons beside the row numbers (or the 1 2 3 buttons at the top left) to fold or unfold each Part (Parts folded on the Compare page start folded). * = a total that leaves out ingredients with no price on file. % = share of the recipe\'s Total Cost.', span);
+  const h = ws.addRow(['Ingredient', ...recipes.flatMap(r => [recipeHeader(r), ''])]);
   h.eachCell(styleHeaderCell);
   h.height = 34;
-  let maxLevel = 0, anyUnpriced = false;
+  recipes.forEach((r, i) => ws.mergeCells(h.number, 2 + i * 2, h.number, 3 + i * 2));
+  const h2 = ws.addRow(['', ...recipes.flatMap(() => ['฿', '% of total'])]);
+  h2.eachCell(styleHeaderCell);
+  ws.mergeCells(h.number, 1, h2.number, 1);
+  let maxLevel = 0;
   const foldedRows = new Set();
   const level = (row, n) => { row.outlineLevel = Math.min(n, MAX_LEVEL); maxLevel = Math.max(maxLevel, row.outlineLevel); };
-  const baht = '"฿"#,##0.00';
+  const baht = '"฿"#,##0.00', pctFmt = '0.0"%"';
+
+  // Total cost of each whole recipe (priced ingredients only): the base every % is taken from.
+  const totalCost = {}, unpricedAll = {};
+  recipes.forEach(r => { totalCost[r.id] = 0; unpricedAll[r.id] = false; });
+  d.rows.forEach(row => {
+    const price = d.priceOf(row.label);
+    recipes.forEach(r => {
+      const wt = row.weights[r.id];
+      if(wt === undefined) return;
+      if(price === null){ unpricedAll[r.id] = true; return; }
+      totalCost[r.id] += (wt / 1000) * price;
+    });
+  });
+  const share = (r, cost) => totalCost[r.id] > 0 ? cost / totalCost[r.id] * 100 : 0;
 
   function costs(section){
     const t = {};
@@ -258,14 +276,13 @@ function buildCosting(wb, d, recipes){
   function addSection(section, depth, hiddenBy){
     const t = costs(section);
     const folded = !!(d.collapsed && d.collapsed['cost:' + section.path]);   // Costing keeps its own fold state
-    const group = ws.addRow([section.label, ...recipes.map(() => null)]);
+    const group = ws.addRow([section.label, ...recipes.flatMap(r => [t[r.id].cost, share(r, t[r.id].cost)])]);
     if(hiddenBy) group.hidden = true;
     if(folded){ markFolded(group); foldedRows.add(group.number); }
     // numbers with a trailing * when something under the Part has no price
     recipes.forEach((r, i) => {
-      const cell = group.getCell(2 + i);
-      cell.value = t[r.id].cost;
-      if(t[r.id].unpriced){ anyUnpriced = true; cell.numFmt = '"฿"#,##0.00" *"'; } else cell.numFmt = baht;
+      group.getCell(2 + i * 2).numFmt = t[r.id].unpriced ? '"฿"#,##0.00" *"' : baht;
+      group.getCell(3 + i * 2).numFmt = pctFmt;
     });
     level(group, depth);
     for(let c = 1; c <= span; c++){
@@ -277,11 +294,12 @@ function buildCosting(wb, d, recipes){
     }
     section.rows.forEach(row => {
       const price = d.priceOf(row.label);
-      const cells = recipes.map(r => {
+      const cells = recipes.flatMap(r => {
         const wt = row.weights[r.id];
-        if(wt === undefined) return '— Not used —';
-        if(price === null) return 'No price set';
-        return (wt / 1000) * price;
+        if(wt === undefined) return ['— Not used —', ''];
+        if(price === null) return ['No price set', ''];
+        const cost = (wt / 1000) * price;
+        return [cost, share(r, cost)];
       });
       const ingRow = ws.addRow([d.labelOf(row), ...cells]);
       level(ingRow, depth + 1);
@@ -291,48 +309,43 @@ function buildCosting(wb, d, recipes){
         cell.font = { name: FONT, color: { argb: C.text } };
         cell.border = { bottom: thin() };
         cell.alignment = c === 1 ? { indent: depth + 1, vertical: 'middle', wrapText: true } : { horizontal: 'right', vertical: 'middle' };
-        if(c > 1){
-          if(typeof cell.value === 'number') cell.numFmt = baht;
-          else cell.font = { name: FONT, italic: true, color: { argb: C.dim } };
-        }
+        if(c > 1) cell.numFmt = c % 2 === 0 ? baht : pctFmt;
       }
+      recipes.forEach((r, i) => {
+        const missing = typeof ingRow.getCell(2 + i * 2).value !== 'number';
+        if(!missing) return;
+        ws.mergeCells(ingRow.number, 2 + i * 2, ingRow.number, 3 + i * 2);
+        const cell = ingRow.getCell(2 + i * 2);
+        cell.font = { name: FONT, italic: true, color: { argb: C.dim } };
+        cell.alignment = { horizontal: 'center', vertical: 'middle' };
+      });
     });
     (section.subSections || []).forEach(sub => addSection(sub, depth + 1, hiddenBy || folded));
   }
   d.partSections.forEach(section => addSection(section, 0, false));
 
   // Grand totals over the whole recipe (same figures the page shows).
-  const totalCost = {}, unpricedAll = {};
-  recipes.forEach(r => { totalCost[r.id] = 0; unpricedAll[r.id] = false; });
-  d.rows.forEach(row => {
-    const price = d.priceOf(row.label);
-    recipes.forEach(r => {
-      const wt = row.weights[r.id];
-      if(wt === undefined) return;
-      if(price === null){ unpricedAll[r.id] = true; return; }
-      totalCost[r.id] += (wt / 1000) * price;
-    });
-  });
-  const totalRow = ws.addRow(['Total Cost', ...recipes.map(r => totalCost[r.id])]);
-  const perKgRow = ws.addRow(['Cost / kg of product', ...recipes.map(r => (r.batchWeight ? totalCost[r.id] / (r.batchWeight / 1000) : 'No batch weight'))]);
+  const totalRow = ws.addRow(['Total Cost', ...recipes.flatMap(r => [totalCost[r.id], totalCost[r.id] > 0 ? 100 : 0])]);
+  const perKgRow = ws.addRow(['Cost / kg of product', ...recipes.flatMap(r => [(r.batchWeight ? totalCost[r.id] / (r.batchWeight / 1000) : 'No batch weight'), ''])]);
   [totalRow, perKgRow].forEach(row => {
     for(let c = 1; c <= span; c++){
       const cell = row.getCell(c);
       cell.font = { name: FONT, bold: true, color: { argb: C.text } };
       cell.border = row === totalRow ? { top: { style: 'medium', color: { argb: C.text } } } : {};
       cell.alignment = c === 1 ? { vertical: 'middle' } : { horizontal: 'right', vertical: 'middle' };
-      if(c > 1 && typeof cell.value === 'number'){
-        const r = recipes[c - 2];
-        cell.numFmt = unpricedAll[r.id] ? '"฿"#,##0.00" *"' : baht;
-        if(unpricedAll[r.id]) anyUnpriced = true;
-      }
     }
+    recipes.forEach((r, i) => {
+      const cell = row.getCell(2 + i * 2);
+      if(typeof cell.value === 'number') cell.numFmt = unpricedAll[r.id] ? '"฿"#,##0.00" *"' : baht;
+      if(row === totalRow) row.getCell(3 + i * 2).numFmt = pctFmt;
+      else ws.mergeCells(row.number, 2 + i * 2, row.number, 3 + i * 2);   // Cost / kg has no % of its own
+    });
   });
   clearCollapsedMarks(ws, foldedRows);
   ws.properties.outlineProperties = { summaryBelow: false, summaryRight: false };
   ws.properties.outlineLevelRow = maxLevel;
   ws.pageSetup = { paperSize: 9, orientation: 'landscape', scale: 70 };
-  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 3, showGridLines: false }];
+  ws.views = [{ state: 'frozen', xSplit: 1, ySplit: 4, showGridLines: false }];
 }
 
 /* ----- 4. Process Steps ----- */
@@ -387,14 +400,15 @@ function stripNonFinite(wb){
 // shown -- Costing and Process Steps then merge those two columns), so a recipe reads straight down the page.
 const colNum = s => [...s].reduce((n, ch) => n * 26 + ch.charCodeAt(0) - 64, 0);
 function assembleOneSheet(wb, tmp, d, recipes){
-  const per = d.showWeights ? 2 : 1, n = recipes.length;
+  const per = 2, n = recipes.length;   // Costing always has two columns per recipe (฿ and %), so every section is laid out on pairs
   const ws = wb.addWorksheet('Compare');
-  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: per === 1 ? 40 : 20 })))];
+  ws.columns = [{ width: 46 }, ...recipes.flatMap(() => Array.from({ length: per }, () => ({ width: 20 })))];
   const foldedRows = new Set();
   let maxLevel = 0, offset = 0;
   tmp.worksheets.forEach((src, si) => {
     const kind = src.name === 'Ingredients' ? 'ing' : (src.name === 'Costing' ? 'cost' : 'steps');
-    const mapCol = c => kind === 'ing' ? [c, c] : (c === 1 ? [1, 1] : [2 + (c - 2) * per, 2 + (c - 2) * per + per - 1]);
+    const own = kind === 'cost' || (kind === 'ing' && d.showWeights);   // sections already built on two columns per recipe keep their columns; the others are merged across a pair
+    const mapCol = c => own ? [c, c] : (c === 1 ? [1, 1] : [2 + (c - 2) * per, 2 + (c - 2) * per + per - 1]);
     if(si > 0){ ws.getRow(offset + 1).height = 16; offset += 1; }   // a blank row between the sections
     // cells covered by a merge in the source (the title bar, the note): copied as merges, not paired up below
     const merges = (src.model.merges || []).map(m => { const [a, b] = m.split(':'), pa = /^([A-Z]+)(\d+)$/.exec(a), pb = /^([A-Z]+)(\d+)$/.exec(b); return { c1: colNum(pa[1]), r1: +pa[2], c2: colNum(pb[1]), r2: +pb[2] }; });
