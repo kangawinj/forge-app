@@ -4424,14 +4424,14 @@ function renderStatusBarList(groups, viewMode, selectedMonth){
     if(viewMode === 'list'){
       return `
       <div class="proj-cat-section" data-proj-cat-section="${escapeHtml(c.key)}">
-        <div class="proj-cat-heading"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></div>
+        <div class="proj-cat-heading"><span class="proj-cat-heading-label"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></span></div>
         ${renderStatusGroupItems(c.statusGroups.flatMap(g => g.list), '', viewMode, selectedMonth)}
       </div>`;
     }
     const max = Math.max(...c.statusGroups.map(g => g.list.length));
     return `
       <div class="proj-cat-section" data-proj-cat-section="${escapeHtml(c.key)}">
-        <div class="proj-cat-heading"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></div>
+        <div class="proj-cat-heading"><span class="proj-cat-heading-label"><span>${escapeHtml(c.heading)}</span><span class="proj-cat-heading-count">${c.count}</span></span></div>
         ${c.statusGroups.map(g => {
           const color = (PROJECT_STATUS_BAR[g.label] || PROJECT_STATUS_BAR['Not Started']).color;
           const photosHtml = renderStatusGroupItems(g.list, g.label, viewMode, selectedMonth);

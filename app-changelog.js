@@ -880,6 +880,7 @@ export const CHANGELOG = [
   { version: "3.0.838", date: "2026-11-20", note: "Compare Ingredients / Costing: the columns now line up in every table -- the dividing lines between recipes were drifting sideways in indented Parts, their Subtotals and the Total rows (and the Part indent no longer doubles up at deeper levels)" },
   { version: "3.0.839", date: "2026-11-20", note: "Compare Ingredients / Costing: fixed the dividing lines between recipes still sitting at a different place in the Part Subtotal rows, the cost Total rows and the Recipe Total row (tables made of only a footer ignored their column widths); the Recipe Total table also follows the % / g columns when weights are shown" },
   { version: "3.0.840", date: "2026-11-20", note: "Reference Lists: the Search box now sits under the New company form / the add row, right above the list it filters" },
+  { version: "3.0.841", date: "2026-11-20", note: "Projects by Status (List): the category heading (International project, Domestic project ...) stays in view at the left while the table is scrolled sideways" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
