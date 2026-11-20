@@ -878,6 +878,7 @@ export const CHANGELOG = [
   { version: "3.0.836", date: "2026-11-20", note: "Compare Costing: a \"% of total\" column beside each recipe's cost -- every ingredient, Part Subtotal and the Total Cost now show their share of that recipe's total cost (page and Excel export)" },
   { version: "3.0.837", date: "2026-11-20", note: "Compare Costing: the cost and its % column now sit close together at the right of each recipe's column (the % column is narrow, the cost column takes the spare width)" },
   { version: "3.0.838", date: "2026-11-20", note: "Compare Ingredients / Costing: the columns now line up in every table -- the dividing lines between recipes were drifting sideways in indented Parts, their Subtotals and the Total rows (and the Part indent no longer doubles up at deeper levels)" },
+  { version: "3.0.839", date: "2026-11-20", note: "Compare Ingredients / Costing: fixed the dividing lines between recipes still sitting at a different place in the Part Subtotal rows, the cost Total rows and the Recipe Total row (tables made of only a footer ignored their column widths); the Recipe Total table also follows the % / g columns when weights are shown" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

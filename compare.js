@@ -473,6 +473,12 @@ function renderCompareContent(){
   // Fixed-width label column + N equal unset-width columns — with
   // table-layout:fixed, unset <col>s split the remaining width evenly, so
   // this lines each recipe's column(s) up with its equal-width info card.
+  // A table that has only a <tfoot> (a Part's bottom Subtotal, the cost Total rows) ignores the column widths above and
+  // spreads its columns by their content instead, so its dividing lines land somewhere else than the tables above it.
+  // An invisible zero-height header row (one empty cell per column) makes it honour them like the others.
+  function colsizerHtml(numDataCols){
+    return `<thead class="compare-colsizer" aria-hidden="true"><tr>${'<th></th>'.repeat(numDataCols + 1)}</tr></thead>`;
+  }
   function colgroupHtml(numDataCols, depth = 0){
     // a Part nested deeper sits further in (each level indents its tables 20px), so its label column is 20px narrower
     // per level -- that keeps every recipe's columns, and the lines between them, at the same x in every table
@@ -658,7 +664,7 @@ function renderCompareContent(){
     const bottomSubtotalHtml = hasChildren ? `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${colgroupHtml(ids.length * (showWeights ? 2 : 1), section.depth)}
+          ${colgroupHtml(ids.length * (showWeights ? 2 : 1), section.depth)}${colsizerHtml(ids.length * (showWeights ? 2 : 1))}
           <tfoot>${subtotalRowHtml}</tfoot>
         </table>
       </div>
@@ -699,14 +705,14 @@ function renderCompareContent(){
 
   const totalCells = ids.map((id, idx) => {
     const r = recipes.find(x => x.id === id);
-    if(!r) return `<td class="${boundaryClass(idx)}">-</td>`;
+    if(!r) return `<td${showWeights ? ' colspan="2"' : ''} class="${boundaryClass(idx)}">-</td>`;
     // Summing each ingredient's already-rounded % can drift off 100% (e.g.
     // 99.99%) purely from rounding noise. % is always weight/totalWeight, so
     // the true total is exactly 100% by construction whenever there's any
     // weight at all — same fix as the Grand Total box on the recipe page.
     const totalWt = allIngredientsInRecipe(r).reduce((s,i)=>s+(parseFloat(i.weight)||0),0);
     const totalPct = totalWt > 0 ? 100 : 0;
-    return `<td class="${boundaryClass(idx)}">${totalPct.toFixed(2)}%</td>`;
+    return `<td${showWeights ? ' colspan="2"' : ''} class="${boundaryClass(idx)}">${totalPct.toFixed(2)}%</td>`;
   }).join('');
 
   // --- costing comparison (weight × library price/kg, per ingredient) ---
@@ -863,7 +869,7 @@ function renderCompareContent(){
     const bottomSubtotalHtml = hasChildren ? `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${costColgroupHtml(section.depth)}
+          ${costColgroupHtml(section.depth)}${colsizerHtml(ids.length * 2)}
           <tfoot>${subtotalRowHtml}</tfoot>
         </table>
       </div>
@@ -893,7 +899,7 @@ function renderCompareContent(){
   const costGrandTotalTableHtml = `
     <div style="overflow-x:auto;margin-top:8px;">
       <table class="compare-table">
-        ${costColgroupHtml()}
+        ${costColgroupHtml()}${colsizerHtml(ids.length * 2)}
         <tfoot>
           <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
           <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
@@ -946,8 +952,8 @@ function renderCompareContent(){
     ${compareGroupByPart ? (partSectionsHtml || '<div class="compare-empty">No ingredients yet</div>') : combinedTableHtml}
     <div style="overflow-x:auto;margin-top:16px;">
       <table class="compare-table">
-        ${colgroupHtml(ids.length)}
-        <thead><tr><th>Recipe Total</th>${ingHeaderCells}</tr></thead>
+        ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+        <thead><tr><th>Recipe Total</th>${showWeights ? ids.map((id, idx) => { const r = recipes.find(x => x.id === id); return `<th colspan="2" class="${boundaryClass(idx)}">${r ? recipeColHeaderHtml(r) : '-'}</th>`; }).join('') : ingHeaderCells}</tr></thead>
         <tfoot><tr class="total-row"><td>Total</td>${totalCells}</tr></tfoot>
       </table>
     </div>
