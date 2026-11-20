@@ -6792,3 +6792,6 @@
   .proj-xl-row > .proj-mu-cell .proj-mu-cell-text{user-select:text;}
   /* Projects by Status (List): the marked cell of the table (click it, then move with the arrow keys) */
   .proj-xl-row > .pl-cell.pl-cell-marked:not(.pl-editing){background:#fff !important;box-shadow:inset 0 0 0 2px var(--primary), 0 0 0 2px color-mix(in srgb, var(--primary) 25%, transparent);}
+  /* Compare Costing: the cost and its % sit close together at the right of each recipe's column */
+  .compare-table .col-pct.cost-amt{padding-right:6px;}
+  .compare-table .col-wt.cost-pct{border-left:0;padding-left:2px;padding-right:12px;}

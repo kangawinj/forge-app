@@ -876,6 +876,7 @@ export const CHANGELOG = [
   { version: "3.0.834", date: "2026-11-19", note: "Projects by Status (List): the arrow keys no longer stop at the oldest month column -- pressing right there adds the next older month (up to 36 months) and moves the mark onto it" },
   { version: "3.0.835", date: "2026-11-19", note: "Projects by Status (List): every cell of the table can now be marked with one click (not only the Monthly Update boxes) and the arrow keys move the mark between cells like Excel -- left / right across the columns, up / down across the projects; Enter / F2 or a double-click edits the marked cell. The marked cell's row turns yellow and follows the mark" },
   { version: "3.0.836", date: "2026-11-20", note: "Compare Costing: a \"% of total\" column beside each recipe's cost -- every ingredient, Part Subtotal and the Total Cost now show their share of that recipe's total cost (page and Excel export)" },
+  { version: "3.0.837", date: "2026-11-20", note: "Compare Costing: the cost and its % column now sit close together at the right of each recipe's column (the % column is narrow, the cost column takes the spare width)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
