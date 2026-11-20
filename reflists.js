@@ -70,9 +70,6 @@ export function mountRefListsView(){
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button type="button" class="btn btn-sm" id="btnExportRefListsExcel">${icon('download', 14)} Export Excel</button>
       </div>
-      <div class="reflist-search-row" id="refListSearchRow">
-        <input type="search" id="refListSearchInput" placeholder="Search this list..." autocomplete="off">
-      </div>
       <div class="reflist-company-form" id="refListCompanyForm" style="display:none;">
         <div class="rcf-head"><span class="rcf-title">New company</span><span class="rcf-sub">Only the name is required -- fill in the rest if you have it.</span></div>
         <div class="rcf-body">
@@ -117,6 +114,9 @@ export function mountRefListsView(){
         <input type="text" id="contactNewDepartment" placeholder="Department">
         <input type="email" id="contactNewEmail" placeholder="Email">
         <input type="tel" id="contactNewPhone" placeholder="Phone Number">
+      </div>
+      <div class="reflist-search-row" id="refListSearchRow">
+        <input type="search" id="refListSearchInput" placeholder="Search this list..." autocomplete="off">
       </div>
       <div id="refListItems"></div>
     </div>
