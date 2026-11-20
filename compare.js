@@ -473,8 +473,10 @@ function renderCompareContent(){
   // Fixed-width label column + N equal unset-width columns — with
   // table-layout:fixed, unset <col>s split the remaining width evenly, so
   // this lines each recipe's column(s) up with its equal-width info card.
-  function colgroupHtml(numDataCols){
-    return `<colgroup><col style="width:220px;">${'<col>'.repeat(numDataCols)}</colgroup>`;
+  function colgroupHtml(numDataCols, depth = 0){
+    // a Part nested deeper sits further in (each level indents its tables 20px), so its label column is 20px narrower
+    // per level -- that keeps every recipe's columns, and the lines between them, at the same x in every table
+    return `<colgroup><col style="width:${Math.max(120, 220 - depth * 20)}px;">${'<col>'.repeat(numDataCols)}</colgroup>`;
   }
 
   // The ingredient/costing tables identify each recipe by its code, same as
@@ -645,7 +647,7 @@ function renderCompareContent(){
     const tableHtml = section.rows.length === 0 ? '' : `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+          ${colgroupHtml(ids.length * (showWeights ? 2 : 1), section.depth)}
           <thead>${ingHeaderRowsHtml}</thead>
           <tbody>${collapsed ? '' : bodyRows}</tbody>
           ${hasChildren ? '' : `<tfoot>${subtotalRowHtml}</tfoot>`}
@@ -656,17 +658,17 @@ function renderCompareContent(){
     const bottomSubtotalHtml = hasChildren ? `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${colgroupHtml(ids.length * (showWeights ? 2 : 1))}
+          ${colgroupHtml(ids.length * (showWeights ? 2 : 1), section.depth)}
           <tfoot>${subtotalRowHtml}</tfoot>
         </table>
       </div>
     ` : '';
     return `
-      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth*20}px;">
+      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth ? 20 : 0}px;">
         <button type="button" class="compare-section-eye-btn compare-part-collapse-btn" data-section="${escapeHtml(section.path)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
         ${escapeHtml(section.label)}
       </div>
-      <div style="padding-left:${section.depth*20}px;">
+      <div style="padding-left:${section.depth ? 20 : 0}px;">
         ${tableHtml}
         ${childrenHtml}
         ${bottomSubtotalHtml}
@@ -728,7 +730,7 @@ function renderCompareContent(){
   });
   const costDash = idx => `<td class="col-pct cost-amt${boundaryClass(idx)}">-</td><td class="col-wt cost-pct">-</td>`;
   // the cost column takes the spare width, the % column is a narrow fixed one right next to it (so the two read as a pair)
-  const costColgroupHtml = () => `<colgroup><col style="width:220px;">${ids.map(() => '<col><col style="width:64px;">').join('')}</colgroup>`;
+  const costColgroupHtml = (depth = 0) => `<colgroup><col style="width:${Math.max(120, 220 - depth * 20)}px;">${ids.map(() => '<col><col style="width:64px;">').join('')}</colgroup>`;
   const costMissing = (idx, text) => `<td class="compare-missing${boundaryClass(idx)}" colspan="2">${text}</td>`;
   const costPair = (id, idx, cost, star) => `<td class="col-pct cost-amt${boundaryClass(idx)}">฿${cost.toFixed(2)}${star ? ' *' : ''}</td><td class="col-wt cost-pct">${grandCost[id] > 0 ? (cost / grandCost[id] * 100).toFixed(1) : '0.0'}%</td>`;
   const costHeaderRowsHtml = `
@@ -850,7 +852,7 @@ function renderCompareContent(){
     const tableHtml = section.rows.length === 0 ? '' : `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${costColgroupHtml()}
+          ${costColgroupHtml(section.depth)}
           <thead>${costHeaderRowsHtml}</thead>
           <tbody>${collapsed ? '' : bodyRows}</tbody>
           ${hasChildren ? '' : `<tfoot>${subtotalRowHtml}</tfoot>`}
@@ -861,17 +863,17 @@ function renderCompareContent(){
     const bottomSubtotalHtml = hasChildren ? `
       <div style="overflow-x:auto;">
         <table class="compare-table">
-          ${costColgroupHtml()}
+          ${costColgroupHtml(section.depth)}
           <tfoot>${subtotalRowHtml}</tfoot>
         </table>
       </div>
     ` : '';
     return `
-      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth*20}px;">
+      <div class="compare-section-title compare-part-section-title" style="font-size:13px;margin:16px 0 8px;padding-left:${section.depth ? 20 : 0}px;">
         <button type="button" class="compare-section-eye-btn compare-cost-part-collapse-btn" data-section="${escapeHtml(section.path)}" title="${collapsed ? 'Expand this part' : 'Collapse this part'}">${icon(collapsed ? 'chevron-right' : 'chevron-down', 14)}</button>
         ${escapeHtml(section.label)}
       </div>
-      <div style="padding-left:${section.depth*20}px;">
+      <div style="padding-left:${section.depth ? 20 : 0}px;">
         ${tableHtml}
         ${childrenHtml}
         ${bottomSubtotalHtml}

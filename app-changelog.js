@@ -877,6 +877,7 @@ export const CHANGELOG = [
   { version: "3.0.835", date: "2026-11-19", note: "Projects by Status (List): every cell of the table can now be marked with one click (not only the Monthly Update boxes) and the arrow keys move the mark between cells like Excel -- left / right across the columns, up / down across the projects; Enter / F2 or a double-click edits the marked cell. The marked cell's row turns yellow and follows the mark" },
   { version: "3.0.836", date: "2026-11-20", note: "Compare Costing: a \"% of total\" column beside each recipe's cost -- every ingredient, Part Subtotal and the Total Cost now show their share of that recipe's total cost (page and Excel export)" },
   { version: "3.0.837", date: "2026-11-20", note: "Compare Costing: the cost and its % column now sit close together at the right of each recipe's column (the % column is narrow, the cost column takes the spare width)" },
+  { version: "3.0.838", date: "2026-11-20", note: "Compare Ingredients / Costing: the columns now line up in every table -- the dividing lines between recipes were drifting sideways in indented Parts, their Subtotals and the Total rows (and the Part indent no longer doubles up at deeper levels)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
