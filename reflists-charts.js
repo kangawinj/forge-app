@@ -166,3 +166,26 @@ export function renderFoodAllergensChart(container){
     </div>
   `;
 }
+
+// Project Priority -- the three importance levels a project can have, a plain documentation tab like Trial Code Format above
+// (nothing to add / edit here), so everyone reads the levels the same way.
+const PROJECT_PRIORITY_ROWS = [
+  { level: 1, name: 'Critical / Urgent', cls: 'critical', meaning: 'Requires immediate action or has a close deadline', th: 'ต้องดำเนินการทันที หรือมีกำหนดส่งใกล้เข้ามา' },
+  { level: 2, name: 'High / Important', cls: 'high', meaning: 'Affects customers, sales, or key plans', th: 'มีผลต่อลูกค้า ยอดขาย หรือแผนงานสำคัญ' },
+  { level: 3, name: 'Normal', cls: 'normal', meaning: 'Can proceed according to the regular work plan', th: 'ดำเนินการได้ตามแผนงานปกติ' }
+];
+export function renderProjectPriorityGuide(container){
+  container.innerHTML = `
+    <div class="reflist-code-guide">
+      <div class="reflist-code-guide-structure">Project priority levels -- how important or urgent a project is (ระดับความสำคัญของโปรเจ็ค)</div>
+      <table>
+        <thead><tr><th>Level (ระดับ)</th><th>Priority (ความสำคัญ)</th><th>Meaning (ความหมาย)</th></tr></thead>
+        <tbody>
+          ${PROJECT_PRIORITY_ROWS.map(r => `
+            <tr><td><b>${r.level}</b></td><td><span class="prio-badge prio-${r.cls}">${escapeHtml(r.name)}</span></td><td>${escapeHtml(r.meaning)}<div class="prio-th">${escapeHtml(r.th)}</div></td></tr>
+          `).join('')}
+        </tbody>
+      </table>
+    </div>
+  `;
+}

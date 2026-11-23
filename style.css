@@ -6799,3 +6799,9 @@
   /* Projects by Status: the category name stays in view at the left while the table is scrolled sideways */
   .proj-cat-heading{justify-content:flex-start;}
   .proj-cat-heading-label{display:inline-flex;align-items:center;gap:8px;position:sticky;left:12px;}
+  /* Reference Lists > Project Priority */
+  .prio-badge{display:inline-block;border-radius:12px;padding:2px 12px;font-size:12px;font-weight:700;border:1px solid transparent;white-space:nowrap;}
+  .prio-critical{background:#fde8e6;color:#b3261e;border-color:#f3b8b3;}
+  .prio-high{background:#fff1dc;color:#b45f06;border-color:#f3cf9b;}
+  .prio-normal{background:#e6f4ea;color:#1e7a3c;border-color:#b6dfc2;}
+  .prio-th{color:var(--text-dim);font-size:12px;margin-top:2px;}

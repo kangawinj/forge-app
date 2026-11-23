@@ -6,7 +6,7 @@ import {
 import {
   onSnapshot, setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-import { renderTrialCodeGuide, renderFoodAllergensChart, FOOD_ALLERGEN_COLUMNS } from './reflists-charts.js';
+import { renderTrialCodeGuide, renderFoodAllergensChart, renderProjectPriorityGuide, FOOD_ALLERGEN_COLUMNS } from './reflists-charts.js';
 import { exportRefListsToExcel } from './reflists-excel.js';
 
 /* ---------- Reference Lists modal (Customers / Sales Reps / Destination Countries) ---------- */
@@ -66,6 +66,7 @@ export function mountRefListsView(){
         <button class="reflist-tab-btn" data-key="evaluationCriteria">Evaluation Criteria</button>
         <button class="reflist-tab-btn" data-key="codeGuide">Trial Code Format</button>
         <button class="reflist-tab-btn" data-key="foodAllergens">Food Allergens</button>
+        <button class="reflist-tab-btn" data-key="projectPriority">Project Priority</button>
       </div>
       <div style="display:flex;justify-content:flex-end;margin-bottom:16px;">
         <button type="button" class="btn btn-sm" id="btnExportRefListsExcel">${icon('download', 14)} Export Excel</button>
@@ -125,9 +126,9 @@ export function mountRefListsView(){
   const updateAddRowFields = () => {
     // Trial Code Format is a static reference page, not an editable list —
     // there's nothing to add, so the whole add-row hides for that tab.
-    document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens' || refListActiveTab === 'customers') ? 'none' : '';
+    document.getElementById('refListAddRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens' || refListActiveTab === 'projectPriority' || refListActiveTab === 'customers') ? 'none' : '';
     document.getElementById('refListCompanyForm').style.display = refListActiveTab === 'customers' ? '' : 'none';
-    document.getElementById('refListSearchRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens') ? 'none' : '';
+    document.getElementById('refListSearchRow').style.display = (refListActiveTab === 'codeGuide' || refListActiveTab === 'foodAllergens' || refListActiveTab === 'projectPriority') ? 'none' : '';
     document.getElementById('refListNewCountryInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     document.getElementById('refListNewAbbrInput').style.display = refListActiveTab === 'customers' ? '' : 'none';
     const isCustomersTab = refListActiveTab === 'customers';
@@ -360,6 +361,10 @@ export function renderRefListItems(){
   }
   if(refListActiveTab === 'foodAllergens'){
     renderFoodAllergensChart(container);
+    return;
+  }
+  if(refListActiveTab === 'projectPriority'){
+    renderProjectPriorityGuide(container);
     return;
   }
   const isDestinations = refListActiveTab === 'destinationCountries';
