@@ -204,7 +204,7 @@ export async function exportProjectsStatusTableToExcel(model){
   });
   ws.views = [{ state: 'frozen', xSplit: 2, ySplit: 2 }];     // title + header rows, and No. + Product Name, stay in view
 
-  const centered = new Set([0, 2, 3, 4, 6, 7, 8, 9, 10, 11, 12]);        // No., Reviewed, Status, Initiated by, Target Market, Category, Owner, PD, Date, Cooked, Factory
+  const centered = new Set([0, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13]);        // No., Reviewed, Status, Priority, Initiated by, Target Market, Category, Owner, PD, Date, Cooked, Factory
   const PHOTO_PX = 34;
   const THUMB_PX = 44;
   const nameWidth = model.widths[1] || 30;

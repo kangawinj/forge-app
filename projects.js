@@ -28,7 +28,7 @@ import {
   formatProjectMoq, duplicateProject, saveProjectToCloud, deleteProjectFromCloud,
   scheduleProjectSave, PROJECT_DIFF_FIELDS, MU_DIFF_FIELDS, resolveMuCompletedDate,
   blankMonthlySummary, migrateMonthlySummary, composeMonthlyText, monthlyLangsOf, monthlyLangTextareasHtml, readMonthlyLangs,
-  PROJECT_CATEGORIES, projectCategoryOf
+  PROJECT_CATEGORIES, projectCategoryOf, PROJECT_PRIORITIES, priorityRank, priorityPillHtml
 } from './projects-data.js';
 import { exportProjectsToExcel, exportProjectsStatusTableToExcel } from './projects-excel.js';
 import {
@@ -298,6 +298,7 @@ async function importSubmission(){
   setVal('newProjInitiatedBy', data.initiatedBy);
   setVal('newProjCooked', data.cookedStatus);
   setVal('newProjCategory', data.category || '');
+  setVal('newProjPriority', data.priority || '');
   setVal('newProjOverview', data.overview);
   setVal('newProjPortionQty', data.portionWeightQty);
   setVal('newProjPortionUnit', data.portionWeightUnit);
@@ -670,7 +671,7 @@ let responsibleStatusFilters = new Set();
 let projectsByStatusViewMode = 'grid';
 // Column filters of Projects by Status (the little arrow in each column heading, like Excel): column key -> the set of
 // values that stay visible ('' stands for a blank cell); no entry = that column is not filtered.
-const PROJ_COL_VALUE_KEYS = { name: 1, reviewed: 1, status: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
+const PROJ_COL_VALUE_KEYS = { name: 1, reviewed: 1, status: 1, priority: 1, initiatedBy: 1, customerName: 1, destinationCountry: 1, category: 1, ownerSalesRep: 1, responsiblePerson: 1, requestDate: 1, cooked: 1, factoryName: 1 };
 const projColFilters = new Map();
 // ... remembered across reloads on this browser only (localStorage), like the Category order below
 const PROJ_COL_FILTERS_KEY = 'forgeProjColFilters';
@@ -710,6 +711,7 @@ const PROJ_COL_VALUE = {
   name: p => p.name || 'Untitled project',
   status: p => p.status || PROJECT_STATUSES[0],
   reviewed: p => p.reviewed ? 'Reviewed' : 'Not reviewed',
+  priority: p => p.priority || '',
   initiatedBy: p => p.initiatedBy || '',
   customerName: p => p.customerName || '',
   destinationCountry: p => p.destinationCountry || '',
@@ -722,6 +724,7 @@ const PROJ_COL_VALUE = {
 };
 function projColValueLabel(colKey, v){
   if(colKey === 'category') return v ? (PROJECT_CATEGORIES.find(c => c.key === v)?.label || v) : 'Not set';
+  if(colKey === 'priority') return v ? (PROJECT_PRIORITIES.find(x => x.key === v)?.label || v) : 'Not set';
   return v || '(Blank)';
 }
 function projectMatchesCategoryFilter(p){
@@ -741,7 +744,7 @@ function projectsByCategoryThenStatus(list){
     const inCat = list.filter(p => projectCategoryOf(p).key === key);
     return {
       key, heading: projCatHeading(key), count: inCat.length,
-      statusGroups: PROJECT_STATUSES.map(s => ({ label: s, list: inCat.filter(p => (p.status || PROJECT_STATUSES[0]) === s) })).filter(g => g.list.length)
+      statusGroups: PROJECT_STATUSES.map(s => ({ label: s, list: inCat.filter(p => (p.status || PROJECT_STATUSES[0]) === s).sort((a, b) => priorityRank(a) - priorityRank(b)) })).filter(g => g.list.length)   // most important first (stable: ties keep their order)
     };
   }).filter(c => c.count);
 }
@@ -830,6 +833,7 @@ function showProjUndoToast(message, onUndo){
 }
 const PROJ_CELL_EDITORS = {
   status:             { kind: 'select', options: () => PROJECT_STATUSES.map(s => [s, s]) },
+  priority:           { kind: 'select', options: () => [['', '-'], ...PROJECT_PRIORITIES.map(x => [x.key, x.label])] },
   category:           { kind: 'select', options: () => [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])] },
   cookedStatus:       { kind: 'select', options: () => [['', '-'], ['done', '\u25CB Cooked'], ['partial', '\u25B3 Partly'], ['none', '\u2013 Not yet']] },
   requestDate:        { kind: 'date' },
@@ -927,7 +931,7 @@ function projColFilterPopHtml(colKey){
     values = projCatOrder.slice();
     values.forEach(v => { if(!counts.has(v)) counts.set(v, 0); });
   }else{
-    values = colKey === 'status' ? PROJECT_STATUSES.filter(s => counts.has(s)) : [...counts.keys()].sort((a, b) => ((a === '') - (b === '')) ||
+    values = colKey === 'priority' ? [...PROJECT_PRIORITIES.map(x => x.key), ''].filter(v => counts.has(v)) : colKey === 'status' ? PROJECT_STATUSES.filter(s => counts.has(s)) : [...counts.keys()].sort((a, b) => ((a === '') - (b === '')) ||
       (colKey === 'requestDate' ? String(a).split('/').reverse().join('').localeCompare(String(b).split('/').reverse().join('')) : String(a).localeCompare(String(b), undefined, { numeric: true, sensitivity: 'base' })));
   }
   const set = projColFilters.get(colKey);
@@ -999,6 +1003,10 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeProjColFilter(); });
 
+function priorityOptionsHtml(selected){
+  return [['', '- Not set -'], ...PROJECT_PRIORITIES.map(x => [x.key, x.label])]
+    .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
+}
 function categoryOptionsHtml(selected){
   return [['', 'Auto (from Target Market)'], ...PROJECT_CATEGORIES.map(c => [c.key, c.label])]
     .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -1344,6 +1352,10 @@ function renderNewProjectPanel(){
             <label>Category</label>
             <select id="newProjCategory">${categoryOptionsHtml('')}</select>
           </div>
+          <div class="field" style="margin-bottom:0;">
+            <label>Priority</label>
+            <select id="newProjPriority">${priorityOptionsHtml('')}</select>
+          </div>
         </div>
         <div class="field" style="margin-top:12px;margin-bottom:0;">
           <label>Overview</label>
@@ -1639,6 +1651,7 @@ function renderNewProjectPanel(){
     p.initiatedBy = document.getElementById('newProjInitiatedBy').value.trim();
     p.cookedStatus = document.getElementById('newProjCooked').value;
     p.category = document.getElementById('newProjCategory').value;
+    p.priority = document.getElementById('newProjPriority').value;
     p.overview = document.getElementById('newProjOverview').value.trim();
     p.portionWeightQty = document.getElementById('newProjPortionQty').value.trim();
     p.portionWeightUnit = document.getElementById('newProjPortionUnit').value.trim();
@@ -1694,6 +1707,15 @@ function renderNewProjectPanel(){
 // Called once after every dashboardContainer rebuild, same as the Gantt
 // chart's own click wiring right above it.
 function wireProjectsByStatusCardClicks(dashboardContainer){
+  dashboardContainer.querySelectorAll('#projPriorityFilter [data-proj-priority]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const v = btn.dataset.projPriority;
+      if(v === 'all') projColFilters.delete('priority');
+      else projColFilters.set('priority', new Set([v === 'none' ? '' : v]));
+      saveProjColFilters();
+      renderProjectsList();
+    });
+  });
   dashboardContainer.querySelectorAll('#projCategoryFilter [data-proj-category]').forEach(btn => {
     btn.addEventListener('click', () => {
       const v = btn.dataset.projCategory;
@@ -2132,6 +2154,19 @@ export function renderProjectsList(){
             <button type="button" class="btn btn-sm view-mode-btn${projectsByStatusViewMode === 'list' ? ' active' : ''}" data-mode="list">${icon('list', 14)} List</button>
           </div>
         </div>
+        <div class="proj-cat-filter proj-prio-filter" id="projPriorityFilter">
+          <span class="proj-cat-filter-label">Priority:</span>
+          ${(() => {
+            const counts = new Map();
+            visibleProjects.forEach(pr => { counts.set(pr.priority || '', (counts.get(pr.priority || '') || 0) + 1); });
+            const set = projColFilters.get('priority');
+            const only = key => !!set && set.size === 1 && set.has(key);
+            const chip = (val, label, n, active, cls) => `<button type="button" class="btn btn-sm${active ? ' active' : ''}" data-proj-priority="${val}">${cls ? `<span class="prio-dot prio-${cls}"></span>` : ''}${escapeHtml(label)} <span class="proj-cat-count">${n}</span></button>`;
+            return chip('all', 'All', visibleProjects.length, !set, '')
+              + PROJECT_PRIORITIES.map((x, i) => chip(x.key, `${i + 1}. ${x.label}`, counts.get(x.key) || 0, only(x.key), x.key)).join('')
+              + (counts.get('') ? chip('none', 'Not set', counts.get(''), only(''), '') : '');
+          })()}
+        </div>
         <div class="proj-cat-filter" id="projCategoryFilter">
           <span class="proj-cat-filter-label">Category:</span>
           ${(() => {
@@ -2218,7 +2253,7 @@ export function renderProjectsList(){
           monthPhotos: Object.fromEntries(months.map((m, i) => [PROJ_XL_COLS.length + i, (projectMonthUpdateInfo(p, m)?.photos || [])
             .filter(a => a && typeof a.dataUrl === 'string' && a.dataUrl.startsWith('data:image')).map(a => a.dataUrl)])),
           cells: [
-            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.reviewed ? '\u2713' : '', p.status || PROJECT_STATUSES[0], p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
+            String(++no).padStart(2, '0'), p.name || 'Untitled project', p.reviewed ? '\u2713' : '', p.status || PROJECT_STATUSES[0], PROJECT_PRIORITIES.find(x => x.key === p.priority)?.label || '', p.initiatedBy || '', p.customerName || '', p.destinationCountry || '',
             projectCategoryOf(p).label, p.ownerSalesRep || '', p.responsiblePerson || 'Unassigned PD', formatXlDate(p.requestDate), COOKED_LABELS[p.cookedStatus]?.symbol || '',
             p.factoryName || '', p.overview || '',
             ...months.map(m => projectMonthUpdateInfo(p, m)?.text || '')
@@ -2730,6 +2765,10 @@ export function renderProjectsList(){
                   <div class="field" style="margin-bottom:0;">
                     <label>Category</label>
                     <select class="proj-category" ${isEditing ? '' : 'disabled'}>${categoryOptionsHtml(p.category)}</select>
+                  </div>
+                  <div class="field" style="margin-bottom:0;">
+                    <label>Priority</label>
+                    <select class="proj-priority" ${isEditing ? '' : 'disabled'}>${priorityOptionsHtml(p.priority)}</select>
                   </div>
                 </div>
                 <div class="field" style="margin-top:12px;margin-bottom:0;">
@@ -3250,6 +3289,7 @@ export function renderProjectsList(){
         p.initiatedBy = block.querySelector('.proj-initiated-by').value.trim();
         p.cookedStatus = block.querySelector('.proj-cooked').value;
         p.category = block.querySelector('.proj-category').value;
+        p.priority = block.querySelector('.proj-priority').value;
         p.overview = block.querySelector('.proj-overview').value.trim();
         p.portionWeightQty = block.querySelector('.proj-portion-qty').value.trim();
         p.portionWeightUnit = block.querySelector('.proj-portion-unit').value.trim();
@@ -3711,6 +3751,7 @@ export function attachProjectsListener(){
       p.products.forEach(prod => { if(!Array.isArray(prod.log)) prod.log = []; });
       if(p.image === undefined) p.image = '';
       if(p.category === undefined) p.category = '';
+      if(p.priority === undefined) p.priority = '';
       if(p.startDate === undefined) p.startDate = '';
       if(p.targetEndDate === undefined) p.targetEndDate = '';
     });
@@ -3821,7 +3862,7 @@ function monthsBackFrom(monthStr, count){
 // Projects by Status (List) is laid out like the team's Excel tracker: No. / Initiated by / Customer / Target Market /
 // Owner / MHT Owner (PD) / Product Name / Date Received / Cooked / Factory / Overview, then the Monthly Update columns.
 const PROJ_XL_COLS = [
-  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Reviewed', w: 82, key: 'reviewed' }, { label: 'Status', w: 118, key: 'status' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
+  { label: 'No.', w: 46, sticky: 'no' }, { label: 'Product Name', w: 230, sticky: 'name', key: 'name' }, { label: 'Reviewed', w: 82, key: 'reviewed' }, { label: 'Status', w: 118, key: 'status' }, { label: 'Priority', w: 96, key: 'priority' }, { label: 'Initiated by', w: 96, key: 'initiatedBy' },
   { label: 'Customer', w: 130, key: 'customerName' }, { label: 'Target Market', w: 96, key: 'destinationCountry' }, { label: 'Category', w: 100, key: 'category' },
   { label: 'Owner', w: 96, key: 'ownerSalesRep' }, { label: 'PD-Owner', w: 100, key: 'responsiblePerson' },
   { label: 'Date Received', w: 100, key: 'requestDate' }, { label: 'Cooked', w: 72, key: 'cooked' }, { label: 'Factory', w: 100, key: 'factoryName' }, { label: 'Overview', w: 300 }
@@ -4386,6 +4427,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
             </button>
             <span class="pl-cell pl-center pl-review"><input type="checkbox" class="pl-review-cb" data-project-id="${escapeHtml(p.id)}" ${p.reviewed ? 'checked' : ''} title="${p.reviewed ? `Reviewed${p.reviewedBy ? ' by ' + escapeHtml(p.reviewedBy) : ''}${p.reviewedAt ? ' · ' + escapeHtml(formatActivityDateTime(p.reviewedAt)) : ''} -- untick to undo` : 'Tick when this project\'s information has been checked and is complete'}"></span>
             <span class="pl-cell pl-center pl-editable" data-edit-field="status" data-project-id="${escapeHtml(p.id)}">${statusPillHtml(p.status)}</span>
+            <span class="pl-cell pl-center pl-editable" data-edit-field="priority" data-project-id="${escapeHtml(p.id)}">${priorityPillHtml(p.priority)}</span>
             <span class="pl-cell pl-center pl-hide-sm pl-editable" data-edit-field="initiatedBy" data-project-id="${escapeHtml(p.id)}" title="${escapeHtml(initiatedByFullName(p.initiatedBy))}">${escapeHtml(p.initiatedBy || '')}</span>
             <span class="pl-cell pl-editable" data-edit-field="customerName" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.customerName || '')}</span>
             <span class="pl-cell pl-center pl-editable" data-edit-field="destinationCountry" data-project-id="${escapeHtml(p.id)}">${escapeHtml(p.destinationCountry || '')}</span>
@@ -4409,6 +4451,7 @@ function renderStatusGroupItems(projectsForStatus, statusLabel, viewMode, select
           ${p.image
             ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">`
             : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};${(p.status || PROJECT_STATUSES[0]) === 'Cancelled' ? 'filter:grayscale(100%);' : ''}">${icon('folder', 22)}</span>`}
+          ${p.priority ? `<span class="proj-prio-tag prio-${p.priority}" title="${escapeHtml(PROJECT_PRIORITIES.find(x => x.key === p.priority)?.label || '')}">${PROJECT_PRIORITIES.findIndex(x => x.key === p.priority) + 1}</span>` : ''}
           <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
         </button>
       `).join('')}

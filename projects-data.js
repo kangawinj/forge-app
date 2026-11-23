@@ -34,6 +34,22 @@ export function projectCategoryOf(p){
   return { key, label: PROJECT_CATEGORIES.find(c => c.key === key).label, auto: true };
 }
 
+// Project priority (how important / urgent the work is): picked on the project, "" = not set. Same three levels as
+// Reference Lists > Project Priority.
+export const PROJECT_PRIORITIES = [
+  { key: 'critical', label: 'Critical / Urgent', short: 'Critical', hint: 'Requires immediate action or has a close deadline' },
+  { key: 'high', label: 'High / Important', short: 'High', hint: 'Affects customers, sales, or key plans' },
+  { key: 'normal', label: 'Normal', short: 'Normal', hint: 'Can proceed according to the regular work plan' }
+];
+export function priorityRank(p){
+  const i = PROJECT_PRIORITIES.findIndex(x => x.key === (p?.priority || ''));
+  return i < 0 ? PROJECT_PRIORITIES.length : i;
+}
+export function priorityPillHtml(key){
+  const x = PROJECT_PRIORITIES.find(p => p.key === key);
+  return x ? `<span class="prio-badge prio-${x.key}" title="${x.label} -- ${x.hint}">${x.short}</span>` : '';
+}
+
 export const PROJECT_STATUSES = ['Not Started','In Progress','Blocked / On Hold','Paused','In Review','Completed','Cancelled'];
 export const PROJECT_STATUS_LABELS = {
   'Not Started': 'Not Started (ยังไม่เริ่ม)',
@@ -237,6 +253,7 @@ export function blankProject(){
     reviewed: false,           // ticked in Projects by Status (List) once someone has checked that this project's information is complete
     reviewedBy: "",
     reviewedAt: 0,
+    priority: "",              // "" (not set) | "critical" | "high" | "normal"
     category: "",              // "" (worked out from Target Market) | "international" | "domestic" | "checking" | "longtime"
     flavors: [],
     requirements: blankRequirements(),
@@ -453,7 +470,7 @@ export const PROJECT_DIFF_FIELDS = {
   name: 'Project Name', status: 'Status', requestDate: 'Request Date', startDate: 'Start Date', targetEndDate: 'Target / End Date',
   customerName: 'Customer Name', destinationCountry: 'Destination Country', ownerSalesRep: 'Project Owner', factorySalesRep: 'Factory Sales Rep',
   responsiblePerson: 'Responsible Person (PD)', factoryName: 'Factory',
-  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview', category: 'Category', reviewed: 'Review completed',
+  initiatedBy: 'Initiated by', cookedStatus: 'Cooked', overview: 'Overview', category: 'Category', reviewed: 'Review completed', priority: 'Priority',
   portionWeightQty: 'Portion Weight Qty', portionWeightUnit: 'Portion Weight Unit', portionPerUnit: 'Portion Per Unit',
   innerPackQty: 'Inner Pack Qty', innerPackWeightUnit: 'Inner Pack Weight Unit', innerPackUnit: 'Inner Pack Unit',
   outerPackQty: 'Outer Pack Qty', outerPackUnit: 'Outer Pack Unit', outerPackContainerUnit: 'Outer Pack Container',

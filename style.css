@@ -6827,3 +6827,15 @@
   .part-block:not(.sub-part-row) > .part-header{grid-template-columns:20px 26px minmax(0,1fr) 100px 96px 80px 78px 66px 28px;}
 }
   .ing-suggestion-item.active{background:var(--primary-light);}
+  /* Project priority: the chips row on top of Projects by Status, the dot in them and the number tag on a grid photo */
+  .proj-prio-filter{margin-bottom:8px;}
+  .proj-prio-filter .btn{display:inline-flex;align-items:center;gap:6px;}
+  .prio-dot{width:9px;height:9px;border-radius:50%;display:inline-block;}
+  .prio-dot.prio-critical{background:#d93025;}
+  .prio-dot.prio-high{background:#f29900;}
+  .prio-dot.prio-normal{background:#1e8e3e;}
+  .proj-gallery-item{position:relative;}
+  .proj-prio-tag{position:absolute;top:-2px;right:8px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:#fff;border:2px solid #fff;box-sizing:content-box;line-height:1;}
+  .proj-prio-tag.prio-critical{background:#d93025;}
+  .proj-prio-tag.prio-high{background:#f29900;}
+  .proj-prio-tag.prio-normal{background:#1e8e3e;}

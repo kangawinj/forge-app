@@ -884,6 +884,7 @@ export const CHANGELOG = [
   { version: "3.0.842", date: "2026-11-23", note: "Reference Lists: new Project Priority tab -- the three importance levels (1 Critical / Urgent, 2 High / Important, 3 Normal) with what each one means, in English and Thai" },
   { version: "3.0.843", date: "2026-11-23", note: "Recipe > Components and Process: more room to work -- less padding around the formula tree, a shallower indent for each nested Part / Sub-part, a narrower drag-handle column and tighter number boxes, so names are less cut off and the Formula / % boxes show their whole numbers" },
   { version: "3.0.844", date: "2026-11-23", note: "Ingredient name suggestions (recipe rows) and the product suggestions in Sample Submissions can now be used from the keyboard: Arrow Down / Up move through the list, Enter picks the highlighted one, Esc closes it" },
+  { version: "3.0.845", date: "2026-11-23", note: "Project Priority: every project can now be given a priority (1 Critical / Urgent, 2 High / Important, 3 Normal) in the New Project and Edit forms. Projects by Status has a Priority filter row on top (with counts), a Priority column in the List (double-click to change it, filter it like the other columns), a numbered tag on the Grid photos, the most important projects listed first inside each status, and a Priority column in the Excel export" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
