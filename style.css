@@ -6826,3 +6826,4 @@
   .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:42px minmax(0,1fr) 100px 96px 80px 78px 66px 28px;}
   .part-block:not(.sub-part-row) > .part-header{grid-template-columns:20px 26px minmax(0,1fr) 100px 96px 80px 78px 66px 28px;}
 }
+  .ing-suggestion-item.active{background:var(--primary-light);}

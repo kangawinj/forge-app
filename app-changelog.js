@@ -883,6 +883,7 @@ export const CHANGELOG = [
   { version: "3.0.841", date: "2026-11-20", note: "Projects by Status (List): the category heading (International project, Domestic project ...) stays in view at the left while the table is scrolled sideways" },
   { version: "3.0.842", date: "2026-11-23", note: "Reference Lists: new Project Priority tab -- the three importance levels (1 Critical / Urgent, 2 High / Important, 3 Normal) with what each one means, in English and Thai" },
   { version: "3.0.843", date: "2026-11-23", note: "Recipe > Components and Process: more room to work -- less padding around the formula tree, a shallower indent for each nested Part / Sub-part, a narrower drag-handle column and tighter number boxes, so names are less cut off and the Formula / % boxes show their whole numbers" },
+  { version: "3.0.844", date: "2026-11-23", note: "Ingredient name suggestions (recipe rows) and the product suggestions in Sample Submissions can now be used from the keyboard: Arrow Down / Up move through the list, Enter picks the highlighted one, Esc closes it" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

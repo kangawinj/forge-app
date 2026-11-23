@@ -5,6 +5,7 @@ import {
   productList, projects, hasModuleAccess, compositionSummaryText,
   moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
+import { wireSuggestKeys } from './suggest-keys.js';
 import {
   onSnapshot, doc, deleteDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
@@ -603,6 +604,7 @@ export function renderSubmissionsList(){
           renderSuggestions();
         });
         input.addEventListener('focus', renderSuggestions);
+        wireSuggestKeys(input, () => document.querySelector('.ssample-suggestions'), renderSuggestions);   // arrow keys + Enter pick from the list
         input.addEventListener('blur', closeProductSuggestBox);
         // The table's own horizontal-scroll wrapper can move the input out
         // from under an already-open dropdown -- just close it rather than

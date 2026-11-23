@@ -16,6 +16,7 @@
 // every edit, so splitting them apart would mean real circular-dependency
 // risk between sibling files, not just the safe "sibling → core"
 // circularity the files above use.
+import { wireSuggestKeys } from './suggest-keys.js';
 import { datedFileName } from './file-names.js';
 import {
   escapeHtml, icon, uid, currentUser, mainFeatureView, setMainFeatureView,
@@ -2561,6 +2562,7 @@ function renderPartNode(r, part, container, siblingsArray, isNested, getAncestor
         renderSuggestions();
       });
       nameInput.addEventListener('focus', renderSuggestions);
+      wireSuggestKeys(nameInput, () => suggestBox, renderSuggestions);   // arrow keys + Enter pick from the list
       nameInput.addEventListener('blur', () => {
         suggestBox.innerHTML = '';
         suggestBox.classList.remove('open');
