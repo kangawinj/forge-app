@@ -1003,6 +1003,27 @@ document.addEventListener('click', e => {
 });
 document.addEventListener('keydown', e => { if(e.key === 'Escape') closeProjColFilter(); });
 
+// Photos of the projects that matter most (1 Critical / Urgent, 2 High / Important), under the Priority chips; a click opens the
+// project. Finished (Completed) and Cancelled projects are left out -- nothing is urgent about them any more.
+function projPriorityPhotosHtml(list){
+  const groups = PROJECT_PRIORITIES.slice(0, 2).map((x, i) => ({
+    x, n: i + 1,
+    items: list.filter(p => p.priority === x.key && !['Completed', 'Cancelled'].includes(p.status || PROJECT_STATUSES[0]))
+  })).filter(g => g.items.length);
+  if(!groups.length) return '';
+  return `<div class="proj-prio-photos">${groups.map(g => `
+    <div class="proj-prio-group">
+      <div class="proj-prio-group-label"><span class="prio-dot prio-${g.x.key}"></span>${g.n}. ${escapeHtml(g.x.label)}</div>
+      <div class="proj-gallery-grid">${g.items.map(p => `
+        <button type="button" class="proj-gallery-item" data-gallery-project-id="${escapeHtml(p.id)}" title="${escapeHtml(p.name || 'Untitled project')} (${escapeHtml(p.status || PROJECT_STATUSES[0])})">
+          ${p.image
+            ? `<img class="proj-gallery-thumb" src="${escapeHtml(p.image)}" alt="${escapeHtml(p.name || 'Project photo')}" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};">`
+            : `<span class="proj-gallery-thumb proj-gallery-thumb-empty" style="border-color:${projectPhotoStatusColor(p.status)};box-shadow:0 0 10px ${projectPhotoStatusColor(p.status)};">${icon('folder', 22)}</span>`}
+          <span class="proj-gallery-name">${escapeHtml(p.name || 'Untitled project')}</span>
+        </button>`).join('')}
+      </div>
+    </div>`).join('')}</div>`;
+}
 function priorityOptionsHtml(selected){
   return [['', '- Not set -'], ...PROJECT_PRIORITIES.map(x => [x.key, x.label])]
     .map(([v, l]) => `<option value="${v}"${(selected || '') === v ? ' selected' : ''}>${l}</option>`).join('');
@@ -2167,6 +2188,7 @@ export function renderProjectsList(){
               + (counts.get('') ? chip('none', 'Not set', counts.get(''), only(''), '') : '');
           })()}
         </div>
+        ${projPriorityPhotosHtml(visibleProjects)}
         <div class="proj-cat-filter" id="projCategoryFilter">
           <span class="proj-cat-filter-label">Category:</span>
           ${(() => {

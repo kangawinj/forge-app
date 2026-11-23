@@ -6839,3 +6839,6 @@
   .proj-prio-tag.prio-critical{background:#d93025;}
   .proj-prio-tag.prio-high{background:#f29900;}
   .proj-prio-tag.prio-normal{background:#1e8e3e;}
+  .proj-prio-filter{margin-bottom:10px;}
+  .proj-prio-photos{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0 0 14px;padding:10px 12px 4px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);}
+  .proj-prio-group-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;}
