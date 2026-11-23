@@ -6805,3 +6805,24 @@
   .prio-high{background:#fff1dc;color:#b45f06;border-color:#f3cf9b;}
   .prio-normal{background:#e6f4ea;color:#1e7a3c;border-color:#b6dfc2;}
   .prio-th{color:var(--text-dim);font-size:12px;margin-top:2px;}
+
+/* ===== Recipe > 4. Components and Process: more room to work =====
+   Less padding around the tree, a shallower indent per nesting level, a narrower drag-handle column and tighter number
+   boxes -- the name column and the Formula / % boxes get the width the margins and the nesting used to take. */
+.card:has(> .components-process-grid){padding-left:14px;padding-right:14px;}
+.ingredient-tree{padding:10px 8px;}
+.ingredient-tree .tree-children{margin-left:6px;padding-left:10px;}
+.ingredient-tree .tree-branch::before{left:-10px;width:8px;}
+.ingredient-tree .ing-edit-row input[type=number], .ingredient-tree .part-header .row-value-col input{padding-left:3px;padding-right:3px;text-align:right;}
+@container cptree (min-width:560px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:42px minmax(0,1fr) 0 90px 72px 70px 62px 26px;column-gap:3px;}
+  .part-block:not(.sub-part-row) > .part-header{grid-template-columns:20px 26px minmax(0,1fr) 0 90px 72px 70px 62px 26px;column-gap:3px;}
+}
+@container cptree (min-width:700px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:42px minmax(0,1fr) 0 96px 80px 78px 66px 28px;column-gap:4px;}
+  .part-block:not(.sub-part-row) > .part-header{grid-template-columns:20px 26px minmax(0,1fr) 0 96px 80px 78px 66px 28px;column-gap:4px;}
+}
+@container cptree (min-width:860px){
+  .ing-edit-row, .part-block.sub-part-row > .part-header{grid-template-columns:42px minmax(0,1fr) 100px 96px 80px 78px 66px 28px;}
+  .part-block:not(.sub-part-row) > .part-header{grid-template-columns:20px 26px minmax(0,1fr) 100px 96px 80px 78px 66px 28px;}
+}
