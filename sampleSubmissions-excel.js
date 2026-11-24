@@ -55,7 +55,7 @@ const SUBMISSION_COLUMNS = [
   { header: 'Customer', key: 'customer', width: 20 },
   { header: 'Project Lead', key: 'projectLead', width: 18 },
   { header: 'Destination', key: 'destination', width: 16 },
-  { header: 'Delivery Location', key: 'deliveryLocation', width: 22 },
+  { header: 'Samples Delivery Location', key: 'deliveryLocation', width: 22 },
   { header: 'Courier', key: 'courier', width: 14 },
   { header: 'Tracking No.', key: 'trackingNo', width: 18 },
   { header: 'Expected Receipt', key: 'expectedReceipt', width: 16 },

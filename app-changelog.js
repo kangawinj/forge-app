@@ -908,6 +908,7 @@ export const CHANGELOG = [
   { version: "3.0.866", date: "2026-11-25", note: "Sample Submissions: Doc. Date moved to the Acknowledgement section (the Date under Prepared by) and is filled with today's date automatically whenever a submission is created -- it can still be changed afterwards. It is used as the date on the printed form, Packing List and Sample Invoice" },
   { version: "3.0.867", date: "2026-11-25", note: "Sample Submissions: Present. Date moved to the end of the first row of the details grid (after Customer and Destination); the printed form follows the same order" },
   { version: "3.0.868", date: "2026-11-25", note: "Printed documents: the Packing List and Sample Invoice now show their shipment information in the same compact, three-per-row table (with the same headings) as the printed Sample Submission form; the carton / weight details sit in that table too" },
+  { version: "3.0.869", date: "2026-11-25", note: "Sample Submissions: Delivery Location is now Samples Delivery Location. Its drop-down lists the locations of every company in the Company Directory (\"Company — Location — address\"; type a company name to narrow it down), the chosen Customer's own locations first, and choosing a Customer still fills in that company's first location" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

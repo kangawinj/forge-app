@@ -154,7 +154,7 @@ function submissionFormHtml(s){
     <table class="ssdoc-meta ssdoc-compact">
       <tr>${metaRow('Form no.', s.formNo)}${metaRow('Customer', s.customer)}${metaRow('Destination', s.destination)}</tr>
       <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Project lead', s.projectLead)}${metaRow('Coordinator', s.coordinator)}</tr>
-      <tr>${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Delivery location', s.deliveryLocation)}${metaRow('Courier', s.courier)}</tr>
+      <tr>${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Samples delivery location', s.deliveryLocation)}${metaRow('Courier', s.courier)}</tr>
       <tr>${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}${metaRow('Receiver', s.receiver)}</tr>
       <tr>${metaRow('Doc. date', fmtDate(s.docDate))}${metaRow('Purpose', s.purpose)}${metaRow('Handling', s.handling)}</tr>
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
