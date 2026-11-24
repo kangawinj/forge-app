@@ -138,7 +138,7 @@ export async function exportSampleSubmissionsToExcel(submissions){
   sorted.forEach(s => {
     const row = wsSub.addRow([
       s.formNo || '', s.docDate || '', s.customer || '', s.projectLead || '',
-      s.destination || '', s.deliveryLocation || '', s.courier || '', s.trackingNo || '',
+      s.destination || '', [s.deliveryCompany, s.deliveryLocation].filter(Boolean).join(' — '), s.courier || '', s.trackingNo || '',
       s.expectedReceipt || '', s.coordinator || '', s.shipmentStorage || '', s.purpose || '',
       s.presentDate || '', s.receiver || '', s.handling || '', s.status || '',
       docsText(s.docs), s.feedbackOwner || '', s.feedbackDue || '', s.nextReview || '', s.notes || '',

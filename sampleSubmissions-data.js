@@ -91,7 +91,7 @@ export function blankSubmission(){
   return {
     id: uid(), projectId: '',
     formNo: '', docDate: '', courier: '', customer: '', projectLead: '',
-    expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryLocation: '',
+    expectedReceipt: '', trackingNo: '', destination: '', coordinator: '', deliveryCompany: '', deliveryLocation: '',
     shipmentStorage: '', purpose: '', presentDate: '', receiver: '', docs: blankDocs(),
     samples: [], nextSampleSeq: 0,
     handling: '', status: '',
