@@ -918,6 +918,7 @@ export const CHANGELOG = [
   { version: "3.0.876", date: "2026-11-25", note: "Sample Submissions: the Feedback Owner field is removed from the form and the printed form (Feedback Due, Next Review and Notes stay; anything already saved in it is kept and still appears in the Excel export)" },
   { version: "3.0.877", date: "2026-11-25", note: "Sample Submissions: the Feedback Due field is removed from the form and the printed form (anything already saved in it is kept and still appears in the Excel export)" },
   { version: "3.0.878", date: "2026-11-25", note: "Sample Submissions: Dev. Status is renamed Sample Status (form and printed form)" },
+  { version: "3.0.879", date: "2026-11-25", note: "Sample Submissions: the Follow-up heading and its Next Review field are removed from the form and the printed form (Notes stays; anything already saved in Next Review is kept and still appears in the Excel export)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
