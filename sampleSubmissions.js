@@ -20,6 +20,7 @@ import {
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
 import { allergenCellHtml, openAllergenPopover, splitAllergens } from './sampleSubmissions-allergens.js';
+import { wireGridKeys } from './sampleSubmissions-nav.js';
 
 let submissions = [];
 let submissionExpandedIds = new Set();
@@ -75,6 +76,7 @@ export function mountSampleSubmissionsView(){
       <div id="submissionsList"></div>
     </div>
   `;
+  wireGridKeys(document.getElementById('submissionsList'));
   document.getElementById('btnRenumberSubmissions').addEventListener('click', async () => {
     const btn = document.getElementById('btnRenumberSubmissions');
     btn.disabled = true;
@@ -134,6 +136,14 @@ export function renderSubmissionsList(){
     return;
   }
   const sorted = [...submissions].sort((a,b) => b.updatedAt - a.updatedAt);
+  // a redraw (e.g. after choosing a product) must not throw the table back to the left or take the cursor away
+  const keepScroll = {};
+  container.querySelectorAll('.ssub-sample-scroll').forEach(w => { keepScroll[w.dataset.sid] = w.scrollLeft; });
+  const fa = document.activeElement;
+  const keepFocus = fa && container.contains(fa) && fa.closest('[data-sample-id]') && fa.closest('.ssub-sample-grid') ? {
+    sid: fa.closest('[data-submission-id]')?.dataset.submissionId, sample: fa.closest('[data-sample-id]').dataset.sampleId,
+    sel: fa.classList.contains('ssample-product-input') ? '.ssample-product-input' : (fa.dataset.field ? `[data-field="${fa.dataset.field}"]` : (fa.dataset.spec ? `[data-spec="${fa.dataset.spec}"]` : null))
+  } : null;
   container.innerHTML = sorted.map(s => {
     const isEditing = s.id === submissionEditingId;
     const isExpanded = isEditing || submissionExpandedIds.has(s.id);
@@ -283,12 +293,12 @@ export function renderSubmissionsList(){
         ? `<td><textarea class="ssample-spec" data-spec="${key}" rows="3" ${ro}>${escapeHtml(sp[key])}</textarea></td>`
         : `<td><input type="text" class="ssample-spec" data-spec="${key}" value="${escapeHtml(sp[key])}" ${list ? `list="${list}"` : ''} ${ro}></td>`;
       const img = p && (p.rmImage || p.ideaMenuImage);
-      const hint = p ? '' : (row.productId ? '<div class="field-hint" style="color:var(--danger);">Linked product not found (deleted?)</div>' : '<div class="field-hint">No Product List item linked — using manually typed name</div>');
+      const hint = p ? 'Linked to the Product List' : (row.productId ? 'Linked product not found (deleted?)' : 'No Product List item linked — using the manually typed name');
       return `
         <tr data-sample-id="${escapeHtml(row.id)}">
           <td class="ssub-ro">${idx + 1}</td>
           <td><input type="text" value="${escapeHtml(sampleIdFor(ms, row))}" readonly></td>
-          <td><input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off">${hint}</td>
+          <td><input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off" title="${escapeHtml(hint)}"></td>
           <td>${isEditing
             ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
             : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}</td>
@@ -351,7 +361,7 @@ export function renderSubmissionsList(){
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
           <datalist id="ssubCurrencyList">${['THB', 'JPY', 'USD', 'CNY', 'EUR'].map(c => `<option value="${c}"></option>`).join('')}</datalist>
-          <div style="overflow-x:auto;">
+          <div style="overflow-x:auto;" class="ssub-sample-scroll" data-sid="${escapeHtml(s.id)}">
             <table class="compare-table ssub-sample-grid">
               <thead><tr>${SAMPLE_COLS.map(([label, cls]) => `<th class="${cls}">${label}</th>`).join('')}${isEditing ? '<th class="w-xs"></th>' : ''}</tr></thead>
               <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${SAMPLE_COLS.length + (isEditing ? 1 : 0)}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
@@ -385,6 +395,11 @@ export function renderSubmissionsList(){
       </div>
     `;
   }).join('');
+  container.querySelectorAll('.ssub-sample-scroll').forEach(w => { if(keepScroll[w.dataset.sid]) w.scrollLeft = keepScroll[w.dataset.sid]; });
+  if(keepFocus && keepFocus.sel){
+    const again = container.querySelector(`.part-block[data-submission-id="${CSS.escape(keepFocus.sid || '')}"] [data-sample-id="${CSS.escape(keepFocus.sample)}"] ${keepFocus.sel}`);
+    if(again){ again.focus({ preventScroll: true }); if(again.setSelectionRange && again.type === 'text'){ try{ again.setSelectionRange(again.value.length, again.value.length); }catch(e){ /* not a text box */ } } }
+  }
 
   container.querySelectorAll('.part-block[data-submission-id]').forEach(block => {
     const id = block.dataset.submissionId;
@@ -575,9 +590,6 @@ export function renderSubmissionsList(){
         scheduleSubmissionSave(s);
         if(el.dataset.field === 'currency'){
           row.querySelectorAll('.ssub-money').forEach(m => { m.value = formatMoney(sampleSpec(sample)[m.dataset.spec], sample.currency); });
-        }
-        if(['requestedQty','actualQtySent','developmentStatus','taste','texture','appearance','convenience','decision'].includes(el.dataset.field)){
-          renderSubmissionsList(); // keep computed summaries/avg in sync
         }
       });
     });

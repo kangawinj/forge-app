@@ -6940,3 +6940,16 @@
 .ssub-allergen-opt{display:flex;align-items:center;gap:7px;padding:3px 4px;font-size:12px;font-weight:400;cursor:pointer;border-radius:6px;}
 .ssub-allergen-opt:hover{background:var(--primary-light);}
 .ssub-allergen-opt input{width:auto;margin:0;}
+
+/* ===== samples table: compact, Excel-like grid ===== */
+.ssub-sample-grid{border-collapse:collapse;border:1px solid #bfc6d2;font-size:12px;}
+.ssub-sample-grid th, .ssub-sample-grid td{border:1px solid #d3d8e1;padding:0;vertical-align:middle;background:#fff;}
+.ssub-sample-grid th{background:#e8ecf5;padding:5px 6px;font-size:10.5px;line-height:1.2;vertical-align:middle;}
+.ssub-sample-grid td.ssub-ro{padding:4px 6px;font-size:12px;}
+.ssub-sample-grid td.ssub-allergen{padding:3px 5px;}
+.ssub-sample-grid input, .ssub-sample-grid select, .ssub-sample-grid textarea{border:none !important;border-radius:0 !important;background:transparent !important;box-shadow:none !important;height:28px;padding:3px 6px;font-size:12px;width:100%;box-sizing:border-box;}
+.ssub-sample-grid textarea.ssample-spec{height:auto;min-height:28px;line-height:1.3;resize:vertical;padding:5px 6px;}
+.ssub-sample-grid input[readonly]{color:var(--text);}
+.ssub-sample-grid input:focus, .ssub-sample-grid select:focus, .ssub-sample-grid textarea:focus{outline:2px solid var(--primary);outline-offset:-2px;background:#fff !important;}
+.ssub-sample-grid .ssub-spec-img{width:34px;height:34px;display:block;margin:2px auto;}
+.ssub-sample-grid tbody tr:hover td{background:#f5f8fc;}
