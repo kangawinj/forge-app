@@ -816,7 +816,7 @@ function renderCompareContent(){
       if(price === null){ hasUnpriced = true; return; }
       total += (wt / 1000) * price;
     });
-    return `<td class="col-pct cost-amt${boundaryClass(idx)}" colspan="2">฿${(total / batchKg / 10).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+    return `<td class="col-pct cost-amt${boundaryClass(idx)}">฿${(total / batchKg / 10).toFixed(2)}${hasUnpriced ? ' *' : ''}</td><td class="col-wt cost-pct"></td>`;
   }).join('');
   // Cost / serving: the price is worked out per serving (the recipe's "Amount per Serving (g)"), so this is Cost / kg of
   // product x the serving size; a recipe with no serving size entered says so.
@@ -835,7 +835,7 @@ function renderCompareContent(){
       if(price === null){ hasUnpriced = true; return; }
       total += (wt / 1000) * price;
     });
-    return `<td class="col-pct cost-amt${boundaryClass(idx)}" colspan="2" title="Cost / kg of product × ${serving} g per serving">฿${(total / batchKg * serving / 1000).toFixed(2)}${hasUnpriced ? ' *' : ''} <span class="cost-unit">/ ${serving} g serving</span></td>`;
+    return `<td class="col-pct cost-amt${boundaryClass(idx)}" title="Cost / kg of product × ${serving} g per serving">฿${(total / batchKg * serving / 1000).toFixed(2)}${hasUnpriced ? ' *' : ''}</td><td class="col-wt cost-pct cost-unit" title="Amount per Serving">${serving} g</td>`;
   }).join('');
 
   // Group by Part for Costing, same idea as Compare Ingredients' own
