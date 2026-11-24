@@ -18,6 +18,7 @@ import {
   computeFollowUpSummary, overallAvg
 } from './sampleSubmissions-data.js';
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
+import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
 
 let submissions = [];
 let submissionExpandedIds = new Set();
@@ -35,7 +36,10 @@ const SUBMISSION_DIFF_FIELDS = {
   deliveryLocation: 'Delivery Location', shipmentStorage: 'Storage', purpose: 'Purpose',
   presentDate: 'Present. Date', receiver: 'Receiver',
   handling: 'Handling', status: 'Status', feedbackOwner: 'Feedback Owner',
-  feedbackDue: 'Feedback Due', nextReview: 'Next Review', notes: 'Notes'
+  feedbackDue: 'Feedback Due', nextReview: 'Next Review', notes: 'Notes',
+  shipperName: 'Shipper', shipperAddress: 'Shipper Address', consigneeName: 'Consignee', consigneeAddress: 'Consignee Address',
+  cartons: 'No. of Cartons', grossWeightKg: 'Gross Weight (kg)', cartonSize: 'Carton Size', countryOfOrigin: 'Country of Origin',
+  hsCode: 'HS Code', invoiceCurrency: 'Invoice Currency', exportReason: 'Reason for Export'
 };
 let submissionEditSnapshotBefore = null;
 
@@ -64,6 +68,7 @@ export function mountSampleSubmissionsView(){
     btnAddSubmission.textContent = 'Creating...';
     try{
       const s = blankSubmission();
+      Object.assign(s, lastShipper());   // the shipper is nearly always the same as last time
       s.formNo = await issueSubmissionFormNo();
       submissions.push(s);
       saveSubmissionToCloud(s);
@@ -188,6 +193,45 @@ export function renderSubmissionsList(){
       ` : ''}
     `;
 
+    // Shipping documents: the extra details the Packing List / Sample Invoice need (they also use Customer, Courier, Tracking,
+    // Destination, the samples and their quantities / weights from this submission)
+    const areaField = (label, field, rows) => `
+      <div class="field" style="margin-bottom:0;">
+        <label>${label}</label>
+        <textarea class="ssub-field" data-field="${field}" rows="${rows || 3}" ${isEditing ? '' : 'readonly'}>${escapeHtml(ms[field] || '')}</textarea>
+      </div>`;
+    const shipDocsBlock = `
+      <div class="ssub-shipdocs">
+        <div class="card-title" style="font-size:13px;margin-top:20px;">Shipping documents (Packing List / Sample Invoice)</div>
+        <div class="field-hint" style="margin-bottom:10px;">Used by the Packing List and Sample Invoice buttons at the top. Customer, Courier, Tracking No., Destination and the samples below are taken from this submission; leave Consignee blank to use the Customer.</div>
+        <div class="grid-2">
+          <div>${headerField('Shipper (ship from)', 'shipperName')}<div style="margin-top:10px;">${areaField('Shipper address / contact', 'shipperAddress')}</div></div>
+          <div>${headerField('Consignee (ship to)', 'consigneeName')}<div style="margin-top:10px;">${areaField('Consignee address / contact', 'consigneeAddress')}</div></div>
+        </div>
+        <div class="grid-3" style="margin-top:14px;">
+          ${headerField('No. of cartons', 'cartons', 'number')}
+          ${headerField('Gross weight (kg)', 'grossWeightKg', 'number')}
+          ${headerField('Carton size (cm)', 'cartonSize')}
+        </div>
+        <div class="grid-3" style="margin-top:14px;">
+          ${headerField('Country of origin (blank = Thailand)', 'countryOfOrigin', null, 'destinationDatalist')}
+          ${headerField('HS code', 'hsCode')}
+          ${headerField('Invoice currency (blank = USD)', 'invoiceCurrency')}
+        </div>
+        <div style="margin-top:14px;">${headerField('Reason for export (blank = FREE SAMPLES - NO COMMERCIAL VALUE)', 'exportReason')}</div>
+        <div style="overflow-x:auto;margin-top:14px;">
+          <table class="compare-table">
+            <thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Qty (bags)</th><th>Unit value for customs (per bag)</th></tr></thead>
+            <tbody>${ms.samples.map((row, idx) => `
+              <tr data-sample-id="${escapeHtml(row.id)}">
+                <td>${idx + 1}</td><td>${escapeHtml(sampleIdFor(ms, row))}</td><td>${escapeHtml(sampleProductName(row) || '-')}</td>
+                <td>${escapeHtml(String(row.actualQtySent !== '' && row.actualQtySent != null ? row.actualQtySent : (row.requestedQty || '')))}</td>
+                <td><input type="number" class="ssample-field" data-field="unitValue" value="${escapeHtml(row.unitValue || '')}" min="0" step="0.01" ${isEditing ? '' : 'readonly'}></td>
+              </tr>`).join('') || '<tr><td colspan="5"><div class="overview-empty">No samples added yet</div></td></tr>'}</tbody>
+          </table>
+        </div>
+      </div>`;
+
     const qty = computeQuantitySummary(ms.samples);
     const followUp = computeFollowUpSummary(ms.samples);
 
@@ -278,6 +322,8 @@ export function renderSubmissionsList(){
           <span class="part-header-summary">${ms.samples.length} sample${ms.samples.length === 1 ? '' : 's'}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-submission">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-submission">${icon('pencil')} Edit</button>`}
           <button class="btn btn-sm" data-role="print-submission">${icon('printer')} Print</button>
+          <button class="btn btn-sm" data-role="ship-doc" data-kind="packing" title="Packing List for this shipment">${icon('clipboard-check')} Packing List</button>
+          <button class="btn btn-sm" data-role="ship-doc" data-kind="invoice" title="Sample Invoice (proforma, no commercial value) for customs">${icon('clipboard-check')} Sample Invoice</button>
           <button class="btn btn-sm btn-danger" data-role="delete-submission">${icon('x')} Delete</button>
         </div>
         <div class="part-body">
@@ -310,6 +356,7 @@ export function renderSubmissionsList(){
             ${headerField('Receiver', 'receiver')}
           </div>
           ${docsBlock}
+          ${shipDocsBlock}
           ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
@@ -462,6 +509,10 @@ export function renderSubmissionsList(){
       window.print();
     });
 
+    block.querySelectorAll('[data-role="ship-doc"]').forEach(btn => {
+      btn.addEventListener('click', () => openShipDoc(migrateSubmission(s), btn.dataset.kind));
+    });
+
     block.querySelector('[data-role="delete-submission"]').addEventListener('click', () => {
       if(!canDeleteRecord(s)){ alert(deleteNotAllowedMessage('sample submission', s)); return; }
       if(!confirm(`Delete "${submissionLabel(s)}"? This cannot be undone.`)) return;
@@ -483,6 +534,7 @@ export function renderSubmissionsList(){
       block.querySelectorAll('.ssub-field').forEach(el => {
         el.addEventListener('change', () => {
           s[el.dataset.field] = el.value.trim();
+          if(el.dataset.field === 'shipperName' || el.dataset.field === 'shipperAddress') rememberShipper(s);
           scheduleSubmissionSave(s);
         });
       });

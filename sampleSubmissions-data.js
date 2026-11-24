@@ -54,7 +54,7 @@ export function blankSample(){
     requestedQty: '', actualQtySent: '', netWtPerBag: '', storage: '', remarks: '',
     taste: '', texture: '', appearance: '', convenience: '',
     decision: '', feedback: '', owner: '', dueDate: '', nextAction: '',
-    certification: '', currency: '', leadTime: '', customerComment: ''
+    certification: '', currency: '', leadTime: '', customerComment: '', unitValue: ''
   };
 }
 
@@ -97,6 +97,9 @@ export function blankSubmission(){
     handling: '', status: '',
     feedbackOwner: '', feedbackDue: '', nextReview: '', notes: '',
     preparedByName: '', preparedByDate: '', receivedByName: '', receivedByDate: '',
+    // Shipping documents (Packing List / Sample Invoice buttons)
+    shipperName: '', shipperAddress: '', consigneeName: '', consigneeAddress: '',
+    cartons: '', grossWeightKg: '', cartonSize: '', countryOfOrigin: '', hsCode: '', invoiceCurrency: '', exportReason: '',
     createdBy: currentUser?.email || '', createdAt: Date.now(),
     updatedBy: currentUser?.email || '', updatedAt: Date.now()
   };

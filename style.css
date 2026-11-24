@@ -6843,3 +6843,36 @@
   .proj-prio-photos{display:flex;flex-wrap:wrap;gap:6px 28px;margin:0 0 14px;padding:10px 12px 4px;background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);}
   .proj-prio-group-label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:700;color:var(--text);margin-bottom:6px;}
   .cost-unit{font-size:11px;font-weight:400;color:var(--text-dim);white-space:nowrap;}
+
+/* ===== Sample Submissions: Packing List / Sample Invoice sheet (see sampleSubmissions-docs.js) ===== */
+.ssdoc-overlay{position:fixed;inset:0;z-index:10050;background:#e9ecf2;overflow:auto;padding:14px 12px 30px;}
+.ssdoc-toolbar{max-width:794px;margin:0 auto 12px;display:flex;align-items:center;gap:8px;}
+.ssdoc-hint{flex:1;font-size:12px;color:var(--text-dim);}
+.ssdoc-sheet{width:794px;max-width:100%;box-sizing:border-box;margin:0 auto;background:#fff;color:#111;padding:38px 44px 44px;box-shadow:0 4px 18px rgba(12,24,48,.15);font-size:12px;line-height:1.45;}
+.ssdoc-title{font-size:22px;font-weight:800;letter-spacing:.5px;text-align:center;}
+.ssdoc-title-sm{font-size:13px;font-weight:600;}
+.ssdoc-sub{text-align:center;color:#444;margin:2px 0 16px;}
+.ssdoc-strong{font-weight:700;color:#111;border:1px solid #111;display:table;margin:2px auto 16px;padding:3px 14px;}
+.ssdoc-parties{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-bottom:12px;}
+.ssdoc-party{border:1px solid #888;padding:8px 10px;min-height:78px;}
+.ssdoc-party-title{font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:#555;margin-bottom:3px;}
+.ssdoc-party-name{font-weight:700;margin-bottom:2px;}
+.ssdoc-meta{width:100%;border-collapse:collapse;margin-bottom:12px;}
+.ssdoc-meta td{padding:3px 6px;border:1px solid #bbb;width:33%;}
+.ssdoc-meta td.ssdoc-meta-l{background:#f2f4f8;font-weight:600;width:17%;}
+.ssdoc-table{width:100%;border-collapse:collapse;margin-bottom:12px;}
+.ssdoc-table th,.ssdoc-table td{border:1px solid #444;padding:5px 6px;vertical-align:top;text-align:left;}
+.ssdoc-table th{background:#e8ecf5;font-size:11px;}
+.ssdoc-table td.c{text-align:center;}
+.ssdoc-table td.r{text-align:right;}
+.ssdoc-dim{color:#666;font-size:11px;}
+.ssdoc-note{margin:8px 0;}
+.ssdoc-sign{display:grid;grid-template-columns:1fr 1fr;gap:40px;margin-top:44px;font-size:11px;}
+.ssdoc-sign-line{border-top:1px solid #111;margin-bottom:4px;height:34px;}
+@media print{
+  body.ssdoc-open > *:not(.ssdoc-overlay){display:none !important;}
+  body.ssdoc-open .ssdoc-overlay{position:static;inset:auto;background:#fff;overflow:visible;padding:0;}
+  body.ssdoc-open .ssdoc-toolbar{display:none !important;}
+  body.ssdoc-open .ssdoc-sheet{width:100%;box-shadow:none;padding:0;}
+  .ssub-shipdocs{display:none !important;}
+}
