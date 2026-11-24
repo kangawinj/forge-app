@@ -139,7 +139,7 @@ function submissionFormHtml(s){
         ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
       </table></div>`;
   }).join('');
-  const followMeta = [s.feedbackOwner, s.feedbackDue, s.nextReview].some(Boolean);
+  const followMeta = [s.feedbackDue, s.nextReview].some(Boolean);
   return `
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
     <div class="ssdoc-sub">${escapeHtml(s.formNo)}${s.status ? ` &nbsp;·&nbsp; ${escapeHtml(s.status)}` : ''}</div>
@@ -155,7 +155,7 @@ function submissionFormHtml(s){
     <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="10" class="c">No samples added</td></tr>'}</tbody></table>
     ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
-    ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
+    ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback due', fmtDate(s.feedbackDue))}${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
     ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
     <div class="ssdoc-sign">
       <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.docDate || s.preparedByDate)) || '&nbsp;'}</div>
