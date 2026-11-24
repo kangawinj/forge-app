@@ -19,6 +19,7 @@ import {
 } from './sampleSubmissions-data.js';
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
+import { allergenCellHtml, openAllergenPopover, splitAllergens } from './sampleSubmissions-allergens.js';
 
 let submissions = [];
 let submissionExpandedIds = new Set();
@@ -297,7 +298,7 @@ export function renderSubmissionsList(){
           <td>${inp('remarks')}</td>
           ${spec('code')}${spec('sampleCode')}
           <td class="ssub-ro">${img ? `<img class="ssub-spec-img" src="${escapeHtml(img)}" alt="">` : '-'}</td>
-          ${spec('cookingInstruction', null, true)}${spec('composition', null, true)}${spec('allergens', null, true)}${spec('processedArea', 'destinationDatalist')}${spec('factory', 'customerDatalist')}
+          ${spec('cookingInstruction', null, true)}${spec('composition', null, true)}<td class="ssub-allergen" data-spec="allergens">${allergenCellHtml(sp.allergens, isEditing)}</td>${spec('processedArea', 'destinationDatalist')}${spec('factory', 'customerDatalist')}
           <td>${inp('certification')}</td>
           ${spec('packingStyle')}${spec('size')}${spec('moq')}
           <td>${inp('currency', null, 'THB', 'ssubCurrencyList')}</td>
@@ -517,6 +518,24 @@ export function renderSubmissionsList(){
         scheduleSubmissionSave(s);
         renderSubmissionsList();
       });
+    });
+
+    // Allergen cell: chips + "+ Add" (tick several from the Food Allergens list, or type your own)
+    block.querySelectorAll('.ssub-allergen').forEach(td => {
+      const sample = s.samples.find(x => x.id === td.closest('[data-sample-id]').dataset.sampleId);
+      if(!sample) return;
+      const current = () => splitAllergens(sampleSpec(sample).allergens);
+      const save = list => {
+        sample.spec = { ...(sample.spec || {}), allergens: list.join(', ') };
+        scheduleSubmissionSave(s);
+        td.innerHTML = allergenCellHtml(sample.spec.allergens, true);
+        wire();
+      };
+      const wire = () => {
+        td.querySelector('.ssub-allergen-add')?.addEventListener('click', e => openAllergenPopover(e.currentTarget, current, save));
+        td.querySelectorAll('.ssub-chip-x').forEach(b => b.addEventListener('click', () => save(current().filter(a => a !== b.dataset.name))));
+      };
+      wire();
     });
 
     block.querySelectorAll('.ssample-spec').forEach(el => {
