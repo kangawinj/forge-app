@@ -46,7 +46,7 @@ function metaRow(label, value, span){
 }
 function signBlock(s){
   return `<div class="ssdoc-sign">
-    <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.preparedByDate)) || '&nbsp;'}</div>
+    <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.docDate || s.preparedByDate)) || '&nbsp;'}</div>
     <div><div class="ssdoc-sign-line"></div>Authorized signature / company stamp</div>
   </div>`;
 }
@@ -169,7 +169,7 @@ function submissionFormHtml(s){
     ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
     ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
     <div class="ssdoc-sign">
-      <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.preparedByDate)) || '&nbsp;'}</div>
+      <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.docDate || s.preparedByDate)) || '&nbsp;'}</div>
       <div><div class="ssdoc-sign-line"></div>Received by: ${escapeHtml(s.receivedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.receivedByDate)) || '&nbsp;'}</div>
     </div>`;
 }

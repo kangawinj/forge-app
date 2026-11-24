@@ -142,7 +142,7 @@ export async function exportSampleSubmissionsToExcel(submissions){
       s.expectedReceipt || '', s.coordinator || '', s.shipmentStorage || '', s.purpose || '',
       s.presentDate || '', s.receiver || '', s.handling || '', s.status || '',
       docsText(s.docs), s.feedbackOwner || '', s.feedbackDue || '', s.nextReview || '', s.notes || '',
-      personDateText(s.preparedByName, s.preparedByDate), personDateText(s.receivedByName, s.receivedByDate),
+      personDateText(s.preparedByName, s.docDate || s.preparedByDate), personDateText(s.receivedByName, s.receivedByDate),
       (s.samples || []).length
     ]);
     styleDataRow(row);

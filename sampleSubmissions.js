@@ -2,7 +2,7 @@ import {
   escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, compositionSummaryText, isCurrentUserAdmin, metaLists, metaItemName,
+  productList, compositionSummaryText, isCurrentUserAdmin, metaLists, metaItemName, bangkokTodayStr,
   moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import { wireSuggestKeys } from './suggest-keys.js';
@@ -99,6 +99,7 @@ export function mountSampleSubmissionsView(){
     btnAddSubmission.textContent = 'Creating...';
     try{
       const s = blankSubmission();
+      s.docDate = bangkokTodayStr();   // Doc. Date (the Date under Prepared by) starts as today, editable afterwards
       Object.assign(s, lastShipper());   // the shipper is nearly always the same as last time
       s.formNo = await issueSubmissionFormNo();
       submissions.push(s);
@@ -360,7 +361,6 @@ export function renderSubmissionsList(){
             ${headerField('Courier', 'courier')}
             ${headerField('Tracking No.', 'trackingNo')}
             ${headerField('Storage', 'shipmentStorage')}
-            ${headerField('Doc. Date', 'docDate', 'date')}
             ${headerField('Receiver', 'receiver', null, 'salesRepDatalist')}
           </div>
           ${docsBlock}
@@ -449,7 +449,7 @@ export function renderSubmissionsList(){
               <div class="ssub-ack-title">Prepared by</div>
               <div class="grid-2">
                 ${headerField('Name', 'preparedByName', null, 'salesRepDatalist')}
-                ${headerField('Date', 'preparedByDate', 'date')}
+                ${headerField('Date', 'docDate', 'date')}
               </div>
             </div>
             <div>

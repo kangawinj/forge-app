@@ -107,6 +107,7 @@ export function blankSubmission(){
 export function migrateSubmission(s){
   return {
     ...s,
+    docDate: s.docDate || s.preparedByDate || '',   // the Doc. Date is now the Date under Prepared by (Acknowledgement)
     docs: normalizeDocs(s.docs),
     samples: Array.isArray(s.samples) ? s.samples.map(row => ({ ...blankSample(), ...row })) : []
   };

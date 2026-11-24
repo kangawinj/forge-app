@@ -905,6 +905,7 @@ export const CHANGELOG = [
   { version: "3.0.863", date: "2026-11-25", note: "Sample Submissions: the Variance column (Sent - Requested) is removed from the samples table, the Quantity summary and the printed form" },
   { version: "3.0.864", date: "2026-11-25", note: "Sample Submissions: Purpose moved out of the top details grid to its own full-width field just above the Samples list" },
   { version: "3.0.865", date: "2026-11-25", note: "Sample Submissions: Present. Date now sits in the Doc. Date place (second in the details grid and on the printed form) and Doc. Date takes its old place" },
+  { version: "3.0.866", date: "2026-11-25", note: "Sample Submissions: Doc. Date moved to the Acknowledgement section (the Date under Prepared by) and is filled with today's date automatically whenever a submission is created -- it can still be changed afterwards. It is used as the date on the printed form, Packing List and Sample Invoice" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
