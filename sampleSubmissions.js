@@ -282,7 +282,7 @@ export function renderSubmissionsList(){
             <div class="field" style="grid-column:span 2;"><label>Product</label>
               <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off">
               ${hint}</div>
-            <div class="field"><label>Dev. Status</label>
+            <div class="field"><label>Sample Status</label>
               ${isEditing
                 ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
                 : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}</div>

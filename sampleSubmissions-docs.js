@@ -152,7 +152,7 @@ function submissionFormHtml(s){
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
-    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
+    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Sample status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="10" class="c">No samples added</td></tr>'}</tbody></table>
     ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
     ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="4"></td></tr></table>` : ''}

@@ -80,7 +80,7 @@ const SAMPLE_COLUMNS = [
   { header: 'Form No.', key: 'formNo', width: 16 },
   { header: 'Sample ID', key: 'sampleId', width: 16 },
   { header: 'Product', key: 'product', width: 26 },
-  { header: 'Development Status', key: 'developmentStatus', width: 16 },
+  { header: 'Sample Status', key: 'developmentStatus', width: 16 },
   { header: 'Lot No.', key: 'lotNo', width: 14 },
   { header: 'Requested Qty', key: 'requestedQty', width: 14 },
   { header: 'Actual Qty Sent', key: 'actualQtySent', width: 14 },
