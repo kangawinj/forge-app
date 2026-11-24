@@ -2,7 +2,7 @@ import {
   escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, projects, hasModuleAccess, compositionSummaryText,
+  productList, compositionSummaryText,
   moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import { wireSuggestKeys } from './suggest-keys.js';
@@ -12,8 +12,8 @@ import {
 import {
   SUBMISSION_DECISION_OPTIONS, SUBMISSION_DEV_STATUS_OPTIONS, submissionLabel, sampleIdFor,
   backfillSampleSeqs, blankSample, blankDocs, normalizeDocs, blankSubmission, migrateSubmission,
-  saveSubmissionToCloud, scheduleSubmissionSave, issueSubmissionFormNo, linkedProject,
-  applyProjectAutofill, linkedProduct, sampleProductName, productPickerLabel, fuzzyProductMatches,
+  saveSubmissionToCloud, scheduleSubmissionSave, issueSubmissionFormNo,
+  linkedProduct, sampleProductName, productPickerLabel, fuzzyProductMatches,
   getSharedProductSuggestBox, closeProductSuggestBox, toNum, computeQuantitySummary,
   computeFollowUpSummary, overallAvg
 } from './sampleSubmissions-data.js';
@@ -127,25 +127,6 @@ export function renderSubmissionsList(){
         <input type="text" value="${escapeHtml(ms.formNo || 'ระบบจะออกเลขอัตโนมัติ')}" readonly ${ms.formNo ? '' : 'style="color:var(--text-dim);font-style:italic;"'}>
       </div>
     `;
-    // Project picker -- only rendered at all for a user with Projects
-    // module access (see hasModuleAccess import); everyone else never
-    // gets this field in the DOM, not just a CSS-hidden one. Picking a
-    // project pre-fills Customer/Destination/Project Lead/Coordinator
-    // (see applyProjectAutofill) -- wired in the isEditing block below.
-    // Sits as the first cell of the grid-3 row (not a standalone row) so
-    // it doesn't leave a wasted 2/3-width gap next to it.
-    const projectField = hasModuleAccess('projects') ? `
-      <div class="field" style="margin-bottom:0;">
-        <label>Project</label>
-        <select class="ssub-project-select" ${isEditing ? '' : 'disabled'}>
-          <option value="">— Not linked —</option>
-          ${[...projects].sort((a,b) => (a.name || '').localeCompare(b.name || '', undefined, {sensitivity:'base'})).map(p => `
-            <option value="${escapeHtml(p.id)}" ${p.id === ms.projectId ? 'selected' : ''}>${escapeHtml(p.name || 'Untitled project')}</option>
-          `).join('')}
-        </select>
-      </div>
-    ` : '';
-
     // Docs Request -- a checklist (see blankDocs/normalizeDocs) instead of
     // free text. Tax Invoice's own 6 fields, and the Other-documents
     // detail field, only render once their checkbox is ticked -- wired in
@@ -327,7 +308,6 @@ export function renderSubmissionsList(){
         <div class="part-body">
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
           <div class="ssub-grid4">
-            ${projectField}
             ${formNoField}
             ${headerField('Doc. Date', 'docDate', 'date')}
             ${headerField('Purpose', 'purpose')}
@@ -518,13 +498,6 @@ export function renderSubmissionsList(){
           if(el.dataset.field === 'shipperName' || el.dataset.field === 'shipperAddress') rememberShipper(s);
           scheduleSubmissionSave(s);
         });
-      });
-
-      block.querySelector('.ssub-project-select')?.addEventListener('change', e => {
-        s.projectId = e.target.value;
-        applyProjectAutofill(s, linkedProject(s));
-        scheduleSubmissionSave(s);
-        renderSubmissionsList();
       });
 
       // Docs Request checklist -- toggling any box re-renders so Tax
