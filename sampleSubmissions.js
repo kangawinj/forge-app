@@ -299,6 +299,8 @@ export function renderSubmissionsList(){
           <td>${escapeHtml(sampleIdFor(ms, row))}</td>
           <td>${escapeHtml(p ? p.code : '-')}</td>
           <td>${escapeHtml(sampleProductName(row) || '-')}</td>
+          <td>${escapeHtml(p?.sampleCode || '-')}</td>
+          <td>${(p?.rmImage || p?.ideaMenuImage) ? `<img class="ssub-spec-img" src="${escapeHtml(p.rmImage || p.ideaMenuImage)}" alt="">` : '-'}</td>
           <td>${escapeHtml(p?.cookingInstruction || '-')}</td>
           <td>${escapeHtml(p ? (compositionSummaryText(p.composition) || '-') : '-')}</td>
           <td>${escapeHtml(p?.allergens || '-')}</td>
@@ -306,10 +308,13 @@ export function renderSubmissionsList(){
           <td>${escapeHtml(p?.factory || '-')}</td>
           <td><input type="text" class="ssample-field" data-field="certification" value="${escapeHtml(row.certification)}" ${isEditing ? '' : 'readonly'}></td>
           <td>${escapeHtml(p?.packingStyle || '-')}</td>
+          <td>${escapeHtml(p?.size || '-')}</td>
           <td>${escapeHtml(p?.moq || '-')}</td>
           <td><input type="text" class="ssample-field" data-field="currency" value="${escapeHtml(row.currency)}" placeholder="THB" ${isEditing ? '' : 'readonly'}></td>
           <td>${p?.exwPrice !== '' && p?.exwPrice != null ? '฿' + escapeHtml(String(p.exwPrice)) : '-'}</td>
+          <td>${p?.salesPrice !== '' && p?.salesPrice != null ? escapeHtml(String(p.salesPrice)) : '-'}</td>
           <td><input type="text" class="ssample-field" data-field="leadTime" value="${escapeHtml(row.leadTime)}" ${isEditing ? '' : 'readonly'}></td>
+          <td>${escapeHtml(p?.remarks || '-')}</td>
           <td><input type="text" class="ssample-field" data-field="customerComment" value="${escapeHtml(row.customerComment)}" ${isEditing ? '' : 'readonly'}></td>
         </tr>
       `;
@@ -397,12 +402,12 @@ export function renderSubmissionsList(){
           <div style="overflow-x:auto;">
             <table class="compare-table">
               <thead><tr>
-                <th>No.</th><th>Sample ID</th><th>Product Code</th><th>Product Name</th><th>Approved Cooking Instruction</th>
+                <th>No.</th><th>Sample ID</th><th>Product Code</th><th>Product Name</th><th>Sample Code</th><th>Image</th><th>Approved Cooking Instruction</th>
                 <th>Composition (Approx.)</th><th>Allergen Statement</th><th>Country of Origin</th><th>Factory</th>
-                <th>Certification / Standard</th><th>Case Pack</th><th>MOQ (ctn)</th><th>Currency</th><th>EXW Price</th>
-                <th>Lead Time</th><th>Customer Comment / Selling Point</th>
+                <th>Certification / Standard</th><th>Standards / Packing Style</th><th>Size</th><th>MOQ (ctn)</th><th>Currency</th><th>EXW Price</th><th>Sales Price</th>
+                <th>Lead Time</th><th>Product Remarks</th><th>Customer Comment / Selling Point</th>
               </tr></thead>
-              <tbody>${productSpecRowsHtml || `<tr><td colspan="16"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
+              <tbody>${productSpecRowsHtml || `<tr><td colspan="21"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
             </table>
           </div>
 

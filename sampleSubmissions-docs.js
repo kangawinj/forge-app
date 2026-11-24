@@ -130,13 +130,15 @@ function submissionFormHtml(s){
   }).join('');
   const specHtml = samples.map(r => {
     const p = linkedProduct(r);
-    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${p && p.code ? ` <span class="ssdoc-dim">(${escapeHtml(p.code)})</span>` : ''}</div>
+    const img = p && (p.rmImage || p.ideaMenuImage);
+    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${img ? `<img class="ssdoc-spec-img" src="${escapeHtml(img)}" alt="">` : ''}${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${p && p.code ? ` <span class="ssdoc-dim">(${escapeHtml(p.code)})</span>` : ''}${p && p.sampleCode ? ` <span class="ssdoc-dim">· Sample code ${escapeHtml(p.sampleCode)}</span>` : ''}</div>
       <table class="ssdoc-meta ssdoc-compact">
         <tr>${metaRow('Cooking instruction', p?.cookingInstruction)}${metaRow('Composition (approx.)', p ? compositionSummaryText(p.composition) : '')}</tr>
         <tr>${metaRow('Allergen statement', p?.allergens)}${metaRow('Country of origin', p?.processedArea)}</tr>
         <tr>${metaRow('Factory', p?.factory)}${metaRow('Certification / standard', r.certification)}</tr>
-        <tr>${metaRow('Case pack', p?.packingStyle)}${metaRow('MOQ (ctn)', p?.moq)}</tr>
-        <tr>${metaRow('Price', [r.currency, p && p.exwPrice !== '' && p.exwPrice != null ? `EXW ${p.exwPrice}` : ''].filter(Boolean).join(' '))}${metaRow('Lead time', r.leadTime)}</tr>
+        <tr>${metaRow('Standards / packing style', p?.packingStyle)}${metaRow('Size', p?.size)}</tr>
+        <tr>${metaRow('MOQ (ctn)', p?.moq)}${metaRow('Price', [r.currency, p && p.exwPrice !== '' && p.exwPrice != null ? `EXW ${p.exwPrice}` : '', p && p.salesPrice !== '' && p.salesPrice != null ? `Sales ${p.salesPrice}` : ''].filter(Boolean).join(' · '))}</tr>
+        <tr>${metaRow('Lead time', r.leadTime)}${metaRow('Product remarks', p?.remarks)}</tr>
         ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
       </table></div>`;
   }).join('');
