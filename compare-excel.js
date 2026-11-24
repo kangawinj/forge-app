@@ -327,7 +327,14 @@ function buildCosting(wb, d, recipes){
   // Grand totals over the whole recipe (same figures the page shows).
   const totalRow = ws.addRow(['Total Cost', ...recipes.flatMap(r => [totalCost[r.id], totalCost[r.id] > 0 ? 100 : 0])]);
   const perKgRow = ws.addRow(['Cost / kg of product', ...recipes.flatMap(r => [(r.batchWeight ? totalCost[r.id] / (r.batchWeight / 1000) : 'No batch weight'), ''])]);
-  [totalRow, perKgRow].forEach(row => {
+  // Cost / serving = Cost / kg x the recipe's Amount per Serving (g); the serving size is shown beside it in the cell's number format
+  const perServingRow = ws.addRow(['Cost / serving', ...recipes.flatMap(r => {
+    const serving = parseFloat(r.servingSizeG) || 0;
+    if(serving <= 0) return ['No serving size', ''];
+    if(!r.batchWeight) return ['No batch weight', ''];
+    return [totalCost[r.id] / (r.batchWeight / 1000) * serving / 1000, ''];
+  })]);
+  [totalRow, perKgRow, perServingRow].forEach(row => {
     for(let c = 1; c <= span; c++){
       const cell = row.getCell(c);
       cell.font = { name: FONT, bold: true, color: { argb: C.text } };
@@ -338,7 +345,7 @@ function buildCosting(wb, d, recipes){
       const cell = row.getCell(2 + i * 2);
       if(typeof cell.value === 'number') cell.numFmt = unpricedAll[r.id] ? '"฿"#,##0.00" *"' : baht;
       if(row === totalRow) row.getCell(3 + i * 2).numFmt = pctFmt;
-      else ws.mergeCells(row.number, 2 + i * 2, row.number, 3 + i * 2);   // Cost / kg has no % of its own
+      else ws.mergeCells(row.number, 2 + i * 2, row.number, 3 + i * 2);   // Cost / kg and Cost / serving have no % of their own
     });
   });
   clearCollapsedMarks(ws, foldedRows);
