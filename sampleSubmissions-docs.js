@@ -2,8 +2,8 @@
 // from what the submission already holds (customer, courier, tracking, samples, quantities) plus the "Shipping documents"
 // fields filled in on the submission. Shown on screen as an A4 sheet in an overlay with a Print button (choose "Save as PDF"
 // in the print dialog to get a file); nothing is stored by this module.
-import { escapeHtml } from './app.js';
-import { linkedProduct, sampleProductName, sampleIdFor, toNum } from './sampleSubmissions-data.js';
+import { escapeHtml, compositionSummaryText } from './app.js';
+import { linkedProduct, sampleProductName, sampleIdFor, toNum, overallAvg, computeQuantitySummary, computeFollowUpSummary } from './sampleSubmissions-data.js';
 
 const LAST_SHIPPER_KEY = 'forgeLastShipper';
 // the shipper (who sends the samples) is nearly always the same, so a new submission starts with the one used last time
@@ -112,19 +112,83 @@ function sampleInvoiceHtml(s){
     ${signBlock(s)}`;
 }
 
+// The whole submission as one clean A4 form (replaces printing the on-screen form): document and delivery details, the docs
+// requested, the samples, the product specification of each, and -- only once something has been entered -- the customer
+// evaluation, follow-up, notes and acknowledgement.
+function submissionFormHtml(s){
+  const samples = s.samples || [];
+  const d = s.docs || {};
+  const tax = d.taxInvoiceDetails || {};
+  const taxBits = [tax.carrierName, tax.flightNo, tax.portOfLoading && `from ${tax.portOfLoading}`, tax.portOfDestination && `to ${tax.portOfDestination}`].filter(Boolean);
+  const picked = [d.specification && 'Specification', d.quotation && 'Quotation',
+    d.taxInvoice && ('Tax Invoice' + (taxBits.length ? ` (${taxBits.join(' · ')})` : '')),
+    d.other && ('Other' + (d.otherDetails ? ` (${d.otherDetails})` : ''))].filter(Boolean);
+  const qty = computeQuantitySummary(samples);
+  const evalFilled = samples.some(r => r.taste || r.texture || r.appearance || r.convenience || r.decision || r.feedback || r.owner || r.dueDate || r.nextAction);
+  const fu = computeFollowUpSummary(samples);
+  const rowsHtml = samples.map((r, i) => {
+    const req = toNum(r.requestedQty), act = toNum(r.actualQtySent);
+    return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td>${escapeHtml(r.developmentStatus)}</td><td>${escapeHtml(r.lotNo)}</td><td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td><td class="r">${req !== null && act !== null ? act - req : ''}</td><td class="r">${escapeHtml(r.netWtPerBag)}</td><td>${escapeHtml(r.storage)}</td><td>${escapeHtml(r.remarks)}</td></tr>`;
+  }).join('');
+  const specHtml = samples.map(r => {
+    const p = linkedProduct(r);
+    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${p && p.code ? ` <span class="ssdoc-dim">(${escapeHtml(p.code)})</span>` : ''}</div>
+      <table class="ssdoc-meta">
+        <tr>${metaRow('Cooking instruction', p?.cookingInstruction)}${metaRow('Composition (approx.)', p ? compositionSummaryText(p.composition) : '')}</tr>
+        <tr>${metaRow('Allergen statement', p?.allergens)}${metaRow('Country of origin', p?.processedArea)}</tr>
+        <tr>${metaRow('Factory', p?.factory)}${metaRow('Certification / standard', r.certification)}</tr>
+        <tr>${metaRow('Case pack', p?.packingStyle)}${metaRow('MOQ (ctn)', p?.moq)}</tr>
+        <tr>${metaRow('Price', [r.currency, p && p.exwPrice !== '' && p.exwPrice != null ? `EXW ${p.exwPrice}` : ''].filter(Boolean).join(' '))}${metaRow('Lead time', r.leadTime)}</tr>
+        ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
+      </table></div>`;
+  }).join('');
+  const evalHtml = !evalFilled ? '' : `
+    <div class="ssdoc-h">Customer evaluation</div>
+    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Taste</th><th>Texture</th><th>Appear.</th><th>Conven.</th><th>Avg.</th><th>Decision</th><th>Feedback / issue</th><th>Owner</th><th>Due</th><th>Next action</th></tr></thead>
+    <tbody>${samples.map((r, i) => { const a = overallAvg(r); return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td class="c">${escapeHtml(r.taste)}</td><td class="c">${escapeHtml(r.texture)}</td><td class="c">${escapeHtml(r.appearance)}</td><td class="c">${escapeHtml(r.convenience)}</td><td class="c"><b>${a !== null ? a.toFixed(1) : ''}</b></td><td>${escapeHtml(r.decision)}</td><td>${escapeHtml(r.feedback)}</td><td>${escapeHtml(r.owner)}</td><td>${escapeHtml(fmtDate(r.dueDate))}</td><td>${escapeHtml(r.nextAction)}</td></tr>`; }).join('')}</tbody></table>
+    <div class="ssdoc-note">Approved: <b>${fu.Approved}</b> &nbsp;·&nbsp; Revise: <b>${fu.Revise}</b> &nbsp;·&nbsp; Rejected: <b>${fu.Rejected}</b> &nbsp;·&nbsp; No decision: <b>${fu['No decision']}</b></div>`;
+  const followMeta = [s.feedbackOwner, s.feedbackDue, s.nextReview].some(Boolean);
+  return `
+    <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
+    <div class="ssdoc-sub">${escapeHtml(s.formNo)}${s.status ? ` &nbsp;·&nbsp; ${escapeHtml(s.status)}` : ''}</div>
+    <div class="ssdoc-h">Document and delivery information</div>
+    <table class="ssdoc-meta">
+      <tr>${metaRow('Form no.', s.formNo)}${metaRow('Doc. date', fmtDate(s.docDate))}</tr>
+      <tr>${metaRow('Purpose', s.purpose)}${metaRow('Customer', s.customer)}</tr>
+      <tr>${metaRow('Destination', s.destination)}${metaRow('Project lead', s.projectLead)}</tr>
+      <tr>${metaRow('Coordinator', s.coordinator)}${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}</tr>
+      <tr>${metaRow('Delivery location', s.deliveryLocation)}${metaRow('Courier', s.courier)}</tr>
+      <tr>${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}</tr>
+      <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Receiver', s.receiver)}</tr>
+      <tr>${metaRow('Docs requested', picked.join(', ') || '-')}${metaRow('Handling', s.handling)}</tr>
+    </table>
+    <div class="ssdoc-h">Samples included</div>
+    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Var.</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
+    <tbody>${rowsHtml || '<tr><td colspan="11" class="c">No samples added</td></tr>'}</tbody></table>
+    <div class="ssdoc-note">Requested: <b>${qty.requested}</b> bags &nbsp;·&nbsp; Actual sent: <b>${qty.sent}</b> bags &nbsp;·&nbsp; Variance: <b>${qty.variance >= 0 ? '+' : ''}${qty.variance}</b> bags &nbsp;·&nbsp; Ready: <b>${qty.ready} / ${qty.total}</b></div>
+    ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
+    ${evalHtml}
+    ${followMeta ? `<table class="ssdoc-meta"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
+    ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
+    <div class="ssdoc-sign">
+      <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.preparedByDate)) || '&nbsp;'}</div>
+      <div><div class="ssdoc-sign-line"></div>Received by: ${escapeHtml(s.receivedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.receivedByDate)) || '&nbsp;'}</div>
+    </div>`;
+}
+
 export function openShipDoc(s, kind){
-  if(!(s.samples || []).length){ alert('Add at least one sample to this submission first.'); return; }
+  if(kind !== 'form' && !(s.samples || []).length){ alert('Add at least one sample to this submission first.'); return; }
   document.getElementById('ssdocOverlay')?.remove();
   const overlay = document.createElement('div');
   overlay.id = 'ssdocOverlay';
   overlay.className = 'ssdoc-overlay';
   overlay.innerHTML = `
     <div class="ssdoc-toolbar">
-      <span class="ssdoc-hint">Fill any blank on the submission (Shipping documents section) and open this again. In the print dialog choose "Save as PDF" for a file.</span>
+      <span class="ssdoc-hint">${kind === 'form' ? 'In the print dialog choose "Save as PDF" for a file.' : 'Fill any blank on the submission (Shipping documents section) and open this again. In the print dialog choose "Save as PDF" for a file.'}</span>
       <button type="button" class="btn btn-primary btn-sm" data-role="ssdoc-print">Print</button>
       <button type="button" class="btn btn-sm" data-role="ssdoc-close">Close</button>
     </div>
-    <div class="ssdoc-sheet">${kind === 'invoice' ? sampleInvoiceHtml(s) : packingListHtml(s)}</div>`;
+    <div class="ssdoc-sheet">${kind === 'invoice' ? sampleInvoiceHtml(s) : (kind === 'form' ? submissionFormHtml(s) : packingListHtml(s))}</div>`;
   document.body.appendChild(overlay);
   document.body.classList.add('ssdoc-open');
   const close = () => { overlay.remove(); document.body.classList.remove('ssdoc-open'); document.removeEventListener('keydown', onKey); };

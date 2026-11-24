@@ -499,15 +499,8 @@ export function renderSubmissionsList(){
       });
     }
 
-    block.querySelector('[data-role="print-submission"]').addEventListener('click', () => {
-      block.classList.add('printing-only');
-      const cleanup = () => {
-        block.classList.remove('printing-only');
-        window.removeEventListener('afterprint', cleanup);
-      };
-      window.addEventListener('afterprint', cleanup);
-      window.print();
-    });
+    // Print = the clean A4 form (see sampleSubmissions-docs.js), not the on-screen editor
+    block.querySelector('[data-role="print-submission"]').addEventListener('click', () => openShipDoc(migrateSubmission(s), 'form'));
 
     block.querySelectorAll('[data-role="ship-doc"]').forEach(btn => {
       btn.addEventListener('click', () => openShipDoc(migrateSubmission(s), btn.dataset.kind));

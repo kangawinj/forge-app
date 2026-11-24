@@ -6876,3 +6876,7 @@
   body.ssdoc-open .ssdoc-sheet{width:100%;box-shadow:none;padding:0;}
   .ssub-shipdocs{display:none !important;}
 }
+.ssdoc-h{font-size:13px;font-weight:700;margin:16px 0 6px;padding-bottom:3px;border-bottom:2px solid #16294a;}
+.ssdoc-sm th,.ssdoc-sm td{font-size:10.5px;padding:4px 4px;}
+.ssdoc-spec{margin-bottom:8px;break-inside:avoid;}
+.ssdoc-spec-h{font-weight:700;margin:6px 0 3px;}
