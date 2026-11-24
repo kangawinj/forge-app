@@ -6880,3 +6880,6 @@
 .ssdoc-sm th,.ssdoc-sm td{font-size:10.5px;padding:4px 4px;}
 .ssdoc-spec{margin-bottom:8px;break-inside:avoid;}
 .ssdoc-spec-h{font-weight:700;margin:6px 0 3px;}
+.ssdoc-compact{margin-bottom:6px;}
+.ssdoc-compact td{font-size:10.5px;padding:2px 5px;width:19%;line-height:1.3;}
+.ssdoc-compact td.ssdoc-meta-l{width:14%;font-size:10px;white-space:nowrap;}

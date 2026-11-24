@@ -41,8 +41,8 @@ function sampleLines(s){
 function partyBlock(title, name, address){
   return `<div class="ssdoc-party"><div class="ssdoc-party-title">${title}</div><div class="ssdoc-party-name">${escapeHtml(name) || '&nbsp;'}</div><div>${lines(address) || '&nbsp;'}</div></div>`;
 }
-function metaRow(label, value){
-  return `<td class="ssdoc-meta-l">${label}</td><td>${escapeHtml(value) || '&nbsp;'}</td>`;
+function metaRow(label, value, span){
+  return `<td class="ssdoc-meta-l">${label}</td><td${span ? ` colspan="${span}"` : ''}>${escapeHtml(value) || '&nbsp;'}</td>`;
 }
 function signBlock(s){
   return `<div class="ssdoc-sign">
@@ -133,7 +133,7 @@ function submissionFormHtml(s){
   const specHtml = samples.map(r => {
     const p = linkedProduct(r);
     return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${p && p.code ? ` <span class="ssdoc-dim">(${escapeHtml(p.code)})</span>` : ''}</div>
-      <table class="ssdoc-meta">
+      <table class="ssdoc-meta ssdoc-compact">
         <tr>${metaRow('Cooking instruction', p?.cookingInstruction)}${metaRow('Composition (approx.)', p ? compositionSummaryText(p.composition) : '')}</tr>
         <tr>${metaRow('Allergen statement', p?.allergens)}${metaRow('Country of origin', p?.processedArea)}</tr>
         <tr>${metaRow('Factory', p?.factory)}${metaRow('Certification / standard', r.certification)}</tr>
@@ -152,15 +152,13 @@ function submissionFormHtml(s){
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
     <div class="ssdoc-sub">${escapeHtml(s.formNo)}${s.status ? ` &nbsp;·&nbsp; ${escapeHtml(s.status)}` : ''}</div>
     <div class="ssdoc-h">Document and delivery information</div>
-    <table class="ssdoc-meta">
-      <tr>${metaRow('Form no.', s.formNo)}${metaRow('Doc. date', fmtDate(s.docDate))}</tr>
-      <tr>${metaRow('Purpose', s.purpose)}${metaRow('Customer', s.customer)}</tr>
-      <tr>${metaRow('Destination', s.destination)}${metaRow('Project lead', s.projectLead)}</tr>
-      <tr>${metaRow('Coordinator', s.coordinator)}${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}</tr>
-      <tr>${metaRow('Delivery location', s.deliveryLocation)}${metaRow('Courier', s.courier)}</tr>
-      <tr>${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}</tr>
-      <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Receiver', s.receiver)}</tr>
-      <tr>${metaRow('Docs requested', picked.join(', ') || '-')}${metaRow('Handling', s.handling)}</tr>
+    <table class="ssdoc-meta ssdoc-compact">
+      <tr>${metaRow('Form no.', s.formNo)}${metaRow('Doc. date', fmtDate(s.docDate))}${metaRow('Purpose', s.purpose)}</tr>
+      <tr>${metaRow('Customer', s.customer)}${metaRow('Destination', s.destination)}${metaRow('Project lead', s.projectLead)}</tr>
+      <tr>${metaRow('Coordinator', s.coordinator)}${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Delivery location', s.deliveryLocation)}</tr>
+      <tr>${metaRow('Courier', s.courier)}${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}</tr>
+      <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Receiver', s.receiver)}${metaRow('Handling', s.handling)}</tr>
+      <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
     <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Var.</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
@@ -168,7 +166,7 @@ function submissionFormHtml(s){
     <div class="ssdoc-note">Requested: <b>${qty.requested}</b> bags &nbsp;·&nbsp; Actual sent: <b>${qty.sent}</b> bags &nbsp;·&nbsp; Variance: <b>${qty.variance >= 0 ? '+' : ''}${qty.variance}</b> bags &nbsp;·&nbsp; Ready: <b>${qty.ready} / ${qty.total}</b></div>
     ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
     ${evalHtml}
-    ${followMeta ? `<table class="ssdoc-meta"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
+    ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
     ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
     <div class="ssdoc-sign">
       <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.preparedByDate)) || '&nbsp;'}</div>
