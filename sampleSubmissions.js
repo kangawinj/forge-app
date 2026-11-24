@@ -258,7 +258,6 @@ export function renderSubmissionsList(){
         </div>`}
       </div>`;
 
-    const followUp = computeFollowUpSummary(ms.samples);
 
     // One card per sample: what is being sent (product, status, lot, quantities, storage, remarks) and, right under it, that
     // product's information from the Product List (read-only) with the few details that belong to this submission.
@@ -316,27 +315,6 @@ export function renderSubmissionsList(){
         </div>`;
     }).join('');
 
-    const evalRowsHtml = ms.samples.map((row, idx) => {
-      const avg = overallAvg(row);
-      return `
-        <tr data-sample-id="${escapeHtml(row.id)}">
-          <td>${idx + 1}</td>
-          <td>${escapeHtml(sampleIdFor(ms, row))}</td>
-          <td>${escapeHtml(sampleProductName(row) || '-')}</td>
-          ${['taste','texture','appearance','convenience'].map(field => `
-            <td><input type="number" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" min="1" max="5" step="1" ${isEditing ? '' : 'readonly'}></td>
-          `).join('')}
-          <td><b>${avg !== null ? avg.toFixed(1) : '-'}</b></td>
-          <td>${isEditing
-            ? `<select class="ssample-field" data-field="decision"><option value="">No decision</option>${SUBMISSION_DECISION_OPTIONS.map(o => `<option value="${o}" ${row.decision === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
-            : `<input type="text" value="${escapeHtml(row.decision || 'No decision')}" readonly>`}</td>
-          <td><input type="text" class="ssample-field" data-field="feedback" value="${escapeHtml(row.feedback)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="text" class="ssample-field" data-field="owner" list="salesRepDatalist" value="${escapeHtml(row.owner)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="date" class="ssample-field" data-field="dueDate" value="${escapeHtml(row.dueDate)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="text" class="ssample-field" data-field="nextAction" value="${escapeHtml(row.nextAction)}" ${isEditing ? '' : 'readonly'}></td>
-        </tr>
-      `;
-    }).join('');
 
     return `
       <div class="part-block${isExpanded ? '' : ' collapsed'}" data-submission-id="${escapeHtml(s.id)}">
@@ -390,25 +368,7 @@ export function renderSubmissionsList(){
             </div>
           </div>
 
-          <div class="card-title" style="font-size:13px;margin-top:20px;">Customer evaluation</div>
-          <div style="overflow-x:auto;">
-            <table class="compare-table">
-              <thead><tr>
-                <th>No.</th><th>Sample ID</th><th>Product Name</th><th>Taste (1–5)</th><th>Texture (1–5)</th>
-                <th>Appearance (1–5)</th><th>Convenience (1–5)</th><th>Overall Avg.</th><th>Decision</th>
-                <th>Feedback / Issue</th><th>Owner</th><th>Due Date</th><th>Next Action</th>
-              </tr></thead>
-              <tbody id="ssubEvalBody-${escapeHtml(s.id)}">${evalRowsHtml || `<tr><td colspan="13"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
-            </table>
-          </div>
-
-          <div class="card-title" style="font-size:13px;margin-top:20px;">Follow-up summary</div>
-          <div class="batch-summary" style="grid-template-columns:repeat(4,1fr);">
-            <div><div class="batch-stat-label">Approved</div><div class="batch-stat-value">${followUp.Approved}</div></div>
-            <div><div class="batch-stat-label">Revise</div><div class="batch-stat-value">${followUp.Revise}</div></div>
-            <div><div class="batch-stat-label">Rejected</div><div class="batch-stat-value">${followUp.Rejected}</div></div>
-            <div><div class="batch-stat-label">No decision</div><div class="batch-stat-value">${followUp['No decision']}</div></div>
-          </div>
+          <div class="card-title" style="font-size:13px;margin-top:20px;">Follow-up</div>
           <div class="grid-3" style="margin-top:14px;">
             ${headerField('Feedback Owner', 'feedbackOwner', null, 'salesRepDatalist')}
             ${headerField('Feedback Due', 'feedbackDue', 'date')}

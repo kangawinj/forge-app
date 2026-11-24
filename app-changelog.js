@@ -914,6 +914,7 @@ export const CHANGELOG = [
   { version: "3.0.872", date: "2026-11-25", note: "Sample Submissions > Product specification (from Product List): now carries the same information as the product sheet -- Sample Code, the product photo, Standards / Packing Style, Size, Sales Price and the product's Remarks, next to the cooking instruction, composition, allergens, area, factory, MOQ and EXW price that were already there (also on the printed form)" },
   { version: "3.0.873", date: "2026-11-25", note: "Sample Submissions: the Quantity summary (Requested / Actual Sent / Ready) is removed from the form and the printed form" },
   { version: "3.0.874", date: "2026-11-25", note: "Sample Submissions: the Samples list and the Product specification are now one section -- each sample is a card with its product, status, lot, quantities, storage and remarks, and right under them its photo and Product List information (code, sample code, packing style, size, MOQ, prices, factory, origin, allergens, cooking instruction, composition, remarks) plus certification, currency, lead time and customer comment" },
+  { version: "3.0.875", date: "2026-11-25", note: "Sample Submissions: the Customer evaluation table and the Follow-up summary counts (Approved / Revise / Rejected / No decision, which came from it) are removed from the form and the printed form; Feedback Owner, Feedback Due, Next Review and Notes stay" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

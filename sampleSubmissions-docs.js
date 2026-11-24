@@ -121,8 +121,6 @@ function submissionFormHtml(s){
   const picked = [d.specification && 'Specification', d.quotation && 'Quotation',
     d.taxInvoice && ('Tax Invoice' + (taxBits.length ? ` (${taxBits.join(' · ')})` : '')),
     d.other && ('Other' + (d.otherDetails ? ` (${d.otherDetails})` : ''))].filter(Boolean);
-  const evalFilled = samples.some(r => r.taste || r.texture || r.appearance || r.convenience || r.decision || r.feedback || r.owner || r.dueDate || r.nextAction);
-  const fu = computeFollowUpSummary(samples);
   const rowsHtml = samples.map((r, i) => {
     const req = toNum(r.requestedQty), act = toNum(r.actualQtySent);
     return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td>${escapeHtml(r.developmentStatus)}</td><td>${escapeHtml(r.lotNo)}</td><td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td><td class="r">${escapeHtml(r.netWtPerBag)}</td><td>${escapeHtml(r.storage)}</td><td>${escapeHtml(r.remarks)}</td></tr>`;
@@ -141,11 +139,6 @@ function submissionFormHtml(s){
         ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
       </table></div>`;
   }).join('');
-  const evalHtml = !evalFilled ? '' : `
-    <div class="ssdoc-h">Customer evaluation</div>
-    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Taste</th><th>Texture</th><th>Appear.</th><th>Conven.</th><th>Avg.</th><th>Decision</th><th>Feedback / issue</th><th>Owner</th><th>Due</th><th>Next action</th></tr></thead>
-    <tbody>${samples.map((r, i) => { const a = overallAvg(r); return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td class="c">${escapeHtml(r.taste)}</td><td class="c">${escapeHtml(r.texture)}</td><td class="c">${escapeHtml(r.appearance)}</td><td class="c">${escapeHtml(r.convenience)}</td><td class="c"><b>${a !== null ? a.toFixed(1) : ''}</b></td><td>${escapeHtml(r.decision)}</td><td>${escapeHtml(r.feedback)}</td><td>${escapeHtml(r.owner)}</td><td>${escapeHtml(fmtDate(r.dueDate))}</td><td>${escapeHtml(r.nextAction)}</td></tr>`; }).join('')}</tbody></table>
-    <div class="ssdoc-note">Approved: <b>${fu.Approved}</b> &nbsp;·&nbsp; Revise: <b>${fu.Revise}</b> &nbsp;·&nbsp; Rejected: <b>${fu.Rejected}</b> &nbsp;·&nbsp; No decision: <b>${fu['No decision']}</b></div>`;
   const followMeta = [s.feedbackOwner, s.feedbackDue, s.nextReview].some(Boolean);
   return `
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
@@ -162,7 +155,6 @@ function submissionFormHtml(s){
     <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
     <tbody>${rowsHtml || '<tr><td colspan="10" class="c">No samples added</td></tr>'}</tbody></table>
     ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
-    ${evalHtml}
     ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}
     ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
     <div class="ssdoc-sign">
