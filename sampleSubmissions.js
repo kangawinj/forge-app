@@ -259,60 +259,50 @@ export function renderSubmissionsList(){
       </div>`;
 
 
-    // One card per sample: what is being sent (product, status, lot, quantities, storage, remarks) and, right under it, that
-    // product's information from the Product List (read-only) with the few details that belong to this submission.
+    // One row per sample, everything side by side (sample details first, then that product's Product List information, then
+    // the few details that belong to this submission); the table scrolls sideways.
     const ro = isEditing ? '' : 'readonly';
-    const samplesCardsHtml = ms.samples.map((row, idx) => {
+    const SAMPLE_COLS = [
+      ['No.', 'w-xs'], ['Sample ID', 'w-id'], ['Product', 'w-product'], ['Sample Status', 'w-md'], ['Lot No.', 'w-md'],
+      ['Requested Qty (bags)', 'w-md'], ['Actual Qty Sent (bags)', 'w-md'], ['Net Wt./Bag (g)', 'w-md'], ['Storage', 'w-md'], ['Remarks', 'w-lg'],
+      ['Product Code', 'w-sm'], ['Sample Code', 'w-md'], ['Image', 'w-sm'], ['Approved Cooking Instruction', 'w-xl'], ['Composition (Approx.)', 'w-xl'],
+      ['Allergen Statement', 'w-lg'], ['Country of Origin', 'w-md'], ['Factory', 'w-lg'], ['Certification / Standard', 'w-md'],
+      ['Standards / Packing Style', 'w-lg'], ['Size', 'w-md'], ['MOQ (ctn)', 'w-sm'], ['Currency', 'w-sm'], ['EXW Price', 'w-sm'], ['Sales Price', 'w-sm'],
+      ['Lead Time', 'w-md'], ['Product Remarks', 'w-lg'], ['Customer Comment / Selling Point', 'w-lg']
+    ];
+    const samplesRowsHtml = ms.samples.map((row, idx) => {
       const p = linkedProduct(row);
       const pickerValue = p ? productPickerLabel(p) : (row.manualProductName || '');
-      const sf = (label, field, type, extra, ph) => `
-        <div class="field"${extra ? ` style="${extra}"` : ''}><label>${label}</label>
-          <input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}></div>`;
-      const info = (label, value, extra) => `<div class="ssub-info"${extra ? ` style="${extra}"` : ''}><span>${label}</span><div>${escapeHtml(value || '-')}</div></div>`;
+      const inp = (field, type, ph) => `<input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}>`;
+      const txt = v => `<td class="ssub-ro">${escapeHtml(v || '-')}</td>`;
       const img = p && (p.rmImage || p.ideaMenuImage);
-      const hint = p ? '' : (row.productId ? '<div class="field-hint" style="color:var(--danger);">Linked product not found (deleted?)</div>' : `<div class="field-hint">No Product List item linked — using manually typed name</div>`);
+      const hint = p ? '' : (row.productId ? '<div class="field-hint" style="color:var(--danger);">Linked product not found (deleted?)</div>' : '<div class="field-hint">No Product List item linked — using manually typed name</div>');
       return `
-        <div class="ssub-sample" data-sample-id="${escapeHtml(row.id)}">
-          <div class="ssub-sample-head">
-            <span class="ssub-sample-no">${idx + 1}</span>
-            <span class="ssub-sample-id">${escapeHtml(sampleIdFor(ms, row))}</span>
-            ${isEditing ? `<button class="icon-btn" data-role="remove-sample" title="Remove this sample" style="margin-left:auto;">${icon('x')}</button>` : ''}
-          </div>
-          <div class="ssub-grid4">
-            <div class="field" style="grid-column:span 2;"><label>Product</label>
-              <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off">
-              ${hint}</div>
-            <div class="field"><label>Sample Status</label>
-              ${isEditing
-                ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
-                : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}</div>
-            ${sf('Lot No.', 'lotNo')}
-            ${sf('Requested Qty (bags)', 'requestedQty', 'number')}
-            ${sf('Actual Qty Sent (bags)', 'actualQtySent', 'number')}
-            ${sf('Net Wt./Bag (g)', 'netWtPerBag')}
-            ${sf('Storage', 'storage')}
-            ${sf('Remarks', 'remarks', null, 'grid-column:span 2;')}
-          </div>
-          <div class="ssub-spec">
-            ${img ? `<img class="ssub-spec-img" src="${escapeHtml(img)}" alt="">` : `<div class="ssub-spec-img ssub-spec-img-empty"></div>`}
-            <div class="ssub-spec-body">
-              <div class="ssub-spec-title">From the Product List</div>
-              <div class="ssub-grid4 ssub-spec-grid">
-                ${info('Product code', p?.code)}${info('Sample code', p?.sampleCode)}${info('Standards / packing style', p?.packingStyle)}${info('Size', p?.size)}
-                ${info('MOQ (ctn)', p?.moq)}${info('EXW price', p && p.exwPrice !== '' && p.exwPrice != null ? '฿' + p.exwPrice : '')}${info('Sales price', p?.salesPrice)}${info('Factory', p?.factory)}
-                ${info('Country of origin', p?.processedArea)}${info('Allergen statement', p?.allergens, 'grid-column:span 3;')}
-                ${info('Approved cooking instruction', p?.cookingInstruction, 'grid-column:span 2;')}${info('Composition (approx.)', p ? compositionSummaryText(p.composition) : '', 'grid-column:span 2;')}
-                ${info('Product remarks', p?.remarks, 'grid-column:span 4;')}
-              </div>
-              <div class="ssub-grid4" style="margin-top:6px;">
-                ${sf('Certification / standard', 'certification')}
-                ${sf('Currency', 'currency', null, null, 'THB')}
-                ${sf('Lead time', 'leadTime')}
-                ${sf('Customer comment / selling point', 'customerComment')}
-              </div>
-            </div>
-          </div>
-        </div>`;
+        <tr data-sample-id="${escapeHtml(row.id)}">
+          <td class="ssub-ro">${idx + 1}</td>
+          <td><input type="text" value="${escapeHtml(sampleIdFor(ms, row))}" readonly></td>
+          <td><input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off">${hint}</td>
+          <td>${isEditing
+            ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+            : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}</td>
+          <td>${inp('lotNo')}</td>
+          <td>${inp('requestedQty', 'number')}</td>
+          <td>${inp('actualQtySent', 'number')}</td>
+          <td>${inp('netWtPerBag')}</td>
+          <td>${inp('storage')}</td>
+          <td>${inp('remarks')}</td>
+          ${txt(p?.code)}${txt(p?.sampleCode)}
+          <td class="ssub-ro">${img ? `<img class="ssub-spec-img" src="${escapeHtml(img)}" alt="">` : '-'}</td>
+          ${txt(p?.cookingInstruction)}${txt(p ? compositionSummaryText(p.composition) : '')}${txt(p?.allergens)}${txt(p?.processedArea)}${txt(p?.factory)}
+          <td>${inp('certification')}</td>
+          ${txt(p?.packingStyle)}${txt(p?.size)}${txt(p?.moq)}
+          <td>${inp('currency', null, 'THB')}</td>
+          ${txt(p && p.exwPrice !== '' && p.exwPrice != null ? '฿' + p.exwPrice : '')}${txt(p?.salesPrice)}
+          <td>${inp('leadTime')}</td>
+          ${txt(p?.remarks)}
+          <td>${inp('customerComment')}</td>
+          ${isEditing ? `<td class="ssub-ro"><button class="icon-btn" data-role="remove-sample" title="Remove this sample">${icon('x')}</button></td>` : ''}
+        </tr>`;
     }).join('');
 
 
@@ -353,7 +343,12 @@ export function renderSubmissionsList(){
           <div style="margin-top:14px;">${headerField('Purpose', 'purpose')}</div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
-          <div id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesCardsHtml || '<div class="overview-empty">No samples added yet</div>'}</div>
+          <div style="overflow-x:auto;">
+            <table class="compare-table ssub-sample-grid">
+              <thead><tr>${SAMPLE_COLS.map(([label, cls]) => `<th class="${cls}">${label}</th>`).join('')}${isEditing ? '<th class="w-xs"></th>' : ''}</tr></thead>
+              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${SAMPLE_COLS.length + (isEditing ? 1 : 0)}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
+            </table>
+          </div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}
 
           <div class="field" style="margin-top:14px;">

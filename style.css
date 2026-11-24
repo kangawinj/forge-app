@@ -6915,3 +6915,14 @@
 .ssub-info span{display:block;font-size:10.5px;color:var(--text-dim);}
 .ssub-info div{overflow-wrap:anywhere;}
 @media (max-width:700px){ .ssub-spec{flex-direction:column;} }
+
+/* ===== Sample Submissions: one table, one row per sample (scrolls sideways) ===== */
+.ssub-sample-grid{table-layout:fixed;width:max-content;min-width:100%;}
+.ssub-sample-grid th, .ssub-sample-grid td{vertical-align:top;padding:6px 6px;}
+.ssub-sample-grid th{white-space:normal;text-align:left;font-size:10.5px;}
+.ssub-sample-grid .w-xs{width:44px;} .ssub-sample-grid .w-sm{width:84px;} .ssub-sample-grid .w-md{width:120px;} .ssub-sample-grid .w-lg{width:170px;}
+.ssub-sample-grid .w-xl{width:260px;} .ssub-sample-grid .w-id{width:170px;} .ssub-sample-grid .w-product{width:240px;}
+.ssub-sample-grid td{text-align:left;}
+.ssub-sample-grid td.ssub-ro{font-size:12px;overflow-wrap:anywhere;padding-top:12px;}
+.ssub-sample-grid input, .ssub-sample-grid select{width:100%;min-width:0;box-sizing:border-box;padding:5px 8px;font-size:13px;min-height:0;height:auto;border-radius:8px;}
+.ssub-sample-grid .ssub-spec-img{width:56px;height:56px;flex:none;}
