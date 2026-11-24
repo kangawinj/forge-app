@@ -234,7 +234,7 @@ export function renderSubmissionsList(){
           Shipping documents (Packing List / Sample Invoice)
         </label>
         ${!shipOn ? '' : `
-        <div class="field-hint" style="margin-bottom:10px;">Used by the Packing List and Sample Invoice buttons at the top. Customer, Courier, Tracking No., Destination and the samples below are taken from this submission; leave Consignee blank to use the Customer.</div>
+        <div class="field-hint" style="margin-bottom:10px;">Used by the Packing List and Sample Invoice buttons at the top. Customer, Destination and the samples below are taken from this submission; leave Consignee blank to use the Customer.</div>
         <div class="ssub-grid4">
           <div style="grid-column:span 2;">${headerField('Shipper (ship from)', 'shipperName')}</div>
           <div style="grid-column:span 2;">${headerField('Consignee (ship to)', 'consigneeName')}</div>
@@ -366,10 +366,6 @@ export function renderSubmissionsList(){
             ${headerField('Expected Receipt', 'expectedReceipt', 'date')}
             ${headerField('Samples Delivery Location', 'deliveryLocation', null, 'ssubLocList-' + s.id)}
             <datalist id="ssubLocList-${escapeHtml(s.id)}">${companyLocationOptions(ms.customer).map(o => `<option value="${escapeHtml(o)}"></option>`).join('')}</datalist>
-            ${headerField('Courier', 'courier')}
-            ${headerField('Tracking No.', 'trackingNo')}
-            ${headerField('Storage', 'shipmentStorage')}
-            ${headerField('Receiver', 'receiver', null, 'salesRepDatalist')}
           </div>
           ${docsBlock}
           ${shipDocsBlock}

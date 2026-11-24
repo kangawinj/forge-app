@@ -66,8 +66,7 @@ function packingListHtml(s){
     <div class="ssdoc-h">Shipment information</div>
     <table class="ssdoc-meta ssdoc-compact">
       <tr>${metaRow('Packing list no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}${metaRow('Destination', s.destination)}</tr>
-      <tr>${metaRow('Courier', s.courier)}${metaRow('Tracking / AWB no.', s.trackingNo)}${metaRow('Flight / carrier', [tax.carrierName, tax.flightNo].filter(Boolean).join(' '))}</tr>
-      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}${metaRow('Storage', s.shipmentStorage)}</tr>
+      <tr>${metaRow('Flight / carrier', [tax.carrierName, tax.flightNo].filter(Boolean).join(' '))}${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}</tr>
       <tr>${metaRow('No. of cartons', s.cartons)}${metaRow('Gross weight (kg)', num(s.grossWeightKg))}${metaRow('Carton size (cm)', s.cartonSize)}</tr>
     </table>
     <div class="ssdoc-h">Items</div>
@@ -98,8 +97,8 @@ function sampleInvoiceHtml(s){
     <div class="ssdoc-h">Shipment information</div>
     <table class="ssdoc-meta ssdoc-compact">
       <tr>${metaRow('Invoice no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}${metaRow('Destination', s.destination)}</tr>
-      <tr>${metaRow('Courier', [s.courier, tax.carrierName].filter(Boolean).join(' / '))}${metaRow('Tracking / AWB no.', s.trackingNo)}${metaRow('Flight', tax.flightNo)}</tr>
-      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}${metaRow('Country of origin', origin)}</tr>
+      <tr>${metaRow('Flight / carrier', [tax.carrierName, tax.flightNo].filter(Boolean).join(' '))}${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}</tr>
+      <tr>${metaRow('Country of origin', origin)}<td colspan="4"></td></tr>
     </table>
     <div class="ssdoc-h">Items</div>
     <table class="ssdoc-table">
@@ -154,9 +153,8 @@ function submissionFormHtml(s){
     <table class="ssdoc-meta ssdoc-compact">
       <tr>${metaRow('Form no.', s.formNo)}${metaRow('Customer', s.customer)}${metaRow('Destination', s.destination)}</tr>
       <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Project lead', s.projectLead)}${metaRow('Coordinator', s.coordinator)}</tr>
-      <tr>${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Samples delivery location', s.deliveryLocation)}${metaRow('Courier', s.courier)}</tr>
-      <tr>${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}${metaRow('Receiver', s.receiver)}</tr>
-      <tr>${metaRow('Doc. date', fmtDate(s.docDate))}${metaRow('Purpose', s.purpose)}${metaRow('Handling', s.handling)}</tr>
+      <tr>${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Samples delivery location', s.deliveryLocation)}${metaRow('Doc. date', fmtDate(s.docDate))}</tr>
+      <tr>${metaRow('Purpose', s.purpose)}${metaRow('Handling', s.handling)}<td colspan="2"></td></tr>
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
