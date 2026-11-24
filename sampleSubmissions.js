@@ -370,7 +370,6 @@ export function renderSubmissionsList(){
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Follow-up</div>
           <div class="grid-2" style="margin-top:14px;">
-            ${headerField('Feedback Due', 'feedbackDue', 'date')}
             ${headerField('Next Review', 'nextReview', 'date')}
           </div>
           <div class="field" style="margin-top:14px;">
