@@ -329,7 +329,7 @@ export function renderSubmissionsList(){
             ${headerField('Present. Date', 'presentDate', 'date')}
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
-            ${headerField('Expected Receipt', 'expectedReceipt', 'date')}
+            <div style="grid-column:4;">${headerField('Expected Receipt', 'expectedReceipt', 'date')}</div>
             <div style="grid-column:span 2;">${headerField('Samples Delivery Company', 'deliveryCompany', null, 'customerDatalist')}</div>
             <div class="field" style="grid-column:span 2;margin-bottom:0;">
               <label>Samples Delivery Location</label>
