@@ -901,6 +901,7 @@ export const CHANGELOG = [
   { version: "3.0.859", date: "2026-11-25", note: "Sample Submissions: choosing the Customer also fills Delivery Location with that company's first location (name and address from the Company Directory); the company's other locations are offered in the field's drop-down list, and it can still be typed over" },
   { version: "3.0.860", date: "2026-11-25", note: "Sample Submissions: fixed typing in the Product box (and other fields) stopping after one character -- the list was being rebuilt on every keystroke's save and took the cursor away. Another person's change now appears the next time the list redraws instead of while a field here has focus" },
   { version: "3.0.861", date: "2026-11-25", note: "Sample Submissions: the Prepared by Name, Received by Name and Receiver fields now suggest names from the Contact Directory as you type (any name can still be typed)" },
+  { version: "3.0.862", date: "2026-11-25", note: "Sample Submissions: Shipping documents now has a tick box -- unticked, the section's fields and the Packing List / Sample Invoice buttons are hidden; tick it (while editing) to fill them in. Submissions that already hold shipping details show it ticked" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

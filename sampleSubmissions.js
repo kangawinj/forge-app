@@ -214,9 +214,17 @@ export function renderSubmissionsList(){
         <label>${label}</label>
         <textarea class="ssub-field" data-field="${field}" rows="${rows || 3}" ${isEditing ? '' : 'readonly'}>${escapeHtml(ms[field] || '')}</textarea>
       </div>`;
+    // Shipping documents is optional: tick it to show the details (and the Packing List / Sample Invoice buttons). Submissions
+    // saved before the tick existed show it ticked when they already hold shipping details.
+    const shipDataFields = ['shipperName', 'shipperAddress', 'consigneeName', 'consigneeAddress', 'cartons', 'grossWeightKg', 'cartonSize', 'hsCode', 'countryOfOrigin', 'invoiceCurrency', 'exportReason'];
+    const shipOn = ms.shipDocsOn === undefined ? (shipDataFields.some(f => ms[f]) || ms.samples.some(r => r.unitValue)) : !!ms.shipDocsOn;
     const shipDocsBlock = `
       <div class="ssub-shipdocs">
-        <div class="card-title" style="font-size:13px;margin-top:20px;">Shipping documents (Packing List / Sample Invoice)</div>
+        <label class="card-title ssub-shipdocs-toggle" style="font-size:13px;margin-top:20px;display:flex;align-items:center;gap:8px;cursor:pointer;">
+          <input type="checkbox" class="ssub-shipdocs-check" ${shipOn ? 'checked' : ''} ${isEditing ? '' : 'disabled'}>
+          Shipping documents (Packing List / Sample Invoice)
+        </label>
+        ${!shipOn ? '' : `
         <div class="field-hint" style="margin-bottom:10px;">Used by the Packing List and Sample Invoice buttons at the top. Customer, Courier, Tracking No., Destination and the samples below are taken from this submission; leave Consignee blank to use the Customer.</div>
         <div class="ssub-grid4">
           <div style="grid-column:span 2;">${headerField('Shipper (ship from)', 'shipperName')}</div>
@@ -241,7 +249,7 @@ export function renderSubmissionsList(){
                 <td><input type="number" class="ssample-field" data-field="unitValue" value="${escapeHtml(row.unitValue || '')}" min="0" step="0.01" ${isEditing ? '' : 'readonly'}></td>
               </tr>`).join('') || '<tr><td colspan="5"><div class="overview-empty">No samples added yet</div></td></tr>'}</tbody>
           </table>
-        </div>
+        </div>`}
       </div>`;
 
     const qty = computeQuantitySummary(ms.samples);
@@ -334,8 +342,10 @@ export function renderSubmissionsList(){
           <span class="part-header-summary">${ms.samples.length} sample${ms.samples.length === 1 ? '' : 's'}</span>
           ${isEditing ? `<button class="btn btn-sm" data-role="save-submission">${icon('save')} Save</button>` : `<button class="btn btn-sm" data-role="edit-submission">${icon('pencil')} Edit</button>`}
           <button class="btn btn-sm" data-role="print-submission">${icon('printer')} Print</button>
+          ${shipOn ? `
           <button class="btn btn-sm" data-role="ship-doc" data-kind="packing" title="Packing List for this shipment">${icon('clipboard-check')} Packing List</button>
           <button class="btn btn-sm" data-role="ship-doc" data-kind="invoice" title="Sample Invoice (proforma, no commercial value) for customs">${icon('clipboard-check')} Sample Invoice</button>
+          ` : ''}
           <button class="btn btn-sm btn-danger" data-role="delete-submission">${icon('x')} Delete</button>
         </div>
         <div class="part-body">
@@ -504,6 +514,11 @@ export function renderSubmissionsList(){
     // Print = the clean A4 form (see sampleSubmissions-docs.js), not the on-screen editor
     block.querySelector('[data-role="print-submission"]').addEventListener('click', () => openShipDoc(migrateSubmission(s), 'form'));
 
+    block.querySelector('.ssub-shipdocs-check')?.addEventListener('change', e => {
+      s.shipDocsOn = e.target.checked;
+      scheduleSubmissionSave(s);
+      renderSubmissionsList();
+    });
     block.querySelectorAll('[data-role="ship-doc"]').forEach(btn => {
       btn.addEventListener('click', () => openShipDoc(migrateSubmission(s), btn.dataset.kind));
     });
