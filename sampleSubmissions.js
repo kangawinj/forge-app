@@ -260,63 +260,60 @@ export function renderSubmissionsList(){
 
     const followUp = computeFollowUpSummary(ms.samples);
 
-    const samplesRowsHtml = ms.samples.map((row, idx) => {
+    // One card per sample: what is being sent (product, status, lot, quantities, storage, remarks) and, right under it, that
+    // product's information from the Product List (read-only) with the few details that belong to this submission.
+    const ro = isEditing ? '' : 'readonly';
+    const samplesCardsHtml = ms.samples.map((row, idx) => {
       const p = linkedProduct(row);
       const pickerValue = p ? productPickerLabel(p) : (row.manualProductName || '');
-      const specLine = p
-        ? `Case Pack: ${escapeHtml(p.packingStyle || '-')} &nbsp;·&nbsp; MOQ: ${escapeHtml(p.moq || '-')} &nbsp;·&nbsp; EXW: ${p.exwPrice !== '' && p.exwPrice != null ? '฿' + escapeHtml(String(p.exwPrice)) : '-'} &nbsp;·&nbsp; Factory: ${escapeHtml(p.factory || '-')} &nbsp;·&nbsp; Allergens: ${escapeHtml(p.allergens || '-')}`
-        : (row.productId ? '<span style="color:var(--danger);">Linked product not found (deleted?)</span>' : 'No Product List item linked — using manually typed name');
+      const sf = (label, field, type, extra, ph) => `
+        <div class="field"${extra ? ` style="${extra}"` : ''}><label>${label}</label>
+          <input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}></div>`;
+      const info = (label, value, extra) => `<div class="ssub-info"${extra ? ` style="${extra}"` : ''}><span>${label}</span><div>${escapeHtml(value || '-')}</div></div>`;
+      const img = p && (p.rmImage || p.ideaMenuImage);
+      const hint = p ? '' : (row.productId ? '<div class="field-hint" style="color:var(--danger);">Linked product not found (deleted?)</div>' : `<div class="field-hint">No Product List item linked — using manually typed name</div>`);
       return `
-        <tr data-sample-id="${escapeHtml(row.id)}">
-          <td>${idx + 1}</td>
-          <td><input type="text" value="${escapeHtml(sampleIdFor(ms, row))}" readonly></td>
-          <td style="min-width:240px;">
-            <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${isEditing ? '' : 'readonly'} autocomplete="off">
-            ${isEditing ? `<div class="field-hint" style="margin-top:2px;">${specLine}</div>` : ''}
-          </td>
-          <td>
-            ${isEditing
-              ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
-              : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}
-          </td>
-          <td><input type="text" class="ssample-field" data-field="lotNo" value="${escapeHtml(row.lotNo)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="number" class="ssample-field" data-field="requestedQty" value="${escapeHtml(row.requestedQty)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="number" class="ssample-field" data-field="actualQtySent" value="${escapeHtml(row.actualQtySent)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="text" class="ssample-field" data-field="netWtPerBag" value="${escapeHtml(row.netWtPerBag)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="text" class="ssample-field" data-field="storage" value="${escapeHtml(row.storage)}" ${isEditing ? '' : 'readonly'}></td>
-          <td><input type="text" class="ssample-field" data-field="remarks" value="${escapeHtml(row.remarks)}" ${isEditing ? '' : 'readonly'}></td>
-          ${isEditing ? `<td><button class="icon-btn" data-role="remove-sample" title="Remove this sample">${icon('x')}</button></td>` : ''}
-        </tr>
-      `;
-    }).join('');
-
-    const productSpecRowsHtml = ms.samples.map((row, idx) => {
-      const p = linkedProduct(row);
-      return `
-        <tr>
-          <td>${idx + 1}</td>
-          <td>${escapeHtml(sampleIdFor(ms, row))}</td>
-          <td>${escapeHtml(p ? p.code : '-')}</td>
-          <td>${escapeHtml(sampleProductName(row) || '-')}</td>
-          <td>${escapeHtml(p?.sampleCode || '-')}</td>
-          <td>${(p?.rmImage || p?.ideaMenuImage) ? `<img class="ssub-spec-img" src="${escapeHtml(p.rmImage || p.ideaMenuImage)}" alt="">` : '-'}</td>
-          <td>${escapeHtml(p?.cookingInstruction || '-')}</td>
-          <td>${escapeHtml(p ? (compositionSummaryText(p.composition) || '-') : '-')}</td>
-          <td>${escapeHtml(p?.allergens || '-')}</td>
-          <td>${escapeHtml(p?.processedArea || '-')}</td>
-          <td>${escapeHtml(p?.factory || '-')}</td>
-          <td><input type="text" class="ssample-field" data-field="certification" value="${escapeHtml(row.certification)}" ${isEditing ? '' : 'readonly'}></td>
-          <td>${escapeHtml(p?.packingStyle || '-')}</td>
-          <td>${escapeHtml(p?.size || '-')}</td>
-          <td>${escapeHtml(p?.moq || '-')}</td>
-          <td><input type="text" class="ssample-field" data-field="currency" value="${escapeHtml(row.currency)}" placeholder="THB" ${isEditing ? '' : 'readonly'}></td>
-          <td>${p?.exwPrice !== '' && p?.exwPrice != null ? '฿' + escapeHtml(String(p.exwPrice)) : '-'}</td>
-          <td>${p?.salesPrice !== '' && p?.salesPrice != null ? escapeHtml(String(p.salesPrice)) : '-'}</td>
-          <td><input type="text" class="ssample-field" data-field="leadTime" value="${escapeHtml(row.leadTime)}" ${isEditing ? '' : 'readonly'}></td>
-          <td>${escapeHtml(p?.remarks || '-')}</td>
-          <td><input type="text" class="ssample-field" data-field="customerComment" value="${escapeHtml(row.customerComment)}" ${isEditing ? '' : 'readonly'}></td>
-        </tr>
-      `;
+        <div class="ssub-sample" data-sample-id="${escapeHtml(row.id)}">
+          <div class="ssub-sample-head">
+            <span class="ssub-sample-no">${idx + 1}</span>
+            <span class="ssub-sample-id">${escapeHtml(sampleIdFor(ms, row))}</span>
+            ${isEditing ? `<button class="icon-btn" data-role="remove-sample" title="Remove this sample" style="margin-left:auto;">${icon('x')}</button>` : ''}
+          </div>
+          <div class="ssub-grid4">
+            <div class="field" style="grid-column:span 2;"><label>Product</label>
+              <input type="text" class="ssample-product-input" value="${escapeHtml(pickerValue)}" placeholder="Search Product List or type a name..." ${ro} autocomplete="off">
+              ${hint}</div>
+            <div class="field"><label>Dev. Status</label>
+              ${isEditing
+                ? `<select class="ssample-field" data-field="developmentStatus"><option value="">-</option>${SUBMISSION_DEV_STATUS_OPTIONS.map(o => `<option value="${o}" ${row.developmentStatus === o ? 'selected' : ''}>${o}</option>`).join('')}</select>`
+                : `<input type="text" value="${escapeHtml(row.developmentStatus || '-')}" readonly>`}</div>
+            ${sf('Lot No.', 'lotNo')}
+            ${sf('Requested Qty (bags)', 'requestedQty', 'number')}
+            ${sf('Actual Qty Sent (bags)', 'actualQtySent', 'number')}
+            ${sf('Net Wt./Bag (g)', 'netWtPerBag')}
+            ${sf('Storage', 'storage')}
+            ${sf('Remarks', 'remarks', null, 'grid-column:span 2;')}
+          </div>
+          <div class="ssub-spec">
+            ${img ? `<img class="ssub-spec-img" src="${escapeHtml(img)}" alt="">` : `<div class="ssub-spec-img ssub-spec-img-empty"></div>`}
+            <div class="ssub-spec-body">
+              <div class="ssub-spec-title">From the Product List</div>
+              <div class="ssub-grid4 ssub-spec-grid">
+                ${info('Product code', p?.code)}${info('Sample code', p?.sampleCode)}${info('Standards / packing style', p?.packingStyle)}${info('Size', p?.size)}
+                ${info('MOQ (ctn)', p?.moq)}${info('EXW price', p && p.exwPrice !== '' && p.exwPrice != null ? '฿' + p.exwPrice : '')}${info('Sales price', p?.salesPrice)}${info('Factory', p?.factory)}
+                ${info('Country of origin', p?.processedArea)}${info('Allergen statement', p?.allergens, 'grid-column:span 3;')}
+                ${info('Approved cooking instruction', p?.cookingInstruction, 'grid-column:span 2;')}${info('Composition (approx.)', p ? compositionSummaryText(p.composition) : '', 'grid-column:span 2;')}
+                ${info('Product remarks', p?.remarks, 'grid-column:span 4;')}
+              </div>
+              <div class="ssub-grid4" style="margin-top:6px;">
+                ${sf('Certification / standard', 'certification')}
+                ${sf('Currency', 'currency', null, null, 'THB')}
+                ${sf('Lead time', 'leadTime')}
+                ${sf('Customer comment / selling point', 'customerComment')}
+              </div>
+            </div>
+          </div>
+        </div>`;
     }).join('');
 
     const evalRowsHtml = ms.samples.map((row, idx) => {
@@ -378,30 +375,8 @@ export function renderSubmissionsList(){
           <div style="margin-top:14px;">${headerField('Purpose', 'purpose')}</div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
-          <div style="overflow-x:auto;">
-            <table class="compare-table ssub-samples-table">
-              <thead><tr>
-                <th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. Status</th><th>Lot No.</th>
-                <th>Requested Qty</th><th>Actual Qty Sent</th>
-                <th>Net Wt./Bag (g)</th><th>Storage</th><th>Remarks</th>${isEditing ? '<th></th>' : ''}
-              </tr></thead>
-              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${isEditing ? 11 : 10}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
-            </table>
-          </div>
+          <div id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesCardsHtml || '<div class="overview-empty">No samples added yet</div>'}</div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}
-
-          <div class="card-title" style="font-size:13px;margin-top:20px;">Product specification (from Product List)</div>
-          <div style="overflow-x:auto;">
-            <table class="compare-table">
-              <thead><tr>
-                <th>No.</th><th>Sample ID</th><th>Product Code</th><th>Product Name</th><th>Sample Code</th><th>Image</th><th>Approved Cooking Instruction</th>
-                <th>Composition (Approx.)</th><th>Allergen Statement</th><th>Country of Origin</th><th>Factory</th>
-                <th>Certification / Standard</th><th>Standards / Packing Style</th><th>Size</th><th>MOQ (ctn)</th><th>Currency</th><th>EXW Price</th><th>Sales Price</th>
-                <th>Lead Time</th><th>Product Remarks</th><th>Customer Comment / Selling Point</th>
-              </tr></thead>
-              <tbody>${productSpecRowsHtml || `<tr><td colspan="21"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
-            </table>
-          </div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Handling information</div>
           <div class="grid-2">
@@ -603,7 +578,7 @@ export function renderSubmissionsList(){
 
     block.querySelectorAll('[data-role="remove-sample"]').forEach(btn => {
       btn.addEventListener('click', () => {
-        const row = btn.closest('tr[data-sample-id]');
+        const row = btn.closest('[data-sample-id]');
         s.samples = s.samples.filter(x => x.id !== row.dataset.sampleId);
         scheduleSubmissionSave(s);
         renderSubmissionsList();
@@ -612,7 +587,7 @@ export function renderSubmissionsList(){
 
     block.querySelectorAll('.ssample-field').forEach(el => {
       el.addEventListener('change', () => {
-        const row = el.closest('tr[data-sample-id]');
+        const row = el.closest('[data-sample-id]');
         const sample = s.samples.find(x => x.id === row.dataset.sampleId);
         if(!sample) return;
         sample[el.dataset.field] = el.value.trim();
@@ -636,7 +611,7 @@ export function renderSubmissionsList(){
     // chasing each cause of it.
     if(isEditing){
       block.querySelectorAll('.ssample-product-input').forEach(input => {
-        const row = input.closest('tr[data-sample-id]');
+        const row = input.closest('[data-sample-id]');
         const sample = s.samples.find(x => x.id === row.dataset.sampleId);
         if(!sample) return;
         function renderSuggestions(){

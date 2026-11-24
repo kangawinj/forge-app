@@ -6896,3 +6896,22 @@
 #submissionsList .part-body .grid-3[style*="margin-top"], #submissionsList .part-body .grid-2[style*="margin-top"]{margin-top:8px !important;}
 .ssub-spec-img{width:46px;height:46px;object-fit:cover;border-radius:6px;display:block;}
 .ssdoc-spec-img{width:34px;height:34px;object-fit:cover;border-radius:4px;vertical-align:middle;margin-right:8px;}
+
+/* ===== Sample Submissions: one card per sample (sample details + its Product List information) ===== */
+.ssub-sample{background:#fff;border:1px solid var(--border);border-radius:var(--radius);padding:10px 12px 12px;margin-top:10px;}
+.ssub-sample-head{display:flex;align-items:center;gap:10px;margin-bottom:6px;}
+.ssub-sample-no{width:22px;height:22px;border-radius:50%;background:var(--primary);color:#fff;font-size:12px;font-weight:700;display:flex;align-items:center;justify-content:center;}
+.ssub-sample-id{font-weight:700;font-size:13px;color:var(--primary-dark);}
+.ssub-sample .field{margin-bottom:0;}
+.ssub-sample .field label{font-size:11px;margin-bottom:2px;}
+.ssub-sample :is(.ssample-field,.ssample-product-input){width:100%;box-sizing:border-box;padding:5px 9px;font-size:13px;min-height:0;height:auto;border-radius:8px;}
+.ssub-spec{display:flex;gap:12px;margin-top:10px;padding-top:10px;border-top:1px dashed var(--border);}
+.ssub-spec-img{flex:0 0 72px;width:72px;height:72px;object-fit:cover;border-radius:8px;}
+.ssub-spec-img-empty{background:var(--bg);border:1px dashed var(--border);}
+.ssub-spec-body{flex:1;min-width:0;}
+.ssub-spec-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;color:var(--text-dim);margin-bottom:4px;}
+.ssub-spec-grid{gap:4px 12px;}
+.ssub-info{font-size:12px;min-width:0;}
+.ssub-info span{display:block;font-size:10.5px;color:var(--text-dim);}
+.ssub-info div{overflow-wrap:anywhere;}
+@media (max-width:700px){ .ssub-spec{flex-direction:column;} }
