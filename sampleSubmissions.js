@@ -350,7 +350,6 @@ export function renderSubmissionsList(){
           <div class="ssub-grid4">
             ${formNoField}
             ${headerField('Doc. Date', 'docDate', 'date')}
-            ${headerField('Purpose', 'purpose')}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
@@ -367,6 +366,8 @@ export function renderSubmissionsList(){
           ${docsBlock}
           ${shipDocsBlock}
           ${activity.length ? `<div class="reflist-item-meta" style="margin:10px 0;">${activity.join(' &nbsp;|&nbsp; ')}</div>` : ''}
+
+          <div style="margin-top:14px;">${headerField('Purpose', 'purpose')}</div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
           <div style="overflow-x:auto;">
