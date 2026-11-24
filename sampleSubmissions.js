@@ -204,22 +204,20 @@ export function renderSubmissionsList(){
       <div class="ssub-shipdocs">
         <div class="card-title" style="font-size:13px;margin-top:20px;">Shipping documents (Packing List / Sample Invoice)</div>
         <div class="field-hint" style="margin-bottom:10px;">Used by the Packing List and Sample Invoice buttons at the top. Customer, Courier, Tracking No., Destination and the samples below are taken from this submission; leave Consignee blank to use the Customer.</div>
-        <div class="grid-2">
-          <div>${headerField('Shipper (ship from)', 'shipperName')}<div style="margin-top:10px;">${areaField('Shipper address / contact', 'shipperAddress')}</div></div>
-          <div>${headerField('Consignee (ship to)', 'consigneeName')}<div style="margin-top:10px;">${areaField('Consignee address / contact', 'consigneeAddress')}</div></div>
-        </div>
-        <div class="grid-3" style="margin-top:14px;">
+        <div class="ssub-grid4">
+          <div style="grid-column:span 2;">${headerField('Shipper (ship from)', 'shipperName')}</div>
+          <div style="grid-column:span 2;">${headerField('Consignee (ship to)', 'consigneeName')}</div>
+          <div style="grid-column:span 2;">${areaField('Shipper address / contact', 'shipperAddress', 2)}</div>
+          <div style="grid-column:span 2;">${areaField('Consignee address / contact', 'consigneeAddress', 2)}</div>
           ${headerField('No. of cartons', 'cartons', 'number')}
           ${headerField('Gross weight (kg)', 'grossWeightKg', 'number')}
           ${headerField('Carton size (cm)', 'cartonSize')}
-        </div>
-        <div class="grid-3" style="margin-top:14px;">
-          ${headerField('Country of origin (blank = Thailand)', 'countryOfOrigin', null, 'destinationDatalist')}
           ${headerField('HS code', 'hsCode')}
+          ${headerField('Country of origin (blank = Thailand)', 'countryOfOrigin', null, 'destinationDatalist')}
           ${headerField('Invoice currency (blank = USD)', 'invoiceCurrency')}
+          <div style="grid-column:span 2;">${headerField('Reason for export (blank = FREE SAMPLES - NO COMMERCIAL VALUE)', 'exportReason')}</div>
         </div>
-        <div style="margin-top:14px;">${headerField('Reason for export (blank = FREE SAMPLES - NO COMMERCIAL VALUE)', 'exportReason')}</div>
-        <div style="overflow-x:auto;margin-top:14px;">
+        <div style="overflow-x:auto;margin-top:8px;">
           <table class="compare-table">
             <thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Qty (bags)</th><th>Unit value for customs (per bag)</th></tr></thead>
             <tbody>${ms.samples.map((row, idx) => `
@@ -328,30 +326,20 @@ export function renderSubmissionsList(){
         </div>
         <div class="part-body">
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
-          <div class="grid-3">
+          <div class="ssub-grid4">
             ${projectField}
             ${formNoField}
             ${headerField('Doc. Date', 'docDate', 'date')}
-          </div>
-          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Purpose', 'purpose')}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
-          </div>
-          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
-          </div>
-          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Expected Receipt', 'expectedReceipt', 'date')}
             ${headerField('Delivery Location', 'deliveryLocation')}
-          </div>
-          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Courier', 'courier')}
             ${headerField('Tracking No.', 'trackingNo')}
             ${headerField('Storage', 'shipmentStorage')}
-          </div>
-          <div class="grid-3" style="margin-top:14px;">
             ${headerField('Present. Date', 'presentDate', 'date')}
             ${headerField('Receiver', 'receiver')}
           </div>
