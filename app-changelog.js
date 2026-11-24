@@ -887,6 +887,7 @@ export const CHANGELOG = [
   { version: "3.0.845", date: "2026-11-23", note: "Project Priority: every project can now be given a priority (1 Critical / Urgent, 2 High / Important, 3 Normal) in the New Project and Edit forms. Projects by Status has a Priority filter row on top (with counts), a Priority column in the List (double-click to change it, filter it like the other columns), a numbered tag on the Grid photos, the most important projects listed first inside each status, and a Priority column in the Excel export" },
   { version: "3.0.846", date: "2026-11-23", note: "Projects by Status: under the Priority chips, a strip with the photos of the 1 Critical / Urgent and 2 High / Important projects (Completed and Cancelled ones left out) -- click a photo to open the project" },
   { version: "3.0.847", date: "2026-11-24", note: "Compare Costing: new Cost / serving row under Cost / kg of product -- the cost per serving (Cost / kg x the recipe's Amount per Serving), with the serving size shown beside it; recipes with no serving size entered say so (page and Excel export)" },
+  { version: "3.0.848", date: "2026-11-24", note: "Compare Costing: new Cost / 100 g of product row under Cost / kg of product (page and Excel). The Cost / serving row now only appears once a compared recipe has an Amount per Serving, instead of saying No serving size" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

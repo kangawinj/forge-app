@@ -802,6 +802,22 @@ function renderCompareContent(){
     return `<td class="col-pct cost-amt${boundaryClass(idx)}">฿${(total / batchKg).toFixed(2)}${hasUnpriced ? ' *' : ''}</td><td class="col-wt cost-pct"></td>`;
   }).join('');
 
+  // Cost / 100 g of product = Cost / kg of product / 10 (same batch-weight basis as Cost / kg)
+  const costPer100Cells = ids.map((id, idx) => {
+    if(!selected.some(r => r.id === id)) return costDash(idx);
+    const r = recipes.find(x => x.id === id);
+    const batchKg = (r && r.batchWeight) ? r.batchWeight / 1000 : 0;
+    if(batchKg <= 0) return costMissing(idx, 'No batch weight');
+    let total = 0, hasUnpriced = false;
+    rows.forEach(row => {
+      const wt = row.weights[id];
+      if(wt === undefined) return;
+      const price = priceOf(row.label);
+      if(price === null){ hasUnpriced = true; return; }
+      total += (wt / 1000) * price;
+    });
+    return `<td class="col-pct cost-amt${boundaryClass(idx)}" colspan="2">฿${(total / batchKg / 10).toFixed(2)}${hasUnpriced ? ' *' : ''}</td>`;
+  }).join('');
   // Cost / serving: the price is worked out per serving (the recipe's "Amount per Serving (g)"), so this is Cost / kg of
   // product x the serving size; a recipe with no serving size entered says so.
   const costPerServingCells = ids.map((id, idx) => {
@@ -923,7 +939,8 @@ function renderCompareContent(){
         <tfoot>
           <tr class="total-row"><td>Total Cost</td>${costTotalCells}</tr>
           <tr class="total-row"><td>Cost / kg of product</td>${costPerKgCells}</tr>
-          <tr class="total-row"><td>Cost / serving</td>${costPerServingCells}</tr>
+          <tr class="total-row"><td>Cost / 100 g of product</td>${costPer100Cells}</tr>
+          ${recipes.some(r => selected.some(s => s.id === r.id) && ids.includes(r.id) && parseFloat(r.servingSizeG) > 0) ? `<tr class="total-row"><td>Cost / serving</td>${costPerServingCells}</tr>` : ''}
         </tfoot>
       </table>
     </div>
@@ -992,7 +1009,7 @@ function renderCompareContent(){
       </label>
       ${compareCostGroupByPart ? (costPartSectionsHtml || '<div class="compare-empty">No ingredients yet</div>') : combinedCostTableHtml}
       ${costGrandTotalTableHtml}
-      <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ. "Cost / serving" is that cost per kg × the recipe's Amount per Serving (g). "%" is that ingredient's (or Part's) share of the recipe's Total Cost.</div>
+      <div class="compare-legend">Costs are in Thai Baht (฿), calculated from weight × the ingredient's Price/kg in the library. "No price set" ingredients are excluded from Total Cost — a "*" marks a total that is a partial estimate because at least one ingredient has no price on file. "Cost / kg of product" divides Total Cost by the recipe's batch weight, so costs are comparable per kg of finished product even when batch sizes differ. "Cost / 100 g of product" is the same figure per 100 g. "Cost / serving" (shown once a recipe has an Amount per Serving) is the cost per kg × that serving size. "%" is that ingredient's (or Part's) share of the recipe's Total Cost.</div>
     ` : ''}
 
     ${sectionTitleWithEye('toggleStepsSection', 'Compare Process Steps', compareShowSteps)}

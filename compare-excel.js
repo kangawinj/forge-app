@@ -327,14 +327,16 @@ function buildCosting(wb, d, recipes){
   // Grand totals over the whole recipe (same figures the page shows).
   const totalRow = ws.addRow(['Total Cost', ...recipes.flatMap(r => [totalCost[r.id], totalCost[r.id] > 0 ? 100 : 0])]);
   const perKgRow = ws.addRow(['Cost / kg of product', ...recipes.flatMap(r => [(r.batchWeight ? totalCost[r.id] / (r.batchWeight / 1000) : 'No batch weight'), ''])]);
-  // Cost / serving = Cost / kg x the recipe's Amount per Serving (g); the serving size is shown beside it in the cell's number format
-  const perServingRow = ws.addRow(['Cost / serving', ...recipes.flatMap(r => {
+  const per100Row = ws.addRow(['Cost / 100 g of product', ...recipes.flatMap(r => [(r.batchWeight ? totalCost[r.id] / (r.batchWeight / 1000) / 10 : 'No batch weight'), ''])]);
+  // Cost / serving = Cost / kg x the recipe's Amount per Serving (g); only when at least one recipe has a serving size
+  const anyServing = recipes.some(r => parseFloat(r.servingSizeG) > 0);
+  const perServingRow = !anyServing ? null : ws.addRow(['Cost / serving', ...recipes.flatMap(r => {
     const serving = parseFloat(r.servingSizeG) || 0;
     if(serving <= 0) return ['No serving size', ''];
     if(!r.batchWeight) return ['No batch weight', ''];
     return [totalCost[r.id] / (r.batchWeight / 1000) * serving / 1000, ''];
   })]);
-  [totalRow, perKgRow, perServingRow].forEach(row => {
+  [totalRow, perKgRow, per100Row, perServingRow].filter(Boolean).forEach(row => {
     for(let c = 1; c <= span; c++){
       const cell = row.getCell(c);
       cell.font = { name: FONT, bold: true, color: { argb: C.text } };
