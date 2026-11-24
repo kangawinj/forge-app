@@ -897,6 +897,7 @@ export const CHANGELOG = [
   { version: "3.0.855", date: "2026-11-25", note: "Sample Submissions: the running number in a new Form No. is 2 digits -- SS-2611-01, SS-2611-02 ... (it grows to 3 digits only past 99 in one month). Existing numbers are not changed" },
   { version: "3.0.856", date: "2026-11-25", note: "Sample Submissions: the Project picker is removed from the submission form (Customer, Destination, Project Lead and Coordinator are typed or picked directly, as before)" },
   { version: "3.0.857", date: "2026-11-25", note: "Sample Submissions: admins get a Renumber old Form Nos. button (shown only while old numbers remain). It lists what will change -- SS-2026-0003 and later become SS-YYMM-01, 02 ... by the month each was created (Bangkok time) -- and only renumbers after you confirm; the old number is kept on the submission as its previous Form No." },
+  { version: "3.0.858", date: "2026-11-25", note: "Sample Submissions: choosing the Customer from the Company Directory now fills Destination with that company's country automatically; it can still be edited afterwards" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

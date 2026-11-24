@@ -2,7 +2,7 @@ import {
   escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, compositionSummaryText, isCurrentUserAdmin,
+  productList, compositionSummaryText, isCurrentUserAdmin, metaLists, metaItemName,
   moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import { wireSuggestKeys } from './suggest-keys.js';
@@ -518,6 +518,16 @@ export function renderSubmissionsList(){
         el.addEventListener('change', () => {
           s[el.dataset.field] = el.value.trim();
           if(el.dataset.field === 'shipperName' || el.dataset.field === 'shipperAddress') rememberShipper(s);
+          // Picking a company from the Company Directory fills Destination with its country (still editable afterwards, and only
+          // changed again when the Customer is changed); a company with no country, or a name not in the directory, leaves it alone
+          if(el.dataset.field === 'customer'){
+            const match = metaLists.customers.find(c => metaItemName(c) === s.customer);
+            if(match && match.country){
+              s.destination = match.country;
+              const dest = block.querySelector('.ssub-field[data-field="destination"]');
+              if(dest) dest.value = match.country;
+            }
+          }
           scheduleSubmissionSave(s);
         });
       });
