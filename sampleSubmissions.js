@@ -43,6 +43,17 @@ const SUBMISSION_DIFF_FIELDS = {
 };
 let submissionEditSnapshotBefore = null;
 
+// The delivery places of a company in Reference Lists > Company Directory ("Head office — address"), for the Delivery Location
+// field: the first one is filled in when the Customer is chosen, the rest are offered in the field's drop-down list.
+function companyLocationOptions(customerName){
+  const c = metaLists.customers.find(x => metaItemName(x) === (customerName || '').trim());
+  if(!c) return [];
+  return (c.locations || []).map((name, i) => {
+    const addr = ((c.locationAddresses || [])[i] || '').trim();
+    return [name, addr].filter(Boolean).join(' — ');
+  }).filter(Boolean);
+}
+
 
 export function mountSampleSubmissionsView(){
   const main = document.getElementById('mainArea');
@@ -338,7 +349,8 @@ export function renderSubmissionsList(){
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
             ${headerField('Coordinator', 'coordinator', null, 'salesRepDatalist')}
             ${headerField('Expected Receipt', 'expectedReceipt', 'date')}
-            ${headerField('Delivery Location', 'deliveryLocation')}
+            ${headerField('Delivery Location', 'deliveryLocation', null, 'ssubLocList-' + s.id)}
+            <datalist id="ssubLocList-${escapeHtml(s.id)}">${companyLocationOptions(ms.customer).map(o => `<option value="${escapeHtml(o)}"></option>`).join('')}</datalist>
             ${headerField('Courier', 'courier')}
             ${headerField('Tracking No.', 'trackingNo')}
             ${headerField('Storage', 'shipmentStorage')}
@@ -518,14 +530,24 @@ export function renderSubmissionsList(){
         el.addEventListener('change', () => {
           s[el.dataset.field] = el.value.trim();
           if(el.dataset.field === 'shipperName' || el.dataset.field === 'shipperAddress') rememberShipper(s);
-          // Picking a company from the Company Directory fills Destination with its country (still editable afterwards, and only
-          // changed again when the Customer is changed); a company with no country, or a name not in the directory, leaves it alone
+          // Picking a company from the Company Directory fills Destination with its country and Delivery Location with its first
+          // location (both still editable afterwards, and only changed again when the Customer is changed); a company with no
+          // country / location, or a name not in the directory, leaves them alone
           if(el.dataset.field === 'customer'){
             const match = metaLists.customers.find(c => metaItemName(c) === s.customer);
             if(match && match.country){
               s.destination = match.country;
               const dest = block.querySelector('.ssub-field[data-field="destination"]');
               if(dest) dest.value = match.country;
+            }
+            // ... and Delivery Location with the company's first location (the others stay in the field's drop-down list)
+            const opts = companyLocationOptions(s.customer);
+            const list = block.querySelector(`#ssubLocList-${CSS.escape(s.id)}`);
+            if(list) list.innerHTML = opts.map(o => `<option value="${escapeHtml(o)}"></option>`).join('');
+            if(opts.length){
+              s.deliveryLocation = opts[0];
+              const loc = block.querySelector('.ssub-field[data-field="deliveryLocation"]');
+              if(loc) loc.value = opts[0];
             }
           }
           scheduleSubmissionSave(s);
