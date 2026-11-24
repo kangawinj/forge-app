@@ -6926,3 +6926,4 @@
 .ssub-sample-grid td.ssub-ro{font-size:12px;overflow-wrap:anywhere;padding-top:12px;}
 .ssub-sample-grid input, .ssub-sample-grid select{width:100%;min-width:0;box-sizing:border-box;padding:5px 8px;font-size:13px;min-height:0;height:auto;border-radius:8px;}
 .ssub-sample-grid .ssub-spec-img{width:56px;height:56px;flex:none;}
+.ssub-sample-grid textarea.ssample-spec{width:100%;box-sizing:border-box;padding:5px 8px;font-size:12px;line-height:1.35;border-radius:8px;min-height:64px;resize:vertical;}

@@ -5,7 +5,7 @@
 // file's own top-of-file comment for the overall file split.
 import {
   uid, currentUser, sampleSubmissionsCol, productList, db,
-  sampleSubmissionCountersCol, projects, bangkokMonthStr
+  sampleSubmissionCountersCol, projects, bangkokMonthStr, compositionSummaryText
 } from './app.js';
 import {
   setDoc, doc, runTransaction, getDoc
@@ -54,7 +54,7 @@ export function blankSample(){
     requestedQty: '', actualQtySent: '', netWtPerBag: '', storage: '', remarks: '',
     taste: '', texture: '', appearance: '', convenience: '',
     decision: '', feedback: '', owner: '', dueDate: '', nextAction: '',
-    certification: '', currency: '', leadTime: '', customerComment: '', unitValue: ''
+    certification: '', currency: '', leadTime: '', customerComment: '', unitValue: '', spec: {}
   };
 }
 
@@ -218,6 +218,21 @@ export function applyProjectAutofill(s, project){
 // truth" decision. Returns null for a manual/unlinked row.
 export function linkedProduct(sample){
   return sample.productId ? (productList.find(p => p.id === sample.productId) || null) : null;
+}
+// What a sample shows for its product information: whatever was typed on the sample (row.spec, only the fields that were
+// edited), otherwise the linked Product List item's value. Used by the form, the printed form and the Packing List / Invoice.
+export function sampleSpec(row){
+  const p = linkedProduct(row);
+  const o = row.spec || {};
+  const pick = (k, pv) => (k in o ? String(o[k] ?? '') : (pv === undefined || pv === null ? '' : String(pv)));
+  return {
+    code: pick('code', p?.code), sampleCode: pick('sampleCode', p?.sampleCode),
+    cookingInstruction: pick('cookingInstruction', p?.cookingInstruction),
+    composition: pick('composition', p ? compositionSummaryText(p.composition) : ''),
+    allergens: pick('allergens', p?.allergens), processedArea: pick('processedArea', p?.processedArea), factory: pick('factory', p?.factory),
+    packingStyle: pick('packingStyle', p?.packingStyle), size: pick('size', p?.size), moq: pick('moq', p?.moq),
+    exwPrice: pick('exwPrice', p?.exwPrice), salesPrice: pick('salesPrice', p?.salesPrice), remarks: pick('remarks', p?.remarks)
+  };
 }
 export function sampleProductName(sample){
   const p = linkedProduct(sample);

@@ -923,6 +923,7 @@ export const CHANGELOG = [
   { version: "3.0.881", date: "2026-11-25", note: "Sample Submissions: the samples are a table again -- one row per sample with everything side by side (sample details, then the Product List information, then certification / currency / lead time / customer comment); wider columns with proper spacing, and the table scrolls sideways" },
   { version: "3.0.882", date: "2026-11-25", note: "Sample Submissions: Expected Receipt moved to the last column of its row in the details grid" },
   { version: "3.0.883", date: "2026-11-25", note: "Sample Submissions: Samples Delivery Company and Location are no longer filled in automatically when the Customer is chosen -- pick them yourself (choosing a different company clears the old location and offers that company's locations)" },
+  { version: "3.0.884", date: "2026-11-25", note: "Sample Submissions: the Product List columns of the samples table (product code, sample code, cooking instruction, composition, allergens, origin, factory, packing style, size, MOQ, prices, remarks) can now be typed over -- they still start from the linked Product List item, and what is typed stays on that sample (also used on the printed form). Country of Origin is linked to Destination Countries, Factory to the Company Directory, Storage to Storage Condition and Currency to the currency list" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

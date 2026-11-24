@@ -15,7 +15,7 @@ import {
   saveSubmissionToCloud, scheduleSubmissionSave, issueSubmissionFormNo,
   linkedProduct, sampleProductName, productPickerLabel, fuzzyProductMatches,
   getSharedProductSuggestBox, closeProductSuggestBox, toNum, computeQuantitySummary,
-  computeFollowUpSummary, overallAvg, needsRenumber, planRenumber, applyRenumber
+  computeFollowUpSummary, overallAvg, needsRenumber, planRenumber, applyRenumber, sampleSpec
 } from './sampleSubmissions-data.js';
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
@@ -273,8 +273,12 @@ export function renderSubmissionsList(){
     const samplesRowsHtml = ms.samples.map((row, idx) => {
       const p = linkedProduct(row);
       const pickerValue = p ? productPickerLabel(p) : (row.manualProductName || '');
-      const inp = (field, type, ph) => `<input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}>`;
-      const txt = v => `<td class="ssub-ro">${escapeHtml(v || '-')}</td>`;
+      const inp = (field, type, ph, list) => `<input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${list ? `list="${list}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}>`;
+      const sp = sampleSpec(row);
+      // product information: shows the Product List value, can be typed over (kept on this sample); `list` links a field to a Reference List
+      const spec = (key, list, area) => area
+        ? `<td><textarea class="ssample-spec" data-spec="${key}" rows="3" ${ro}>${escapeHtml(sp[key])}</textarea></td>`
+        : `<td><input type="text" class="ssample-spec" data-spec="${key}" value="${escapeHtml(sp[key])}" ${list ? `list="${list}"` : ''} ${ro}></td>`;
       const img = p && (p.rmImage || p.ideaMenuImage);
       const hint = p ? '' : (row.productId ? '<div class="field-hint" style="color:var(--danger);">Linked product not found (deleted?)</div>' : '<div class="field-hint">No Product List item linked — using manually typed name</div>');
       return `
@@ -289,17 +293,17 @@ export function renderSubmissionsList(){
           <td>${inp('requestedQty', 'number')}</td>
           <td>${inp('actualQtySent', 'number')}</td>
           <td>${inp('netWtPerBag')}</td>
-          <td>${inp('storage')}</td>
+          <td>${inp('storage', null, null, 'storageConditionDatalist')}</td>
           <td>${inp('remarks')}</td>
-          ${txt(p?.code)}${txt(p?.sampleCode)}
+          ${spec('code')}${spec('sampleCode')}
           <td class="ssub-ro">${img ? `<img class="ssub-spec-img" src="${escapeHtml(img)}" alt="">` : '-'}</td>
-          ${txt(p?.cookingInstruction)}${txt(p ? compositionSummaryText(p.composition) : '')}${txt(p?.allergens)}${txt(p?.processedArea)}${txt(p?.factory)}
+          ${spec('cookingInstruction', null, true)}${spec('composition', null, true)}${spec('allergens', null, true)}${spec('processedArea', 'destinationDatalist')}${spec('factory', 'customerDatalist')}
           <td>${inp('certification')}</td>
-          ${txt(p?.packingStyle)}${txt(p?.size)}${txt(p?.moq)}
-          <td>${inp('currency', null, 'THB')}</td>
-          ${txt(p && p.exwPrice !== '' && p.exwPrice != null ? '฿' + p.exwPrice : '')}${txt(p?.salesPrice)}
+          ${spec('packingStyle')}${spec('size')}${spec('moq')}
+          <td>${inp('currency', null, 'THB', 'ssubCurrencyList')}</td>
+          ${spec('exwPrice')}${spec('salesPrice')}
           <td>${inp('leadTime')}</td>
-          ${txt(p?.remarks)}
+          ${spec('remarks', null, true)}
           <td>${inp('customerComment')}</td>
           ${isEditing ? `<td class="ssub-ro"><button class="icon-btn" data-role="remove-sample" title="Remove this sample">${icon('x')}</button></td>` : ''}
         </tr>`;
@@ -343,6 +347,7 @@ export function renderSubmissionsList(){
           <div style="margin-top:14px;">${headerField('Purpose', 'purpose')}</div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Samples included in this submission</div>
+          <datalist id="ssubCurrencyList">${['THB', 'JPY', 'USD', 'CNY', 'EUR'].map(c => `<option value="${c}"></option>`).join('')}</datalist>
           <div style="overflow-x:auto;">
             <table class="compare-table ssub-sample-grid">
               <thead><tr>${SAMPLE_COLS.map(([label, cls]) => `<th class="${cls}">${label}</th>`).join('')}${isEditing ? '<th class="w-xs"></th>' : ''}</tr></thead>
@@ -514,6 +519,16 @@ export function renderSubmissionsList(){
       });
     });
 
+    block.querySelectorAll('.ssample-spec').forEach(el => {
+      el.addEventListener('change', () => {
+        const row = el.closest('[data-sample-id]');
+        const sample = s.samples.find(x => x.id === row.dataset.sampleId);
+        if(!sample) return;
+        sample.spec = { ...(sample.spec || {}), [el.dataset.spec]: el.value.trim() };
+        scheduleSubmissionSave(s);
+      });
+    });
+
     block.querySelectorAll('.ssample-field').forEach(el => {
       el.addEventListener('change', () => {
         const row = el.closest('[data-sample-id]');
@@ -571,6 +586,7 @@ export function renderSubmissionsList(){
               if(matched){
                 sample.productId = matched.id;
                 sample.manualProductName = '';
+                sample.spec = {};
                 scheduleSubmissionSave(s);
               }
               closeProductSuggestBox();

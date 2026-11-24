@@ -3,7 +3,7 @@
 // fields filled in on the submission. Shown on screen as an A4 sheet in an overlay with a Print button (choose "Save as PDF"
 // in the print dialog to get a file); nothing is stored by this module.
 import { escapeHtml, compositionSummaryText } from './app.js';
-import { linkedProduct, sampleProductName, sampleIdFor, toNum, overallAvg, computeQuantitySummary, computeFollowUpSummary } from './sampleSubmissions-data.js';
+import { linkedProduct, sampleProductName, sampleIdFor, toNum, overallAvg, computeQuantitySummary, computeFollowUpSummary, sampleSpec } from './sampleSubmissions-data.js';
 
 const LAST_SHIPPER_KEY = 'forgeLastShipper';
 // the shipper (who sends the samples) is nearly always the same, so a new submission starts with the one used last time
@@ -126,15 +126,16 @@ function submissionFormHtml(s){
   }).join('');
   const specHtml = samples.map(r => {
     const p = linkedProduct(r);
+    const sp = sampleSpec(r);
     const img = p && (p.rmImage || p.ideaMenuImage);
-    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${img ? `<img class="ssdoc-spec-img" src="${escapeHtml(img)}" alt="">` : ''}${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${p && p.code ? ` <span class="ssdoc-dim">(${escapeHtml(p.code)})</span>` : ''}${p && p.sampleCode ? ` <span class="ssdoc-dim">· Sample code ${escapeHtml(p.sampleCode)}</span>` : ''}</div>
+    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${img ? `<img class="ssdoc-spec-img" src="${escapeHtml(img)}" alt="">` : ''}${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${sp.code ? ` <span class="ssdoc-dim">(${escapeHtml(sp.code)})</span>` : ''}${sp.sampleCode ? ` <span class="ssdoc-dim">· Sample code ${escapeHtml(sp.sampleCode)}</span>` : ''}</div>
       <table class="ssdoc-meta ssdoc-compact">
-        <tr>${metaRow('Cooking instruction', p?.cookingInstruction)}${metaRow('Composition (approx.)', p ? compositionSummaryText(p.composition) : '')}</tr>
-        <tr>${metaRow('Allergen statement', p?.allergens)}${metaRow('Country of origin', p?.processedArea)}</tr>
-        <tr>${metaRow('Factory', p?.factory)}${metaRow('Certification / standard', r.certification)}</tr>
-        <tr>${metaRow('Standards / packing style', p?.packingStyle)}${metaRow('Size', p?.size)}</tr>
-        <tr>${metaRow('MOQ (ctn)', p?.moq)}${metaRow('Price', [r.currency, p && p.exwPrice !== '' && p.exwPrice != null ? `EXW ${p.exwPrice}` : '', p && p.salesPrice !== '' && p.salesPrice != null ? `Sales ${p.salesPrice}` : ''].filter(Boolean).join(' · '))}</tr>
-        <tr>${metaRow('Lead time', r.leadTime)}${metaRow('Product remarks', p?.remarks)}</tr>
+        <tr>${metaRow('Cooking instruction', sp.cookingInstruction)}${metaRow('Composition (approx.)', sp.composition)}</tr>
+        <tr>${metaRow('Allergen statement', sp.allergens)}${metaRow('Country of origin', sp.processedArea)}</tr>
+        <tr>${metaRow('Factory', sp.factory)}${metaRow('Certification / standard', r.certification)}</tr>
+        <tr>${metaRow('Standards / packing style', sp.packingStyle)}${metaRow('Size', sp.size)}</tr>
+        <tr>${metaRow('MOQ (ctn)', sp.moq)}${metaRow('Price', [r.currency, sp.exwPrice ? `EXW ${sp.exwPrice}` : '', sp.salesPrice ? `Sales ${sp.salesPrice}` : ''].filter(Boolean).join(' · '))}</tr>
+        <tr>${metaRow('Lead time', r.leadTime)}${metaRow('Product remarks', sp.remarks)}</tr>
         ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
       </table></div>`;
   }).join('');
