@@ -219,6 +219,22 @@ export function applyProjectAutofill(s, project){
 export function linkedProduct(sample){
   return sample.productId ? (productList.find(p => p.id === sample.productId) || null) : null;
 }
+// Prices typed on a sample (EXW / Sales): once the sample has a currency, a number is shown as money ("฿11.00", "$11.00", "¥1,100").
+// What is stored is just the number; text that is not a number is shown as typed.
+const CURRENCY_SYMBOLS = { THB: '฿', JPY: '¥', USD: '$', CNY: 'CN¥', EUR: '€' };
+export function moneyNumber(v){
+  const s = String(v ?? '').replace(/[,\s]/g, '').replace(/^[^\d.\-]+/, '');
+  return /^-?\d*\.?\d+$/.test(s) ? parseFloat(s) : null;
+}
+export function formatMoney(v, currency){
+  const n = moneyNumber(v);
+  const cur = String(currency || '').trim().toUpperCase();
+  if(n === null || !cur) return String(v ?? '');
+  const dp = cur === 'JPY' ? 0 : 2;
+  const num = n.toLocaleString('en-US', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+  return CURRENCY_SYMBOLS[cur] ? CURRENCY_SYMBOLS[cur] + num : `${cur} ${num}`;
+}
+
 // What a sample shows for its product information: whatever was typed on the sample (row.spec, only the fields that were
 // edited), otherwise the linked Product List item's value. Used by the form, the printed form and the Packing List / Invoice.
 export function sampleSpec(row){

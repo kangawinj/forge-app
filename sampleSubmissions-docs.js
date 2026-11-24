@@ -3,7 +3,7 @@
 // fields filled in on the submission. Shown on screen as an A4 sheet in an overlay with a Print button (choose "Save as PDF"
 // in the print dialog to get a file); nothing is stored by this module.
 import { escapeHtml, compositionSummaryText } from './app.js';
-import { linkedProduct, sampleProductName, sampleIdFor, toNum, overallAvg, computeQuantitySummary, computeFollowUpSummary, sampleSpec } from './sampleSubmissions-data.js';
+import { linkedProduct, sampleProductName, sampleIdFor, toNum, overallAvg, computeQuantitySummary, computeFollowUpSummary, sampleSpec, formatMoney } from './sampleSubmissions-data.js';
 
 const LAST_SHIPPER_KEY = 'forgeLastShipper';
 // the shipper (who sends the samples) is nearly always the same, so a new submission starts with the one used last time
@@ -134,7 +134,7 @@ function submissionFormHtml(s){
         <tr>${metaRow('Allergen statement', sp.allergens)}${metaRow('Country of origin', sp.processedArea)}</tr>
         <tr>${metaRow('Factory', sp.factory)}${metaRow('Certification / standard', r.certification)}</tr>
         <tr>${metaRow('Standards / packing style', sp.packingStyle)}${metaRow('Size', sp.size)}</tr>
-        <tr>${metaRow('MOQ (ctn)', sp.moq)}${metaRow('Price', [r.currency, sp.exwPrice ? `EXW ${sp.exwPrice}` : '', sp.salesPrice ? `Sales ${sp.salesPrice}` : ''].filter(Boolean).join(' · '))}</tr>
+        <tr>${metaRow('MOQ (ctn)', sp.moq)}${metaRow('Price', [sp.exwPrice ? `EXW ${formatMoney(sp.exwPrice, r.currency)}` : '', sp.salesPrice ? `Sales ${formatMoney(sp.salesPrice, r.currency)}` : '', !r.currency || (!sp.exwPrice && !sp.salesPrice) ? r.currency : ''].filter(Boolean).join(' · '))}</tr>
         <tr>${metaRow('Lead time', r.leadTime)}${metaRow('Product remarks', sp.remarks)}</tr>
         ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
       </table></div>`;

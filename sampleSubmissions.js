@@ -15,7 +15,7 @@ import {
   saveSubmissionToCloud, scheduleSubmissionSave, issueSubmissionFormNo,
   linkedProduct, sampleProductName, productPickerLabel, fuzzyProductMatches,
   getSharedProductSuggestBox, closeProductSuggestBox, toNum, computeQuantitySummary,
-  computeFollowUpSummary, overallAvg, needsRenumber, planRenumber, applyRenumber, sampleSpec
+  computeFollowUpSummary, overallAvg, needsRenumber, planRenumber, applyRenumber, sampleSpec, formatMoney, moneyNumber
 } from './sampleSubmissions-data.js';
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
@@ -277,7 +277,9 @@ export function renderSubmissionsList(){
       const inp = (field, type, ph, list) => `<input type="${type || 'text'}" class="ssample-field" data-field="${field}" value="${escapeHtml(row[field])}" ${ph ? `placeholder="${ph}"` : ''} ${list ? `list="${list}"` : ''} ${ro}${type === 'number' ? ' min="0" step="1"' : ''}>`;
       const sp = sampleSpec(row);
       // product information: shows the Product List value, can be typed over (kept on this sample); `list` links a field to a Reference List
-      const spec = (key, list, area) => area
+      const spec = (key, list, area, money) => money
+        ? `<td><input type="text" class="ssample-spec ssub-money" data-spec="${key}" value="${escapeHtml(formatMoney(sp[key], row.currency))}" ${ro}></td>`
+        : area
         ? `<td><textarea class="ssample-spec" data-spec="${key}" rows="3" ${ro}>${escapeHtml(sp[key])}</textarea></td>`
         : `<td><input type="text" class="ssample-spec" data-spec="${key}" value="${escapeHtml(sp[key])}" ${list ? `list="${list}"` : ''} ${ro}></td>`;
       const img = p && (p.rmImage || p.ideaMenuImage);
@@ -302,7 +304,7 @@ export function renderSubmissionsList(){
           <td>${inp('certification')}</td>
           ${spec('packingStyle')}${spec('size')}${spec('moq')}
           <td>${inp('currency', null, 'THB', 'ssubCurrencyList')}</td>
-          ${spec('exwPrice')}${spec('salesPrice')}
+          ${spec('exwPrice', null, false, true)}${spec('salesPrice', null, false, true)}
           <td>${inp('leadTime')}</td>
           ${spec('remarks', null, true)}
           <td>${inp('customerComment')}</td>
@@ -538,7 +540,23 @@ export function renderSubmissionsList(){
       wire();
     });
 
-    block.querySelectorAll('.ssample-spec').forEach(el => {
+    block.querySelectorAll('.ssub-money').forEach(el => {
+      const sample = () => s.samples.find(x => x.id === el.closest('[data-sample-id]').dataset.sampleId);
+      el.addEventListener('focus', () => { const n = moneyNumber(el.value); if(n !== null) el.value = String(n); el.select(); });
+      el.addEventListener('blur', () => {
+        const sm = sample();
+        if(!sm) return;
+        const n = moneyNumber(el.value);
+        const raw = n !== null ? String(n) : el.value.trim();
+        if(raw !== String(sampleSpec(sm)[el.dataset.spec] ?? '')){
+          sm.spec = { ...(sm.spec || {}), [el.dataset.spec]: raw };
+          scheduleSubmissionSave(s);
+        }
+        el.value = formatMoney(raw, sm.currency);
+      });
+    });
+
+    block.querySelectorAll('.ssample-spec:not(.ssub-money)').forEach(el => {
       el.addEventListener('change', () => {
         const row = el.closest('[data-sample-id]');
         const sample = s.samples.find(x => x.id === row.dataset.sampleId);
@@ -555,6 +573,9 @@ export function renderSubmissionsList(){
         if(!sample) return;
         sample[el.dataset.field] = el.value.trim();
         scheduleSubmissionSave(s);
+        if(el.dataset.field === 'currency'){
+          row.querySelectorAll('.ssub-money').forEach(m => { m.value = formatMoney(sampleSpec(sample)[m.dataset.spec], sample.currency); });
+        }
         if(['requestedQty','actualQtySent','developmentStatus','taste','texture','appearance','convenience','decision'].includes(el.dataset.field)){
           renderSubmissionsList(); // keep computed summaries/avg in sync
         }
