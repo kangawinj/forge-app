@@ -899,6 +899,7 @@ export const CHANGELOG = [
   { version: "3.0.857", date: "2026-11-25", note: "Sample Submissions: admins get a Renumber old Form Nos. button (shown only while old numbers remain). It lists what will change -- SS-2026-0003 and later become SS-YYMM-01, 02 ... by the month each was created (Bangkok time) -- and only renumbers after you confirm; the old number is kept on the submission as its previous Form No." },
   { version: "3.0.858", date: "2026-11-25", note: "Sample Submissions: choosing the Customer from the Company Directory now fills Destination with that company's country automatically; it can still be edited afterwards" },
   { version: "3.0.859", date: "2026-11-25", note: "Sample Submissions: choosing the Customer also fills Delivery Location with that company's first location (name and address from the Company Directory); the company's other locations are offered in the field's drop-down list, and it can still be typed over" },
+  { version: "3.0.860", date: "2026-11-25", note: "Sample Submissions: fixed typing in the Product box (and other fields) stopping after one character -- the list was being rebuilt on every keystroke's save and took the cursor away. Another person's change now appears the next time the list redraws instead of while a field here has focus" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

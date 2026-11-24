@@ -679,7 +679,13 @@ export function attachSampleSubmissionsListener(){
   unsubscribeSubmissions = onSnapshot(sampleSubmissionsCol, snapshot => {
     submissions = snapshot.docs.map(d => d.data());
     submissionsLoaded = true;
-    if(mainFeatureView === 'sampleSubmissions') renderSubmissionsList();
+    if(mainFeatureView !== 'sampleSubmissions') return;
+    // Every keystroke in the Product box saves the submission, and that save comes straight back through this listener --
+    // rebuilding the list then replaced the box mid-typing (one character, then the cursor was gone). While a field of the list
+    // has focus the page already shows what was typed, so the rebuild is skipped.
+    const a = document.activeElement;
+    if(a && a.closest && a.closest('#submissionsList') && /^(INPUT|TEXTAREA|SELECT)$/.test(a.tagName)) return;
+    renderSubmissionsList();
   }, err => {
     console.error('Forge: sample submissions listener error', err);
     showCloudError('Failed to load sample submissions from Firebase: ' + err.message);
