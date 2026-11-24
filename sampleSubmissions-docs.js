@@ -124,7 +124,7 @@ function submissionFormHtml(s){
   // submission) -- printed on A4 landscape in a small type so all the columns fit.
   const COLS = [
     ['No.', 22], ['Sample ID', 62], ['Product', 70], ['Status', 40], ['Lot no.', 36], ['Req.', 30], ['Sent', 30],
-    ['Net/bag (g)', 42], ['Storage', 46], ['Remarks', 44], ['Code', 34], ['Sample code', 40], ['Image', 32],
+    ['Net/bag (g)', 42], ['Storage', 46], ['Remarks', 44], ['Code', 40], ['Image', 32],
     ['Cooking instruction', 90], ['Composition', 90], ['Allergen', 62], ['Origin', 44], ['Factory', 48],
     ['Certif. / standard', 46], ['Packing style', 48], ['Size', 36], ['MOQ (ctn)', 28], ['Cur.', 30],
     ['EXW price', 40], ['Sales price', 40], ['Lead time', 32], ['Prod. remarks', 44], ['Cust. comment', 48]
@@ -135,7 +135,7 @@ function submissionFormHtml(s){
     const p = linkedProduct(r), sp = sampleSpec(r);
     const img = p && (p.rmImage || p.ideaMenuImage);
     const c = v => `<td>${escapeHtml(v)}</td>`;
-    return `<tr><td class="c">${i + 1}</td>${c(sampleIdFor(s, r))}${c(sampleProductName(r) || '-')}${c(r.developmentStatus)}${c(r.lotNo)}<td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td>${c(r.netWtPerBag)}${c(r.storage)}${c(r.remarks)}${c(sp.code)}${c(sp.sampleCode)}<td class="c">${img ? `<img class="ssdoc-cell-img" src="${escapeHtml(img)}" alt="">` : ''}</td>${c(sp.cookingInstruction)}${c(sp.composition)}${c(sp.allergens)}${c(sp.processedArea)}${c(sp.factory)}${c(r.certification)}${c(sp.packingStyle)}${c(sp.size)}${c(sp.moq)}${c(r.currency)}<td class="r">${escapeHtml(sp.exwPrice ? formatMoney(sp.exwPrice, r.currency) : '')}</td><td class="r">${escapeHtml(sp.salesPrice ? formatMoney(sp.salesPrice, r.currency) : '')}</td>${c(r.leadTime)}${c(sp.remarks)}${c(r.customerComment)}</tr>`;
+    return `<tr><td class="c">${i + 1}</td>${c(sampleIdFor(s, r))}${c(sampleProductName(r) || '-')}${c(r.developmentStatus)}${c(r.lotNo)}<td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td>${c(r.netWtPerBag)}${c(r.storage)}${c(r.remarks)}${c(sp.code)}<td class="c">${img ? `<img class="ssdoc-cell-img" src="${escapeHtml(img)}" alt="">` : ''}</td>${c(sp.cookingInstruction)}${c(sp.composition)}${c(sp.allergens)}${c(sp.processedArea)}${c(sp.factory)}${c(r.certification)}${c(sp.packingStyle)}${c(sp.size)}${c(sp.moq)}${c(r.currency)}<td class="r">${escapeHtml(sp.exwPrice ? formatMoney(sp.exwPrice, r.currency) : '')}</td><td class="r">${escapeHtml(sp.salesPrice ? formatMoney(sp.salesPrice, r.currency) : '')}</td>${c(r.leadTime)}${c(sp.remarks)}${c(r.customerComment)}</tr>`;
   }).join('');
   return `
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
