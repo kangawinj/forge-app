@@ -63,20 +63,18 @@ function packingListHtml(s){
       ${partyBlock('Shipper', s.shipperName, s.shipperAddress)}
       ${partyBlock('Consignee', s.consigneeName || s.customer, s.consigneeAddress)}
     </div>
-    <table class="ssdoc-meta">
-      <tr>${metaRow('Packing list no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}</tr>
-      <tr>${metaRow('Destination', s.destination)}${metaRow('Courier', s.courier)}</tr>
-      <tr>${metaRow('Tracking / AWB no.', s.trackingNo)}${metaRow('Flight / carrier', [tax.carrierName, tax.flightNo].filter(Boolean).join(' '))}</tr>
-      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}</tr>
+    <div class="ssdoc-h">Shipment information</div>
+    <table class="ssdoc-meta ssdoc-compact">
+      <tr>${metaRow('Packing list no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}${metaRow('Destination', s.destination)}</tr>
+      <tr>${metaRow('Courier', s.courier)}${metaRow('Tracking / AWB no.', s.trackingNo)}${metaRow('Flight / carrier', [tax.carrierName, tax.flightNo].filter(Boolean).join(' '))}</tr>
+      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}${metaRow('Storage', s.shipmentStorage)}</tr>
+      <tr>${metaRow('No. of cartons', s.cartons)}${metaRow('Gross weight (kg)', num(s.grossWeightKg))}${metaRow('Carton size (cm)', s.cartonSize)}</tr>
     </table>
+    <div class="ssdoc-h">Items</div>
     <table class="ssdoc-table">
       <thead><tr><th>No.</th><th>Sample ID</th><th>Description</th><th>Lot no.</th><th>Qty (bags)</th><th>Net wt / bag (g)</th><th>Net wt (kg)</th><th>Storage</th></tr></thead>
       <tbody>${ls.map(l => `<tr><td class="c">${l.no}</td><td>${escapeHtml(l.id)}</td><td>${escapeHtml(l.name)}${l.code ? `<div class="ssdoc-dim">${escapeHtml(l.code)}</div>` : ''}</td><td>${escapeHtml(l.lot)}</td><td class="r">${l.qty}</td><td class="r">${l.bagG !== null ? num(l.bagG) : ''}</td><td class="r">${l.netKg !== null ? num(l.netKg, 3) : ''}</td><td>${escapeHtml(l.storage)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="4" class="r"><b>Total</b></td><td class="r"><b>${totalQty}</b></td><td></td><td class="r"><b>${num(totalNet, 3)}</b></td><td></td></tr></tfoot>
-    </table>
-    <table class="ssdoc-meta ssdoc-pack">
-      <tr>${metaRow('Number of cartons', s.cartons)}${metaRow('Gross weight (kg)', num(s.grossWeightKg))}</tr>
-      <tr>${metaRow('Carton size (cm)', s.cartonSize)}${metaRow('Storage during transport', s.shipmentStorage)}</tr>
     </table>
     ${s.handling ? `<div class="ssdoc-note"><b>Handling:</b> ${lines(s.handling)}</div>` : ''}
     <div class="ssdoc-note">Samples for evaluation only. Not for resale.</div>
@@ -97,12 +95,13 @@ function sampleInvoiceHtml(s){
       ${partyBlock('Shipper / Exporter', s.shipperName, s.shipperAddress)}
       ${partyBlock('Consignee', s.consigneeName || s.customer, s.consigneeAddress)}
     </div>
-    <table class="ssdoc-meta">
-      <tr>${metaRow('Invoice no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}</tr>
-      <tr>${metaRow('Country of origin', origin)}${metaRow('Country of destination', s.destination)}</tr>
-      <tr>${metaRow('Courier / carrier', [s.courier, tax.carrierName].filter(Boolean).join(' / '))}${metaRow('Tracking / AWB no.', s.trackingNo)}</tr>
-      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}</tr>
+    <div class="ssdoc-h">Shipment information</div>
+    <table class="ssdoc-meta ssdoc-compact">
+      <tr>${metaRow('Invoice no.', s.formNo)}${metaRow('Date', fmtDate(s.docDate || todayIso()))}${metaRow('Destination', s.destination)}</tr>
+      <tr>${metaRow('Courier', [s.courier, tax.carrierName].filter(Boolean).join(' / '))}${metaRow('Tracking / AWB no.', s.trackingNo)}${metaRow('Flight', tax.flightNo)}</tr>
+      <tr>${metaRow('Port of loading', tax.portOfLoading)}${metaRow('Port of destination', tax.portOfDestination)}${metaRow('Country of origin', origin)}</tr>
     </table>
+    <div class="ssdoc-h">Items</div>
     <table class="ssdoc-table">
       <thead><tr><th>No.</th><th>Description of goods</th><th>HS code</th><th>Origin</th><th>Qty (bags)</th><th>Unit value (${escapeHtml(cur)})</th><th>Total value (${escapeHtml(cur)})</th></tr></thead>
       <tbody>${ls.map(l => `<tr><td class="c">${l.no}</td><td>${escapeHtml(l.name)}${l.bagG !== null ? `<div class="ssdoc-dim">${num(l.bagG)} g / bag${l.lot ? ` · Lot ${escapeHtml(l.lot)}` : ''}</div>` : (l.lot ? `<div class="ssdoc-dim">Lot ${escapeHtml(l.lot)}</div>` : '')}</td><td>${escapeHtml(s.hsCode)}</td><td>${escapeHtml(origin)}</td><td class="r">${l.qty}</td><td class="r">${l.unitValue !== null ? money(l.unitValue) : ''}</td><td class="r">${l.unitValue !== null ? money(l.unitValue * l.qty) : ''}</td></tr>`).join('')}</tbody>
