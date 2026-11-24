@@ -904,6 +904,7 @@ export const CHANGELOG = [
   { version: "3.0.862", date: "2026-11-25", note: "Sample Submissions: Shipping documents now has a tick box -- unticked, the section's fields and the Packing List / Sample Invoice buttons are hidden; tick it (while editing) to fill them in. Submissions that already hold shipping details show it ticked" },
   { version: "3.0.863", date: "2026-11-25", note: "Sample Submissions: the Variance column (Sent - Requested) is removed from the samples table, the Quantity summary and the printed form" },
   { version: "3.0.864", date: "2026-11-25", note: "Sample Submissions: Purpose moved out of the top details grid to its own full-width field just above the Samples list" },
+  { version: "3.0.865", date: "2026-11-25", note: "Sample Submissions: Present. Date now sits in the Doc. Date place (second in the details grid and on the printed form) and Doc. Date takes its old place" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

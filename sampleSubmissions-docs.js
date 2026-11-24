@@ -153,11 +153,11 @@ function submissionFormHtml(s){
     <div class="ssdoc-sub">${escapeHtml(s.formNo)}${s.status ? ` &nbsp;·&nbsp; ${escapeHtml(s.status)}` : ''}</div>
     <div class="ssdoc-h">Document and delivery information</div>
     <table class="ssdoc-meta ssdoc-compact">
-      <tr>${metaRow('Form no.', s.formNo)}${metaRow('Doc. date', fmtDate(s.docDate))}${metaRow('Purpose', s.purpose)}</tr>
+      <tr>${metaRow('Form no.', s.formNo)}${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Purpose', s.purpose)}</tr>
       <tr>${metaRow('Customer', s.customer)}${metaRow('Destination', s.destination)}${metaRow('Project lead', s.projectLead)}</tr>
       <tr>${metaRow('Coordinator', s.coordinator)}${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Delivery location', s.deliveryLocation)}</tr>
       <tr>${metaRow('Courier', s.courier)}${metaRow('Tracking no.', s.trackingNo)}${metaRow('Storage', s.shipmentStorage)}</tr>
-      <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Receiver', s.receiver)}${metaRow('Handling', s.handling)}</tr>
+      <tr>${metaRow('Doc. date', fmtDate(s.docDate))}${metaRow('Receiver', s.receiver)}${metaRow('Handling', s.handling)}</tr>
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>

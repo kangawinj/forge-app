@@ -349,7 +349,7 @@ export function renderSubmissionsList(){
           <div class="card-title" style="font-size:13px;">Document and delivery information</div>
           <div class="ssub-grid4">
             ${formNoField}
-            ${headerField('Doc. Date', 'docDate', 'date')}
+            ${headerField('Present. Date', 'presentDate', 'date')}
             ${headerField('Customer', 'customer', null, 'customerDatalist')}
             ${headerField('Destination', 'destination', null, 'destinationDatalist')}
             ${headerField('Project Lead', 'projectLead', null, 'salesRepDatalist')}
@@ -360,7 +360,7 @@ export function renderSubmissionsList(){
             ${headerField('Courier', 'courier')}
             ${headerField('Tracking No.', 'trackingNo')}
             ${headerField('Storage', 'shipmentStorage')}
-            ${headerField('Present. Date', 'presentDate', 'date')}
+            ${headerField('Doc. Date', 'docDate', 'date')}
             ${headerField('Receiver', 'receiver', null, 'salesRepDatalist')}
           </div>
           ${docsBlock}
