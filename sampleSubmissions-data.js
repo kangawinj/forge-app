@@ -121,7 +121,7 @@ export function scheduleSubmissionSave(s){
   saveSubmissionToCloud(s);
 }
 
-// Atomic "SS-<YYMM>-<seq>" Form No. (e.g. SS-2611-001 = the 1st submission created in November 2026, Bangkok time), collision-safe
+// Atomic "SS-<YYMM>-<seq>" Form No. (e.g. SS-2611-01 = the 1st submission created in November 2026, Bangkok time), collision-safe
 // even when two people hit "+ New Submission" at the same instant -- same runTransaction() read-and-increment-in-one-step
 // pattern as recipes.js's createNewTrial(), against a per-month counter doc (sampleSubmissionCounters/m<YYMM>.maxSeq), so the
 // number restarts at 001 every month. It is a counter, not a count of what is left: deleting a submission never frees its number.
@@ -137,7 +137,7 @@ export async function issueSubmissionFormNo(){
     tx.set(counterRef, { maxSeq: seq }, { merge: true });
     return seq;
   });
-  return `SS-${yymm}-${String(nextSeq).padStart(3, '0')}`;
+  return `SS-${yymm}-${String(nextSeq).padStart(2, '0')}`;
 }
 
 // Looks up a submission's linked Project (for the "Project" picker's
