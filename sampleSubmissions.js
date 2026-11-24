@@ -258,7 +258,6 @@ export function renderSubmissionsList(){
         </div>`}
       </div>`;
 
-    const qty = computeQuantitySummary(ms.samples);
     const followUp = computeFollowUpSummary(ms.samples);
 
     const samplesRowsHtml = ms.samples.map((row, idx) => {
@@ -390,13 +389,6 @@ export function renderSubmissionsList(){
             </table>
           </div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}
-
-          <div class="card-title" style="font-size:13px;margin-top:20px;">Quantity summary</div>
-          <div class="batch-summary" style="grid-template-columns:repeat(3,1fr);">
-            <div><div class="batch-stat-label">Requested</div><div class="batch-stat-value">${qty.requested} bags</div></div>
-            <div><div class="batch-stat-label">Actual Sent</div><div class="batch-stat-value">${qty.sent} bags</div></div>
-            <div><div class="batch-stat-label">Ready</div><div class="batch-stat-value">${qty.ready} / ${qty.total}</div></div>
-          </div>
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Product specification (from Product List)</div>
           <div style="overflow-x:auto;">

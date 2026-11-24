@@ -912,6 +912,7 @@ export const CHANGELOG = [
   { version: "3.0.870", date: "2026-11-25", note: "Sample Submissions: the Courier, Tracking No., Storage and Receiver fields are removed from the form and from the printed form, Packing List and Sample Invoice (anything already saved in them is kept and still appears in the Excel export)" },
   { version: "3.0.871", date: "2026-11-25", note: "Sample Submissions: Samples Delivery is now chosen in two steps -- pick the Company first (any company in the Company Directory), then pick one of that company's Locations from a drop-down. Choosing the Customer fills both with the Customer and its first location; changing the company offers its own locations" },
   { version: "3.0.872", date: "2026-11-25", note: "Sample Submissions > Product specification (from Product List): now carries the same information as the product sheet -- Sample Code, the product photo, Standards / Packing Style, Size, Sales Price and the product's Remarks, next to the cooking instruction, composition, allergens, area, factory, MOQ and EXW price that were already there (also on the printed form)" },
+  { version: "3.0.873", date: "2026-11-25", note: "Sample Submissions: the Quantity summary (Requested / Actual Sent / Ready) is removed from the form and the printed form" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
