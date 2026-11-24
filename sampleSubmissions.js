@@ -355,7 +355,7 @@ export function renderSubmissionsList(){
             ${headerField('Tracking No.', 'trackingNo')}
             ${headerField('Storage', 'shipmentStorage')}
             ${headerField('Present. Date', 'presentDate', 'date')}
-            ${headerField('Receiver', 'receiver')}
+            ${headerField('Receiver', 'receiver', null, 'salesRepDatalist')}
           </div>
           ${docsBlock}
           ${shipDocsBlock}
@@ -441,14 +441,14 @@ export function renderSubmissionsList(){
             <div>
               <div class="ssub-ack-title">Prepared by</div>
               <div class="grid-2">
-                ${headerField('Name', 'preparedByName')}
+                ${headerField('Name', 'preparedByName', null, 'salesRepDatalist')}
                 ${headerField('Date', 'preparedByDate', 'date')}
               </div>
             </div>
             <div>
               <div class="ssub-ack-title">Received by</div>
               <div class="grid-2">
-                ${headerField('Name', 'receivedByName')}
+                ${headerField('Name', 'receivedByName', null, 'salesRepDatalist')}
                 ${headerField('Date', 'receivedByDate', 'date')}
               </div>
             </div>

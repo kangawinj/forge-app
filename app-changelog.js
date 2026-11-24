@@ -900,6 +900,7 @@ export const CHANGELOG = [
   { version: "3.0.858", date: "2026-11-25", note: "Sample Submissions: choosing the Customer from the Company Directory now fills Destination with that company's country automatically; it can still be edited afterwards" },
   { version: "3.0.859", date: "2026-11-25", note: "Sample Submissions: choosing the Customer also fills Delivery Location with that company's first location (name and address from the Company Directory); the company's other locations are offered in the field's drop-down list, and it can still be typed over" },
   { version: "3.0.860", date: "2026-11-25", note: "Sample Submissions: fixed typing in the Product box (and other fields) stopping after one character -- the list was being rebuilt on every keystroke's save and took the cursor away. Another person's change now appears the next time the list redraws instead of while a field here has focus" },
+  { version: "3.0.861", date: "2026-11-25", note: "Sample Submissions: the Prepared by Name, Received by Name and Receiver fields now suggest names from the Contact Directory as you type (any name can still be typed)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
