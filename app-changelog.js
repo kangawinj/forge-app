@@ -896,6 +896,7 @@ export const CHANGELOG = [
   { version: "3.0.854", date: "2026-11-25", note: "Sample Submissions: new Form Nos. are now SS-YYMM-001 -- the year and month (Bangkok time) then a running number that starts again at 001 every month (e.g. SS-2611-001, SS-2611-002 ... SS-2612-001). A deleted submission never frees its number, so one is never reused. Existing numbers (SS-0001, SS-2026-0001) are not changed" },
   { version: "3.0.855", date: "2026-11-25", note: "Sample Submissions: the running number in a new Form No. is 2 digits -- SS-2611-01, SS-2611-02 ... (it grows to 3 digits only past 99 in one month). Existing numbers are not changed" },
   { version: "3.0.856", date: "2026-11-25", note: "Sample Submissions: the Project picker is removed from the submission form (Customer, Destination, Project Lead and Coordinator are typed or picked directly, as before)" },
+  { version: "3.0.857", date: "2026-11-25", note: "Sample Submissions: admins get a Renumber old Form Nos. button (shown only while old numbers remain). It lists what will change -- SS-2026-0003 and later become SS-YYMM-01, 02 ... by the month each was created (Bangkok time) -- and only renumbers after you confirm; the old number is kept on the submission as its previous Form No." },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

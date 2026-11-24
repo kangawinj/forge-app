@@ -2,7 +2,7 @@ import {
   escapeHtml, icon, logActivityEvent,
   playContentTransition, mainFeatureView, diffMainFields, requestAuthConfirm,
   formatActivityDateTime, sampleSubmissionsCol, showCloudError,
-  productList, compositionSummaryText,
+  productList, compositionSummaryText, isCurrentUserAdmin,
   moveToTrash, canDeleteRecord, deleteNotAllowedMessage
 } from './app.js';
 import { wireSuggestKeys } from './suggest-keys.js';
@@ -15,7 +15,7 @@ import {
   saveSubmissionToCloud, scheduleSubmissionSave, issueSubmissionFormNo,
   linkedProduct, sampleProductName, productPickerLabel, fuzzyProductMatches,
   getSharedProductSuggestBox, closeProductSuggestBox, toNum, computeQuantitySummary,
-  computeFollowUpSummary, overallAvg
+  computeFollowUpSummary, overallAvg, needsRenumber, planRenumber, applyRenumber
 } from './sampleSubmissions-data.js';
 import { exportSampleSubmissionsToExcel } from './sampleSubmissions-excel.js';
 import { openShipDoc, rememberShipper, lastShipper } from './sampleSubmissions-docs.js';
@@ -54,9 +54,29 @@ export function mountSampleSubmissionsView(){
     <div class="card">
       <button class="btn btn-primary btn-sm" id="btnAddSubmission" style="margin-bottom:16px;">+ New Submission</button>
       <button type="button" class="btn btn-sm" id="btnExportSubmissionsExcel" style="margin-bottom:16px;margin-left:8px;">${icon('download', 14)} Export Excel</button>
+      <button type="button" class="btn btn-sm" id="btnRenumberSubmissions" style="margin-bottom:16px;margin-left:8px;display:none;" title="Give the old SS-year-0000 numbers (from SS-2026-0003 on) the new SS-YYMM-00 format">Renumber old Form Nos.</button>
       <div id="submissionsList"></div>
     </div>
   `;
+  document.getElementById('btnRenumberSubmissions').addEventListener('click', async () => {
+    const btn = document.getElementById('btnRenumberSubmissions');
+    btn.disabled = true;
+    try{
+      const plan = await planRenumber(submissions);
+      if(!plan.length){ alert('Nothing to renumber.'); return; }
+      const list = plan.map(p => `${p.oldNo}  ->  ${p.newNo}${p.s.customer ? '   (' + p.s.customer + ')' : ''}`).join('\n');
+      if(!confirm(`Renumber these ${plan.length} submission(s)?\n\n${list}\n\nThe old number is kept on the submission as "previous Form No.", but anything already printed or sent with the old number will no longer match.`)) return;
+      await applyRenumber(plan);
+      logActivityEvent('updated', 'sample submission', `Renumbered ${plan.length} Form No.(s) to SS-YYMM-00`);
+      renderSubmissionsList();
+      alert(`Done: ${plan.length} Form No.(s) renumbered.`);
+    }catch(e){
+      console.error('Forge: renumber failed', e);
+      alert('Could not renumber: ' + e.message);
+    }finally{
+      btn.disabled = false;
+    }
+  });
 
   document.getElementById('btnExportSubmissionsExcel').addEventListener('click', () => exportSampleSubmissionsToExcel(submissions));
 
@@ -89,6 +109,8 @@ export function mountSampleSubmissionsView(){
 export function renderSubmissionsList(){
   const container = document.getElementById('submissionsList');
   if(!container) return;
+  const renumberBtn = document.getElementById('btnRenumberSubmissions');
+  if(renumberBtn) renumberBtn.style.display = isCurrentUserAdmin() && submissions.some(needsRenumber) ? '' : 'none';   // admins only, and only while old numbers remain
   if(submissions.length === 0){
     container.innerHTML = '<div class="overview-empty">No sample submissions yet — click "+ New Submission" above to start one</div>';
     return;

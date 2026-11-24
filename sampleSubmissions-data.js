@@ -8,7 +8,7 @@ import {
   sampleSubmissionCountersCol, projects, bangkokMonthStr
 } from './app.js';
 import {
-  setDoc, doc, runTransaction
+  setDoc, doc, runTransaction, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
 export const SUBMISSION_DECISION_OPTIONS = ['Approved', 'Revise', 'Rejected'];
@@ -138,6 +138,56 @@ export async function issueSubmissionFormNo(){
     return seq;
   });
   return `SS-${yymm}-${String(nextSeq).padStart(2, '0')}`;
+}
+
+// ---- One-time renumbering of the old "SS-<year>-<4 digits>" Form Nos. (from SS-2026-0003 onwards) into SS-<YYMM>-<seq> ----
+// The month is the one the submission was created in (Bangkok time); within a month the numbers follow the creation order and
+// carry on after whatever the month's counter has already reached. The old number is kept on the submission as previousFormNo.
+const OLD_FORM_NO = /^SS-(20\d{2})-(\d{4})$/;
+export function needsRenumber(s){
+  const m = OLD_FORM_NO.exec(s.formNo || '');
+  return !!m && +m[2] >= 3;
+}
+const BKK_MONTH = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Bangkok', year: 'numeric', month: '2-digit' });
+function yymmOf(ms){
+  const [y, m] = BKK_MONTH.format(new Date(ms || Date.now())).split('-');   // "2026-11"
+  return y.slice(2) + m;
+}
+// What would change, without changing anything: [{ s, oldNo, newNo, yymm }]
+export async function planRenumber(subs){
+  const cands = subs.filter(needsRenumber).sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0) || a.formNo.localeCompare(b.formNo));
+  const byMonth = new Map();
+  cands.forEach(s => { const k = yymmOf(s.createdAt || s.updatedAt); if(!byMonth.has(k)) byMonth.set(k, []); byMonth.get(k).push(s); });
+  const plan = [];
+  for(const [yymm, list] of byMonth){
+    const snap = await getDoc(doc(sampleSubmissionCountersCol, 'm' + yymm));
+    let seq = snap.exists() ? (snap.data().maxSeq || 0) : 0;
+    list.forEach(s => { seq += 1; plan.push({ s, oldNo: s.formNo, newNo: `SS-${yymm}-${String(seq).padStart(2, '0')}`, yymm }); });
+  }
+  return plan;
+}
+// Does it: one transaction per month (re-reads the month's counter, so a submission created meanwhile cannot get the same number)
+export async function applyRenumber(plan){
+  const byMonth = new Map();
+  plan.forEach(p => { if(!byMonth.has(p.yymm)) byMonth.set(p.yymm, []); byMonth.get(p.yymm).push(p); });
+  const done = [];
+  for(const [yymm, list] of byMonth){
+    const counterRef = doc(sampleSubmissionCountersCol, 'm' + yymm);
+    const result = await runTransaction(db, async (tx) => {
+      const snap = await tx.get(counterRef);
+      let seq = snap.exists() ? (snap.data().maxSeq || 0) : 0;
+      const out = list.map(p => {
+        seq += 1;
+        const newNo = `SS-${yymm}-${String(seq).padStart(2, '0')}`;
+        tx.update(doc(sampleSubmissionsCol, p.s.id), { formNo: newNo, previousFormNo: p.oldNo, updatedAt: Date.now(), updatedBy: currentUser?.email || '' });
+        return { p, newNo };
+      });
+      tx.set(counterRef, { maxSeq: seq }, { merge: true });
+      return out;
+    });
+    result.forEach(({ p, newNo }) => { p.s.previousFormNo = p.oldNo; p.s.formNo = newNo; done.push({ ...p, newNo }); });
+  }
+  return done;
 }
 
 // Looks up a submission's linked Project (for the "Project" picker's
