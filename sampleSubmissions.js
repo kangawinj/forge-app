@@ -455,13 +455,10 @@ export function renderSubmissionsList(){
         el.addEventListener('change', () => {
           s[el.dataset.field] = el.value.trim();
           if(el.dataset.field === 'shipperName' || el.dataset.field === 'shipperAddress') rememberShipper(s);
-          // Picking a Customer from the Company Directory fills Destination with its country, and the Samples Delivery Company with
-          // that company and Location with its first location (all still editable, and only filled again when the Customer is
-          // changed); a company with no country / location, or a name not in the directory, leaves them alone
-          const refreshDeliveryLoc = (pickFirst) => {
+          // Picking a Customer from the Company Directory fills Destination with its country (still editable afterwards); a company
+          // with no country, or a name not in the directory, leaves it alone
+          const refreshDeliveryLoc = () => {
             const sel = block.querySelector('.ssub-delivery-loc');
-            const opts = companyLocations(s.deliveryCompany);
-            if(pickFirst) s.deliveryLocation = opts[0] || '';
             if(sel) sel.innerHTML = locationSelectOptionsHtml(s.deliveryCompany, s.deliveryLocation);
           };
           if(el.dataset.field === 'customer'){
@@ -471,14 +468,9 @@ export function renderSubmissionsList(){
               const dest = block.querySelector('.ssub-field[data-field="destination"]');
               if(dest) dest.value = match.country;
             }
-            if(match){
-              s.deliveryCompany = s.customer;
-              const co = block.querySelector('.ssub-field[data-field="deliveryCompany"]');
-              if(co) co.value = s.customer;
-              refreshDeliveryLoc(true);
-            }
           }
-          if(el.dataset.field === 'deliveryCompany') refreshDeliveryLoc(true);   // another company: its locations, the first one chosen
+          // Samples Delivery is chosen by hand: a new company clears the old location and offers that company's own locations
+          if(el.dataset.field === 'deliveryCompany'){ s.deliveryLocation = ''; refreshDeliveryLoc(); }
           scheduleSubmissionSave(s);
         });
       });

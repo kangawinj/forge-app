@@ -922,6 +922,7 @@ export const CHANGELOG = [
   { version: "3.0.880", date: "2026-11-25", note: "Sample Submissions: the Handling information section (Handling and Status) is removed from the form, the printed form and the Packing List (Notes stays; anything already saved in them is kept and still appears in the Excel export)" },
   { version: "3.0.881", date: "2026-11-25", note: "Sample Submissions: the samples are a table again -- one row per sample with everything side by side (sample details, then the Product List information, then certification / currency / lead time / customer comment); wider columns with proper spacing, and the table scrolls sideways" },
   { version: "3.0.882", date: "2026-11-25", note: "Sample Submissions: Expected Receipt moved to the last column of its row in the details grid" },
+  { version: "3.0.883", date: "2026-11-25", note: "Sample Submissions: Samples Delivery Company and Location are no longer filled in automatically when the Customer is chosen -- pick them yourself (choosing a different company clears the old location and offers that company's locations)" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;
