@@ -6953,3 +6953,10 @@
 .ssub-sample-grid input:focus, .ssub-sample-grid select:focus, .ssub-sample-grid textarea:focus{outline:2px solid var(--primary);outline-offset:-2px;background:#fff !important;}
 .ssub-sample-grid .ssub-spec-img{width:34px;height:34px;display:block;margin:2px auto;}
 .ssub-sample-grid tbody tr:hover td{background:#f5f8fc;}
+.ssdoc-sheet.ssdoc-landscape{width:1123px;padding:30px 36px 36px;}
+.ssdoc-toolbar:has(+ .ssdoc-landscape){max-width:1123px;}
+.ssdoc-wide{table-layout:fixed;}
+.ssdoc-wide th, .ssdoc-wide td{font-size:7.5px;padding:2px 3px;line-height:1.25;overflow-wrap:break-word;}
+.ssdoc-wide td{word-break:break-word;}
+.ssdoc-wide th{font-size:7px;text-transform:none;letter-spacing:0;}
+.ssdoc-cell-img{width:24px;height:24px;object-fit:cover;border-radius:2px;display:block;margin:0 auto;}

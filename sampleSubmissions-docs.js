@@ -120,24 +120,22 @@ function submissionFormHtml(s){
   const picked = [d.specification && 'Specification', d.quotation && 'Quotation',
     d.taxInvoice && ('Tax Invoice' + (taxBits.length ? ` (${taxBits.join(' · ')})` : '')),
     d.other && ('Other' + (d.otherDetails ? ` (${d.otherDetails})` : ''))].filter(Boolean);
+  // One row per sample with everything side by side (sample details, then its product information, then the details of this
+  // submission) -- printed on A4 landscape in a small type so all the columns fit.
+  const COLS = [
+    ['No.', 22], ['Sample ID', 62], ['Product', 70], ['Status', 40], ['Lot no.', 36], ['Req.', 30], ['Sent', 30],
+    ['Net/bag (g)', 42], ['Storage', 46], ['Remarks', 44], ['Code', 34], ['Sample code', 40], ['Image', 32],
+    ['Cooking instruction', 90], ['Composition', 90], ['Allergen', 62], ['Origin', 44], ['Factory', 48],
+    ['Certif. / standard', 46], ['Packing style', 48], ['Size', 36], ['MOQ (ctn)', 28], ['Cur.', 30],
+    ['EXW price', 40], ['Sales price', 40], ['Lead time', 32], ['Prod. remarks', 44], ['Cust. comment', 48]
+  ];
+  const colTotal = COLS.reduce((a, c) => a + c[1], 0);
   const rowsHtml = samples.map((r, i) => {
     const req = toNum(r.requestedQty), act = toNum(r.actualQtySent);
-    return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td>${escapeHtml(r.developmentStatus)}</td><td>${escapeHtml(r.lotNo)}</td><td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td><td class="r">${escapeHtml(r.netWtPerBag)}</td><td>${escapeHtml(r.storage)}</td><td>${escapeHtml(r.remarks)}</td></tr>`;
-  }).join('');
-  const specHtml = samples.map(r => {
-    const p = linkedProduct(r);
-    const sp = sampleSpec(r);
+    const p = linkedProduct(r), sp = sampleSpec(r);
     const img = p && (p.rmImage || p.ideaMenuImage);
-    return `<div class="ssdoc-spec"><div class="ssdoc-spec-h">${img ? `<img class="ssdoc-spec-img" src="${escapeHtml(img)}" alt="">` : ''}${escapeHtml(sampleIdFor(s, r))} — ${escapeHtml(sampleProductName(r) || '-')}${sp.code ? ` <span class="ssdoc-dim">(${escapeHtml(sp.code)})</span>` : ''}${sp.sampleCode ? ` <span class="ssdoc-dim">· Sample code ${escapeHtml(sp.sampleCode)}</span>` : ''}</div>
-      <table class="ssdoc-meta ssdoc-compact">
-        <tr>${metaRow('Cooking instruction', sp.cookingInstruction)}${metaRow('Composition (approx.)', sp.composition)}</tr>
-        <tr>${metaRow('Allergen statement', sp.allergens)}${metaRow('Country of origin', sp.processedArea)}</tr>
-        <tr>${metaRow('Factory', sp.factory)}${metaRow('Certification / standard', r.certification)}</tr>
-        <tr>${metaRow('Standards / packing style', sp.packingStyle)}${metaRow('Size', sp.size)}</tr>
-        <tr>${metaRow('MOQ (ctn)', sp.moq)}${metaRow('Price', [sp.exwPrice ? `EXW ${formatMoney(sp.exwPrice, r.currency)}` : '', sp.salesPrice ? `Sales ${formatMoney(sp.salesPrice, r.currency)}` : '', !r.currency || (!sp.exwPrice && !sp.salesPrice) ? r.currency : ''].filter(Boolean).join(' · '))}</tr>
-        <tr>${metaRow('Lead time', r.leadTime)}${metaRow('Product remarks', sp.remarks)}</tr>
-        ${r.customerComment ? `<tr>${metaRow('Customer comment', r.customerComment)}<td colspan="2"></td></tr>` : ''}
-      </table></div>`;
+    const c = v => `<td>${escapeHtml(v)}</td>`;
+    return `<tr><td class="c">${i + 1}</td>${c(sampleIdFor(s, r))}${c(sampleProductName(r) || '-')}${c(r.developmentStatus)}${c(r.lotNo)}<td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td>${c(r.netWtPerBag)}${c(r.storage)}${c(r.remarks)}${c(sp.code)}${c(sp.sampleCode)}<td class="c">${img ? `<img class="ssdoc-cell-img" src="${escapeHtml(img)}" alt="">` : ''}</td>${c(sp.cookingInstruction)}${c(sp.composition)}${c(sp.allergens)}${c(sp.processedArea)}${c(sp.factory)}${c(r.certification)}${c(sp.packingStyle)}${c(sp.size)}${c(sp.moq)}${c(r.currency)}<td class="r">${escapeHtml(sp.exwPrice ? formatMoney(sp.exwPrice, r.currency) : '')}</td><td class="r">${escapeHtml(sp.salesPrice ? formatMoney(sp.salesPrice, r.currency) : '')}</td>${c(r.leadTime)}${c(sp.remarks)}${c(r.customerComment)}</tr>`;
   }).join('');
   return `
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
@@ -151,9 +149,9 @@ function submissionFormHtml(s){
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
-    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Sample status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
-    <tbody>${rowsHtml || '<tr><td colspan="10" class="c">No samples added</td></tr>'}</tbody></table>
-    ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
+    <table class="ssdoc-table ssdoc-wide"><colgroup>${COLS.map(([, w]) => `<col style="width:${(w / colTotal * 100).toFixed(2)}%">`).join('')}</colgroup>
+    <thead><tr>${COLS.map(([l]) => `<th>${l}</th>`).join('')}</tr></thead>
+    <tbody>${rowsHtml || `<tr><td colspan="${COLS.length}" class="c">No samples added</td></tr>`}</tbody></table>
     ${s.notes ? `<div class="ssdoc-note"><b>Notes:</b> ${lines(s.notes)}</div>` : ''}
     <div class="ssdoc-sign">
       <div><div class="ssdoc-sign-line"></div>Prepared by: ${escapeHtml(s.preparedByName) || '&nbsp;'}<br>Date: ${escapeHtml(fmtDate(s.docDate || s.preparedByDate)) || '&nbsp;'}</div>
@@ -173,10 +171,13 @@ export function openShipDoc(s, kind){
       <button type="button" class="btn btn-primary btn-sm" data-role="ssdoc-print">Print</button>
       <button type="button" class="btn btn-sm" data-role="ssdoc-close">Close</button>
     </div>
-    <div class="ssdoc-sheet">${kind === 'invoice' ? sampleInvoiceHtml(s) : (kind === 'form' ? submissionFormHtml(s) : packingListHtml(s))}</div>`;
+    <div class="ssdoc-sheet${kind === 'form' ? ' ssdoc-landscape' : ''}">${kind === 'invoice' ? sampleInvoiceHtml(s) : (kind === 'form' ? submissionFormHtml(s) : packingListHtml(s))}</div>`;
   document.body.appendChild(overlay);
   document.body.classList.add('ssdoc-open');
-  const close = () => { overlay.remove(); document.body.classList.remove('ssdoc-open'); document.removeEventListener('keydown', onKey); };
+  // the form has many columns: print it on A4 landscape (the other documents stay portrait)
+  let pageStyle = null;
+  if(kind === 'form'){ pageStyle = document.createElement('style'); pageStyle.textContent = '@page{size:A4 landscape;margin:8mm;}'; document.head.appendChild(pageStyle); }
+  const close = () => { overlay.remove(); pageStyle?.remove(); document.body.classList.remove('ssdoc-open'); document.removeEventListener('keydown', onKey); };
   const onKey = e => { if(e.key === 'Escape') close(); };
   document.addEventListener('keydown', onKey);
   overlay.querySelector('[data-role="ssdoc-close"]').addEventListener('click', close);
