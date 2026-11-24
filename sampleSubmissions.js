@@ -356,18 +356,6 @@ export function renderSubmissionsList(){
           <div id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesCardsHtml || '<div class="overview-empty">No samples added yet</div>'}</div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}
 
-          <div class="card-title" style="font-size:13px;margin-top:20px;">Handling information</div>
-          <div class="grid-2">
-            <div class="field">
-              <label>Handling</label>
-              <textarea class="ssub-field" data-field="handling" rows="2" ${isEditing ? '' : 'readonly'}>${escapeHtml(ms.handling)}</textarea>
-            </div>
-            <div class="field">
-              <label>Status</label>
-              <input type="text" class="ssub-field" data-field="status" value="${escapeHtml(ms.status)}" placeholder="e.g. Evaluation sample — not for sale" ${isEditing ? '' : 'readonly'}>
-            </div>
-          </div>
-
           <div class="field" style="margin-top:14px;">
             <label>Notes</label>
             <textarea class="ssub-field" data-field="notes" rows="2" ${isEditing ? '' : 'readonly'}>${escapeHtml(ms.notes)}</textarea>

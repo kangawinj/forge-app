@@ -75,7 +75,6 @@ function packingListHtml(s){
       <tbody>${ls.map(l => `<tr><td class="c">${l.no}</td><td>${escapeHtml(l.id)}</td><td>${escapeHtml(l.name)}${l.code ? `<div class="ssdoc-dim">${escapeHtml(l.code)}</div>` : ''}</td><td>${escapeHtml(l.lot)}</td><td class="r">${l.qty}</td><td class="r">${l.bagG !== null ? num(l.bagG) : ''}</td><td class="r">${l.netKg !== null ? num(l.netKg, 3) : ''}</td><td>${escapeHtml(l.storage)}</td></tr>`).join('')}</tbody>
       <tfoot><tr><td colspan="4" class="r"><b>Total</b></td><td class="r"><b>${totalQty}</b></td><td></td><td class="r"><b>${num(totalNet, 3)}</b></td><td></td></tr></tfoot>
     </table>
-    ${s.handling ? `<div class="ssdoc-note"><b>Handling:</b> ${lines(s.handling)}</div>` : ''}
     <div class="ssdoc-note">Samples for evaluation only. Not for resale.</div>
     ${signBlock(s)}`;
 }
@@ -141,13 +140,13 @@ function submissionFormHtml(s){
   }).join('');
   return `
     <div class="ssdoc-title">SAMPLE SUBMISSION FORM</div>
-    <div class="ssdoc-sub">${escapeHtml(s.formNo)}${s.status ? ` &nbsp;·&nbsp; ${escapeHtml(s.status)}` : ''}</div>
+    <div class="ssdoc-sub">${escapeHtml(s.formNo)}</div>
     <div class="ssdoc-h">Document and delivery information</div>
     <table class="ssdoc-meta ssdoc-compact">
       <tr>${metaRow('Form no.', s.formNo)}${metaRow('Customer', s.customer)}${metaRow('Destination', s.destination)}</tr>
       <tr>${metaRow('Present. date', fmtDate(s.presentDate))}${metaRow('Project lead', s.projectLead)}${metaRow('Coordinator', s.coordinator)}</tr>
       <tr>${metaRow('Expected receipt', fmtDate(s.expectedReceipt))}${metaRow('Samples delivery location', [s.deliveryCompany, s.deliveryLocation].filter(Boolean).join(' — '))}${metaRow('Doc. date', fmtDate(s.docDate))}</tr>
-      <tr>${metaRow('Purpose', s.purpose)}${metaRow('Handling', s.handling)}<td colspan="2"></td></tr>
+      <tr>${metaRow('Purpose', s.purpose)}<td colspan="4"></td></tr>
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
