@@ -893,6 +893,7 @@ export const CHANGELOG = [
   { version: "3.0.851", date: "2026-11-25", note: "Sample Submissions: Print now gives the same clean A4 layout as the Packing List -- title, a tidy details table, the docs requested, the samples, each product's specification, the customer evaluation (only once something is entered), notes and the Prepared by / Received by signature lines -- instead of printing the on-screen editor" },
   { version: "3.0.852", date: "2026-11-25", note: "Sample Submission print: the Document and delivery information table is smaller and more compact -- three fields per row in a smaller type, with Docs requested on its own full-width line" },
   { version: "3.0.853", date: "2026-11-25", note: "Sample Submissions form: the fields are more compact -- smaller boxes, four to a row (the Project picker is now the same size as the others and no longer overlaps Form No.), and a tighter Shipping documents section" },
+  { version: "3.0.854", date: "2026-11-25", note: "Sample Submissions: new Form Nos. are now SS-YYMM-001 -- the year and month (Bangkok time) then a running number that starts again at 001 every month (e.g. SS-2611-001, SS-2611-002 ... SS-2612-001). A deleted submission never frees its number, so one is never reused. Existing numbers (SS-0001, SS-2026-0001) are not changed" },
 ];
 export const APP_VERSION = CHANGELOG[CHANGELOG.length - 1].version;
 export const APP_UPDATED = CHANGELOG[CHANGELOG.length - 1].date;

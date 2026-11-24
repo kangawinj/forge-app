@@ -5,7 +5,7 @@
 // file's own top-of-file comment for the overall file split.
 import {
   uid, currentUser, sampleSubmissionsCol, productList, db,
-  sampleSubmissionCountersCol, projects
+  sampleSubmissionCountersCol, projects, bangkokMonthStr
 } from './app.js';
 import {
   setDoc, doc, runTransaction
@@ -121,24 +121,23 @@ export function scheduleSubmissionSave(s){
   saveSubmissionToCloud(s);
 }
 
-// Atomic "SS-<year>-<seq>" Form No., collision-safe even when two people
-// hit "+ New Submission" at the same instant -- same runTransaction()
-// read-and-increment-in-one-step pattern as recipes.js's createNewTrial(),
-// against a per-year counter doc (sampleSubmissionCounters/<year>.maxSeq)
-// instead of per-Series, so numbering restarts at 0001 every new year.
-// tx.set(...,{merge:true}) (rather than tx.update, which createNewTrial
-// can use) because the very first submission of a new year has no counter
-// doc yet to update.
+// Atomic "SS-<YYMM>-<seq>" Form No. (e.g. SS-2611-001 = the 1st submission created in November 2026, Bangkok time), collision-safe
+// even when two people hit "+ New Submission" at the same instant -- same runTransaction() read-and-increment-in-one-step
+// pattern as recipes.js's createNewTrial(), against a per-month counter doc (sampleSubmissionCounters/m<YYMM>.maxSeq), so the
+// number restarts at 001 every month. It is a counter, not a count of what is left: deleting a submission never frees its number.
+// tx.set(...,{merge:true}) (rather than tx.update) because the first submission of a month has no counter doc yet to update.
+// Older numbers (SS-0001, SS-2026-0001) are left as they are.
 export async function issueSubmissionFormNo(){
-  const year = new Date().getFullYear();
-  const counterRef = doc(sampleSubmissionCountersCol, String(year));
+  const ym = bangkokMonthStr();                                   // "2026-11"
+  const yymm = ym.slice(2, 4) + ym.slice(5, 7);                   // "2611"
+  const counterRef = doc(sampleSubmissionCountersCol, 'm' + yymm);
   const nextSeq = await runTransaction(db, async (tx) => {
     const snap = await tx.get(counterRef);
     const seq = (snap.exists() ? (snap.data().maxSeq || 0) : 0) + 1;
     tx.set(counterRef, { maxSeq: seq }, { merge: true });
     return seq;
   });
-  return `SS-${year}-${String(nextSeq).padStart(4, '0')}`;
+  return `SS-${yymm}-${String(nextSeq).padStart(3, '0')}`;
 }
 
 // Looks up a submission's linked Project (for the "Project" picker's
