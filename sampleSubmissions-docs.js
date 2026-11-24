@@ -128,7 +128,7 @@ function submissionFormHtml(s){
   const fu = computeFollowUpSummary(samples);
   const rowsHtml = samples.map((r, i) => {
     const req = toNum(r.requestedQty), act = toNum(r.actualQtySent);
-    return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td>${escapeHtml(r.developmentStatus)}</td><td>${escapeHtml(r.lotNo)}</td><td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td><td class="r">${req !== null && act !== null ? act - req : ''}</td><td class="r">${escapeHtml(r.netWtPerBag)}</td><td>${escapeHtml(r.storage)}</td><td>${escapeHtml(r.remarks)}</td></tr>`;
+    return `<tr><td class="c">${i + 1}</td><td>${escapeHtml(sampleIdFor(s, r))}</td><td>${escapeHtml(sampleProductName(r) || '-')}</td><td>${escapeHtml(r.developmentStatus)}</td><td>${escapeHtml(r.lotNo)}</td><td class="r">${req ?? ''}</td><td class="r">${act ?? ''}</td><td class="r">${escapeHtml(r.netWtPerBag)}</td><td>${escapeHtml(r.storage)}</td><td>${escapeHtml(r.remarks)}</td></tr>`;
   }).join('');
   const specHtml = samples.map(r => {
     const p = linkedProduct(r);
@@ -161,9 +161,9 @@ function submissionFormHtml(s){
       <tr>${metaRow('Docs requested', picked.join(', ') || '-', 5)}</tr>
     </table>
     <div class="ssdoc-h">Samples included</div>
-    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Var.</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
-    <tbody>${rowsHtml || '<tr><td colspan="11" class="c">No samples added</td></tr>'}</tbody></table>
-    <div class="ssdoc-note">Requested: <b>${qty.requested}</b> bags &nbsp;·&nbsp; Actual sent: <b>${qty.sent}</b> bags &nbsp;·&nbsp; Variance: <b>${qty.variance >= 0 ? '+' : ''}${qty.variance}</b> bags &nbsp;·&nbsp; Ready: <b>${qty.ready} / ${qty.total}</b></div>
+    <table class="ssdoc-table ssdoc-sm"><thead><tr><th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. status</th><th>Lot no.</th><th>Req. qty</th><th>Sent qty</th><th>Net wt/bag (g)</th><th>Storage</th><th>Remarks</th></tr></thead>
+    <tbody>${rowsHtml || '<tr><td colspan="10" class="c">No samples added</td></tr>'}</tbody></table>
+    <div class="ssdoc-note">Requested: <b>${qty.requested}</b> bags &nbsp;·&nbsp; Actual sent: <b>${qty.sent}</b> bags &nbsp;·&nbsp; Ready: <b>${qty.ready} / ${qty.total}</b></div>
     ${samples.length ? `<div class="ssdoc-h">Product specification</div>${specHtml}` : ''}
     ${evalHtml}
     ${followMeta ? `<table class="ssdoc-meta ssdoc-compact"><tr>${metaRow('Feedback owner', s.feedbackOwner)}${metaRow('Feedback due', fmtDate(s.feedbackDue))}</tr><tr>${metaRow('Next review', fmtDate(s.nextReview))}<td colspan="2"></td></tr></table>` : ''}

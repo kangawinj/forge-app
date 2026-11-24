@@ -257,8 +257,6 @@ export function renderSubmissionsList(){
 
     const samplesRowsHtml = ms.samples.map((row, idx) => {
       const p = linkedProduct(row);
-      const variance = (toNum(row.actualQtySent) !== null && toNum(row.requestedQty) !== null)
-        ? (toNum(row.actualQtySent) - toNum(row.requestedQty)) : null;
       const pickerValue = p ? productPickerLabel(p) : (row.manualProductName || '');
       const specLine = p
         ? `Case Pack: ${escapeHtml(p.packingStyle || '-')} &nbsp;·&nbsp; MOQ: ${escapeHtml(p.moq || '-')} &nbsp;·&nbsp; EXW: ${p.exwPrice !== '' && p.exwPrice != null ? '฿' + escapeHtml(String(p.exwPrice)) : '-'} &nbsp;·&nbsp; Factory: ${escapeHtml(p.factory || '-')} &nbsp;·&nbsp; Allergens: ${escapeHtml(p.allergens || '-')}`
@@ -279,7 +277,6 @@ export function renderSubmissionsList(){
           <td><input type="text" class="ssample-field" data-field="lotNo" value="${escapeHtml(row.lotNo)}" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="number" class="ssample-field" data-field="requestedQty" value="${escapeHtml(row.requestedQty)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="number" class="ssample-field" data-field="actualQtySent" value="${escapeHtml(row.actualQtySent)}" min="0" step="1" ${isEditing ? '' : 'readonly'}></td>
-          <td>${variance !== null ? variance : '-'}</td>
           <td><input type="text" class="ssample-field" data-field="netWtPerBag" value="${escapeHtml(row.netWtPerBag)}" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="text" class="ssample-field" data-field="storage" value="${escapeHtml(row.storage)}" ${isEditing ? '' : 'readonly'}></td>
           <td><input type="text" class="ssample-field" data-field="remarks" value="${escapeHtml(row.remarks)}" ${isEditing ? '' : 'readonly'}></td>
@@ -377,18 +374,17 @@ export function renderSubmissionsList(){
               <thead><tr>
                 <th>No.</th><th>Sample ID</th><th>Product</th><th>Dev. Status</th><th>Lot No.</th>
                 <th>Requested Qty</th><th>Actual Qty Sent</th>
-                <th>Variance</th><th>Net Wt./Bag (g)</th><th>Storage</th><th>Remarks</th>${isEditing ? '<th></th>' : ''}
+                <th>Net Wt./Bag (g)</th><th>Storage</th><th>Remarks</th>${isEditing ? '<th></th>' : ''}
               </tr></thead>
-              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${isEditing ? 12 : 11}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
+              <tbody id="ssubSamplesBody-${escapeHtml(s.id)}">${samplesRowsHtml || `<tr><td colspan="${isEditing ? 11 : 10}"><div class="overview-empty">No samples added yet</div></td></tr>`}</tbody>
             </table>
           </div>
           ${isEditing ? `<button class="btn btn-sm add-row-btn" data-role="add-sample" style="margin-top:8px;">+ Add Sample</button>` : ''}
 
           <div class="card-title" style="font-size:13px;margin-top:20px;">Quantity summary</div>
-          <div class="batch-summary" style="grid-template-columns:repeat(4,1fr);">
+          <div class="batch-summary" style="grid-template-columns:repeat(3,1fr);">
             <div><div class="batch-stat-label">Requested</div><div class="batch-stat-value">${qty.requested} bags</div></div>
             <div><div class="batch-stat-label">Actual Sent</div><div class="batch-stat-value">${qty.sent} bags</div></div>
-            <div><div class="batch-stat-label">Variance (Sent − Requested)</div><div class="batch-stat-value">${qty.variance >= 0 ? '+' : ''}${qty.variance} bags</div></div>
             <div><div class="batch-stat-label">Ready</div><div class="batch-stat-value">${qty.ready} / ${qty.total}</div></div>
           </div>
 
