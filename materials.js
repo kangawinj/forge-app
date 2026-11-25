@@ -428,6 +428,14 @@ export function mountMaterialsView(){
   playContentTransition(main);
 }
 
+// Price per kg of what is left after a Sub Ingredient's yield: the library Price/kg divided by (% Yield / 100) -- e.g. ฿250 at 90%
+// yield is ฿277.78 per kg of the prepared ingredient. "-" when there is no price or no usable yield.
+export function subIngredientPrice(m, si){
+  const price = parseFloat(m && m.price), y = parseFloat(si && si.yieldPct);
+  if(!(price >= 0) || !(y > 0)) return '-';
+  return '฿' + (price / (y / 100)).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+}
+
 export function openMaterialDetail(m){
   materialDetailCurrentId = m.id;
   const body = document.getElementById('materialDetailBody');
@@ -466,7 +474,7 @@ export function openMaterialDetail(m){
       <div class="material-detail-notes-label">Sub Ingredients</div>
       <div class="flavor-table-scroll">
       <table class="flavor-table">
-        <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th></tr></thead>
+        <thead><tr><th>Type</th><th>Size</th><th>Unit</th><th>Cooking</th><th>% Yield</th><th title="Price/kg divided by the % Yield">Price/kg (after yield)</th></tr></thead>
         <tbody>${m.subIngredients.map(si => `
           <tr>
             <td>${escapeHtml(si.type || '-')}</td>
@@ -474,6 +482,7 @@ export function openMaterialDetail(m){
             <td>${escapeHtml(si.sizeUnit || '-')}</td>
             <td>${escapeHtml(si.cooking || '-')}</td>
             <td>${si.yieldPct !== '' && si.yieldPct != null ? escapeHtml(si.yieldPct) + '%' : '-'}</td>
+            <td>${escapeHtml(subIngredientPrice(m, si))}</td>
           </tr>
         `).join('')}</tbody>
       </table>
